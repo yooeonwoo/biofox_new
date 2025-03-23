@@ -58,7 +58,7 @@ export function SpecialtyStoreManagement({
 }: ISpecialtyStoreManagementProps) {
   const [stores, setStores] = React.useState<ISpecialtyStore[]>(initialStores);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [selectedKolId, setSelectedKolId] = React.useState<string>(""); // 선택된 KOL ID
+  const [selectedKolId, setSelectedKolId] = React.useState<string>("all"); // 선택된 KOL ID
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = React.useState(false);
   const [currentStore, setCurrentStore] = React.useState<ISpecialtyStore | null>(null);
@@ -87,7 +87,7 @@ export function SpecialtyStoreManagement({
       store.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       store.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       store.kolName.toLowerCase().includes(searchQuery.toLowerCase())) && 
-      (selectedKolId ? store.kolId === selectedKolId : true)
+      (selectedKolId && selectedKolId !== "all" ? store.kolId === selectedKolId : true)
     );
   }, [stores, searchQuery, selectedKolId]);
 
@@ -105,6 +105,20 @@ export function SpecialtyStoreManagement({
     return groups;
   }, [stores]);
 
+  // KOL이 없는 전문점 목록
+  const unassignedStores = React.useMemo(() => {
+    return stores.filter(store => !store.kolId);
+  }, [stores]);
+
+  // 선택된 KOL 정보
+  const selectedKolName = React.useMemo(() => {
+    if (selectedKolId === "all") return "모든 전문점";
+    if (selectedKolId === "unassigned") return "미지정 KOL";
+    
+    const selectedKol = kols.find(kol => kol.id === selectedKolId);
+    return selectedKol?.name || "선택된 KOL";
+  }, [selectedKolId, kols]);
+
   // 전문점 추가 (관리자만 가능)
   const handleAddStore = () => {
     if (!isAdmin) return;
@@ -118,8 +132,9 @@ export function SpecialtyStoreManagement({
       status: "active",
       businessNumber: "",
       description: "",
-      kolId: "",
-      kolName: "",
+      kolId: selectedKolId !== "all" && selectedKolId !== "unassigned" ? selectedKolId : "",
+      kolName: selectedKolId !== "all" && selectedKolId !== "unassigned" ? 
+        kols.find(kol => kol.id === selectedKolId)?.name || "" : "",
     });
     setIsDialogOpen(true);
   };
@@ -276,7 +291,6 @@ export function SpecialtyStoreManagement({
       <TableHeader>
         <TableRow>
           <TableHead>이름</TableHead>
-          <TableHead>소속 KOL</TableHead>
           <TableHead>주소</TableHead>
           <TableHead>연락처</TableHead>
           <TableHead>대표자</TableHead>
@@ -287,7 +301,7 @@ export function SpecialtyStoreManagement({
       <TableBody>
         {stores.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={6} className="h-24 text-center">
               등록된 전문점이 없습니다.
             </TableCell>
           </TableRow>
@@ -295,7 +309,6 @@ export function SpecialtyStoreManagement({
           stores.map((store) => (
             <TableRow key={store.id}>
               <TableCell className="font-medium">{store.name}</TableCell>
-              <TableCell>{store.kolName}</TableCell>
               <TableCell>{store.address}</TableCell>
               <TableCell>{store.phone}</TableCell>
               <TableCell>{store.ownerName}</TableCell>
@@ -357,6 +370,24 @@ export function SpecialtyStoreManagement({
     </Table>
   );
 
+  // KOL 사이드바 항목 컴포넌트
+  const KolSidebarItem = ({ id, name, count }: { id: string, name: string, count: number }) => (
+    <button
+      className={cn(
+        "w-full text-left px-4 py-2 rounded-md transition-colors flex items-center justify-between",
+        selectedKolId === id 
+          ? "bg-purple-100 text-purple-900 font-medium" 
+          : "hover:bg-gray-100"
+      )}
+      onClick={() => setSelectedKolId(id)}
+    >
+      <span className="truncate">{name}</span>
+      <span className="text-xs bg-gray-200 rounded-full px-2 py-0.5 text-gray-700 min-w-[1.5rem] text-center">
+        {count}
+      </span>
+    </button>
+  );
+
   return (
     <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
@@ -370,85 +401,84 @@ export function SpecialtyStoreManagement({
       </div>
 
       <div className="flex flex-col gap-4">
-        {/* 검색 및 필터 */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="전문점 검색..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+        {/* 검색 */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="전문점 검색..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+      
+      {/* 사이드바 + 컨텐츠 레이아웃 */}
+      <div className="grid grid-cols-[250px_1fr] gap-6">
+        {/* KOL 사이드바 */}
+        <div className="border rounded-md p-2 space-y-1 h-[calc(100vh-250px)] overflow-y-auto">
+          <KolSidebarItem 
+            id="all" 
+            name="모든 전문점" 
+            count={stores.length} 
+          />
+          
+          {/* KOL 목록 */}
+          {kols.map(kol => {
+            const kolStores = stores.filter(store => store.kolId === kol.id);
+            if (kolStores.length === 0 && searchQuery.length === 0) return null;
+            
+            return (
+              <KolSidebarItem
+                key={kol.id}
+                id={kol.id}
+                name={kol.name}
+                count={kolStores.length}
+              />
+            );
+          })}
+          
+          {/* 미지정 KOL 항목 */}
+          {unassignedStores.length > 0 && (
+            <KolSidebarItem
+              id="unassigned"
+              name="미지정 KOL"
+              count={unassignedStores.length}
             />
+          )}
+        </div>
+        
+        {/* 선택된 KOL의 전문점 목록 */}
+        <div className="border rounded-md">
+          <div className="bg-muted/40 px-4 py-3 border-b flex items-center justify-between">
+            <h3 className="text-lg font-semibold">{selectedKolName}</h3>
+            {isAdmin && selectedKolId !== "all" && selectedKolId !== "unassigned" && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => handleAddStoreToKol(selectedKolId)}
+                className="gap-1"
+              >
+                <Plus className="h-3 w-3" />
+                이 KOL에 전문점 추가
+              </Button>
+            )}
           </div>
           
-          {/* KOL 필터 */}
-          <div className="w-64">
-            <Select value={selectedKolId} onValueChange={setSelectedKolId}>
-              <SelectTrigger>
-                <SelectValue placeholder="모든 KOL" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">모든 KOL</SelectItem>
-                {kols.map((kol) => (
-                  <SelectItem key={kol.id} value={kol.id}>{kol.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <StoresTable 
+            stores={
+              selectedKolId === "all"
+                ? searchQuery ? filteredStores : stores
+                : selectedKolId === "unassigned"
+                  ? unassignedStores.filter(store => 
+                      store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      store.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      store.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                  : filteredStores
+            } 
+          />
         </div>
-
-        {/* KOL별 그룹화 또는 필터링된 목록 */}
-        {selectedKolId || searchQuery ? (
-          // 필터링된 결과 표시
-          <div className="rounded-md border">
-            <StoresTable stores={filteredStores} />
-          </div>
-        ) : (
-          // KOL별 그룹화 표시
-          <div className="space-y-6">
-            {kols.map(kol => {
-              const kolStores = stores.filter(store => store.kolId === kol.id);
-              if (kolStores.length === 0) return null;
-              
-              return (
-                <div key={kol.id} className="rounded-md border">
-                  <div className="flex items-center justify-between bg-muted/40 px-4 py-3">
-                    <h3 className="text-lg font-semibold">{kol.name}</h3>
-                    {isAdmin && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => handleAddStoreToKol(kol.id)}
-                        className="gap-1"
-                      >
-                        <Plus className="h-3 w-3" />
-                        이 KOL에 전문점 추가
-                      </Button>
-                    )}
-                  </div>
-                  <StoresTable stores={kolStores} />
-                </div>
-              );
-            })}
-            
-            {/* KOL이 없는 전문점 (예외 처리) */}
-            {stores.filter(store => !store.kolId).length > 0 && (
-              <div className="rounded-md border">
-                <div className="flex items-center justify-between bg-muted/40 px-4 py-3">
-                  <h3 className="text-lg font-semibold">미지정 KOL</h3>
-                </div>
-                <StoresTable stores={stores.filter(store => !store.kolId)} />
-              </div>
-            )}
-            
-            {Object.keys(groupedStores).length === 0 && (
-              <div className="rounded-md border p-8 text-center text-muted-foreground">
-                등록된 전문점이 없습니다.
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 전문점 상세 조회 대화상자 */}
@@ -528,7 +558,7 @@ export function SpecialtyStoreManagement({
                       onValueChange={handleKolChange}
                       required
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="kolId">
                         <SelectValue placeholder="KOL을 선택하세요" />
                       </SelectTrigger>
                       <SelectContent>
