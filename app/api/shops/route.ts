@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { getDB } from "@/db";
 import { shops, kols, users } from "@/db/schema";
 import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // 데이터베이스 연결 가져오기
+    const db = await getDB();
 
     // 관리자는 모든 전문점 조회 가능, KOL은 자신의 전문점만 조회 가능
     if (orgRole === "본사관리자") {
@@ -83,6 +86,9 @@ export async function POST(req: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // 데이터베이스 연결 가져오기
+    const db = await getDB();
 
     const data = await req.json();
     const { kolId, ownerName, region, smartPlaceLink } = data;

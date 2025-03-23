@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { getDB } from "@/db";
 import { products } from "@/db/schema";
 import { auth } from "@clerk/nextjs/server";
 import { desc } from "drizzle-orm";
@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+    
+    // 데이터베이스 연결 가져오기
+    const db = await getDB();
     
     // 제품 목록 조회
     const productList = await db.query.products.findMany({

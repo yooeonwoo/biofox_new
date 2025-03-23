@@ -16,6 +16,7 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@supabase/supabase-js": "^2.49.1",
     "@tailwindcss/postcss": "^4.0.15",
+    "@types/recharts": "^1.8.29",
     "class-variance-authority": "^0.7.1",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.30.5",
@@ -25,6 +26,7 @@
     "postgres": "^3.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "recharts": "^2.15.1",
     "sonner": "^2.0.1",
     "svix": "^1.62.0",
     "tailwind-merge": "^3.0.2"

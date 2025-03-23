@@ -6,8 +6,8 @@ import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "BIOFOX 관리자",
-  description: "BIOFOX 관리자 페이지입니다.",
+  title: "관리자 대시보드 - BIOFOX KOL",
+  description: "BIOFOX KOL 관리자 대시보드",
 };
 
 export default async function AdminLayout({
