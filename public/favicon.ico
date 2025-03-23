@@ -1,0 +1,43 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="silverGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0E0E0" />
+      <stop offset="50%" stop-color="#B3B3B3" />
+      <stop offset="100%" stop-color="#808080" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <linearGradient id="auroraGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="50%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#EC4899" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fox Body Shape -->
+  <path 
+    d="M96 32L84 16L72 20L60 12L48 20L36 16L24 32L28 48L20 64L32 84L60 108L88 84L100 64L92 48L96 32Z" 
+    fill="url(#silverGradient)" 
+    filter="url(#glow)" />
+  
+  <!-- Fox Face Details -->
+  <path 
+    d="M60 68L54 62L46 52L38 60L32 52L38 38L48 30L60 36L72 30L82 38L88 52L82 60L74 52L66 62L60 68Z" 
+    fill="#C0C0C0" />
+  
+  <!-- Fox Eyes -->
+  <path 
+    d="M54 76C54 72 52 68 52 68C52 68 46 76 46 80C46 84 48 88 52 88C56 88 58 84 58 80C58 78 56 76 54 76Z" 
+    fill="#E0E0E0" />
+  <path 
+    d="M66 76C66 72 68 68 68 68C68 68 74 76 74 80C74 84 72 88 68 88C64 88 62 84 62 80C62 78 64 76 66 76Z" 
+    fill="#E0E0E0" />
+  
+  <!-- Aura Effect -->
+  <circle cx="60" cy="60" r="48" stroke="url(#auroraGradient)" stroke-width="1" fill="none" opacity="0.5">
+    <animate attributeName="opacity" values="0.3;0.7;0.3" dur="6s" repeatCount="indefinite" />
+    <animate attributeName="r" values="48;52;48" dur="4s" repeatCount="indefinite" />
+  </circle>
+</svg> 

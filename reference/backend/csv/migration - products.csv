@@ -1,0 +1,9 @@
+id,name,code,category_id,description,price,commission_rate,created_at,updated_at
+,마이크로젯 레이저,microjet,1,마이크로젯 레이저,1500000,100%,,
+,큐어부스터,mist,2,큐어부스터 미스트,75000,30%,,
+,올인원 세럼,serum,2,올인원 세럼,66000,30%,,
+,큐어 페이셜 마스크,curemask,2,큐어 페이셜 마스크,33000,30%,,
+,프리미엄 마스크,premiummask,2,프리미엄 마스크,66000,30%,,
+,V 앰플,vample,2,V 앰플,50000,30%,,
+,퓨어 솔루션,puresoiution,2,퓨어 솔루션,50000,30%,,
+,마이크로젯 부스터,microjetbooster,2,마이크로젯 부스터,50000,30%,,
