@@ -6,7 +6,7 @@
  * 2. 사용자 목록 조회
  * 3. 사용자 역할 관리
  */
-import { currentUser } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import UserForm from "./components/UserForm";
 import UserTable from "./components/UserTable";
