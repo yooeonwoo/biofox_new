@@ -1,0 +1,49 @@
+# 의존성 디렉토리
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# 환경 설정 파일
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 빌드 디렉토리
+.next/
+out/
+build/
+dist/
+
+# 캐시 디렉토리
+.cache/
+.npm/
+.yarn/
+
+# 로그 파일
+logs
+*.log
+
+# 에디터 설정 파일
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS 생성 파일
+.DS_Store
+Thumbs.db
+
+# 테스트 커버리지
+coverage/
+
+# 기타
+.vercel
+.cursor/
+
+# 중첩된 Git 저장소
+biofox-kol/
+n8n-workflow-builder/ 
