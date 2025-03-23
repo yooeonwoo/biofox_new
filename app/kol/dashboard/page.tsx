@@ -10,7 +10,7 @@ export default function KolDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-purple-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-aurora-pink">KOL 대시보드</h1>
           <div className="flex items-center gap-4">
@@ -32,20 +32,20 @@ export default function KolDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+          <div className="bg-purple-50 rounded-lg shadow p-6 border border-purple-100">
             <h3 className="text-lg font-medium text-gray-900 mb-2">내 프로필</h3>
             <p className="text-gray-600 mb-4">KOL 프로필 정보 및 수정</p>
             <button className="btn-primary w-full">프로필 관리</button>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+          <div className="bg-purple-50 rounded-lg shadow p-6 border border-purple-100">
             <h3 className="text-lg font-medium text-gray-900 mb-2">연결된 전문점</h3>
             <p className="text-gray-600 mb-4">나와 연결된 전문점 정보 확인</p>
-            <button className="btn-primary w-full">전문점 확인</button>
+            <Link href="/kol/stores" className="btn-primary w-full block text-center">전문점 관리</Link>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+          <div className="bg-purple-50 rounded-lg shadow p-6 border border-purple-100">
             <h3 className="text-lg font-medium text-gray-900 mb-2">실적 조회</h3>
             <p className="text-gray-600 mb-4">나의 실적 및 성과 확인</p>
-            <button className="btn-primary w-full">실적 보기</button>
+            <Link href="/kol/sales" className="btn-primary w-full block text-center">매출 등록</Link>
           </div>
         </div>
       </main>
