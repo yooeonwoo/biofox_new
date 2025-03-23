@@ -1,15 +1,33 @@
-import { Metadata } from "next";
+"use client";
+
 import { SpecialtyStoreManagement } from "@/components/kols/SpecialtyStoreManagement";
 import { Toaster } from "sonner";
 
-export const metadata: Metadata = {
-  title: "전문점 관리 - BIOFOX 관리자",
-  description: "관리자가 KOL에 소속된 전문점을 등록하고 관리할 수 있는 페이지입니다.",
-};
+// metadata는 클라이언트 컴포넌트에서 사용할 수 없으므로 제거
+// export const metadata: Metadata = {
+//   title: "전문점 관리 - BIOFOX 관리자",
+//   description: "관리자가 KOL에 소속된 전문점을 등록하고 관리할 수 있는 페이지입니다.",
+// };
 
 // 실제 구현 시에는 서버 컴포넌트에서 데이터를 불러오는 로직이 추가되어야 함
 export default function AdminStoresPage() {
-  // 예시 데이터
+  // 예시 KOL 데이터
+  const demoKols = [
+    {
+      id: "kol1",
+      name: "스타일리스트 김민지",
+    },
+    {
+      id: "kol2",
+      name: "패션 인플루언서 박서준",
+    },
+    {
+      id: "kol3",
+      name: "뷰티 크리에이터 이하늘",
+    },
+  ];
+
+  // 예시 데이터 (KOL 정보 추가)
   const demoStores = [
     {
       id: "1",
@@ -20,6 +38,8 @@ export default function AdminStoresPage() {
       status: "active" as const,
       businessNumber: "123-45-67890",
       description: "강남 지역 대표 전문점",
+      kolId: "kol1",
+      kolName: "스타일리스트 김민지",
     },
     {
       id: "2",
@@ -30,6 +50,8 @@ export default function AdminStoresPage() {
       status: "active" as const,
       businessNumber: "234-56-78901",
       description: "부산 해운대 지역 전문점",
+      kolId: "kol2",
+      kolName: "패션 인플루언서 박서준",
     },
     {
       id: "3",
@@ -40,6 +62,20 @@ export default function AdminStoresPage() {
       status: "inactive" as const,
       businessNumber: "345-67-89012",
       description: "대구 중앙 지역 전문점",
+      kolId: "kol3",
+      kolName: "뷰티 크리에이터 이하늘",
+    },
+    {
+      id: "4",
+      name: "인천 송도점",
+      address: "인천광역시 연수구 송도과학로 123",
+      phone: "032-456-7890",
+      ownerName: "최지점",
+      status: "active" as const,
+      businessNumber: "456-78-90123",
+      description: "송도 지역 신규 전문점",
+      kolId: "kol1",
+      kolName: "스타일리스트 김민지",
     },
   ];
 
@@ -65,7 +101,8 @@ export default function AdminStoresPage() {
   return (
     <div className="container py-8">
       <SpecialtyStoreManagement 
-        initialStores={demoStores} 
+        initialStores={demoStores}
+        kols={demoKols}
         isAdmin={true} 
         title="전문점 관리" 
         onAddStore={handleAddStore}

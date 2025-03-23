@@ -8,13 +8,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // 클래스 이름 병합을 위한 유틸리티 함수
 function cn(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-// 타입 정의
+// KOL 타입 정의
+export interface IKOL {
+  id: string;
+  name: string;
+}
+
+// 전문점 타입 정의 (KOL 정보 추가)
 export interface ISpecialtyStore {
   id: string;
   name: string;
@@ -24,10 +31,13 @@ export interface ISpecialtyStore {
   status: "active" | "inactive";
   businessNumber?: string;
   description?: string;
+  kolId: string; // KOL ID 추가
+  kolName: string; // KOL 이름 추가 (화면 표시용)
 }
 
 interface ISpecialtyStoreManagementProps {
   initialStores?: ISpecialtyStore[];
+  kols?: IKOL[]; // KOL 목록 추가
   onAddStore?: (store: Omit<ISpecialtyStore, "id">) => Promise<void>;
   onUpdateStore?: (store: ISpecialtyStore) => Promise<void>;
   onDeleteStore?: (id: string) => Promise<void>;
@@ -38,6 +48,7 @@ interface ISpecialtyStoreManagementProps {
 
 export function SpecialtyStoreManagement({
   initialStores = [],
+  kols = [],
   onAddStore,
   onUpdateStore,
   onDeleteStore,
@@ -47,6 +58,7 @@ export function SpecialtyStoreManagement({
 }: ISpecialtyStoreManagementProps) {
   const [stores, setStores] = React.useState<ISpecialtyStore[]>(initialStores);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedKolId, setSelectedKolId] = React.useState<string>(""); // 선택된 KOL ID
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = React.useState(false);
   const [currentStore, setCurrentStore] = React.useState<ISpecialtyStore | null>(null);
@@ -58,6 +70,8 @@ export function SpecialtyStoreManagement({
     status: "active",
     businessNumber: "",
     description: "",
+    kolId: "",
+    kolName: "",
   });
   const [processing, setProcessing] = React.useState(false);
 
@@ -69,11 +83,27 @@ export function SpecialtyStoreManagement({
   // 검색 기능
   const filteredStores = React.useMemo(() => {
     return stores.filter((store) =>
-      store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       store.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      store.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
+      store.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      store.kolName.toLowerCase().includes(searchQuery.toLowerCase())) && 
+      (selectedKolId ? store.kolId === selectedKolId : true)
     );
-  }, [stores, searchQuery]);
+  }, [stores, searchQuery, selectedKolId]);
+
+  // KOL별 그룹화된 스토어 목록
+  const groupedStores = React.useMemo(() => {
+    const groups: Record<string, ISpecialtyStore[]> = {};
+    
+    stores.forEach(store => {
+      if (!groups[store.kolId]) {
+        groups[store.kolId] = [];
+      }
+      groups[store.kolId].push(store);
+    });
+    
+    return groups;
+  }, [stores]);
 
   // 전문점 추가 (관리자만 가능)
   const handleAddStore = () => {
@@ -88,6 +118,29 @@ export function SpecialtyStoreManagement({
       status: "active",
       businessNumber: "",
       description: "",
+      kolId: "",
+      kolName: "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  // 특정 KOL에 전문점 추가
+  const handleAddStoreToKol = (kolId: string) => {
+    if (!isAdmin) return;
+    
+    const selectedKol = kols.find(kol => kol.id === kolId);
+    
+    setCurrentStore(null);
+    setFormData({
+      name: "",
+      address: "",
+      phone: "",
+      ownerName: "",
+      status: "active",
+      businessNumber: "",
+      description: "",
+      kolId: kolId,
+      kolName: selectedKol?.name || "",
     });
     setIsDialogOpen(true);
   };
@@ -111,6 +164,8 @@ export function SpecialtyStoreManagement({
       status: store.status,
       businessNumber: store.businessNumber || "",
       description: store.description || "",
+      kolId: store.kolId,
+      kolName: store.kolName,
     });
     setIsDialogOpen(true);
   };
@@ -149,6 +204,16 @@ export function SpecialtyStoreManagement({
   // 상태 변경 핸들러
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, status: e.target.value as "active" | "inactive" }));
+  };
+
+  // KOL 선택 핸들러
+  const handleKolChange = (value: string) => {
+    const selectedKol = kols.find(kol => kol.id === value);
+    setFormData(prev => ({ 
+      ...prev, 
+      kolId: value,
+      kolName: selectedKol?.name || ""
+    }));
   };
 
   // 폼 제출 핸들러 (관리자만 가능)
@@ -205,8 +270,95 @@ export function SpecialtyStoreManagement({
     }
   };
 
+  // 스토어 테이블 컴포넌트
+  const StoresTable = ({ stores }: { stores: ISpecialtyStore[] }) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>이름</TableHead>
+          <TableHead>소속 KOL</TableHead>
+          <TableHead>주소</TableHead>
+          <TableHead>연락처</TableHead>
+          <TableHead>대표자</TableHead>
+          <TableHead>상태</TableHead>
+          <TableHead className="w-[100px]">관리</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {stores.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={7} className="h-24 text-center">
+              등록된 전문점이 없습니다.
+            </TableCell>
+          </TableRow>
+        ) : (
+          stores.map((store) => (
+            <TableRow key={store.id}>
+              <TableCell className="font-medium">{store.name}</TableCell>
+              <TableCell>{store.kolName}</TableCell>
+              <TableCell>{store.address}</TableCell>
+              <TableCell>{store.phone}</TableCell>
+              <TableCell>{store.ownerName}</TableCell>
+              <TableCell>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                    store.status === "active"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                  )}
+                >
+                  {store.status === "active" ? "활성" : "비활성"}
+                </span>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleViewStore(store)}
+                    title="상세 보기"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span className="sr-only">상세 보기</span>
+                  </Button>
+                  
+                  {isAdmin && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditStore(store)}
+                        disabled={processing}
+                        title="수정"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">수정</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteStore(store.id)}
+                        disabled={processing}
+                        title="삭제"
+                        className="text-red-500"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">삭제</span>
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
+      </TableBody>
+    </Table>
+  );
+
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
         {isAdmin && (
@@ -217,120 +369,103 @@ export function SpecialtyStoreManagement({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="전문점 검색..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <div className="flex flex-col gap-4">
+        {/* 검색 및 필터 */}
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="전문점 검색..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          {/* KOL 필터 */}
+          <div className="w-64">
+            <Select value={selectedKolId} onValueChange={setSelectedKolId}>
+              <SelectTrigger>
+                <SelectValue placeholder="모든 KOL" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">모든 KOL</SelectItem>
+                {kols.map((kol) => (
+                  <SelectItem key={kol.id} value={kol.id}>{kol.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>이름</TableHead>
-              <TableHead>주소</TableHead>
-              <TableHead>연락처</TableHead>
-              <TableHead>대표자</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead className="w-[100px]">관리</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  전문점 정보를 불러오는 중...
-                </TableCell>
-              </TableRow>
-            ) : filteredStores.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  등록된 전문점이 없습니다.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredStores.map((store) => (
-                <TableRow key={store.id}>
-                  <TableCell className="font-medium">{store.name}</TableCell>
-                  <TableCell>{store.address}</TableCell>
-                  <TableCell>{store.phone}</TableCell>
-                  <TableCell>{store.ownerName}</TableCell>
-                  <TableCell>
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                        store.status === "active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                      )}
-                    >
-                      {store.status === "active" ? "활성" : "비활성"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewStore(store)}
-                        title="상세 보기"
+        {/* KOL별 그룹화 또는 필터링된 목록 */}
+        {selectedKolId || searchQuery ? (
+          // 필터링된 결과 표시
+          <div className="rounded-md border">
+            <StoresTable stores={filteredStores} />
+          </div>
+        ) : (
+          // KOL별 그룹화 표시
+          <div className="space-y-6">
+            {kols.map(kol => {
+              const kolStores = stores.filter(store => store.kolId === kol.id);
+              if (kolStores.length === 0) return null;
+              
+              return (
+                <div key={kol.id} className="rounded-md border">
+                  <div className="flex items-center justify-between bg-muted/40 px-4 py-3">
+                    <h3 className="text-lg font-semibold">{kol.name}</h3>
+                    {isAdmin && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleAddStoreToKol(kol.id)}
+                        className="gap-1"
                       >
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">상세 보기</span>
+                        <Plus className="h-3 w-3" />
+                        이 KOL에 전문점 추가
                       </Button>
-                      
-                      {isAdmin && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditStore(store)}
-                            disabled={processing}
-                            title="수정"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">수정</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteStore(store.id)}
-                            disabled={processing}
-                            title="삭제"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">삭제</span>
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                    )}
+                  </div>
+                  <StoresTable stores={kolStores} />
+                </div>
+              );
+            })}
+            
+            {/* KOL이 없는 전문점 (예외 처리) */}
+            {stores.filter(store => !store.kolId).length > 0 && (
+              <div className="rounded-md border">
+                <div className="flex items-center justify-between bg-muted/40 px-4 py-3">
+                  <h3 className="text-lg font-semibold">미지정 KOL</h3>
+                </div>
+                <StoresTable stores={stores.filter(store => !store.kolId)} />
+              </div>
             )}
-          </TableBody>
-        </Table>
+            
+            {Object.keys(groupedStores).length === 0 && (
+              <div className="rounded-md border p-8 text-center text-muted-foreground">
+                등록된 전문점이 없습니다.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* 상세 보기 다이얼로그 (읽기 전용) */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>
-              전문점 정보
-            </DialogTitle>
-          </DialogHeader>
-          {currentStore && (
+      {/* 전문점 상세 조회 대화상자 */}
+      {currentStore && (
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>전문점 상세 정보</DialogTitle>
+            </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right font-medium">이름</Label>
                 <div className="col-span-3">{currentStore.name}</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right font-medium">소속 KOL</Label>
+                <div className="col-span-3">{currentStore.kolName || "미지정"}</div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right font-medium">주소</Label>
@@ -341,21 +476,17 @@ export function SpecialtyStoreManagement({
                 <div className="col-span-3">{currentStore.phone}</div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-medium">대표자명</Label>
+                <Label className="text-right font-medium">대표자</Label>
                 <div className="col-span-3">{currentStore.ownerName}</div>
               </div>
-              {currentStore.businessNumber && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right font-medium">사업자번호</Label>
-                  <div className="col-span-3">{currentStore.businessNumber}</div>
-                </div>
-              )}
-              {currentStore.description && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right font-medium">설명</Label>
-                  <div className="col-span-3">{currentStore.description}</div>
-                </div>
-              )}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right font-medium">사업자번호</Label>
+                <div className="col-span-3">{currentStore.businessNumber || "-"}</div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right font-medium">설명</Label>
+                <div className="col-span-3">{currentStore.description || "-"}</div>
+              </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right font-medium">상태</Label>
                 <div className="col-span-3">
@@ -372,19 +503,14 @@ export function SpecialtyStoreManagement({
                 </div>
               </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setIsViewDialogOpen(false)}>
-              닫기
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
-      {/* 수정/추가 다이얼로그 (관리자만 사용) */}
+      {/* 전문점 추가/편집 대화상자 */}
       {isAdmin && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle>
                 {currentStore ? "전문점 정보 수정" : "새 전문점 추가"}
@@ -392,6 +518,27 @@ export function SpecialtyStoreManagement({
             </DialogHeader>
             <form onSubmit={handleSubmit}>
               <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="kolId" className="text-right">
+                    소속 KOL
+                  </Label>
+                  <div className="col-span-3">
+                    <Select 
+                      value={formData.kolId} 
+                      onValueChange={handleKolChange}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="KOL을 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {kols.map((kol) => (
+                          <SelectItem key={kol.id} value={kol.id}>{kol.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="name" className="text-right">
                     이름
