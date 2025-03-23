@@ -54,8 +54,8 @@ export default function UserForm() {
         throw new Error("유효한 이메일 주소를 입력해주세요.");
       }
 
-      // 사용자 등록 API 호출
-      const response = await fetch("/api/admin/clerk/create-user", {
+      // 사용자 등록 API 호출 (새로운 API 엔드포인트 사용)
+      const response = await fetch("/api/admin/users-backend", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

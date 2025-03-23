@@ -36,7 +36,8 @@ export default function UserTable() {
     setError(null);
 
     try {
-      const response = await fetch("/api/admin/clerk/users");
+      // 새로운 API 엔드포인트 사용
+      const response = await fetch("/api/admin/users-backend");
       
       if (!response.ok) {
         throw new Error("사용자 목록을 가져오는데 실패했습니다.");
@@ -75,7 +76,8 @@ export default function UserTable() {
     setIsDeleting(userId);
 
     try {
-      const response = await fetch(`/api/admin/clerk/users?id=${userId}`, {
+      // 새로운 API 엔드포인트 사용
+      const response = await fetch(`/api/admin/users-backend?id=${userId}`, {
         method: "DELETE",
       });
 

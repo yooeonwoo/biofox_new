@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { clerkClient } from "@clerk/nextjs/server";
+import { Clerk } from "@clerk/nextjs/server";
 import { supabase } from "@/db/utils";
 
 export async function POST(req: NextRequest) {
@@ -34,11 +34,12 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      // Clerk API를 사용하여 사용자 생성
-      const password = Math.random().toString(36).substring(2, 10); // 임의 비밀번호 생성
+      // 임의 비밀번호 생성
+      const password = Math.random().toString(36).substring(2, 10);
       
       // Clerk API를 사용하여 사용자 생성
-      const newUser = await clerkClient.users.createUser({
+      const clerk = Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
+      const newUser = await clerk.users.createUser({
         emailAddress: [email],
         firstName,
         lastName: lastName || "",
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       if (userError) {
         console.error("Supabase 사용자 저장 실패:", userError);
         // Clerk에서 생성된 사용자 롤백 (에러 복구)
-        await clerkClient.users.deleteUser(newUser.id);
+        await clerk.users.deleteUser(newUser.id);
         throw new Error("데이터베이스에 사용자 정보를 저장하는 중 오류가 발생했습니다.");
       }
 
