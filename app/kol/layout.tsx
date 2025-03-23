@@ -20,7 +20,7 @@ export default async function KolLayout({
   // 권한 확인 - 관리자면 관리자 페이지로 리다이렉트
   const role = user?.publicMetadata?.role as string;
   if (role === "본사관리자") {
-    redirect("/admin/dashboard");
+    redirect("/admin");
   }
   
   return (

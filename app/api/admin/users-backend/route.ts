@@ -23,14 +23,24 @@ export async function POST(req: NextRequest) {
     }
 
     // 요청 본문 파싱
-    const { email, firstName, lastName, role } = await req.json();
+    const { email, name, role, kolData } = await req.json();
 
     // 필수 필드 검증
-    if (!email || !firstName || !role) {
+    if (!email || !role) {
       return NextResponse.json(
-        { error: "email, firstName, role 필드는 필수입니다." },
+        { error: "email, role 필드는 필수입니다." },
         { status: 400 }
       );
+    }
+
+    // KOL 역할일 경우 추가 데이터 검증
+    if (role === "kol") {
+      if (!kolData || !kolData.name || !kolData.shopName || !kolData.region) {
+        return NextResponse.json(
+          { error: "KOL 역할을 선택한 경우 원장님 성함, 샵 명, 지역은 필수입니다." },
+          { status: 400 }
+        );
+      }
     }
 
     try {
@@ -49,8 +59,8 @@ export async function POST(req: NextRequest) {
         headers,
         body: JSON.stringify({
           email_address: [email],
-          first_name: firstName,
-          last_name: lastName || "",
+          first_name: role === "kol" ? kolData.name : name || email.split('@')[0],
+          last_name: "",
           password,
           public_metadata: { role }
         })
@@ -68,8 +78,9 @@ export async function POST(req: NextRequest) {
         .from('users')
         .insert([
           { 
-            clerkId: newUser.id,
+            clerk_id: newUser.id,
             email: email,
+            name: role === "kol" ? kolData.name : name || email.split('@')[0],
             role: role,
           }
         ])
@@ -87,14 +98,58 @@ export async function POST(req: NextRequest) {
         throw new Error("데이터베이스에 사용자 정보를 저장하는 중 오류가 발생했습니다.");
       }
 
+      // KOL 역할인 경우 추가 정보 저장
+      if (role === "kol" && userData && userData.length > 0) {
+        const userId = userData[0].id;
+        
+        // 기존 KOL 테이블에서 최대 ID 조회
+        const { data: maxIdResult } = await supabase
+          .from('kols')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1);
+        
+        // 최대 ID에 1을 더한 값 사용 (없으면 1 사용)
+        const nextId = maxIdResult && maxIdResult.length > 0 ? maxIdResult[0].id + 1 : 1;
+        
+        const { data: insertedKolData, error: kolError } = await supabase
+          .from('kols')
+          .insert([
+            {
+              id: nextId, // 명시적으로 ID 지정
+              user_id: userId,
+              name: kolData.name,
+              shop_name: kolData.shopName,
+              region: kolData.region,
+              smart_place_link: kolData.smartPlaceLink || "",
+              status: "active"
+            }
+          ])
+          .select();
+
+        if (kolError) {
+          console.error("Supabase KOL 정보 저장 실패:", kolError);
+          
+          // KOL 정보 저장 실패 시 사용자 정보도 롤백
+          await supabase.from('users').delete().eq('id', userId);
+          
+          // Clerk에서 생성된 사용자 롤백 (에러 복구)
+          await fetch(`https://api.clerk.com/v1/users/${newUser.id}`, {
+            method: 'DELETE',
+            headers
+          });
+          
+          throw new Error("데이터베이스에 KOL 정보를 저장하는 중 오류가 발생했습니다.");
+        }
+      }
+
       // 응답
       return NextResponse.json({ 
         success: true, 
         user: {
           id: newUser.id,
           email,
-          firstName,
-          lastName,
+          name: role === "kol" ? kolData.name : name,
           role
         }
       }, { status: 201 });
@@ -148,17 +203,31 @@ export async function GET(req: NextRequest) {
     }
 
     const clerkUsers = await clerkResponse.json();
-
+    
+    // API 응답 디버깅
+    console.log("Clerk API 응답 구조:", JSON.stringify(clerkUsers, null, 2));
+    
+    // 응답이 예상한 구조가 아닐 경우를 안전하게 처리
+    let usersArray: any[] = [];
+    
+    // 응답이 배열인 경우
+    if (Array.isArray(clerkUsers)) {
+      usersArray = clerkUsers;
+    } 
+    // 응답이 객체이고 data 프로퍼티가 배열인 경우
+    else if (clerkUsers && typeof clerkUsers === 'object' && 'data' in clerkUsers && Array.isArray(clerkUsers.data)) {
+      usersArray = clerkUsers.data;
+    }
+    
     // 필요한 정보만 추출하여 반환
-    const users = clerkUsers.data.map((user: any) => ({
+    const users = usersArray.map((user: any) => ({
       id: user.id,
-      email: user.email_addresses[0]?.email_address || "",
-      firstName: user.first_name || "",
-      lastName: user.last_name || "",
+      email: user.email_addresses?.[0]?.email_address || "",
+      name: user.first_name || "",
       role: (user.public_metadata?.role as string) || "kol",
       createdAt: user.created_at || new Date().toISOString(),
     }));
-
+    
     return NextResponse.json({ users });
   } catch (error) {
     console.error("사용자 목록 조회 실패:", error);
@@ -217,7 +286,7 @@ export async function DELETE(req: NextRequest) {
     const { error: supabaseError } = await supabase
       .from('users')
       .delete()
-      .eq('clerkId', id);
+      .eq('clerk_id', id);
 
     if (supabaseError) {
       console.error("Supabase 사용자 삭제 실패:", supabaseError);

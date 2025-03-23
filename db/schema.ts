@@ -1,10 +1,12 @@
-import { pgTable, serial, varchar, timestamp, integer, boolean, foreignKey, text, relations } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, boolean, foreignKey, text } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 // 사용자 테이블
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   clerkId: varchar("clerk_id", { length: 255 }).notNull().unique(),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }),
   role: varchar("role", { length: 50 }).notNull().default("kol"), // 본사관리자, kol
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
@@ -25,13 +27,8 @@ export const kols = pgTable("kols", {
   userId: integer("user_id").references(() => users.id).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   shopName: varchar("shop_name", { length: 255 }).notNull(),
-  phone: varchar("phone", { length: 100 }),
-  address: varchar("address", { length: 500 }),
-  profileImage: varchar("profile_image", { length: 500 }),
-  description: text("description"),
-  bankName: varchar("bank_name", { length: 100 }),
-  accountNumber: varchar("account_number", { length: 100 }),
-  accountHolder: varchar("account_holder", { length: 100 }),
+  region: varchar("region", { length: 100 }),
+  smartPlaceLink: varchar("smart_place_link", { length: 500 }),
   status: varchar("status", { length: 50 }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
@@ -50,15 +47,10 @@ export const kolsRelations = relations(kols, ({ one, many }) => ({
 // 전문점 테이블
 export const shops = pgTable("shops", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  ownerName: varchar("owner_name", { length: 255 }).notNull(),
   kolId: integer("kol_id").references(() => kols.id).notNull(),
-  address: varchar("address", { length: 500 }).notNull(),
-  phone: varchar("phone", { length: 100 }),
-  businessNumber: varchar("business_number", { length: 100 }),
-  description: text("description"),
-  image: varchar("image", { length: 500 }),
-  operatingHours: varchar("operating_hours", { length: 255 }),
+  ownerName: varchar("owner_name", { length: 255 }).notNull(),
+  region: varchar("region", { length: 100 }),
+  smartPlaceLink: varchar("smart_place_link", { length: 500 }),
   status: varchar("status", { length: 50 }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
@@ -166,15 +158,6 @@ export const commissionsRelations = relations(commissions, ({ one }) => ({
     references: [orders.id],
   }),
 }));
-
-// 화이트리스트 이메일 테이블
-export const whitelistedEmails = pgTable("whitelisted_emails", {
-  id: serial("id").primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  role: varchar("role", { length: 50 }).notNull().default("kol"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
 
 // 알림 테이블
 export const notifications = pgTable("notifications", {

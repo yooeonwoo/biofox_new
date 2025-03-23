@@ -8,6 +8,10 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Supabase Admin 클라이언트 설정
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
 /**
  * 사용자 정보를 DB에 저장합니다.
  * @param clerkId Clerk 사용자 ID
@@ -21,7 +25,7 @@ export async function saveUserToDB(clerkId: string, email: string, role: string)
       .from('users')
       .insert([
         { 
-          clerkId,
+          clerk_id: clerkId,
           email,
           role,
         }
@@ -50,7 +54,7 @@ export async function deleteUserFromDB(clerkId: string) {
     const { error } = await supabase
       .from('users')
       .delete()
-      .eq('clerkId', clerkId);
+      .eq('clerk_id', clerkId);
 
     if (error) {
       console.error('사용자 삭제 오류:', error);
@@ -74,7 +78,7 @@ export async function getUserByClerkId(clerkId: string) {
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('clerkId', clerkId)
+      .eq('clerk_id', clerkId)
       .single();
 
     if (error) {

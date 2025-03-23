@@ -51,27 +51,25 @@ export default function Sidebar({ role, isMobileOpen, onCloseMobile }: SidebarPr
   const adminMenuItems: MenuItem[] = [
     { 
       label: "대시보드", 
-      href: "/admin/dashboard", 
+      href: "/admin", 
       icon: <LayoutDashboard size={18} /> 
     },
     { 
       label: "사용자 관리", 
-      href: "/admin/dashboard/user-management", 
+      href: "/admin/user-management", 
       icon: <Users size={18} />,
       isGroup: true,
       subItems: [
-        { label: "모든 사용자", href: "/admin/dashboard/user-management" },
-        { label: "승인 대기", href: "/admin/dashboard/user-management/pending" }
+        { label: "모든 사용자", href: "/admin/user-management" }
       ]
     },
     { 
       label: "KOL 관리", 
-      href: "/admin/dashboard/kols", 
+      href: "/admin/kols", 
       icon: <BadgeCheck size={18} />,
       isGroup: true,
       subItems: [
-        { label: "모든 KOL", href: "/admin/dashboard/kols" },
-        { label: "등급별 관리", href: "/admin/dashboard/kols/levels" }
+        { label: "모든 KOL", href: "/admin/kols" }
       ]
     },
     { 
@@ -83,12 +81,7 @@ export default function Sidebar({ role, isMobileOpen, onCloseMobile }: SidebarPr
       label: "매출 관리", 
       href: "/admin/sales", 
       icon: <DollarSign size={18} /> 
-    },
-    { 
-      label: "화이트리스트", 
-      href: "/admin/dashboard/whitelist", 
-      icon: <Shield size={18} /> 
-    },
+    }
   ];
 
   // KOL 메뉴
@@ -152,7 +145,7 @@ export default function Sidebar({ role, isMobileOpen, onCloseMobile }: SidebarPr
     },
     {
       label: '대시보드',
-      url: '/admin/dashboard',
+      url: '/admin',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
           <rect width="7" height="9" x="3" y="3" rx="1" />
@@ -161,11 +154,11 @@ export default function Sidebar({ role, isMobileOpen, onCloseMobile }: SidebarPr
           <rect width="7" height="5" x="3" y="16" rx="1" />
         </svg>
       ),
-      isActive: pathname === '/admin/dashboard',
+      isActive: pathname === '/admin',
     },
     {
       label: '사용자 관리',
-      url: '/admin/dashboard/user-management',
+      url: '/admin/user-management',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -174,11 +167,11 @@ export default function Sidebar({ role, isMobileOpen, onCloseMobile }: SidebarPr
           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       ),
-      isActive: pathname === '/admin/dashboard/user-management',
+      isActive: pathname === '/admin/user-management',
     },
     {
       label: 'KOL 관리',
-      url: '/admin/dashboard/kol-management',
+      url: '/admin/kols',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -187,7 +180,7 @@ export default function Sidebar({ role, isMobileOpen, onCloseMobile }: SidebarPr
           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       ),
-      isActive: pathname === '/admin/dashboard/kol-management',
+      isActive: pathname === '/admin/kols',
     },
     {
       label: '전문점 관리',
@@ -211,20 +204,7 @@ export default function Sidebar({ role, isMobileOpen, onCloseMobile }: SidebarPr
         </svg>
       ),
       isActive: pathname === '/admin/sales',
-    },
-    {
-      label: '화이트리스트',
-      url: '/admin/dashboard/whitelist',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <path d="M14 2v6h6" />
-          <path d="M9 15h6" />
-          <path d="M9 11h6" />
-        </svg>
-      ),
-      isActive: pathname === '/admin/dashboard/whitelist',
-    },
+    }
   ];
 
   const renderMenuItems = () => {

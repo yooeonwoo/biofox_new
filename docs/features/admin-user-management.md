@@ -27,9 +27,9 @@
 
 ### 컴포넌트 구조
 
-- `app/admin/dashboard/user-management/page.tsx`: 사용자 관리 페이지
-- `app/admin/dashboard/user-management/components/UserForm.tsx`: 사용자 등록 폼 컴포넌트
-- `app/admin/dashboard/user-management/components/UserTable.tsx`: 사용자 목록 테이블 컴포넌트
+- `app/admin/user-management/page.tsx`: 사용자 관리 페이지
+- `app/admin/user-management/components/UserForm.tsx`: 사용자 등록 폼 컴포넌트
+- `app/admin/user-management/components/UserTable.tsx`: 사용자 목록 테이블 컴포넌트
 
 ### API 구조
 

@@ -20,8 +20,7 @@
 5. orders - 주문 정보
 6. orderItems - 주문 상세 항목
 7. commissions - 수당 정보
-8. whitelistedEmails - 화이트리스트 이메일
-9. notifications - 알림 정보
+8. notifications - 알림 정보
 
 ## 목업 데이터
 
@@ -46,7 +45,6 @@
 - orders
 - order_items
 - commissions
-- whitelisted_emails
 - notifications
 
 ## 테이블 관계

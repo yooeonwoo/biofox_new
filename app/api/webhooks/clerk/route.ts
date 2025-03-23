@@ -4,10 +4,10 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(req: Request) {
-  const headerPayload = headers();
-  const svix_id = headerPayload.get('svix-id');
-  const svix_timestamp = headerPayload.get('svix-timestamp');
-  const svix_signature = headerPayload.get('svix-signature');
+  const headersList = headers();
+  const svix_id = headersList.get('svix-id');
+  const svix_timestamp = headersList.get('svix-timestamp');
+  const svix_signature = headersList.get('svix-signature');
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
     return new Response('Error: Missing svix headers', { status: 400 });
@@ -42,31 +42,30 @@ export async function POST(req: Request) {
   
   if (type === 'user.created') {
     try {
-      // 화이트리스트 확인
-      const { data: whitelistedEmail, error: whitelistError } = await supabase
-        .from('whitelisted_emails')
+      // users 테이블에서 이메일 확인
+      const { data: userData, error: userError } = await supabase
+        .from('users')
         .select('email, role')
         .eq('email', data.email_addresses[0].email_address)
         .single();
 
-      if (whitelistError || !whitelistedEmail) {
-        console.log('화이트리스트에 없는 이메일:', data.email_addresses[0].email_address);
-        // 화이트리스트에 없는 경우 처리
-        return NextResponse.json({ message: 'Email not in whitelist' });
+      if (userError || !userData) {
+        console.log('등록되지 않은 이메일:', data.email_addresses[0].email_address);
+        // 등록되지 않은 이메일인 경우 처리
+        return NextResponse.json({ message: 'Email not approved' });
       }
 
-      // Supabase에 사용자 생성
-      const { error: userError } = await supabase
+      // Supabase에 사용자 정보 업데이트
+      const { error: updateError } = await supabase
         .from('users')
-        .insert({
+        .update({
           clerk_id: data.id,
-          email: data.email_addresses[0].email_address,
-          role: whitelistedEmail.role || 'kol',
-        });
+        })
+        .eq('email', data.email_addresses[0].email_address);
 
-      if (userError) {
-        console.error('Supabase 사용자 생성 오류:', userError);
-        return NextResponse.json({ error: userError.message }, { status: 500 });
+      if (updateError) {
+        console.error('Supabase 사용자 업데이트 오류:', updateError);
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
       }
 
       // Clerk 사용자 메타데이터 업데이트
@@ -81,12 +80,12 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           public_metadata: {
-            role: whitelistedEmail.role || 'kol',
+            role: userData.role || 'kol',
           },
         }),
       });
       
-      console.log('사용자 생성 완료:', data.id, data.email_addresses[0].email_address);
+      console.log('사용자 등록 완료:', data.id, data.email_addresses[0].email_address);
       return NextResponse.json({ success: true, message: 'User created and metadata updated' });
     } catch (error) {
       console.error('웹훅 처리 오류:', error);

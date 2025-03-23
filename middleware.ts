@@ -45,7 +45,7 @@ export default clerkMiddleware(async (auth, req) => {
     if (userRole === "본사관리자") {
       console.log("관리자로 리다이렉트");
       // 테스트 페이지 A: 관리자 대시보드
-      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+      return NextResponse.redirect(new URL("/admin", req.url));
     } else if (userRole === "kol") {
       console.log("KOL로 리다이렉트");
       // 테스트 페이지 B: KOL 대시보드

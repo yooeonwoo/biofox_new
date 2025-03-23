@@ -147,15 +147,14 @@ async function main() {
   
   // 2. 테이블 생성
   const tables = [
-    { name: 'users', file: 'create_users_table.sql', description: 'Users 테이블' },
-    { name: 'whitelisted_emails', file: 'create_whitelist_table.sql', description: 'Whitelist 테이블' },
-    { name: 'kols', file: 'create_kols_table.sql', description: 'KOLs 테이블' },
-    { name: 'shops', file: 'create_shops_table.sql', description: 'Shops 테이블' },
-    { name: 'products', file: 'create_products_table.sql', description: 'Products 테이블' },
-    { name: 'orders', file: 'create_orders_table.sql', description: 'Orders 테이블' },
-    { name: 'order_items', file: 'create_order_items_table.sql', description: 'Order Items 테이블' },
-    { name: 'commissions', file: 'create_commissions_table.sql', description: 'Commissions 테이블' },
-    { name: 'notifications', file: 'create_notifications_table.sql', description: 'Notifications 테이블' }
+    { name: 'users', file: 'create_users_table.sql', description: '사용자 테이블' },
+    { name: 'kols', file: 'create_kols_table.sql', description: 'KOL 테이블' },
+    { name: 'shops', file: 'create_shops_table.sql', description: '전문점 테이블' },
+    { name: 'products', file: 'create_products_table.sql', description: '제품 테이블' },
+    { name: 'orders', file: 'create_orders_table.sql', description: '주문 테이블' },
+    { name: 'order_items', file: 'create_order_items_table.sql', description: '주문 상세 테이블' },
+    { name: 'commissions', file: 'create_commissions_table.sql', description: '수당 테이블' },
+    { name: 'notifications', file: 'create_notifications_table.sql', description: '알림 테이블' },
   ];
   
   for (const table of tables) {

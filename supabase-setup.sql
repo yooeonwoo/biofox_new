@@ -145,22 +145,6 @@ VALUES
 (2, 2, 35000, TRUE, NOW() - INTERVAL '3 days', '5월 수당 정산 완료'),
 (3, 3, 138500, FALSE, NULL, NULL);
 
--- 8. whitelistedEmails 테이블 생성
-CREATE TABLE IF NOT EXISTS "whitelisted_emails" (
-  "id" SERIAL PRIMARY KEY,
-  "email" VARCHAR(255) NOT NULL UNIQUE,
-  "role" VARCHAR(50) NOT NULL DEFAULT 'kol',
-  "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-  "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
-);
-
--- whitelistedEmails 목업 데이터 삽입
-INSERT INTO "whitelisted_emails" ("email", "role")
-VALUES
-('admin@biofox.kr', 'admin'),
-('kol1@biofox.kr', 'kol'),
-('kol2@biofox.kr', 'kol');
-
 -- 9. notifications 테이블 생성
 CREATE TABLE IF NOT EXISTS "notifications" (
   "id" SERIAL PRIMARY KEY,

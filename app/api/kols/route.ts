@@ -1,7 +1,5 @@
-import { db } from "@/db";
-import { kols, users } from "@/db/schema";
+import { supabase } from "@/lib/supabase";
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export interface IKol {
@@ -22,31 +20,31 @@ export interface IKol {
 // KOL 목록 조회
 export async function GET(req: NextRequest) {
   try {
-    const { userId, orgRole } = await auth();
+    const { userId } = await auth();
 
     // 인증 확인
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 관리자 권한 확인
-    if (orgRole !== "본사관리자") {
-      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+    console.log("KOL 목록 조회 API 호출됨, 유저 ID:", userId);
+
+    // Supabase에서 KOL 목록 조회
+    const { data: kols, error } = await supabase
+      .from('kols')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Supabase 조회 오류:", error);
+      return NextResponse.json(
+        { error: "KOL 목록을 조회하는 중 오류가 발생했습니다" },
+        { status: 500 }
+      );
     }
 
-    // KOL 목록 조회
-    const kolList = await db.query.kols.findMany({
-      orderBy: (kols, { desc }) => [desc(kols.createdAt)],
-      with: {
-        user: {
-          columns: {
-            email: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(kolList);
+    console.log("KOL 목록 조회 성공, 항목 수:", kols?.length || 0);
+    return NextResponse.json(kols || []);
   } catch (error) {
     console.error("KOL 목록 조회 오류:", error);
     return NextResponse.json(
@@ -59,16 +57,11 @@ export async function GET(req: NextRequest) {
 // KOL 등록
 export async function POST(req: NextRequest) {
   try {
-    const { userId, orgRole } = await auth();
+    const { userId } = await auth();
 
     // 인증 확인
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // 관리자 권한 확인
-    if (orgRole !== "본사관리자") {
-      return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
     const data = await req.json();
@@ -82,10 +75,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 사용자 ID 확인
-    const user = await db.query.users.findFirst({
-      where: eq(users.clerkId, data.clerkId),
-    });
+    // Supabase에 KOL 등록
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('clerk_id', userId)
+      .single();
 
     if (!user) {
       return NextResponse.json(
@@ -94,22 +89,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // KOL 생성
-    const newKol = await db.insert(kols).values({
-      userId: user.id,
-      name,
-      shopName,
-      phone,
-      address,
-      profileImage,
-      description,
-      bankName,
-      accountNumber,
-      accountHolder,
-      status: "active",
-    }).returning();
+    const { data: newKol, error } = await supabase
+      .from('kols')
+      .insert({
+        user_id: user.id,
+        name,
+        shop_name: shopName,
+        phone: phone || "",
+        address: address || "",
+        profile_image: profileImage || "",
+        description: description || "",
+        bank_name: bankName || "",
+        account_number: accountNumber || "",
+        account_holder: accountHolder || "",
+        status: "active",
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(newKol[0], { status: 201 });
+    if (error) {
+      console.error("Supabase 등록 오류:", error);
+      return NextResponse.json(
+        { error: "KOL을 등록하는 중 오류가 발생했습니다" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(newKol, { status: 201 });
   } catch (error) {
     console.error("KOL 등록 오류:", error);
     return NextResponse.json(

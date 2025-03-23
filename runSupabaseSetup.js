@@ -32,7 +32,7 @@ try {
   console.log('4. 실행 버튼 클릭');
   
   console.log('\n완료 후 테이블 에디터에서 다음 테이블이 생성되었는지 확인:');
-  console.log('users, kols, shops, products, orders, order_items, commissions, whitelisted_emails, notifications');
+  console.log('users, kols, shops, products, orders, order_items, commissions, notifications');
 } catch (error) {
   console.error('오류 발생:', error);
   process.exit(1);

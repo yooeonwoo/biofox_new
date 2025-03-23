@@ -9,19 +9,6 @@ export const metadata = {
 export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-biofox-purple">관리자 대시보드</h1>
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-gray-600 hover:text-biofox-purple">
-              홈
-            </Link>
-            <UserButton afterSignOutUrl="/" />
-          </div>
-        </div>
-      </header>
-
       {/* 메인 콘텐츠 */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="card-gradient p-6 mb-8">
@@ -35,17 +22,17 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-2">KOL 관리</h3>
             <p className="text-gray-600 mb-4">등록된 KOL 현황 및 관리 기능</p>
-            <button className="btn-primary w-full">KOL 목록 보기</button>
+            <Link href="/admin/kols" className="btn-primary w-full block text-center">KOL 목록 보기</Link>
           </div>
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-2">전문점 관리</h3>
             <p className="text-gray-600 mb-4">전문점 정보 및 업데이트 관리</p>
-            <button className="btn-primary w-full">전문점 관리</button>
+            <Link href="/admin/stores" className="btn-primary w-full block text-center">전문점 관리</Link>
           </div>
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-2">통계 분석</h3>
             <p className="text-gray-600 mb-4">판매 실적 및 통계 데이터</p>
-            <button className="btn-primary w-full">통계 보기</button>
+            <Link href="/admin/sales" className="btn-primary w-full block text-center">통계 보기</Link>
           </div>
         </div>
       </main>

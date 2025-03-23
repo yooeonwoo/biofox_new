@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 // 클래스 이름 병합을 위한 유틸리티 함수
 function cn(...classes: string[]) {
@@ -24,15 +25,23 @@ export interface IKOL {
 // 전문점 타입 정의 (KOL 정보 추가)
 export interface ISpecialtyStore {
   id: string;
-  name: string;
-  address: string;
-  phone: string;
-  ownerName: string;
-  status: "active" | "inactive";
-  businessNumber?: string;
-  description?: string;
   kolId: string; // KOL ID 추가
   kolName: string; // KOL 이름 추가 (화면 표시용)
+  ownerName: string;
+  region: string;
+  smartPlaceLink: string;
+  status: "active" | "inactive";
+}
+
+// 편집용 타입 정의
+interface ISpecialtyStoreEditData {
+  id?: string;
+  kolId: string;
+  kolName: string;
+  ownerName: string;
+  region: string;
+  smartPlaceLink: string;
+  status: "active" | "inactive";
 }
 
 interface ISpecialtyStoreManagementProps {
@@ -62,16 +71,13 @@ export function SpecialtyStoreManagement({
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = React.useState(false);
   const [currentStore, setCurrentStore] = React.useState<ISpecialtyStore | null>(null);
-  const [formData, setFormData] = React.useState<Omit<ISpecialtyStore, "id">>({
-    name: "",
-    address: "",
-    phone: "",
-    ownerName: "",
-    status: "active",
-    businessNumber: "",
-    description: "",
+  const [formData, setFormData] = React.useState<ISpecialtyStoreEditData>({
     kolId: "",
     kolName: "",
+    ownerName: "",
+    region: "",
+    smartPlaceLink: "",
+    status: "active",
   });
   const [processing, setProcessing] = React.useState(false);
 
@@ -83,9 +89,8 @@ export function SpecialtyStoreManagement({
   // 검색 기능
   const filteredStores = React.useMemo(() => {
     return stores.filter((store) =>
-      (store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      store.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      store.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (store.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      store.region.toLowerCase().includes(searchQuery.toLowerCase()) ||
       store.kolName.toLowerCase().includes(searchQuery.toLowerCase())) && 
       (selectedKolId && selectedKolId !== "all" ? store.kolId === selectedKolId : true)
     );
@@ -123,18 +128,18 @@ export function SpecialtyStoreManagement({
   const handleAddStore = () => {
     if (!isAdmin) return;
     
+    const defaultKol = selectedKolId !== "all" && selectedKolId !== "unassigned" 
+      ? kols.find(k => k.id === selectedKolId) 
+      : null;
+      
     setCurrentStore(null);
     setFormData({
-      name: "",
-      address: "",
-      phone: "",
+      kolId: defaultKol?.id || "",
+      kolName: defaultKol?.name || "",
       ownerName: "",
+      region: "",
+      smartPlaceLink: "",
       status: "active",
-      businessNumber: "",
-      description: "",
-      kolId: selectedKolId !== "all" && selectedKolId !== "unassigned" ? selectedKolId : "",
-      kolName: selectedKolId !== "all" && selectedKolId !== "unassigned" ? 
-        kols.find(kol => kol.id === selectedKolId)?.name || "" : "",
     });
     setIsDialogOpen(true);
   };
@@ -143,19 +148,16 @@ export function SpecialtyStoreManagement({
   const handleAddStoreToKol = (kolId: string) => {
     if (!isAdmin) return;
     
-    const selectedKol = kols.find(kol => kol.id === kolId);
+    const selectedKol = kols.find(k => k.id === kolId);
     
     setCurrentStore(null);
     setFormData({
-      name: "",
-      address: "",
-      phone: "",
-      ownerName: "",
-      status: "active",
-      businessNumber: "",
-      description: "",
       kolId: kolId,
       kolName: selectedKol?.name || "",
+      ownerName: "",
+      region: "",
+      smartPlaceLink: "",
+      status: "active",
     });
     setIsDialogOpen(true);
   };
@@ -172,15 +174,13 @@ export function SpecialtyStoreManagement({
     
     setCurrentStore(store);
     setFormData({
-      name: store.name,
-      address: store.address,
-      phone: store.phone,
-      ownerName: store.ownerName,
-      status: store.status,
-      businessNumber: store.businessNumber || "",
-      description: store.description || "",
+      id: store.id,
       kolId: store.kolId,
       kolName: store.kolName,
+      ownerName: store.ownerName,
+      region: store.region,
+      smartPlaceLink: store.smartPlaceLink || "",
+      status: store.status,
     });
     setIsDialogOpen(true);
   };
@@ -290,77 +290,48 @@ export function SpecialtyStoreManagement({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>이름</TableHead>
-          <TableHead>주소</TableHead>
-          <TableHead>연락처</TableHead>
-          <TableHead>대표자</TableHead>
+          <TableHead>소속 KOL</TableHead>
+          <TableHead>원장님 이름</TableHead>
+          <TableHead>지역</TableHead>
           <TableHead>상태</TableHead>
-          <TableHead className="w-[100px]">관리</TableHead>
+          <TableHead className="text-right">관리</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {stores.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="h-24 text-center">
+            <TableCell colSpan={5} className="h-24 text-center">
               등록된 전문점이 없습니다.
             </TableCell>
           </TableRow>
         ) : (
           stores.map((store) => (
             <TableRow key={store.id}>
-              <TableCell className="font-medium">{store.name}</TableCell>
-              <TableCell>{store.address}</TableCell>
-              <TableCell>{store.phone}</TableCell>
+              <TableCell className="font-medium">{store.kolName}</TableCell>
               <TableCell>{store.ownerName}</TableCell>
+              <TableCell>{store.region}</TableCell>
               <TableCell>
-                <span
-                  className={cn(
-                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                    store.status === "active"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                  )}
-                >
+                <Badge variant={store.status === "active" ? "default" : "secondary"}>
                   {store.status === "active" ? "활성" : "비활성"}
-                </span>
+                </Badge>
               </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
+              <TableCell className="text-right">
+                <div className="flex justify-end space-x-2">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleViewStore(store)}
-                    title="상세 보기"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEditStore(store)}
                   >
-                    <Eye className="h-4 w-4" />
-                    <span className="sr-only">상세 보기</span>
+                    <Edit className="h-4 w-4" />
                   </Button>
-                  
-                  {isAdmin && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditStore(store)}
-                        disabled={processing}
-                        title="수정"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">수정</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteStore(store.id)}
-                        disabled={processing}
-                        title="삭제"
-                        className="text-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">삭제</span>
-                      </Button>
-                    </>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-500"
+                    onClick={() => handleDeleteStore(store.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
@@ -471,9 +442,9 @@ export function SpecialtyStoreManagement({
                 ? searchQuery ? filteredStores : stores
                 : selectedKolId === "unassigned"
                   ? unassignedStores.filter(store => 
-                      store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      store.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      store.ownerName.toLowerCase().includes(searchQuery.toLowerCase())
+                      store.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      store.region.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      store.kolName.toLowerCase().includes(searchQuery.toLowerCase())
                     )
                   : filteredStores
             } 
@@ -490,32 +461,32 @@ export function SpecialtyStoreManagement({
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-medium">이름</Label>
-                <div className="col-span-3">{currentStore.name}</div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right font-medium">소속 KOL</Label>
                 <div className="col-span-3">{currentStore.kolName || "미지정"}</div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-medium">주소</Label>
-                <div className="col-span-3">{currentStore.address}</div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-medium">연락처</Label>
-                <div className="col-span-3">{currentStore.phone}</div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-medium">대표자</Label>
+                <Label className="text-right font-medium">원장님 이름</Label>
                 <div className="col-span-3">{currentStore.ownerName}</div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-medium">사업자번호</Label>
-                <div className="col-span-3">{currentStore.businessNumber || "-"}</div>
+                <Label className="text-right font-medium">지역</Label>
+                <div className="col-span-3">{currentStore.region}</div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-medium">설명</Label>
-                <div className="col-span-3">{currentStore.description || "-"}</div>
+                <Label className="text-right font-medium">스마트플레이스 링크</Label>
+                <div className="col-span-3">
+                  {currentStore.smartPlaceLink ? (
+                    <a 
+                      href={currentStore.smartPlaceLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex items-center gap-1"
+                    >
+                      <Eye className="h-4 w-4" />
+                      링크 바로가기
+                    </a>
+                  ) : "-"}
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right font-medium">상태</Label>
@@ -546,126 +517,72 @@ export function SpecialtyStoreManagement({
                 {currentStore ? "전문점 정보 수정" : "새 전문점 추가"}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="kolId" className="text-right">
-                    소속 KOL
-                  </Label>
-                  <div className="col-span-3">
-                    <Select 
-                      value={formData.kolId} 
-                      onValueChange={handleKolChange}
-                      required
-                    >
-                      <SelectTrigger id="kolId">
-                        <SelectValue placeholder="KOL을 선택하세요" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {kols.map((kol) => (
-                          <SelectItem key={kol.id} value={kol.id}>{kol.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* KOL 선택 필드 */}
+                <div className="space-y-2">
+                  <Label htmlFor="kolId">소속 KOL</Label>
+                  <Select
+                    onValueChange={handleKolChange}
+                    value={formData.kolId}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="KOL을 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kols.map((kol) => (
+                        <SelectItem key={kol.id} value={kol.id}>
+                          {kol.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    이름
-                  </Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="address" className="text-right">
-                    주소
-                  </Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="phone" className="text-right">
-                    연락처
-                  </Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="ownerName" className="text-right">
-                    대표자명
-                  </Label>
+
+                {/* 원장님 이름 필드 */}
+                <div className="space-y-2">
+                  <Label htmlFor="ownerName">원장님 이름</Label>
                   <Input
                     id="ownerName"
                     name="ownerName"
                     value={formData.ownerName}
                     onChange={handleInputChange}
-                    className="col-span-3"
+                    placeholder="원장님 이름을 입력하세요"
                     required
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="businessNumber" className="text-right">
-                    사업자번호
-                  </Label>
+
+                {/* 지역 필드 */}
+                <div className="space-y-2">
+                  <Label htmlFor="region">지역</Label>
                   <Input
-                    id="businessNumber"
-                    name="businessNumber"
-                    value={formData.businessNumber}
+                    id="region"
+                    name="region"
+                    value={formData.region}
                     onChange={handleInputChange}
-                    className="col-span-3"
+                    placeholder="지역을 입력하세요"
+                    required
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">
-                    설명
-                  </Label>
+
+                {/* 스마트플레이스 링크 필드 */}
+                <div className="space-y-2">
+                  <Label htmlFor="smartPlaceLink">스마트플레이스 링크</Label>
                   <Input
-                    id="description"
-                    name="description"
-                    value={formData.description}
+                    id="smartPlaceLink"
+                    name="smartPlaceLink"
+                    value={formData.smartPlaceLink}
                     onChange={handleInputChange}
-                    className="col-span-3"
+                    placeholder="스마트플레이스 링크를 입력하세요"
                   />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="status" className="text-right">
-                    상태
-                  </Label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleStatusChange}
-                    className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="active">활성</option>
-                    <option value="inactive">비활성</option>
-                  </select>
                 </div>
               </div>
-              <DialogFooter>
+
+              <div className="flex justify-end space-x-2 mt-4">
                 <Button type="submit" disabled={processing}>
-                  {processing ? "처리 중..." : currentStore ? "수정" : "추가"}
+                  {processing ? "처리 중..." : formData.id ? "수정" : "등록"}
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
           </DialogContent>
         </Dialog>

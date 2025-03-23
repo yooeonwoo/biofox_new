@@ -120,12 +120,12 @@ export async function PUT(
     }
 
     const data = await req.json();
-    const { name, ownerName, address, phone, businessNumber, description, image, operatingHours, status, kolId } = data;
+    const { ownerName, region, smartPlaceLink, status, kolId } = data;
 
     // 필수 필드 확인
-    if (!name || !ownerName || !address) {
+    if (!ownerName || !region) {
       return NextResponse.json(
-        { error: "이름, 소유자 이름, 주소는 필수 항목입니다" },
+        { error: "원장님 이름, 지역은 필수 항목입니다" },
         { status: 400 }
       );
     }
@@ -155,15 +155,10 @@ export async function PUT(
     // 전문점 정보 업데이트
     const updatedShop = await db.update(shops)
       .set({
-        name,
-        ownerName,
         kolId: kolId || shopToUpdate.kolId,
-        address,
-        phone,
-        businessNumber,
-        description,
-        image,
-        operatingHours,
+        ownerName,
+        region,
+        smartPlaceLink,
         status: orgRole === "본사관리자" ? status : shopToUpdate.status, // 관리자만 상태 변경 가능
         updatedAt: new Date(),
       })

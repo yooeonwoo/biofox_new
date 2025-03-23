@@ -16,7 +16,6 @@ interface IUser {
   id: string;
   email: string;
   firstName: string;
-  lastName: string;
   role: string;
   createdAt: string;
 }
@@ -181,7 +180,7 @@ export default function UserTable() {
                     {user.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {`${user.firstName} ${user.lastName || ""}`}
+                    {user.firstName}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

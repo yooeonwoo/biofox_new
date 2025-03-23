@@ -6,15 +6,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export interface IShop {
   id?: number;
-  name: string;
-  ownerName: string;
   kolId: number;
-  address: string;
-  phone?: string;
-  businessNumber?: string;
-  description?: string;
-  image?: string;
-  operatingHours?: string;
+  ownerName: string;
+  region: string;
+  smartPlaceLink?: string;
   status?: string;
 }
 
@@ -34,11 +29,7 @@ export async function GET(req: NextRequest) {
       const shopList = await db.query.shops.findMany({
         orderBy: (shops, { desc }) => [desc(shops.createdAt)],
         with: {
-          kol: {
-            columns: {
-              name: true,
-            },
-          },
+          kol: true,
         },
       });
 
@@ -94,12 +85,12 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await req.json();
-    const { name, ownerName, kolId, address, phone, businessNumber, description, image, operatingHours } = data;
+    const { kolId, ownerName, region, smartPlaceLink } = data;
 
     // 필수 필드 확인
-    if (!name || !ownerName || !kolId || !address) {
+    if (!kolId || !ownerName || !region) {
       return NextResponse.json(
-        { error: "이름, 소유자 이름, KOL ID, 주소는 필수 항목입니다" },
+        { error: "KOL ID, 원장님 이름, 지역은 필수 항목입니다" },
         { status: 400 }
       );
     }
@@ -143,15 +134,10 @@ export async function POST(req: NextRequest) {
 
     // 전문점 생성
     const newShop = await db.insert(shops).values({
-      name,
-      ownerName,
       kolId,
-      address,
-      phone,
-      businessNumber,
-      description,
-      image,
-      operatingHours,
+      ownerName,
+      region,
+      smartPlaceLink,
       status: "active",
     }).returning();
 

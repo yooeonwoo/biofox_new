@@ -1,51 +1,60 @@
-import { db } from "@/db";
-import { kols, users } from "@/db/schema";
+import { supabase } from "@/lib/supabase";
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 // 특정 KOL 조회
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const { userId, orgRole } = await auth();
-    const id = parseInt(params.id);
+    const { userId } = await auth();
+    const id = parseInt(context.params.id);
 
     // 인증 확인
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 권한 확인 (관리자 또는 자신의 정보)
-    const userInfo = await db.query.users.findFirst({
-      where: eq(users.clerkId, userId),
-    });
+    // Supabase에서 사용자 정보 조회
+    const { data: userInfo, error: userError } = await supabase
+      .from('users')
+      .select('id, role')
+      .eq('clerk_id', userId)
+      .single();
 
-    if (!userInfo) {
+    if (userError || !userInfo) {
       return NextResponse.json(
         { error: "사용자 정보를 찾을 수 없습니다" },
         { status: 404 }
       );
     }
 
-    const kol = await db.query.kols.findFirst({
-      where: eq(kols.id, id),
-      with: {
-        shops: true,
-      },
-    });
+    // KOL 정보 조회
+    const { data: kol, error: kolError } = await supabase
+      .from('kols')
+      .select(`
+        *,
+        shops:shops(*)
+      `)
+      .eq('id', id)
+      .single();
 
-    if (!kol) {
+    if (kolError || !kol) {
       return NextResponse.json(
         { error: "KOL을 찾을 수 없습니다" },
         { status: 404 }
       );
     }
 
-    // 자신의 정보가 아니고 관리자도 아닌 경우 접근 거부
-    if (kol.userId !== userInfo.id && orgRole !== "본사관리자") {
+    // 관리자인 경우 모든 KOL 정보에 접근 가능
+    // 일반 사용자는 자신의 정보만 접근 가능
+    if (userInfo.role === "본사관리자") {
+      return NextResponse.json(kol);
+    }
+    
+    // 자신의 정보가 아닌 경우 접근 거부
+    if (kol.user_id !== userInfo.id) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
@@ -59,45 +68,36 @@ export async function GET(
   }
 }
 
-// KOL 정보 수정
+// KOL 수정
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const { userId, orgRole } = await auth();
-    const id = parseInt(params.id);
+    const { userId } = await auth();
+    const id = parseInt(context.params.id);
 
     // 인증 확인
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 권한 확인
-    const userInfo = await db.query.users.findFirst({
-      where: eq(users.clerkId, userId),
-    });
+    // 사용자 권한 확인
+    const { data: userInfo, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('clerk_id', userId)
+      .single();
 
-    if (!userInfo) {
+    if (userError || !userInfo) {
       return NextResponse.json(
         { error: "사용자 정보를 찾을 수 없습니다" },
         { status: 404 }
       );
     }
 
-    const kolToUpdate = await db.query.kols.findFirst({
-      where: eq(kols.id, id),
-    });
-
-    if (!kolToUpdate) {
-      return NextResponse.json(
-        { error: "KOL을 찾을 수 없습니다" },
-        { status: 404 }
-      );
-    }
-
-    // 자신의 정보가 아니고 관리자도 아닌 경우 접근 거부
-    if (kolToUpdate.userId !== userInfo.id && orgRole !== "본사관리자") {
+    // 관리자 권한 확인
+    if (userInfo.role !== "본사관리자") {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
@@ -112,29 +112,52 @@ export async function PUT(
       );
     }
 
+    // KOL 존재 확인
+    const { data: existingKol, error: kolError } = await supabase
+      .from('kols')
+      .select('status')
+      .eq('id', id)
+      .single();
+
+    if (kolError || !existingKol) {
+      return NextResponse.json(
+        { error: "KOL을 찾을 수 없습니다" },
+        { status: 404 }
+      );
+    }
+
     // KOL 정보 업데이트
-    const updatedKol = await db.update(kols)
-      .set({
+    const { data: updatedKol, error: updateError } = await supabase
+      .from('kols')
+      .update({
         name,
-        shopName,
+        shop_name: shopName,
         phone,
         address,
-        profileImage,
+        profile_image: profileImage,
         description,
-        bankName,
-        accountNumber,
-        accountHolder,
-        status: orgRole === "본사관리자" ? status : kolToUpdate.status, // 관리자만 상태 변경 가능
-        updatedAt: new Date(),
+        bank_name: bankName,
+        account_number: accountNumber,
+        account_holder: accountHolder,
+        status: status || existingKol.status,
+        updated_at: new Date().toISOString()
       })
-      .where(eq(kols.id, id))
-      .returning();
+      .eq('id', id)
+      .select()
+      .single();
 
-    return NextResponse.json(updatedKol[0]);
+    if (updateError) {
+      return NextResponse.json(
+        { error: "KOL을 수정하는 중 오류가 발생했습니다" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(updatedKol);
   } catch (error) {
-    console.error("KOL 정보 수정 오류:", error);
+    console.error("KOL 수정 오류:", error);
     return NextResponse.json(
-      { error: "KOL 정보를 수정하는 중 오류가 발생했습니다" },
+      { error: "KOL을 수정하는 중 오류가 발생했습니다" },
       { status: 500 }
     );
   }
@@ -143,28 +166,44 @@ export async function PUT(
 // KOL 삭제
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const { userId, orgRole } = await auth();
-    const id = parseInt(params.id);
+    const { userId } = await auth();
+    const id = parseInt(context.params.id);
 
     // 인증 확인
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // 사용자 권한 확인
+    const { data: userInfo, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('clerk_id', userId)
+      .single();
+
+    if (userError || !userInfo) {
+      return NextResponse.json(
+        { error: "사용자 정보를 찾을 수 없습니다" },
+        { status: 404 }
+      );
+    }
+
     // 관리자 권한 확인
-    if (orgRole !== "본사관리자") {
+    if (userInfo.role !== "본사관리자") {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
 
-    // KOL 존재 여부 확인
-    const kolToDelete = await db.query.kols.findFirst({
-      where: eq(kols.id, id),
-    });
+    // KOL 존재 확인
+    const { data: existingKol, error: kolError } = await supabase
+      .from('kols')
+      .select('id')
+      .eq('id', id)
+      .single();
 
-    if (!kolToDelete) {
+    if (kolError || !existingKol) {
       return NextResponse.json(
         { error: "KOL을 찾을 수 없습니다" },
         { status: 404 }
@@ -172,9 +211,19 @@ export async function DELETE(
     }
 
     // KOL 삭제
-    await db.delete(kols).where(eq(kols.id, id));
+    const { error: deleteError } = await supabase
+      .from('kols')
+      .delete()
+      .eq('id', id);
 
-    return NextResponse.json({ message: "KOL이 성공적으로 삭제되었습니다" });
+    if (deleteError) {
+      return NextResponse.json(
+        { error: "KOL을 삭제하는 중 오류가 발생했습니다" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("KOL 삭제 오류:", error);
     return NextResponse.json(

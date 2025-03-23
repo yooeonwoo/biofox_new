@@ -8,6 +8,13 @@
       "when": 1742720413868,
       "tag": "0000_jazzy_moira_mactaggert",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1742741188672,
+      "tag": "0001_perpetual_jack_flag",
+      "breakpoints": true
     }
   ]
 }

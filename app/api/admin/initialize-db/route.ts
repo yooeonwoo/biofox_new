@@ -73,14 +73,13 @@ export async function POST(req: NextRequest) {
     console.log("2. 테이블 생성 중...");
     const tables = [
       { name: 'users', file: 'create_users_table.sql' },
-      { name: 'whitelisted_emails', file: 'create_whitelist_table.sql' },
       { name: 'kols', file: 'create_kols_table.sql' },
       { name: 'shops', file: 'create_shops_table.sql' },
       { name: 'products', file: 'create_products_table.sql' },
       { name: 'orders', file: 'create_orders_table.sql' },
       { name: 'order_items', file: 'create_order_items_table.sql' },
       { name: 'commissions', file: 'create_commissions_table.sql' },
-      { name: 'notifications', file: 'create_notifications_table.sql' }
+      { name: 'notifications', file: 'create_notifications_table.sql' },
     ];
 
     const tableResults = [];
