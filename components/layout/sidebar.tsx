@@ -11,6 +11,7 @@ export default function Sidebar({ role }: SidebarProps) {
   // 관리자 메뉴
   const adminMenuItems = [
     { label: "대시보드", href: "/admin/dashboard" },
+    { label: "사용자 관리", href: "/admin/dashboard/user-management" },
     { label: "KOL 관리", href: "/admin/dashboard/kols" },
     { label: "전문점 관리", href: "/admin/dashboard/shops" },
     { label: "화이트리스트", href: "/admin/dashboard/whitelist" },
