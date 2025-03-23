@@ -38,14 +38,14 @@ export default function KolDashboardPage() {
             <button className="btn-primary w-full">프로필 관리</button>
           </div>
           <div className="bg-purple-50 rounded-lg shadow p-6 border border-purple-100">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">연결된 전문점</h3>
-            <p className="text-gray-600 mb-4">나와 연결된 전문점 정보 확인</p>
-            <Link href="/kol/stores" className="btn-primary w-full block text-center">전문점 관리</Link>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">소속 전문점</h3>
+            <p className="text-gray-600 mb-4">나와 연결된 전문점 정보 조회</p>
+            <Link href="/kol/stores" className="btn-primary w-full block text-center">전문점 목록</Link>
           </div>
           <div className="bg-purple-50 rounded-lg shadow p-6 border border-purple-100">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">실적 조회</h3>
-            <p className="text-gray-600 mb-4">나의 실적 및 성과 확인</p>
-            <Link href="/kol/sales" className="btn-primary w-full block text-center">매출 등록</Link>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">매출 현황</h3>
+            <p className="text-gray-600 mb-4">소속 전문점의 매출 현황 확인</p>
+            <Link href="/kol/sales" className="btn-primary w-full block text-center">매출 조회</Link>
           </div>
         </div>
       </main>

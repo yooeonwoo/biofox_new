@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Edit, Plus, Search, Trash2, Store } from "lucide-react";
+import { Edit, Plus, Search, Trash2, Store, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -32,6 +32,8 @@ interface ISpecialtyStoreManagementProps {
   onUpdateStore?: (store: ISpecialtyStore) => Promise<void>;
   onDeleteStore?: (id: string) => Promise<void>;
   isLoading?: boolean;
+  isAdmin?: boolean; // 관리자 모드인지 여부
+  title?: string; // 컴포넌트 제목 커스터마이징 옵션
 }
 
 export function SpecialtyStoreManagement({
@@ -40,10 +42,13 @@ export function SpecialtyStoreManagement({
   onUpdateStore,
   onDeleteStore,
   isLoading = false,
+  isAdmin = false, // 기본적으로 관리자 모드 아님 (KOL 전용 조회 모드)
+  title = "전문점 관리",
 }: ISpecialtyStoreManagementProps) {
   const [stores, setStores] = React.useState<ISpecialtyStore[]>(initialStores);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = React.useState(false);
   const [currentStore, setCurrentStore] = React.useState<ISpecialtyStore | null>(null);
   const [formData, setFormData] = React.useState<Omit<ISpecialtyStore, "id">>({
     name: "",
@@ -70,8 +75,10 @@ export function SpecialtyStoreManagement({
     );
   }, [stores, searchQuery]);
 
-  // 전문점 추가
+  // 전문점 추가 (관리자만 가능)
   const handleAddStore = () => {
+    if (!isAdmin) return;
+    
     setCurrentStore(null);
     setFormData({
       name: "",
@@ -85,8 +92,16 @@ export function SpecialtyStoreManagement({
     setIsDialogOpen(true);
   };
 
-  // 전문점 편집
+  // 전문점 상세 조회 (KOL도 가능)
+  const handleViewStore = (store: ISpecialtyStore) => {
+    setCurrentStore(store);
+    setIsViewDialogOpen(true);
+  };
+
+  // 전문점 편집 (관리자만 가능)
   const handleEditStore = (store: ISpecialtyStore) => {
+    if (!isAdmin) return;
+    
     setCurrentStore(store);
     setFormData({
       name: store.name,
@@ -100,8 +115,10 @@ export function SpecialtyStoreManagement({
     setIsDialogOpen(true);
   };
 
-  // 전문점 삭제
+  // 전문점 삭제 (관리자만 가능)
   const handleDeleteStore = async (id: string) => {
+    if (!isAdmin) return;
+    
     try {
       setProcessing(true);
       if (onDeleteStore) {
@@ -134,9 +151,11 @@ export function SpecialtyStoreManagement({
     setFormData((prev) => ({ ...prev, status: e.target.value as "active" | "inactive" }));
   };
 
-  // 폼 제출 핸들러
+  // 폼 제출 핸들러 (관리자만 가능)
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (!isAdmin) return;
     
     try {
       setProcessing(true);
@@ -189,11 +208,13 @@ export function SpecialtyStoreManagement({
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">전문점 관리</h2>
-        <Button onClick={handleAddStore} className="gap-1.5" disabled={isLoading || processing}>
-          <Plus className="h-4 w-4" />
-          전문점 추가
-        </Button>
+        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+        {isAdmin && (
+          <Button onClick={handleAddStore} className="gap-1.5" disabled={isLoading || processing}>
+            <Plus className="h-4 w-4" />
+            전문점 추가
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -257,21 +278,37 @@ export function SpecialtyStoreManagement({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEditStore(store)}
-                        disabled={processing}
+                        onClick={() => handleViewStore(store)}
+                        title="상세 보기"
                       >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">수정</span>
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">상세 보기</span>
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteStore(store.id)}
-                        disabled={processing}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">삭제</span>
-                      </Button>
+                      
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditStore(store)}
+                            disabled={processing}
+                            title="수정"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">수정</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteStore(store.id)}
+                            disabled={processing}
+                            title="삭제"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">삭제</span>
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -281,115 +318,181 @@ export function SpecialtyStoreManagement({
         </Table>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* 상세 보기 다이얼로그 (읽기 전용) */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              {currentStore ? "전문점 정보 수정" : "새 전문점 추가"}
+              전문점 정보
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
+          {currentStore && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  이름
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                  required
-                />
+                <Label className="text-right font-medium">이름</Label>
+                <div className="col-span-3">{currentStore.name}</div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="address" className="text-right">
-                  주소
-                </Label>
-                <Input
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                  required
-                />
+                <Label className="text-right font-medium">주소</Label>
+                <div className="col-span-3">{currentStore.address}</div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">
-                  연락처
-                </Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                  required
-                />
+                <Label className="text-right font-medium">연락처</Label>
+                <div className="col-span-3">{currentStore.phone}</div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="ownerName" className="text-right">
-                  대표자명
-                </Label>
-                <Input
-                  id="ownerName"
-                  name="ownerName"
-                  value={formData.ownerName}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                  required
-                />
+                <Label className="text-right font-medium">대표자명</Label>
+                <div className="col-span-3">{currentStore.ownerName}</div>
               </div>
+              {currentStore.businessNumber && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right font-medium">사업자번호</Label>
+                  <div className="col-span-3">{currentStore.businessNumber}</div>
+                </div>
+              )}
+              {currentStore.description && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right font-medium">설명</Label>
+                  <div className="col-span-3">{currentStore.description}</div>
+                </div>
+              )}
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="businessNumber" className="text-right">
-                  사업자번호
-                </Label>
-                <Input
-                  id="businessNumber"
-                  name="businessNumber"
-                  value={formData.businessNumber}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="text-right">
-                  설명
-                </Label>
-                <Input
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  상태
-                </Label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleStatusChange}
-                  className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="active">활성</option>
-                  <option value="inactive">비활성</option>
-                </select>
+                <Label className="text-right font-medium">상태</Label>
+                <div className="col-span-3">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                      currentStore.status === "active"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                    )}
+                  >
+                    {currentStore.status === "active" ? "활성" : "비활성"}
+                  </span>
+                </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="submit" disabled={processing}>
-                {processing ? "처리 중..." : currentStore ? "수정" : "추가"}
-              </Button>
-            </DialogFooter>
-          </form>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsViewDialogOpen(false)}>
+              닫기
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 수정/추가 다이얼로그 (관리자만 사용) */}
+      {isAdmin && (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>
+                {currentStore ? "전문점 정보 수정" : "새 전문점 추가"}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    이름
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="address" className="text-right">
+                    주소
+                  </Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="phone" className="text-right">
+                    연락처
+                  </Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="ownerName" className="text-right">
+                    대표자명
+                  </Label>
+                  <Input
+                    id="ownerName"
+                    name="ownerName"
+                    value={formData.ownerName}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="businessNumber" className="text-right">
+                    사업자번호
+                  </Label>
+                  <Input
+                    id="businessNumber"
+                    name="businessNumber"
+                    value={formData.businessNumber}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="description" className="text-right">
+                    설명
+                  </Label>
+                  <Input
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="status" className="text-right">
+                    상태
+                  </Label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleStatusChange}
+                    className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="active">활성</option>
+                    <option value="inactive">비활성</option>
+                  </select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={processing}>
+                  {processing ? "처리 중..." : currentStore ? "수정" : "추가"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 } 

@@ -4,11 +4,11 @@ import { Toaster } from "sonner";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "매출 현황 - BIOFOX KOL",
-  description: "KOL이 소속 전문점의 매출 현황을 확인할 수 있는 페이지입니다.",
+  title: "매출 관리 - BIOFOX 관리자",
+  description: "관리자가 전문점의 매출을 등록하고 관리할 수 있는 페이지입니다.",
 };
 
-export default function SalesPage() {
+export default function AdminSalesPage() {
   // 예시 데이터
   const demoStores = [
     { id: "store1", name: "서울 강남점" },
@@ -50,23 +50,31 @@ export default function SalesPage() {
     }
   ];
 
+  // 관리자용 매출 등록 핸들러
+  const handleSubmitOrder = async (order: any) => {
+    console.log("새 매출 등록:", order);
+    // 실제 구현 시에는 서버에 데이터 전송하는 로직 필요
+    return Promise.resolve();
+  };
+
   return (
     <div className="container py-8">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">매출 현황</h1>
+          <h1 className="text-2xl font-bold">매출 관리</h1>
           <SalesRegistration 
             stores={demoStores} 
             products={demoProducts} 
-            isAdmin={false}
-            buttonLabel="매출 조회"
+            isAdmin={true}
+            onSubmitOrder={handleSubmitOrder}
+            buttonLabel="매출 등록"
           />
         </div>
 
-        {/* 최근 매출 현황 테이블 */}
+        {/* 매출 현황 테이블 */}
         <div className="rounded-md border p-6 bg-white">
           <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-semibold">최근 매출 현황</h2>
+            <h2 className="text-xl font-semibold">매출 현황</h2>
             {demoSales.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
@@ -76,6 +84,7 @@ export default function SalesPage() {
                       <th className="py-2 px-4 text-left">전문점</th>
                       <th className="py-2 px-4 text-left">상품</th>
                       <th className="py-2 px-4 text-right">금액</th>
+                      <th className="py-2 px-4 text-center">작업</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -91,6 +100,12 @@ export default function SalesPage() {
                           </ul>
                         </td>
                         <td className="py-2 px-4 text-right font-medium">₩{sale.amount.toLocaleString()}</td>
+                        <td className="py-2 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button variant="outline" size="sm">수정</Button>
+                            <Button variant="outline" size="sm" className="text-red-500">삭제</Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                     <tr className="bg-gray-50 font-medium">
@@ -98,6 +113,7 @@ export default function SalesPage() {
                       <td className="py-2 px-4 text-right">
                         ₩{demoSales.reduce((total, sale) => total + sale.amount, 0).toLocaleString()}
                       </td>
+                      <td></td>
                     </tr>
                   </tbody>
                 </table>
@@ -112,14 +128,15 @@ export default function SalesPage() {
 
         <div className="rounded-md border p-6 bg-white">
           <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-semibold">매출 조회 안내</h2>
+            <h2 className="text-xl font-semibold">관리자 매출 등록 안내</h2>
             <p className="text-muted-foreground">
-              KOL 전용 페이지에서는 소속 전문점의 매출 현황만 조회 가능합니다. 매출 등록은 관리자가 담당합니다.
+              관리자는 모든 전문점의 매출을 등록하고 관리할 수 있습니다.
             </p>
             <ul className="list-disc ml-4 space-y-2">
-              <li>오른쪽 상단의 '매출 조회' 버튼을 클릭하여 전문점별 매출 현황을 확인할 수 있습니다.</li>
-              <li>매출 등록이 필요한 경우 본사 관리자에게 문의하세요.</li>
-              <li>매출 데이터는 실시간으로 업데이트됩니다.</li>
+              <li>오른쪽 상단의 '매출 등록' 버튼을 클릭하여 새로운 매출을 등록할 수 있습니다.</li>
+              <li>매출 등록 시 전문점을 선택하고, 제품 및 수량을 입력하세요.</li>
+              <li>등록된 매출은 KOL에게 실시간으로 표시됩니다.</li>
+              <li>매출 정보는 수정 및 삭제가 가능합니다.</li>
             </ul>
           </div>
         </div>
