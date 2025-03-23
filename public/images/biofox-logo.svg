@@ -1,0 +1,22 @@
+<svg width="180" height="60" viewBox="0 0 180 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 로고 배경 상자 -->
+  <rect x="5" y="10" width="40" height="40" rx="8" fill="url(#aurora-gradient)" />
+  
+  <!-- B 모양 -->
+  <path d="M15 20 H25 C28 20, 30 22, 30 25 C30 28, 28 30, 25 30 H15 V20 Z" fill="white" />
+  <path d="M15 30 H25 C29 30, 32 32, 32 35 C32 38, 29 40, 25 40 H15 V30 Z" fill="white" />
+  <path d="M15 20 V40 H25 C30 40, 35 37, 35 32.5 C35 30, 33 28, 30 27 C32 26, 33 23, 33 22 C33 18, 30 20, 25 20 Z" fill="white" />
+  
+  <!-- 텍스트 -->
+  <text x="55" y="37" font-family="Arial, sans-serif" font-weight="bold" font-size="22" fill="#6D28D9">BIOFOX</text>
+  <text x="140" y="37" font-family="Arial, sans-serif" font-weight="bold" font-size="22" fill="#8B5CF6">KOL</text>
+  
+  <!-- 그라데이션 정의 -->
+  <defs>
+    <linearGradient id="aurora-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF8AE2" />
+      <stop offset="50%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#67E8F9" />
+    </linearGradient>
+  </defs>
+</svg> 
