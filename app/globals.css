@@ -79,3 +79,56 @@ body {
   color: var(--foreground);
   font-family: var(--font-noto-sans-kr), var(--font-inter), 'Pretendard', 'Noto Sans KR', Arial, sans-serif;
 }
+
+/* 새로운 애니메이션 효과 추가 */
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes appear-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-appear {
+  animation: appear 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-appear-zoom {
+  animation: appear-zoom 0.7s ease-out forwards;
+  opacity: 0;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
+}
+
+.delay-500 {
+  animation-delay: 0.5s;
+}
+
+.delay-700 {
+  animation-delay: 0.7s;
+}
+
+.delay-1000 {
+  animation-delay: 1s;
+}
