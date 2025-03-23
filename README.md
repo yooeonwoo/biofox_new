@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BIOFOX KOL
 
-## Getting Started
+BIOFOX KOL 프로젝트는 인플루언서 및 Key Opinion Leader (KOL) 관리를 위한 시스템입니다.
 
-First, run the development server:
+## 프로젝트 구조
+
+- `app/`: 주요 애플리케이션 코드
+- `docs/`: 프로젝트 문서
+- `components/`: 재사용 가능한 컴포넌트
+- `lib/`: 유틸리티 및 라이브러리
+
+## 설치 및 실행
 
 ```bash
+# 의존성 설치
+npm install
+
+# 개발 서버 시작
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+개발 서버가 실행되면 [http://localhost:3000](http://localhost:3000)에서 결과를 확인할 수 있습니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 기술 스택
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Next.js 15 (App Router)
+- TypeScript
+- Tailwind CSS
+- Clerk (인증)
+- Supabase (데이터베이스)
+- Drizzle ORM
 
-## Learn More
+## 기능
 
-To learn more about Next.js, take a look at the following resources:
+- KOL 사용자 관리
+- 본사 관리자 기능
+- 전문점 연동
+- 실적 관리
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 개발 가이드라인
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+자세한 개발 가이드라인은 `docs/` 디렉토리를 참조하세요.
 
-## Deploy on Vercel
+## 배포
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+이 프로젝트는 [Vercel](https://vercel.com)에 배포할 수 있습니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[Next.js 배포 문서](https://nextjs.org/docs/app/building-your-application/deploying)에서 더 자세한 정보를 확인하세요.
