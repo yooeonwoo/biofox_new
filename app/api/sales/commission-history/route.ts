@@ -11,13 +11,74 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getDB } from '@/db';
-import { and, eq, desc, like, sql } from 'drizzle-orm';
-import { commissions, orders, shops } from '@/db/schema';
 import { getCurrentYearMonth } from '@/lib/sales-utils';
+import { supabase } from '@/lib/supabase';
+import { auth } from '@clerk/nextjs/server';
+
+// 타임아웃 설정을 30초로 늘림
+export const maxDuration = 30; // 30초 타임아웃 설정
 
 export async function GET(request: NextRequest) {
   try {
+    // 인증 확인
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    console.log("수당 내역 조회 API 호출됨");
+    
+    // 사용자 정보 및 역할 확인 - 직접 쿼리로 변경
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('clerk_id', userId)
+      .limit(1);
+    
+    if (userError) {
+      console.error("사용자 조회 오류:", userError);
+      return NextResponse.json(
+        { error: "사용자 정보를 조회하는 중 오류가 발생했습니다" },
+        { status: 500 }
+      );
+    }
+    
+    if (!userData || userData.length === 0) {
+      console.error("사용자 조회 실패:", "사용자를 찾을 수 없음");
+      return NextResponse.json(
+        { error: "사용자 정보를 찾을 수 없습니다" },
+        { status: 404 }
+      );
+    }
+    
+    const user = userData[0];
+    const role = user?.role || '';
+    
+    // 권한 확인
+    if (role !== '본사관리자') {
+      if (role === 'kol') {
+        // 사용자의 KOL ID 조회
+        const { data: kolData } = await supabase
+          .from('kols')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        
+        const userKolId = kolData?.id;
+        
+        // 여기서 권한 확인 로직 추가...
+      } else {
+        return NextResponse.json(
+          { success: false, error: '접근 권한이 없습니다.' },
+          { status: 403 }
+        );
+      }
+    }
+    
     const searchParams = request.nextUrl.searchParams;
     const kolId = searchParams.get('kolId');
     const yearMonth = searchParams.get('yearMonth') || getCurrentYearMonth();
@@ -31,41 +92,111 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // DB 연결 가져오기
-    const db = await getDB();
-
-    // 1) 기본 where 조건 (KOL ID, yearMonth)
-    const baseWhere = and(
-      eq(commissions.kolId, parseInt(kolId, 10)),
-      like(commissions.createdAt, `${yearMonth}-%`)
+    console.log(`수당 내역 조회 시작: KOL ID ${kolId}, 연월 ${yearMonth}, 상태 ${status}`);
+    
+    // Supabase RPC(Stored Procedure) 호출을 사용하여 데이터 조회
+    const { data: commissionHistory, error: historyError } = await supabase.rpc(
+      'get_commission_history',
+      {
+        p_kol_id: parseInt(kolId),
+        p_year_month: yearMonth,
+        p_status: status
+      }
     );
-
-    // 2) status가 all이 아닐 경우, 정산 상태 추가
-    const finalWhere =
-      status !== 'all'
-        ? and(baseWhere, eq(commissions.settled, status === 'completed'))
-        : baseWhere;
-
-    // 3) 최종 쿼리 체이닝
-    const commissionHistory = await db
-      .select({
-        id: commissions.id,
-        date: commissions.createdAt,
-        shopId: orders.shopId,
-        shopName: shops.ownerName,
-        amount: commissions.amount,
-        status: sql`CASE WHEN ${commissions.settled} = true THEN 'completed' ELSE 'pending' END`,
-        note: commissions.settledNote
-      })
-      .from(commissions)
-      .leftJoin(orders, eq(commissions.orderId, orders.id))
-      .leftJoin(shops, eq(orders.shopId, shops.id))
-      .where(finalWhere)
-      .orderBy(desc(commissions.createdAt));
-
+    
+    if (historyError) {
+      console.error("수당 내역 조회 오류:", historyError);
+      
+      // RPC가 없는 경우 대체 쿼리 사용
+      let commissionQuery = supabase
+        .from('commissions')
+        .select('id, created_at, amount, settled, settled_note, order_id')
+        .eq('kol_id', parseInt(kolId))
+        .like('created_at', `${yearMonth}-%`)
+        .order('created_at', { ascending: false });
+      
+      // 정산 상태 필터 적용
+      if (status !== 'all') {
+        commissionQuery = commissionQuery.eq('settled', status === 'completed');
+      }
+      
+      const { data: commissionData, error: commissionError } = await commissionQuery;
+      
+      if (commissionError) {
+        console.error("수당 내역 조회 오류:", commissionError);
+        return NextResponse.json(
+          { success: false, error: '수당 내역을 조회하는 중 오류가 발생했습니다.' },
+          { status: 500 }
+        );
+      }
+      
+      // 조회된 주문 ID들 수집
+      const orderIds = commissionData.map(item => item.order_id).filter(Boolean);
+      
+      // 주문 정보 조회
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('id, shop_id')
+        .in('id', orderIds);
+      
+      if (orderError) {
+        console.error("주문 정보 조회 오류:", orderError);
+      }
+      
+      // 주문별 상점 ID 매핑
+      const orderShopMap = new Map();
+      orderData?.forEach(order => {
+        orderShopMap.set(order.id, order.shop_id);
+      });
+      
+      // 상점 ID 목록 수집
+      const shopIds = [...new Set(orderData?.map(order => order.shop_id) || [])];
+      
+      // 상점 정보 조회
+      const { data: shopData, error: shopError } = await supabase
+        .from('shops')
+        .select('id, owner_name')
+        .in('id', shopIds);
+      
+      if (shopError) {
+        console.error("상점 정보 조회 오류:", shopError);
+      }
+      
+      // 상점 ID별 이름 매핑
+      const shopNameMap = new Map();
+      shopData?.forEach(shop => {
+        shopNameMap.set(shop.id, shop.owner_name);
+      });
+      
+      // 결과 형식 변환
+      const formattedResults = commissionData.map(item => {
+        const shopId = orderShopMap.get(item.order_id);
+        const shopName = shopNameMap.get(shopId);
+        
+        return {
+          id: item.id,
+          date: item.created_at,
+          shopId,
+          shopName,
+          amount: item.amount,
+          status: item.settled ? 'completed' : 'pending',
+          note: item.settled_note
+        };
+      });
+      
+      console.log(`수당 내역 조회 완료(대체 쿼리): ${formattedResults.length}개 항목`);
+      
+      return NextResponse.json({
+        success: true,
+        data: formattedResults,
+      });
+    }
+    
+    console.log(`수당 내역 조회 완료(RPC): ${commissionHistory?.length || 0}개 항목`);
+    
     return NextResponse.json({
       success: true,
-      data: commissionHistory,
+      data: commissionHistory || [],
     });
   } catch (error) {
     console.error('수당 내역 조회 중 오류:', error);

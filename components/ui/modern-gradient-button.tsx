@@ -6,28 +6,28 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { ArrowUpRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const modernGradientButtonVariants = cva(
+const simpleButtonVariants = cva(
   [
     "relative inline-flex items-center justify-center",
-    "rounded-xl px-6 py-3",
+    "rounded-md px-6 py-3",
     "text-sm font-medium",
     "transition-all duration-300",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-50",
-    "overflow-hidden",
     "group",
   ],
   {
     variants: {
       variant: {
-        primary: "text-purple-800 border border-transparent",
-        secondary: "bg-background text-foreground border border-border",
-        outline: "bg-transparent border border-border",
+        primary: "bg-gray-800 text-white shadow-sm hover:bg-gray-700 hover:-translate-y-0.5",
+        secondary: "bg-gray-200 text-gray-800 border border-gray-300 hover:bg-gray-300 hover:-translate-y-0.5",
+        outline: "bg-transparent border border-gray-300 text-gray-800 hover:bg-gray-100",
+        ghost: "bg-transparent text-gray-800 hover:bg-gray-100",
       },
       size: {
-        sm: "h-9 px-4 py-2 text-xs rounded-lg",
+        sm: "h-9 px-4 py-2 text-xs rounded-md",
         default: "h-10 px-6 py-3 text-sm",
-        lg: "h-12 px-8 py-4 text-base rounded-xl",
+        lg: "h-12 px-8 py-4 text-base rounded-md",
       },
       hasIcon: {
         true: "pr-4",
@@ -42,34 +42,23 @@ const modernGradientButtonVariants = cva(
   }
 )
 
-export interface ModernGradientButtonProps
+export interface SimpleButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof modernGradientButtonVariants> {
+    VariantProps<typeof simpleButtonVariants> {
   asChild?: boolean
   showIcon?: boolean
 }
 
-const ModernGradientButton = React.forwardRef<HTMLButtonElement, ModernGradientButtonProps>(
+const SimpleButton = React.forwardRef<HTMLButtonElement, SimpleButtonProps>(
   ({ className, variant, size, asChild = false, showIcon = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     
     return (
       <Comp
-        className={cn(modernGradientButtonVariants({ variant, size, hasIcon: showIcon, className }))}
+        className={cn(simpleButtonVariants({ variant, size, hasIcon: showIcon, className }))}
         ref={ref}
         {...props}
       >
-        {/* Gradient background effect */}
-        <div
-          className={cn(
-            "absolute inset-0 z-0",
-            variant === "primary" 
-              ? "bg-gradient-to-r from-purple-200 via-violet-400 to-indigo-600" 
-              : "bg-gradient-to-r from-slate-300 to-slate-500 opacity-0 group-hover:opacity-10",
-            "transition-opacity duration-300",
-          )}
-        />
-        
         {/* Content */}
         <div className="relative z-10 flex items-center justify-center gap-2">
           <span>{children}</span>
@@ -79,43 +68,33 @@ const ModernGradientButton = React.forwardRef<HTMLButtonElement, ModernGradientB
     )
   }
 )
-ModernGradientButton.displayName = "ModernGradientButton"
+SimpleButton.displayName = "SimpleButton"
 
-// Modern Gradient Card Component
-interface ModernGradientCardProps extends React.HTMLAttributes<HTMLDivElement> {
+// Simple Card Component
+interface SimpleCardProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string
   description?: string
   footer?: React.ReactNode
   variant?: "default" | "bordered" | "elevated"
 }
 
-const ModernGradientCard = React.forwardRef<HTMLDivElement, ModernGradientCardProps>(
+const SimpleCard = React.forwardRef<HTMLDivElement, SimpleCardProps>(
   ({ className, title, description, footer, variant = "default", children, ...props }, ref) => {
     return (
       <div
         ref={ref}
         className={cn(
           "relative rounded-xl overflow-hidden",
-          "bg-background text-foreground",
           "transition-all duration-300",
-          variant === "bordered" && "border border-border",
-          variant === "elevated" && "shadow-lg",
+          variant === "default" && "bg-white text-gray-800 border border-gray-200",
+          variant === "bordered" && "bg-white text-gray-800 border border-gray-300",
+          variant === "elevated" && "bg-white text-gray-800 border border-gray-200 shadow-md",
+          "hover:-translate-y-1",
           "group",
           className
         )}
         {...props}
       >
-        {/* Gradient border effect */}
-        <div
-          className={cn(
-            "absolute inset-0 rounded-xl p-[1px] -z-10",
-            "bg-gradient-to-r from-purple-200 via-violet-400 to-indigo-600",
-            "opacity-0 group-hover:opacity-100",
-            "transition-opacity duration-500",
-            variant === "bordered" ? "opacity-30" : ""
-          )}
-        />
-        
         {/* Card content */}
         <div className="p-6 space-y-4">
           {title && <h3 className="text-xl font-semibold">{title}</h3>}
@@ -124,7 +103,9 @@ const ModernGradientCard = React.forwardRef<HTMLDivElement, ModernGradientCardPr
         </div>
         
         {footer && (
-          <div className="px-6 py-4 bg-muted/50 border-t border-border">
+          <div className={cn(
+            "px-6 py-4 border-t border-gray-200 bg-gray-50"
+          )}>
             {footer}
           </div>
         )}
@@ -132,6 +113,7 @@ const ModernGradientCard = React.forwardRef<HTMLDivElement, ModernGradientCardPr
     )
   }
 )
-ModernGradientCard.displayName = "ModernGradientCard"
+SimpleCard.displayName = "SimpleCard"
 
-export { ModernGradientButton, ModernGradientCard, modernGradientButtonVariants } 
+// 원래 export를 유지하되 새 컴포넌트도 export
+export { SimpleButton as ModernGradientButton, SimpleCard as ModernGradientCard, simpleButtonVariants as modernGradientButtonVariants } 

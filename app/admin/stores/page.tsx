@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { SpecialtyStoreManagement, IKOL, ISpecialtyStore } from "@/components/kols/SpecialtyStoreManagement";
 import { Toaster } from "sonner";
 import { toast } from "sonner";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 // metadata는 클라이언트 컴포넌트에서 사용할 수 없으므로 제거
 // export const metadata: Metadata = {
@@ -196,24 +203,31 @@ export default function AdminStoresPage() {
   };
 
   return (
-    <div className="container py-8">
+    <div className="space-y-6">
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
           <p className="font-bold">오류</p>
           <p>{error}</p>
         </div>
       )}
       
-      <SpecialtyStoreManagement 
-        initialStores={stores}
-        kols={kols}
-        isAdmin={true} 
-        title="전문점 관리" 
-        onAddStore={handleAddStore}
-        onUpdateStore={handleUpdateStore}
-        onDeleteStore={handleDeleteStore}
-        isLoading={loading}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>전문점 관리</CardTitle>
+          <CardDescription>KOL에 소속된 전문점을 등록하고 관리할 수 있습니다</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SpecialtyStoreManagement 
+            initialStores={stores}
+            kols={kols}
+            isAdmin={true} 
+            onAddStore={handleAddStore}
+            onUpdateStore={handleUpdateStore}
+            onDeleteStore={handleDeleteStore}
+            isLoading={loading}
+          />
+        </CardContent>
+      </Card>
       <Toaster position="top-center" richColors />
     </div>
   );

@@ -3,16 +3,28 @@ import { Inter, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = Inter({ 
+  subsets: ["latin"], 
+  variable: "--font-inter",
+  display: 'swap',
+});
+
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   variable: "--font-noto-sans-kr",
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: "BIOFOX KOL",
   description: "KOL 및 전문점 관리 시스템",
+  metadataBase: new URL('https://biofox-kol.vercel.app'),
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
 };
 
 export default function RootLayout({
@@ -21,16 +33,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider appearance={{
-      variables: {
-        colorPrimary: '#6D28D9',
-        colorTextOnPrimaryBackground: 'white',
-      },
-      layout: {
-        socialButtonsPlacement: 'bottom',
-        socialButtonsVariant: 'blockButton', 
-      },
-    }}>
+    <ClerkProvider 
+      appearance={{
+        variables: {
+          colorPrimary: '#6D28D9',
+          colorTextOnPrimaryBackground: 'white',
+        },
+        layout: {
+          socialButtonsPlacement: 'bottom',
+          socialButtonsVariant: 'blockButton', 
+        },
+      }}
+    >
       <html lang="ko">
         <body className={`${inter.variable} ${notoSansKr.variable}`}>
           {children}

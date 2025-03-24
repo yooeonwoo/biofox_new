@@ -1,46 +1,143 @@
+/**
+ * 데이터베이스 액세스 모듈
+ * 전체 애플리케이션에서 일관된 Supabase 클라이언트 제공
+ */
+import { serverSupabase } from '../lib/supabase';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { supabase } from './utils';
+import postgres from 'postgres';
 import * as schema from './schema';
 
-// Supabase 연결을 래핑하여 Drizzle ORM과 함께 사용
-// PostgreSQL 네이티브 연결 대신 Supabase 클라이언트를 통한 연결 사용
-let db: PostgresJsDatabase<typeof schema>;
+// Supabase 클라이언트 내보내기
+export const supabase = serverSupabase;
 
-// Supabase 클라이언트를 통한 데이터베이스 접근을 래핑한 함수
-export async function getDB(): Promise<PostgresJsDatabase<typeof schema>> {
-  // db 인스턴스가 이미 생성되어 있으면 그것을 반환
-  if (db) {
-    return db;
-  }
-
-  try {
-    // Supabase의 REST API 대신 직접 DB 연결이 필요한 경우
-    // 환경 변수에서 데이터베이스 연결 정보 가져오기
-    const connectionString = process.env.DATABASE_URL || '';
-
-    // 동적으로 postgres 모듈 가져오기
-    const postgres = (await import('postgres')).default;
-
-    // 클라이언트 생성 (SSL 옵션 추가)
-    const client = postgres(connectionString, { 
-      ssl: true,
-      max: 10, // 커넥션 풀 최대 크기
-      idle_timeout: 20, // 유휴 타임아웃(초)
-      connect_timeout: 30, // 연결 타임아웃 증가(초)
-    });
-
-    // Drizzle ORM 인스턴스 생성
-    db = drizzle(client, { schema });
-    return db;
-  } catch (error) {
-    console.error('데이터베이스 연결 오류:', error);
-    throw error;
-  }
+// 기본 연결 설정
+const connectionString = process.env.DATABASE_URL || '';
+if (!connectionString) {
+  throw new Error('DATABASE_URL 환경 변수가 설정되지 않았습니다.');
 }
 
-// Supabase 클라이언트를 통한 데이터 접근 함수 제공
-export { supabase };
+// 연결 풀 최적화 설정
+const connectionPoolConfig = {
+  max: 10,        // 최대 연결 수 증가
+  idle_timeout: 30, // 유휴 연결 유지 시간
+  connect_timeout: 10, // 연결 타임아웃 설정
+};
 
-// 스키마 내보내기
+// 연결 초기화 - 최적화된 설정 적용
+const queryClient = postgres(connectionString, connectionPoolConfig);
+
+// Drizzle ORM 초기화 및 내보내기
+export const db = drizzle(queryClient, { schema });
+
+// 이전 코드 호환성을 위해 getDB 함수도 유지
+export async function getDB() {
+  if (!connectionString) {
+    throw new Error('DATABASE_URL 환경 변수가 설정되지 않았습니다.');
+  }
+  
+  // Drizzle ORM 초기화 및 반환
+  return db;
+}
+
+// SQL 헬퍼 함수
+export const sql = {
+  /**
+   * 지정된 테이블의 모든 레코드를 조회
+   * @param table 테이블 이름
+   * @returns 테이블의 모든 레코드
+   */
+  async selectAll(table: string) {
+    const { data, error } = await serverSupabase
+      .from(table)
+      .select('*');
+      
+    if (error) throw error;
+    return data;
+  },
+  
+  /**
+   * 지정된 테이블에서 조건에 맞는 레코드 조회
+   * @param table 테이블 이름
+   * @param column 조건 컬럼
+   * @param value 조건 값
+   * @returns 조건에 맞는 레코드
+   */
+  async selectWhere(table: string, column: string, value: any) {
+    const { data, error } = await serverSupabase
+      .from(table)
+      .select('*')
+      .eq(column, value);
+      
+    if (error) throw error;
+    return data;
+  },
+  
+  /**
+   * 지정된 테이블에 레코드 삽입
+   * @param table 테이블 이름
+   * @param record 삽입할 레코드
+   * @returns 삽입된 레코드
+   */
+  async insert(table: string, record: any) {
+    const { data, error } = await serverSupabase
+      .from(table)
+      .insert(record)
+      .select();
+      
+    if (error) throw error;
+    return data;
+  },
+  
+  /**
+   * 지정된 테이블의 레코드 수정
+   * @param table 테이블 이름
+   * @param id 수정할 레코드 ID
+   * @param updates 수정할 내용
+   * @returns 수정된 레코드
+   */
+  async update(table: string, id: number, updates: any) {
+    const { data, error } = await serverSupabase
+      .from(table)
+      .update(updates)
+      .eq('id', id)
+      .select();
+      
+    if (error) throw error;
+    return data;
+  },
+  
+  /**
+   * 지정된 테이블의 레코드 삭제
+   * @param table 테이블 이름
+   * @param id 삭제할 레코드 ID
+   * @returns 삭제 결과
+   */
+  async delete(table: string, id: number) {
+    const { error } = await serverSupabase
+      .from(table)
+      .delete()
+      .eq('id', id);
+      
+    if (error) throw error;
+    return { success: true };
+  },
+  
+  /**
+   * 원시 SQL 쿼리 실행
+   * @param queryString SQL 쿼리 문자열
+   * @param params 쿼리 파라미터
+   * @returns 쿼리 결과
+   */
+  async raw(queryString: string, params?: any[]) {
+    const { data, error } = await serverSupabase.rpc('execute_sql', {
+      query_text: queryString,
+      params: params || []
+    });
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
+// 스키마 타입 내보내기 (기존 타입 지원 유지)
 export * from './schema'; 

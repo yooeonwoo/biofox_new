@@ -3,6 +3,7 @@ import { shops, kols, users } from "@/db/schema";
 import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { getAuth } from "@/lib/auth";
 
 // 특정 KOL의 전문점 목록 조회
 export async function GET(
@@ -10,7 +11,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgRole } = await auth();
+    const { userId, role } = await getAuth();
     const kolId = parseInt(params.id);
 
     // 인증 확인
@@ -31,7 +32,7 @@ export async function GET(
     }
 
     // 관리자가 아닌 경우, 자신의 KOL 정보만 조회 가능
-    if (orgRole !== "본사관리자") {
+    if (role !== "본사관리자") {
       const userInfo = await db.query.users.findFirst({
         where: eq(users.clerkId, userId),
       });

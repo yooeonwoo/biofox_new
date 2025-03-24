@@ -33,9 +33,6 @@ export default clerkMiddleware(async (auth, req) => {
     signInUrl.searchParams.set('redirect_url', req.nextUrl.pathname);
     return NextResponse.redirect(signInUrl);
   }
-
-  console.log("User ID:", userId);
-  console.log("Session Claims:", sessionClaims);
   
   // 테스트를 위한 임시 역할 할당 (실제로는 sessionClaims에서 가져와야 함)
   const userRole = sessionClaims?.role || (userId ? TEST_ROLE_MAPPING[userId] : undefined) || "kol";
@@ -43,11 +40,9 @@ export default clerkMiddleware(async (auth, req) => {
   // 사용자가 /dashboard로 접근하는 경우 역할별 리다이렉트
   if (req.nextUrl.pathname === "/dashboard") {
     if (userRole === "본사관리자") {
-      console.log("관리자로 리다이렉트");
       // 테스트 페이지 A: 관리자 대시보드
       return NextResponse.redirect(new URL("/admin", req.url));
     } else if (userRole === "kol") {
-      console.log("KOL로 리다이렉트");
       // 테스트 페이지 B: KOL 대시보드
       return NextResponse.redirect(new URL("/kol/dashboard", req.url));
     }

@@ -16,6 +16,8 @@ const config: Config = {
         "aurora-pink": "#FF8AE2",
         "aurora-violet": "#8B5CF6",
         "aurora-blue": "#67E8F9",
+        "dark-gray-1": "#383B44",
+        "dark-gray-2": "#2E3035",
       },
       backgroundImage: {
         "aurora-gradient": "linear-gradient(to right, #FF8AE2, #8B5CF6, #67E8F9)",
@@ -28,7 +30,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
 };
 
 export default config; 

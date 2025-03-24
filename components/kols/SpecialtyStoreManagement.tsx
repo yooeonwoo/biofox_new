@@ -287,58 +287,77 @@ export function SpecialtyStoreManagement({
 
   // 스토어 테이블 컴포넌트
   const StoresTable = ({ stores }: { stores: ISpecialtyStore[] }) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>소속 KOL</TableHead>
-          <TableHead>원장님 이름</TableHead>
-          <TableHead>지역</TableHead>
-          <TableHead>상태</TableHead>
-          <TableHead className="text-right">관리</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {stores.length === 0 ? (
+    <div className="w-full overflow-auto">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell colSpan={5} className="h-24 text-center">
-              등록된 전문점이 없습니다.
-            </TableCell>
+            <TableHead>ID</TableHead>
+            <TableHead>KOL</TableHead>
+            <TableHead>원장님 이름</TableHead>
+            <TableHead>지역</TableHead>
+            <TableHead>상태</TableHead>
+            <TableHead className="text-right">관리</TableHead>
           </TableRow>
-        ) : (
-          stores.map((store) => (
-            <TableRow key={store.id}>
-              <TableCell className="font-medium">{store.kolName}</TableCell>
-              <TableCell>{store.ownerName}</TableCell>
-              <TableCell>{store.region}</TableCell>
-              <TableCell>
-                <Badge variant={store.status === "active" ? "default" : "secondary"}>
-                  {store.status === "active" ? "활성" : "비활성"}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEditStore(store)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-500"
-                    onClick={() => handleDeleteStore(store.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+        </TableHeader>
+        <TableBody>
+          {stores.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                등록된 전문점이 없습니다.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            stores.map((store, index) => (
+              <TableRow key={store.id} className="border-b hover:bg-gray-50">
+                <TableCell>{store.id}</TableCell>
+                <TableCell>{store.kolName || "-"}</TableCell>
+                <TableCell>{store.ownerName}</TableCell>
+                <TableCell>{store.region}</TableCell>
+                <TableCell>
+                  <Badge 
+                    variant={store.status === "active" ? "default" : "secondary"}
+                  >
+                    {store.status === "active" ? "활성" : "비활성"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex space-x-2 justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleViewStore(store)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {isAdmin && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleEditStore(store)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0 text-red-500"
+                          onClick={() => handleDeleteStore(store.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 
   // KOL 사이드바 항목 컴포넌트
@@ -360,13 +379,13 @@ export function SpecialtyStoreManagement({
   );
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+        
         {isAdmin && (
-          <Button onClick={handleAddStore} className="gap-1.5" disabled={isLoading || processing}>
-            <Plus className="h-4 w-4" />
-            전문점 추가
+          <Button onClick={handleAddStore}>
+            <Plus className="mr-2 h-4 w-4" /> 전문점 추가
           </Button>
         )}
       </div>
@@ -422,7 +441,7 @@ export function SpecialtyStoreManagement({
         {/* 선택된 KOL의 전문점 목록 */}
         <div className="border rounded-md">
           <div className="bg-muted/40 px-4 py-3 border-b flex items-center justify-between">
-            <h3 className="text-lg font-semibold">{selectedKolName}</h3>
+            <h3 className="text-lg font-semibold text-gray-800">{selectedKolName}</h3>
             {isAdmin && selectedKolId !== "all" && selectedKolId !== "unassigned" && (
               <Button 
                 size="sm" 

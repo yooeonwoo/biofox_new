@@ -1,60 +1,62 @@
 /**
- * 제품별 매출 비율 차트 컴포넌트
+ * 제품별 매출 비율 차트
  * 
- * 제품별 매출 비율을 파이 차트로 표시
+ * 특정 KOL 또는 전체 KOL의 제품별 매출 비율을 파이 차트로 표시
  */
 
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend
-} from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { Loader2 } from 'lucide-react';
+
+// 파이 차트 색상
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
 interface ProductRatioChartProps {
-  kolId?: number;
-  shopId?: number;
+  kolId: number;
   yearMonth: string;
 }
 
-// API 응답 데이터 타입
-interface ProductRatio {
+// 제품 매출 비율 데이터 타입
+interface ProductRatioData {
+  id: number;
+  yearMonth: string;
   productId: number;
+  totalSalesAmount: number;
+  salesRatio: string;
+  salesGrowthRate: string;
   productName: string;
-  salesAmount: number;
-  salesRatio: string; // decimal 타입이므로 문자열
+  productCategory: string;
 }
 
-// 차트에 표시할 최대 제품 수
-const MAX_PRODUCTS_TO_SHOW = 5;
-
-// 차트 색상 배열
-const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#0891b2'];
-
-export default function ProductRatioChart({ kolId, shopId, yearMonth }: ProductRatioChartProps) {
-  const [data, setData] = useState<ProductRatio[]>([]);
+export default function ProductRatioChart({ kolId, yearMonth }: ProductRatioChartProps) {
+  const [data, setData] = useState<ProductRatioData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // 차트 데이터로 변환
+  const chartData = data.map((item, index) => ({
+    name: item.productName,
+    value: item.totalSalesAmount,
+    ratio: parseFloat(item.salesRatio) * 100, // 백분율로 변환
+    color: COLORS[index % COLORS.length]
+  }));
   
   // 데이터 로드
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        let apiUrl = `/api/admin/dashboard/products?yearMonth=${yearMonth}`;
         
-        // 쿼리 파라미터 구성
-        const params = new URLSearchParams();
-        if (kolId) params.append('kolId', kolId.toString());
-        if (shopId) params.append('shopId', shopId.toString());
-        params.append('yearMonth', yearMonth);
+        // KOL ID가 0이 아닌 경우 (특정 KOL 조회)
+        if (kolId !== 0) {
+          apiUrl = `/api/kol/sales/product-ratio?kolId=${kolId}&yearMonth=${yearMonth}`;
+        }
         
-        const response = await fetch(`/api/sales/product-ratios?${params.toString()}`);
+        const response = await fetch(apiUrl);
         
         if (!response.ok) {
           throw new Error('데이터를 불러오는데 실패했습니다.');
@@ -74,155 +76,99 @@ export default function ProductRatioChart({ kolId, shopId, yearMonth }: ProductR
       }
     };
     
-    if (kolId || shopId) {
-      fetchData();
-    } else {
-      setError('전문점 ID 또는 KOL ID가 필요합니다.');
-      setLoading(false);
-    }
-  }, [kolId, shopId, yearMonth]);
+    fetchData();
+  }, [kolId, yearMonth]);
   
-  if (loading) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>제품별 매출 비율</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[300px] bg-gray-100 animate-pulse"></CardContent>
-      </Card>
-    );
-  }
-  
-  if (error) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>제품별 매출 비율</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-red-500">{error}</div>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (data.length === 0) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>제품별 매출 비율</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-gray-500">제품 매출 데이터가 없습니다.</div>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  // 데이터 처리: 상위 N개 제품 + 기타
-  const processChartData = () => {
-    if (data.length <= MAX_PRODUCTS_TO_SHOW) {
-      return data.map(item => ({
-        ...item,
-        salesRatio: Number(item.salesRatio) * 100 // 백분율로 변환
-      }));
-    }
-    
-    // 매출액 기준 정렬
-    const sortedData = [...data].sort((a, b) => b.salesAmount - a.salesAmount);
-    
-    // 상위 N개 제품
-    const topProducts = sortedData.slice(0, MAX_PRODUCTS_TO_SHOW - 1);
-    
-    // 나머지 제품들을 '기타'로 묶음
-    const otherProducts = sortedData.slice(MAX_PRODUCTS_TO_SHOW - 1);
-    const otherSalesAmount = otherProducts.reduce((sum, item) => sum + item.salesAmount, 0);
-    const otherSalesRatio = otherProducts.reduce((sum, item) => sum + Number(item.salesRatio), 0);
-    
-    return [
-      ...topProducts.map(item => ({
-        ...item,
-        salesRatio: Number(item.salesRatio) * 100 // 백분율로 변환
-      })),
-      {
-        productId: 0,
-        productName: '기타',
-        salesAmount: otherSalesAmount,
-        salesRatio: otherSalesRatio * 100 // 백분율로 변환
-      }
-    ];
-  };
-  
-  const chartData = processChartData();
-  
-  // 차트 툴팁 커스텀 컴포넌트
+  // 커스텀 툴팁
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 border rounded shadow-sm">
-          <p className="font-medium">{data.productName}</p>
-          <p>
-            매출액: {new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(data.salesAmount)}
-          </p>
-          <p>
-            비율: {data.salesRatio.toFixed(1)}%
-          </p>
+        <div className="bg-white p-2 border border-gray-200 shadow-md rounded-md">
+          <p className="font-semibold">{data.name}</p>
+          <p className="text-sm">{`매출액: ${new Intl.NumberFormat('ko-KR').format(data.value)}원`}</p>
+          <p className="text-sm">{`비율: ${data.ratio.toFixed(1)}%`}</p>
         </div>
       );
     }
-    
     return null;
   };
   
-  // 범례 커스텀 렌더러
-  const renderLegend = (props: any) => {
+  // 커스텀 레전드
+  const renderCustomizedLegend = (props: any) => {
     const { payload } = props;
     
     return (
-      <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm mt-2">
+      <div className="flex flex-wrap justify-center gap-2 mt-2">
         {payload.map((entry: any, index: number) => (
-          <li key={`legend-${index}`} className="flex items-center">
-            <span
-              className="inline-block w-3 h-3 mr-1 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span>{entry.payload.productName} ({entry.payload.salesRatio.toFixed(1)}%)</span>
-          </li>
+          <div key={`legend-${index}`} className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-xs">{entry.value}</span>
+          </div>
         ))}
-      </ul>
+      </div>
     );
   };
   
   return (
     <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle>제품별 매출 비율</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">제품별 매출 비율</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                dataKey="salesAmount"
-                nameKey="productName"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                fill="#8884d8"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend content={renderLegend} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-64 text-red-500">
+            {error}
+          </div>
+        ) : data.length === 0 ? (
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            제품별 매출 데이터가 없습니다.
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend 
+                  content={renderCustomizedLegend}
+                  verticalAlign="bottom"
+                  height={36}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+        
+        {!loading && !error && data.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold mb-2">상위 매출 제품</h4>
+            <ul className="text-xs space-y-1">
+              {data.slice(0, 3).map((product, index) => (
+                <li key={index} className="flex justify-between">
+                  <span className="text-gray-700">{product.productName}</span>
+                  <span className="font-semibold">{(parseFloat(product.salesRatio) * 100).toFixed(1)}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

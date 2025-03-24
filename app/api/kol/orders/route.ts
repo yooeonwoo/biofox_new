@@ -1,33 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { orders, orderItems, commissions } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { getAuth } from "@/lib/auth";
+import { orders, orderItems, commissions, kols, users, shops as shopsTable } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
+import { checkAuthSupabase } from "@/lib/auth";
 
 // 주문(매출) 목록 조회 (KOL 전용 - 자신의 소속 전문점 매출만 조회 가능)
 export async function GET(request: NextRequest) {
   try {
-    // 사용자 인증 확인
-    const { userId, role } = await getAuth();
+    // Supabase를 통한 사용자 인증 및 권한 확인
+    const authResult = await checkAuthSupabase(["kol"]);
     
-    if (!userId) {
+    if (authResult instanceof NextResponse) {
+      // 인증 또는 권한 오류 - 응답 그대로 반환
+      return authResult;
+    }
+    
+    if (!authResult) {
       return NextResponse.json(
         { error: "인증되지 않은 사용자입니다." },
         { status: 401 }
       );
     }
     
-    // KOL 역할 확인
-    if (role !== "kol") {
+    // 사용자의 이메일을 통해 연결된 사용자 ID 가져오기
+    const userInfo = await db.query.users.findFirst({
+      where: eq(users.email, authResult.email),
+    });
+    
+    if (!userInfo) {
       return NextResponse.json(
-        { error: "접근 권한이 없습니다." },
-        { status: 403 }
+        { error: "사용자 정보를 찾을 수 없습니다." },
+        { status: 404 }
       );
     }
     
     // KOL ID 가져오기
     const kolResult = await db.query.kols.findFirst({
-      where: (kols) => eq(kols.userId, Number(userId)),
+      where: eq(kols.userId, userInfo.id),
     });
     
     if (!kolResult) {
@@ -38,17 +47,19 @@ export async function GET(request: NextRequest) {
     }
     
     // KOL의 전문점 목록 가져오기
-    const shops = await db.query.shops.findMany({
-      where: (shops) => eq(shops.kolId, kolResult.id),
+    const shopsList = await db.query.shops.findMany({
+      where: eq(shopsTable.kolId, kolResult.id),
     });
     
-    const shopIds = shops.map((shop) => shop.id);
+    const shopIds = shopsList.map((shop) => shop.id);
+    
+    if (shopIds.length === 0) {
+      return NextResponse.json([]);
+    }
     
     // 전문점들의 주문 목록 조회
     const ordersList = await db.query.orders.findMany({
-      where: (orders) => {
-        return shopIds.includes(orders.shopId);
-      },
+      where: inArray(orders.shopId, shopIds),
       with: {
         shop: true,
         orderItems: {

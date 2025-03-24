@@ -3,6 +3,7 @@ import { shops, kols, users } from "@/db/schema";
 import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { getAuth } from "@/lib/auth";
 
 // 특정 전문점 조회
 export async function GET(
@@ -10,7 +11,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgRole } = await auth();
+    const { userId, role } = await getAuth();
     const id = parseInt(params.id);
 
     // 인증 확인
@@ -40,7 +41,7 @@ export async function GET(
     }
 
     // 관리자가 아닌 경우, KOL 자신의 전문점만 조회 가능
-    if (orgRole !== "본사관리자") {
+    if (role !== "본사관리자") {
       const userInfo = await db.query.users.findFirst({
         where: eq(users.clerkId, userId),
       });
@@ -77,7 +78,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgRole } = await auth();
+    const { userId, role } = await getAuth();
     const id = parseInt(params.id);
 
     // 인증 확인
@@ -98,7 +99,7 @@ export async function PUT(
     }
 
     // 관리자가 아닌 경우, KOL 자신의 전문점만 수정 가능
-    if (orgRole !== "본사관리자") {
+    if (role !== "본사관리자") {
       const userInfo = await db.query.users.findFirst({
         where: eq(users.clerkId, userId),
       });
@@ -131,7 +132,7 @@ export async function PUT(
     }
 
     // KOL ID 변경 시 확인 (관리자만 가능)
-    if (kolId && kolId !== shopToUpdate.kolId && orgRole !== "본사관리자") {
+    if (kolId && kolId !== shopToUpdate.kolId && role !== "본사관리자") {
       return NextResponse.json(
         { error: "KOL 변경은 관리자만 가능합니다" },
         { status: 403 }
@@ -159,7 +160,7 @@ export async function PUT(
         ownerName,
         region,
         smartPlaceLink,
-        status: orgRole === "본사관리자" ? status : shopToUpdate.status, // 관리자만 상태 변경 가능
+        status: role === "본사관리자" ? status : shopToUpdate.status, // 관리자만 상태 변경 가능
         updatedAt: new Date(),
       })
       .where(eq(shops.id, id))
@@ -181,7 +182,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId, orgRole } = await auth();
+    const { userId, role } = await getAuth();
     const id = parseInt(params.id);
 
     // 인증 확인
@@ -202,7 +203,7 @@ export async function DELETE(
     }
 
     // 관리자가 아닌 경우, KOL 자신의 전문점만 삭제 가능
-    if (orgRole !== "본사관리자") {
+    if (role !== "본사관리자") {
       const userInfo = await db.query.users.findFirst({
         where: eq(users.clerkId, userId),
       });

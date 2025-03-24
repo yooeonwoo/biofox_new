@@ -50,7 +50,7 @@ export default function KolDashboardPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* 헤더 섹션 */}
       <div className="card-gradient p-6 mb-2 rounded-lg">
-        <h2 className="text-xl font-semibold mb-2">KOL 대시보드</h2>
+        <h2 className="text-xl font-semibold mb-2 text-gray-800">KOL 대시보드</h2>
         <p className="text-gray-700">
           소속 전문점의 매출 및 수당 현황을 확인할 수 있습니다. 이 페이지는 'kol' 역할을 가진 사용자만 접근할 수 있습니다.
         </p>
@@ -58,7 +58,7 @@ export default function KolDashboardPage() {
       
       {/* 대시보드 컨트롤 */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">매출 및 수당 현황</h1>
+        <h1 className="text-2xl font-bold text-gray-800">매출 및 수당 현황</h1>
         <MonthSelector value={yearMonth} onChange={handleMonthChange} />
       </div>
 

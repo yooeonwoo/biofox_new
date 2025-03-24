@@ -287,4 +287,92 @@ export const kolMonthlySummaryRelations = relations(kolMonthlySummary, ({ one })
     fields: [kolMonthlySummary.kolId],
     references: [kols.id],
   }),
+}));
+
+// 관리자 대시보드용 전체 KOL 통계 테이블
+export const adminDashboardStats = pgTable("admin_dashboard_stats", {
+  id: serial("id").primaryKey(),
+  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
+  totalKolsCount: integer("total_kols_count").notNull().default(0), // 전체 KOL 수
+  totalShopsCount: integer("total_shops_count").notNull().default(0), // 전체 전문점 수
+  activeKolsCount: integer("active_kols_count").notNull().default(0), // 활동 중인 KOL 수 
+  activeShopsCount: integer("active_shops_count").notNull().default(0), // 활동 중인 전문점 수
+  totalSales: integer("total_sales").notNull().default(0), // 전체 매출 합계
+  productSales: integer("product_sales").notNull().default(0), // 제품 매출 합계
+  deviceSales: integer("device_sales").notNull().default(0), // 기기 매출 합계
+  totalCommission: integer("total_commission").notNull().default(0), // 전체 수당 합계
+  previousMonthSales: integer("previous_month_sales").notNull().default(0), // 전월 전체 매출
+  previousMonthCommission: integer("previous_month_commission").notNull().default(0), // 전월 전체 수당
+  salesGrowthRate: decimal("sales_growth_rate", { precision: 5, scale: 2 }).notNull().default("0"), // 매출 성장률 (%)
+  commissionGrowthRate: decimal("commission_growth_rate", { precision: 5, scale: 2 }).notNull().default("0"), // 수당 성장률 (%)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// 관리자 통계를 위한 KOL별 월간 매출 합계 테이블
+export const kolTotalMonthlySales = pgTable("kol_total_monthly_sales", {
+  id: serial("id").primaryKey(),
+  kolId: integer("kol_id").references(() => kols.id).notNull(),
+  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
+  totalSales: integer("total_sales").notNull().default(0), // 해당 KOL의 모든 전문점 매출 합계
+  productSales: integer("product_sales").notNull().default(0), // 제품 매출 합계
+  deviceSales: integer("device_sales").notNull().default(0), // 기기 매출 합계
+  totalCommission: integer("total_commission").notNull().default(0), // 수당 합계
+  totalActiveShops: integer("total_active_shops").notNull().default(0), // 활동 중인 전문점 수
+  totalShops: integer("total_shops").notNull().default(0), // 전체 전문점 수
+  directSalesRatio: decimal("direct_sales_ratio", { precision: 5, scale: 2 }).notNull().default("0"), // 직접 판매 비율 (%)
+  indirectSalesRatio: decimal("indirect_sales_ratio", { precision: 5, scale: 2 }).notNull().default("0"), // 간접 판매 비율 (%)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// KOL별 월간 매출 합계 관계 정의
+export const kolTotalMonthlySalesRelations = relations(kolTotalMonthlySales, ({ one }) => ({
+  kol: one(kols, {
+    fields: [kolTotalMonthlySales.kolId],
+    references: [kols.id],
+  }),
+}));
+
+// 전체 제품별 매출 비율 통계 테이블
+export const productTotalSalesStats = pgTable("product_total_sales_stats", {
+  id: serial("id").primaryKey(),
+  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM
+  productId: integer("product_id").references(() => products.id).notNull(),
+  totalSalesAmount: integer("total_sales_amount").notNull().default(0), // 제품별 전체 매출액
+  salesRatio: decimal("sales_ratio", { precision: 5, scale: 4 }).notNull().default("0"), // 제품별 매출 비율
+  salesGrowthRate: decimal("sales_growth_rate", { precision: 5, scale: 2 }).notNull().default("0"), // 전월 대비 성장률
+  orderCount: integer("order_count").notNull().default(0), // 주문 수량
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// 제품별 매출 비율 관계 정의
+export const productTotalSalesStatsRelations = relations(productTotalSalesStats, ({ one }) => ({
+  product: one(products, {
+    fields: [productTotalSalesStats.productId],
+    references: [products.id],
+  }),
+}));
+
+// 관리자 권한 관리 테이블 (관리자가 특정 KOL 그룹만 관리하도록 설정)
+export const adminKolAccess = pgTable("admin_kol_access", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(), // 관리자 사용자 ID
+  kolId: integer("kol_id").references(() => kols.id).notNull(), // 접근 가능한 KOL ID
+  accessLevel: varchar("access_level", { length: 50 }).notNull().default("view"), // view, edit, full_access 등
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// 관리자 KOL 접근 권한 관계 정의
+export const adminKolAccessRelations = relations(adminKolAccess, ({ one }) => ({
+  user: one(users, {
+    fields: [adminKolAccess.userId],
+    references: [users.id],
+  }),
+  kol: one(kols, {
+    fields: [adminKolAccess.kolId],
+    references: [kols.id],
+  }),
 })); 

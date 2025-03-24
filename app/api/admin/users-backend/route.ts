@@ -73,11 +73,34 @@ export async function POST(req: NextRequest) {
 
       const newUser = await clerkResponse.json();
 
-      // Supabase에 사용자 정보 저장
+      // 최대 ID 조회
+      const { data: maxIdData, error: maxIdError } = await supabase
+        .from('users')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+
+      if (maxIdError) {
+        console.error("Supabase 최대 ID 조회 실패:", maxIdError);
+        
+        // Clerk에서 생성된 사용자 롤백 (에러 복구)
+        await fetch(`https://api.clerk.com/v1/users/${newUser.id}`, {
+          method: 'DELETE',
+          headers
+        });
+        
+        throw new Error("사용자 ID를 조회하는 중 오류가 발생했습니다.");
+      }
+
+      // 최대 ID + 1 값 계산 (없으면 1부터 시작)
+      const nextId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
+
+      // Supabase에 사용자 정보 저장 (ID 명시)
       const { data: userData, error: userError } = await supabase
         .from('users')
         .insert([
           { 
+            id: nextId,
             clerk_id: newUser.id,
             email: email,
             name: role === "kol" ? kolData.name : name || email.split('@')[0],
@@ -102,21 +125,36 @@ export async function POST(req: NextRequest) {
       if (role === "kol" && userData && userData.length > 0) {
         const userId = userData[0].id;
         
-        // 기존 KOL 테이블에서 최대 ID 조회
-        const { data: maxIdResult } = await supabase
+        // KOL 테이블의 최대 ID 조회
+        const { data: maxKolIdData, error: maxKolIdError } = await supabase
           .from('kols')
           .select('id')
           .order('id', { ascending: false })
           .limit(1);
-        
-        // 최대 ID에 1을 더한 값 사용 (없으면 1 사용)
-        const nextId = maxIdResult && maxIdResult.length > 0 ? maxIdResult[0].id + 1 : 1;
+
+        if (maxKolIdError) {
+          console.error("Supabase KOL 최대 ID 조회 실패:", maxKolIdError);
+          
+          // 사용자 정보 롤백
+          await supabase.from('users').delete().eq('id', userId);
+          
+          // Clerk에서 생성된 사용자 롤백 (에러 복구)
+          await fetch(`https://api.clerk.com/v1/users/${newUser.id}`, {
+            method: 'DELETE',
+            headers
+          });
+          
+          throw new Error("KOL ID를 조회하는 중 오류가 발생했습니다.");
+        }
+
+        // 최대 ID + 1 값 계산 (없으면 1부터 시작)
+        const nextKolId = maxKolIdData && maxKolIdData.length > 0 ? maxKolIdData[0].id + 1 : 1;
         
         const { data: insertedKolData, error: kolError } = await supabase
           .from('kols')
           .insert([
             {
-              id: nextId, // 명시적으로 ID 지정
+              id: nextKolId,
               user_id: userId,
               name: kolData.name,
               shop_name: kolData.shopName,

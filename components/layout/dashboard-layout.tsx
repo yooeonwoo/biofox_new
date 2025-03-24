@@ -235,7 +235,7 @@ export default function DashboardLayout({ children, title, role }: DashboardLayo
       <div className="flex-1 flex flex-col md:pl-64">
         {/* 헤더 */}
         <header className="flex justify-between items-center bg-white border-b p-4 h-16 shadow-sm">
-          <h1 className="text-2xl font-bold ml-12 md:ml-0">{dynamicTitle}</h1>
+          <h1 className="text-2xl font-bold ml-12 md:ml-0 text-gray-800">{dynamicTitle}</h1>
           
           <div className="flex items-center gap-4">
             <div className="flex items-center">

@@ -5,10 +5,25 @@ import { Toaster } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo, useEffect } from "react";
-import { Search, Plus, ChevronRight, Loader2 } from "lucide-react";
+import { Search, Plus, ChevronRight, Loader2, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // 인터페이스 정의
 interface ISalesData {
@@ -79,26 +94,64 @@ export function SalesContent() {
         return;
       }
       
-      // 모든 데이터 병렬로 로드 - 각 함수에서 에러가 발생하면 Promise.allSettled에서 잡힘
-      const results = await Promise.allSettled([
-        fetchKols(),
-        fetchStores(),
-        fetchProducts(),
-        fetchOrders()
-      ]);
+      // 각 API 호출 함수를 개별적으로 실행하고 오류를 개별적으로 처리
+      let hasLoadedSomeData = false;
+      let errorMessages = [];
       
-      // 개별 결과 확인 (rejected 되면 console.error에 메시지 표시)
-      results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          const apis = ['KOL', '전문점', '제품', '주문'];
-          console.error(`${apis[index]} 데이터 로드 실패:`, result.reason);
+      try {
+        const kolData = await fetchKols();
+        if (kolData) {
+          hasLoadedSomeData = true;
         }
-      });
+      } catch (kolError) {
+        console.error("KOL 데이터 로드 실패:", kolError);
+        errorMessages.push("KOL 목록을 불러오는데 실패했습니다");
+      }
       
-      // 모든 API 호출이 실패했는지 확인
-      const allFailed = results.every(result => result.status === 'rejected');
-      if (allFailed) {
-        setError("모든 데이터를 불러오는데 실패했습니다. 인증 상태를 확인해주세요.");
+      try {
+        const storeData = await fetchStores();
+        if (storeData) {
+          hasLoadedSomeData = true;
+        }
+      } catch (storeError) {
+        console.error("전문점 데이터 로드 실패:", storeError);
+        errorMessages.push("전문점 목록을 불러오는데 실패했습니다");
+      }
+      
+      try {
+        const productData = await fetchProducts();
+        if (productData) {
+          hasLoadedSomeData = true;
+        }
+      } catch (productError) {
+        console.error("제품 데이터 로드 실패:", productError);
+        errorMessages.push("제품 목록을 불러오는데 실패했습니다");
+      }
+      
+      try {
+        const orderData = await fetchOrders();
+        if (orderData) {
+          hasLoadedSomeData = true;
+        }
+      } catch (orderError) {
+        console.error("주문 데이터 로드 실패:", orderError);
+        errorMessages.push("매출 데이터를 불러오는데 실패했습니다");
+      }
+      
+      // 일부 데이터라도 로드되었는지 확인
+      if (!hasLoadedSomeData) {
+        // 모든 API 호출이 실패한 경우
+        setError("모든 데이터를 불러오는데 실패했습니다. 인증 상태와 네트워크 연결을 확인해주세요.");
+        if (errorMessages.length > 0) {
+          toast.error("데이터 로드 실패", {
+            description: errorMessages.join(', ')
+          });
+        }
+      } else if (errorMessages.length > 0) {
+        // 일부 API 호출만 실패한 경우 토스트로 알림만 표시
+        toast.warning("일부 데이터 로드 실패", {
+          description: errorMessages.join(', ')
+        });
       }
     } catch (err) {
       console.error("데이터 로드 오류:", err);
@@ -113,27 +166,25 @@ export function SalesContent() {
   
   /**
    * KOL 데이터 로드
-   * (응답이 정상적이지 않으면 throw -> Promise.allSettled에서 rejected 처리)
    */
   const fetchKols = async () => {
     try {
       const response = await fetch("/api/kols", {
+        credentials: 'include',
         headers: {
           'Cache-Control': 'no-cache'
         }
       });
       
+      // 응답 상태 확인 및 자세한 오류 처리
       if (!response.ok) {
-        // 인증 오류 특별 처리
+        const errorText = await response.text().catch(() => "응답 텍스트를 가져오지 못했습니다");
+        console.error(`[fetchKols] HTTP ${response.status} - ${response.statusText}, 응답: ${errorText}`);
+        
         if (response.status === 401) {
-          // 401이면 바로 에러 던짐
           throw new Error("인증 세션이 만료되었습니다. 다시 로그인해주세요.");
         }
-
-        // --- [수정] 콘솔에 상태 코드 로깅 추가 ---
-        console.error(`[fetchKols] HTTP ${response.status} - ${response.statusText}`);
-
-        // --- [수정] 더 구체적인 에러 메시지로 throw ---
+        
         throw new Error(`KOL 데이터를 불러오는데 실패했습니다 (status: ${response.status})`);
       }
       
@@ -159,20 +210,21 @@ export function SalesContent() {
   const fetchStores = async () => {
     try {
       const response = await fetch("/api/shops", {
+        credentials: 'include',
         headers: {
           'Cache-Control': 'no-cache'
         }
       });
       
+      // 응답 상태 확인 및 자세한 오류 처리
       if (!response.ok) {
+        const errorText = await response.text().catch(() => "응답 텍스트를 가져오지 못했습니다");
+        console.error(`[fetchStores] HTTP ${response.status} - ${response.statusText}, 응답: ${errorText}`);
+        
         if (response.status === 401) {
           throw new Error("인증 세션이 만료되었습니다. 다시 로그인해주세요.");
         }
-
-        // --- [수정] 콘솔에 상태 코드 로깅 추가 ---
-        console.error(`[fetchStores] HTTP ${response.status} - ${response.statusText}`);
-
-        // --- [수정] 에러 메시지 구체화 ---
+        
         throw new Error(`전문점 데이터를 불러오는데 실패했습니다 (status: ${response.status})`);
       }
       
@@ -198,20 +250,21 @@ export function SalesContent() {
   const fetchProducts = async () => {
     try {
       const response = await fetch("/api/products", {
+        credentials: 'include',
         headers: {
           'Cache-Control': 'no-cache'
         }
       });
       
+      // 응답 상태 확인 및 자세한 오류 처리
       if (!response.ok) {
+        const errorText = await response.text().catch(() => "응답 텍스트를 가져오지 못했습니다");
+        console.error(`[fetchProducts] HTTP ${response.status} - ${response.statusText}, 응답: ${errorText}`);
+        
         if (response.status === 401) {
           throw new Error("인증 세션이 만료되었습니다. 다시 로그인해주세요.");
         }
-
-        // --- [수정] 콘솔에 상태 코드 로깅 추가 ---
-        console.error(`[fetchProducts] HTTP ${response.status} - ${response.statusText}`);
-
-        // --- [수정] 에러 메시지 구체화 ---
+        
         throw new Error(`제품 데이터를 불러오는데 실패했습니다 (status: ${response.status})`);
       }
       
@@ -237,48 +290,49 @@ export function SalesContent() {
   const fetchOrders = async () => {
     try {
       const response = await fetch("/api/admin/orders", {
+        credentials: 'include',
         headers: {
           'Cache-Control': 'no-cache'
         }
       });
       
+      // 응답 상태 확인 및 자세한 오류 처리
       if (!response.ok) {
+        const errorText = await response.text().catch(() => "응답 텍스트를 가져오지 못했습니다");
+        console.error(`[fetchOrders] HTTP ${response.status} - ${response.statusText}, 응답: ${errorText}`);
+        
         if (response.status === 401) {
           throw new Error("인증 세션이 만료되었습니다. 다시 로그인해주세요.");
         }
-
-        // --- [수정] 콘솔에 상태 코드 로깅 추가 ---
-        console.error(`[fetchOrders] HTTP ${response.status} - ${response.statusText}`);
-
-        // --- [수정] 에러 메시지 구체화 ---
+        
         throw new Error(`매출 데이터를 불러오는데 실패했습니다 (status: ${response.status})`);
       }
       
       const data = await response.json();
       
-      // API 응답 데이터를 컴포넌트 형식에 맞게 변환
-      const formattedSales: ISalesData[] = data.map((order: any) => {
-        // 제품 정보 추출
-        const products = order.orderItems.map((item: any) => {
-          const product = item.product;
-          return `${product.name} x${item.quantity}`;
-        });
-        
-        // 날짜 형식 변환
-        const orderDate = new Date(order.orderDate);
-        const formattedDate = orderDate.toISOString().split('T')[0]; // YYYY-MM-DD
-        
-        return {
-          id: order.id.toString(),
-          date: formattedDate,
-          storeId: order.shopId.toString(),
-          storeName: order.shop?.ownerName || "알 수 없는 전문점",
-          kolId: order.shop?.kolId.toString() || "",
-          kolName: order.shop?.kol?.name || "알 수 없는 KOL",
-          amount: order.totalAmount,
-          products
-        };
-      });
+      // 디버깅을 위한 콘솔 로그 추가
+      console.log("API 응답 구조:", data);
+      
+      // API 응답 구조 확인 - orders 배열이 있으면 그것을 사용하고, 없으면 data 자체를 사용
+      const ordersArray = data.orders || data;
+      
+      // 배열인지 확인
+      if (!Array.isArray(ordersArray)) {
+        console.error("주문 데이터가 배열 형태가 아닙니다:", ordersArray);
+        throw new Error("주문 데이터 형식이 올바르지 않습니다");
+      }
+      
+      // 주문 데이터를 매출 데이터 형식으로 변환
+      const formattedSales: ISalesData[] = ordersArray.map((order: any) => ({
+        id: order.id.toString(),
+        date: new Date(order.orderDate).toISOString().split('T')[0], // YYYY-MM-DD 형식
+        storeId: order.shopId.toString(),
+        storeName: order.shop?.ownerName || "알 수 없는 전문점",
+        kolId: order.shop?.kol?.id.toString() || "",
+        kolName: order.shop?.kol?.name || "알 수 없는 KOL",
+        amount: order.totalAmount,
+        products: order.orderItems.map((item: any) => item.product?.name || "알 수 없는 제품")
+      }));
       
       setSales(formattedSales);
       return formattedSales;
@@ -371,6 +425,7 @@ export function SalesContent() {
       // 실제 API 호출
       const response = await fetch("/api/admin/orders", {
         method: "POST",
+        credentials: 'include',
         headers: {
           "Content-Type": "application/json",
         },
@@ -397,80 +452,54 @@ export function SalesContent() {
 
   // KOL 사이드바 항목 컴포넌트
   const KolSidebarItem = ({ kol }: { kol: IKol }) => {
-    const kolSales = groupedSalesByKol[kol.id] || [];
-    const kolStores = storesByKol[kol.id] || [];
-    const isExpanded = expandedKols[kol.id];
-    const isSelected = selectedKolId === kol.id && !selectedStoreId;
-    
-    // 검색어가 있을 때 관련 없는 KOL 숨기기
-    if (searchQuery && kolSales.length === 0) return null;
+    const isExpanded = expandedKols[kol.id] ?? false;
+    const kolStores = stores.filter((store) => store.kolId === kol.id);
     
     return (
-      <div>
-        <button
+      <div className="mb-2">
+        <div
           className={cn(
-            "w-full text-left px-4 py-2 rounded-md transition-colors flex items-center justify-between",
-            isSelected
-              ? "bg-purple-100 text-purple-900 font-medium" 
+            "flex items-center justify-between p-2 rounded-md cursor-pointer",
+            selectedKolId === kol.id
+              ? "bg-blue-50 text-blue-700 font-medium"
               : "hover:bg-gray-100"
           )}
-          onClick={() => {
-            setSelectedKolId(kol.id);
-            setSelectedStoreId(null);
-            // 클릭 시 자동으로 확장
-            if (!isExpanded && kolStores.length > 0) {
-              toggleKolExpanded(kol.id);
-            }
-          }}
+          onClick={() => toggleKolExpanded(kol.id)}
         >
-          <div className="flex items-center gap-2">
-            <ChevronRight 
-              className={cn(
-                "h-4 w-4 transition-transform", 
-                isExpanded ? "transform rotate-90" : ""
-              )} 
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleKolExpanded(kol.id);
-              }}
-            />
-            <span className="truncate">{kol.name}</span>
+          <div className="flex items-center">
+            <span>{kol.name}</span>
+            <span className="ml-2 text-xs bg-gray-200 rounded-full px-2 py-0.5 text-gray-700">
+              {kolStores.length}
+            </span>
           </div>
-          <span className="text-xs bg-gray-200 rounded-full px-2 py-0.5 text-gray-700 min-w-[1.5rem] text-center">
-            {kolSales.length}
-          </span>
-        </button>
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 transition-transform",
+              isExpanded ? "transform rotate-90" : ""
+            )}
+          />
+        </div>
         
-        {/* 전문점 하위 목록 */}
         {isExpanded && (
-          <div className="ml-6 mt-1 space-y-1">
-            {kolStores.map(store => {
-              const storeSales = groupedSalesByStore[store.id] || [];
-              
-              // 검색어가 있을 때 관련 없는 전문점 숨기기
-              if (searchQuery && storeSales.length === 0) return null;
-              
-              return (
-                <button
-                  key={store.id}
-                  className={cn(
-                    "w-full text-left px-4 py-1.5 rounded-md transition-colors flex items-center justify-between text-sm",
-                    selectedStoreId === store.id
-                      ? "bg-purple-100 text-purple-900 font-medium" 
-                      : "hover:bg-gray-100"
-                  )}
-                  onClick={() => {
-                    setSelectedKolId(kol.id);
-                    setSelectedStoreId(store.id);
-                  }}
-                >
-                  <span className="truncate">{store.name}</span>
-                  <span className="text-xs bg-gray-200 rounded-full px-2 py-0.5 text-gray-700 min-w-[1.5rem] text-center">
-                    {storeSales.length}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="ml-4 mt-1 space-y-1">
+            {kolStores.map((store) => (
+              <div
+                key={store.id}
+                className={cn(
+                  "flex items-center p-2 rounded-md cursor-pointer",
+                  selectedStoreId === store.id
+                    ? "bg-blue-50 text-blue-700 font-medium"
+                    : "hover:bg-gray-100"
+                )}
+                onClick={() => setSelectedStoreId(store.id)}
+              >
+                <Store className="h-4 w-4 mr-2" />
+                <span className="text-sm">{store.name}</span>
+              </div>
+            ))}
+            {kolStores.length === 0 && (
+              <div className="p-2 text-sm text-gray-500">전문점 없음</div>
+            )}
           </div>
         )}
       </div>
@@ -478,205 +507,115 @@ export function SalesContent() {
   };
 
   return (
-    <div className="container py-8">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">매출 관리</h1>
-          <SalesRegistration 
-            stores={stores} 
-            products={products} 
-            isAdmin={true}
-            onSubmitOrder={handleSubmitOrder}
-            buttonLabel="매출 등록"
-          />
+    <div className="space-y-6">
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
+          <p className="font-bold">오류</p>
+          <p>{error}</p>
         </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-            <p className="font-bold">오류</p>
-            <p>{error}</p>
-            <div className="mt-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mr-2"
-                onClick={() => fetchData()}
-              >
-                재시도
+      )}
+      
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>매출 현황</CardTitle>
+            <CardDescription>KOL 및 전문점별 매출 관리</CardDescription>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="KOL, 전문점으로 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            {!isLoading && (
+              <Button onClick={() => handleSubmitOrder({ storeId: "", items: [], totalAmount: 0 })}>
+                <Plus className="h-4 w-4 mr-2" /> 매출 등록
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.location.href = '/signin?redirect_url=/admin/sales'}
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-[250px_1fr] gap-6">
+            {/* KOL 및 전문점 사이드바 */}
+            <div className="border rounded-md p-2 space-y-1 h-[calc(100vh-250px)] overflow-y-auto">
+              <div className="font-medium mb-2 p-2">KOL 및 전문점</div>
+              
+              <div
+                className={cn(
+                  "flex items-center p-2 rounded-md cursor-pointer mb-2",
+                  selectedKolId === "all"
+                    ? "bg-blue-50 text-blue-700 font-medium"
+                    : "hover:bg-gray-100"
+                )}
+                onClick={() => {
+                  setSelectedKolId("all");
+                  setSelectedStoreId(null);
+                }}
               >
-                로그인 페이지로 이동
-              </Button>
+                <span>모든 매출</span>
+              </div>
+              
+              {kols.map((kol) => (
+                <KolSidebarItem key={kol.id} kol={kol} />
+              ))}
+            </div>
+            
+            {/* 매출 데이터 테이블 */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">{selectedTitle}</h3>
+              
+              {isLoading ? (
+                <div className="flex justify-center items-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+                  <span className="ml-3 text-sm text-gray-500">데이터를 불러오는 중...</span>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>날짜</TableHead>
+                      <TableHead>KOL</TableHead>
+                      <TableHead>전문점</TableHead>
+                      <TableHead>제품</TableHead>
+                      <TableHead className="text-right">매출액</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSales.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center text-gray-500">
+                          등록된 매출이 없습니다.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredSales.map((sale) => (
+                        <TableRow key={sale.id}>
+                          <TableCell>{new Date(sale.date).toLocaleDateString()}</TableCell>
+                          <TableCell>{sale.kolName}</TableCell>
+                          <TableCell>{sale.storeName}</TableCell>
+                          <TableCell>
+                            <div className="max-w-xs truncate">{sale.products.join(", ")}</div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {new Intl.NumberFormat("ko-KR", {
+                              style: "currency",
+                              currency: "KRW",
+                            }).format(sale.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </div>
-        )}
-
-        <div className="flex flex-col gap-4">
-          {/* 검색 */}
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="KOL 또는 전문점으로 검색..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-        
-        {isLoading ? (
-          <div className="flex items-center justify-center p-8 flex-col">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-500 mb-2" />
-            <span className="text-lg">데이터를 불러오는 중...</span>
-          </div>
-        ) : (
-          <>
-            {stores.length === 0 && products.length === 0 ? (
-              <div className="text-center p-8 border rounded-md">
-                <h3 className="text-lg font-medium mb-2">데이터를 불러올 수 없습니다</h3>
-                <p className="text-gray-500 mb-4">전문점 또는 제품 데이터를 가져오는데 실패했을 수 있습니다. 인증 상태를 확인해주세요.</p>
-                <Button 
-                  onClick={() => fetchData()}
-                  className="mr-2"
-                >
-                  재시도
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = '/signin?redirect_url=/admin/sales'}
-                >
-                  로그인하기
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-[250px_1fr] gap-6">
-                {/* KOL/전문점 사이드바 */}
-                <div className="border rounded-md p-2 space-y-1 h-[calc(100vh-250px)] overflow-y-auto">
-                  {/* 모든 매출 항목 */}
-                  <button
-                    className={cn(
-                      "w-full text-left px-4 py-2 rounded-md transition-colors flex items-center justify-between",
-                      selectedKolId === "all" 
-                        ? "bg-purple-100 text-purple-900 font-medium" 
-                        : "hover:bg-gray-100"
-                    )}
-                    onClick={() => {
-                      setSelectedKolId("all");
-                      setSelectedStoreId(null);
-                    }}
-                  >
-                    <span className="truncate">모든 매출</span>
-                    <span className="text-xs bg-gray-200 rounded-full px-2 py-0.5 text-gray-700 min-w-[1.5rem] text-center">
-                      {sales.length}
-                    </span>
-                  </button>
-                  
-                  {/* KOL 목록 */}
-                  {kols.map(kol => (
-                    <KolSidebarItem key={kol.id} kol={kol} />
-                  ))}
-                </div>
-                
-                {/* 선택된 KOL/전문점의 매출 목록 */}
-                <div className="border rounded-md">
-                  <div className="bg-muted/40 px-4 py-3 border-b flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">{selectedTitle}</h3>
-                    {selectedKolId !== "all" && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => {
-                          // 매출 등록 버튼을 클릭하면 선택된 KOL 또는 전문점으로 미리 선택된 매출 등록 다이얼로그 열기
-                          console.log(`${selectedTitle}에 매출 등록`);
-                        }}
-                        className="gap-1"
-                      >
-                        <Plus className="h-3 w-3" />
-                        {selectedStoreId ? "이 전문점에 매출 등록" : "이 KOL에 매출 등록"}
-                      </Button>
-                    )}
-                  </div>
-                  
-                  {/* 매출 현황 테이블 */}
-                  <div className="overflow-x-auto">
-                    {filteredSales.length > 0 ? (
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="py-2 px-4 text-left">날짜</th>
-                            <th className="py-2 px-4 text-left">전문점</th>
-                            <th className="py-2 px-4 text-left">KOL</th>
-                            <th className="py-2 px-4 text-left">상품</th>
-                            <th className="py-2 px-4 text-right">금액</th>
-                            <th className="py-2 px-4 text-center">작업</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredSales.map((sale) => (
-                            <tr key={sale.id} className="border-b hover:bg-gray-50">
-                              <td className="py-2 px-4">{sale.date}</td>
-                              <td className="py-2 px-4">{sale.storeName}</td>
-                              <td className="py-2 px-4">{sale.kolName}</td>
-                              <td className="py-2 px-4">
-                                <ul className="list-disc ml-4">
-                                  {sale.products.map((product, index) => (
-                                    <li key={index}>{product}</li>
-                                  ))}
-                                </ul>
-                              </td>
-                              <td className="py-2 px-4 text-right font-medium">
-                                ₩{sale.amount.toLocaleString()}
-                              </td>
-                              <td className="py-2 px-4 text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  <Button variant="outline" size="sm">수정</Button>
-                                  <Button variant="outline" size="sm" className="text-red-500">삭제</Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                          <tr className="bg-gray-50 font-medium">
-                            <td colSpan={4} className="py-2 px-4 text-right">총 매출액</td>
-                            <td className="py-2 px-4 text-right">
-                              ₩{filteredSales.reduce((total, sale) => total + sale.amount, 0).toLocaleString()}
-                            </td>
-                            <td></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    ) : (
-                      <div className="py-8 text-center text-muted-foreground">
-                        {searchQuery 
-                          ? "검색 결과가 없습니다." 
-                          : "선택한 항목에 대한 매출 데이터가 없습니다."}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        <div className="rounded-md border p-6 bg-white">
-          <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-semibold">관리자 매출 등록 안내</h2>
-            <p className="text-muted-foreground">
-              관리자는 모든 전문점의 매출을 등록하고 관리할 수 있습니다.
-            </p>
-            <ul className="list-disc ml-4 space-y-2">
-              <li>좌측 사이드바를 통해 KOL별, 전문점별 매출을 확인할 수 있습니다.</li>
-              <li>오른쪽 상단의 '매출 등록' 버튼을 클릭하여 새로운 매출을 등록할 수 있습니다.</li>
-              <li>등록된 매출은 KOL에게 실시간으로 표시됩니다.</li>
-              <li>매출 정보는 수정 및 삭제가 가능합니다.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       <Toaster position="top-center" richColors />
     </div>
   );

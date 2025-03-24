@@ -1,0 +1,1 @@
+INSERT INTO users (clerk_id, email, name, role, created_at, updated_at) VALUES ('user_2ujmzjxZPAU1CXGHKyIAewMPRDX', 'reflance88@gmail.com', '관리자', '본사관리자', NOW(), NOW()) ON CONFLICT (clerk_id) DO UPDATE SET role = '본사관리자', name = '관리자', updated_at = NOW();

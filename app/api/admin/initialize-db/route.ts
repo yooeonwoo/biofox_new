@@ -9,6 +9,7 @@ import { initializeRpcFunctions, executeSql } from "@/db/init-rpc";
 import { supabase, supabaseAdmin } from "@/db/utils";
 import path from "path";
 import fs from "fs";
+import { getAuth } from "@/lib/auth";
 
 /**
  * SQL 파일을 읽어서 반환하는 함수
@@ -24,18 +25,16 @@ function readSqlFile(fileName: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    // 개발 환경 확인
-    if (process.env.NODE_ENV !== 'development') {
+    // 개발 환경인지 확인
+    if (process.env.NODE_ENV === 'production') {
       return NextResponse.json(
         { error: "이 API는 개발 환경에서만 사용할 수 있습니다." },
         { status: 403 }
       );
     }
 
-    // 관리자 권한 확인
-    const authObject = await auth();
-    const userId = authObject.userId;
-    const sessionClaims = authObject.sessionClaims;
+    // 관리자 권한 확인 - getAuth 함수 사용
+    const { userId, role } = await getAuth();
     
     if (!userId) {
       return NextResponse.json(
@@ -44,9 +43,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 세션 정보에서 역할 확인
-    const userRole = sessionClaims?.metadata as { role?: string } | undefined;
-    if (userRole?.role !== '본사관리자') {
+    // 역할 확인
+    if (role !== '본사관리자') {
       return NextResponse.json(
         { error: "관리자 권한이 필요합니다." },
         { status: 403 }

@@ -1,8 +1,10 @@
-import React from "react";
+import React from 'react';
+import Link from 'next/link';
 import { cn } from "@/lib/utils";
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
+interface ISidebarProps {
+  children?: React.ReactNode;
+  className?: string;
 }
 
 /**
@@ -17,10 +19,24 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
  * </Sidebar>
  * ```
  */
-export function Sidebar({ className, children, ...props }: SidebarProps) {
+export function Sidebar({ children, className = "" }: ISidebarProps) {
   return (
-    <div className={cn("flex flex-col", className)} {...props}>
-      {children}
-    </div>
+    <aside className={`w-64 h-screen bg-dark-gray-1 border-r border-white/10 fixed left-0 top-0 flex flex-col p-4 z-40 ${className}`}>
+      <div className="flex-1 flex flex-col gap-8">
+        {children}
+      </div>
+    </aside>
   );
+}
+
+export function SidebarHeader({ children }: { children: React.ReactNode }) {
+  return <div className="mb-6">{children}</div>;
+}
+
+export function SidebarContent({ children }: { children: React.ReactNode }) {
+  return <div className="flex-1 overflow-y-auto">{children}</div>;
+}
+
+export function SidebarFooter({ children }: { children: React.ReactNode }) {
+  return <div className="mt-auto pt-4 border-t border-white/10">{children}</div>;
 } 
