@@ -13,251 +13,232 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
-export default function UserForm() {
+interface UserFormProps {
+  onClose: () => void;
+}
+
+const initialFormState = {
+  email: "",
+  role: "",
+  kolName: "",
+  shopName: "",
+  region: "",
+  smartPlaceLink: "",
+};
+
+export default function UserForm({ onClose }: UserFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState(initialFormState);
 
-  // 폼 상태 관리
-  const [formData, setFormData] = useState({
-    email: "",
-    role: "kol", // 기본값은 KOL
-    // KOL 추가 필드
-    kolName: "",
-    shopName: "",
-    region: "",
-    smartPlaceLink: "",
-  });
-
-  // 입력값 변경 처리
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 폼 제출 처리
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      // 필수 필드 검증
-      if (!formData.email) {
-        throw new Error("이메일은 필수 입력 항목입니다.");
-      }
-
-      if (formData.role === "kol" && (!formData.kolName || !formData.shopName || !formData.region)) {
-        throw new Error("KOL 역할을 선택한 경우 원장님 성함, 샵 명, 지역은 필수 입력 항목입니다.");
-      }
-
-      // 이메일 형식 검증
-      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-      if (!emailRegex.test(formData.email)) {
-        throw new Error("유효한 이메일 주소를 입력해주세요.");
-      }
-
-      // 사용자 등록 API 호출
-      const requestData = {
-        email: formData.email,
-        name: formData.role === "kol" ? formData.kolName : "",
-        role: formData.role,
-        kolData: formData.role === "kol" ? {
-          name: formData.kolName,
-          shopName: formData.shopName,
-          region: formData.region,
-          smartPlaceLink: formData.smartPlaceLink,
-        } : undefined
-      };
-
-      const response = await fetch("/api/admin/users-backend", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "사용자 등록에 실패했습니다.");
-      }
-
-      setSuccess(true);
-      // 성공 시 폼 초기화
-      setFormData({
-        email: "",
-        role: "kol",
+  const handleRoleChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      role: value,
+      // KOL이 아닌 경우 관련 필드 초기화
+      ...(value !== "kol" && {
         kolName: "",
         shopName: "",
         region: "",
         smartPlaceLink: "",
+      }),
+    }));
+  };
+
+  const resetForm = () => {
+    setFormData(initialFormState);
+    setIsLoading(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // 필수 필드 검증
+    if (!formData.email || !formData.role) {
+      toast.error("이메일과 역할은 필수 입력 항목입니다.");
+      return;
+    }
+
+    // 이메일 형식 검증
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("유효한 이메일 주소를 입력해주세요.");
+      return;
+    }
+
+    // KOL 역할 선택 시 추가 필드 검증
+    if (formData.role === "kol" && (!formData.kolName || !formData.shopName || !formData.region)) {
+      toast.error("KOL 정보를 모두 입력해주세요.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
-      // 테이블 새로고침을 위해 라우터 새로고침
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "사용자 등록에 실패했습니다.");
+      }
+
+      toast.success("사용자가 성공적으로 등록되었습니다.");
+      resetForm();
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "사용자 등록 중 오류가 발생했습니다.");
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "사용자 등록에 실패했습니다.");
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="mb-8">
-      <Button 
-        onClick={() => setShowForm(!showForm)} 
-        className="mb-4 bg-purple-600 hover:bg-purple-700"
-      >
-        {showForm ? "등록 폼 닫기" : "사용자 등록"}
-      </Button>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+            이메일 *
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="이메일을 입력하세요"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="bg-white border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+          />
+        </div>
 
-      {showForm && (
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* 역할 선택 */}
-              <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                  역할
-                </label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                >
-                  <option value="kol">KOL</option>
-                  <option value="본사관리자">본사관리자</option>
-                </select>
-              </div>
+        <div className="space-y-2">
+          <Label htmlFor="role" className="text-sm font-medium text-gray-700">
+            역할 *
+          </Label>
+          <Select value={formData.role} onValueChange={handleRoleChange} required>
+            <SelectTrigger className="bg-white border-gray-300 font-medium text-gray-900">
+              <SelectValue placeholder="역할을 선택하세요" className="text-gray-500 font-medium" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border border-gray-200">
+              <SelectItem value="admin" className="font-medium text-gray-900 hover:bg-gray-100">
+                관리자
+              </SelectItem>
+              <SelectItem value="kol" className="font-medium text-gray-900 hover:bg-gray-100">
+                KOL
+              </SelectItem>
+              <SelectItem value="user" className="font-medium text-gray-900 hover:bg-gray-100">
+                일반 사용자
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-              {/* 이메일 입력 */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  이메일
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="example@biofox.com"
-                  required
-                />
-              </div>
+        {formData.role === "kol" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="kolName" className="text-sm font-medium text-gray-700">
+                KOL 이름 *
+              </Label>
+              <Input
+                id="kolName"
+                name="kolName"
+                placeholder="KOL 이름을 입력하세요"
+                value={formData.kolName}
+                onChange={handleChange}
+                required
+                className="bg-white border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+              />
+            </div>
 
-              {/* KOL 역할일 경우 추가 필드 */}
-              {formData.role === "kol" && (
-                <div className="space-y-4 border-t pt-4 mt-4">
-                  <h3 className="font-medium text-gray-800">KOL 정보</h3>
-                  
-                  {/* 원장님 성함 */}
-                  <div>
-                    <label htmlFor="kolName" className="block text-sm font-medium text-gray-700 mb-1">
-                      원장님 성함
-                    </label>
-                    <input
-                      type="text"
-                      id="kolName"
-                      name="kolName"
-                      value={formData.kolName}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="원장님 이름"
-                      required
-                    />
-                  </div>
-                  
-                  {/* 샵 명 */}
-                  <div>
-                    <label htmlFor="shopName" className="block text-sm font-medium text-gray-700 mb-1">
-                      샵 명
-                    </label>
-                    <input
-                      type="text"
-                      id="shopName"
-                      name="shopName"
-                      value={formData.shopName}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="샵 이름"
-                      required
-                    />
-                  </div>
-                  
-                  {/* 지역 */}
-                  <div>
-                    <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-1">
-                      지역
-                    </label>
-                    <input
-                      type="text"
-                      id="region"
-                      name="region"
-                      value={formData.region}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="서울시 강남구"
-                      required
-                    />
-                  </div>
-                  
-                  {/* 스마트플레이스 링크 */}
-                  <div>
-                    <label htmlFor="smartPlaceLink" className="block text-sm font-medium text-gray-700 mb-1">
-                      스마트플레이스 링크
-                    </label>
-                    <input
-                      type="text"
-                      id="smartPlaceLink"
-                      name="smartPlaceLink"
-                      value={formData.smartPlaceLink}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                      placeholder="https://map.naver.com/..."
-                    />
-                  </div>
-                </div>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="shopName" className="text-sm font-medium text-gray-700">
+                매장명 *
+              </Label>
+              <Input
+                id="shopName"
+                name="shopName"
+                placeholder="매장명을 입력하세요"
+                value={formData.shopName}
+                onChange={handleChange}
+                required
+                className="bg-white border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+              />
+            </div>
 
-              {/* 오류 메시지 */}
-              {error && (
-                <div className="text-red-500 text-sm py-2">{error}</div>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="region" className="text-sm font-medium text-gray-700">
+                지역 *
+              </Label>
+              <Input
+                id="region"
+                name="region"
+                placeholder="지역을 입력하세요"
+                value={formData.region}
+                onChange={handleChange}
+                required
+                className="bg-white border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+              />
+            </div>
 
-              {/* 성공 메시지 */}
-              {success && (
-                <div className="text-green-500 text-sm py-2">
-                  사용자가 성공적으로 등록되었습니다.
-                </div>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="smartPlaceLink" className="text-sm font-medium text-gray-700">
+                스마트플레이스 링크
+              </Label>
+              <Input
+                id="smartPlaceLink"
+                name="smartPlaceLink"
+                placeholder="스마트플레이스 링크를 입력하세요"
+                value={formData.smartPlaceLink}
+                onChange={handleChange}
+                className="bg-white border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+              />
+            </div>
+          </>
+        )}
+      </div>
 
-              {/* 제출 버튼 */}
-              <div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
-                >
-                  {isLoading ? "등록 중..." : "사용자 등록"}
-                </button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+      <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isLoading}
+          className="font-medium border-gray-300 hover:bg-gray-50 text-gray-600"
+        >
+          취소
+        </Button>
+        <Button 
+          type="submit" 
+          variant="outline"
+          disabled={isLoading}
+          className="font-medium bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
+        >
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          등록
+        </Button>
+      </div>
+    </form>
   );
 } 

@@ -423,9 +423,7 @@ export async function POST(request: NextRequest) {
           status: "completed", // 완료 상태로 바로 기록
           order_date: now,
           payment_method: "cash", // 기본값
-          payment_status: "paid", // 지불 완료 상태로 기록
-          created_at: now,
-          updated_at: now
+          payment_status: "paid" // 지불 완료 상태로 기록
         })
         .select()
         .single();

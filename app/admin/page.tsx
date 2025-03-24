@@ -84,18 +84,10 @@ export default function AdminDashboardPage() {
   }, [yearMonth, toast]);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* 헤더 섹션 */}
-      <div className="card-gradient p-6 mb-2 rounded-lg">
-        <h2 className="text-xl font-semibold mb-2 text-gray-800">관리자 대시보드</h2>
-        <p className="text-gray-700">
-          전체 매출 및 KOL 수당 현황을 확인할 수 있습니다. 이 페이지는 '본사관리자' 역할을 가진 사용자만 접근할 수 있습니다.
-        </p>
-      </div>
-      
+    <div className="space-y-4 md:space-y-6">
       {/* 대시보드 컨트롤 */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">매출 및 수당 현황</h1>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">매출 및 수당 현황</h1>
         <MonthSelector value={yearMonth} onChange={handleMonthChange} />
       </div>
 
@@ -103,21 +95,42 @@ export default function AdminDashboardPage() {
       <SalesSummary kolId={allKolId} yearMonth={yearMonth} />
       
       {/* 차트 섹션 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2">
-          <MonthlyTrendChart kolId={allKolId} />
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base md:text-lg">월별 추이</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 md:p-4">
+              <MonthlyTrendChart kolId={allKolId} />
+            </CardContent>
+          </Card>
         </div>
         
-        <div className="lg:col-span-1 grid grid-cols-1 gap-6">
+        <div className="lg:col-span-1 grid grid-cols-1 gap-4 md:gap-6">
           {/* 제품별 매출 비율 차트 */}
-          <ProductRatioChart kolId={allKolId} yearMonth={yearMonth} />
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              
+            </CardHeader>
+            <CardContent className="p-2 md:p-4">
+              <ProductRatioChart kolId={allKolId} yearMonth={yearMonth} />
+            </CardContent>
+          </Card>
           
           {/* 전문점 활성 현황 위젯 */}
           {dashboardData && (
-            <ShopStatusWidget
-              activeShops={dashboardData.activeShopsCount}
-              totalShops={dashboardData.totalShopsCount}
-            />
+            <Card className="shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base md:text-lg">전문점 활성 현황</CardTitle>
+              </CardHeader>
+              <CardContent className="p-2 md:p-4">
+                <ShopStatusWidget
+                  activeShops={dashboardData.activeShopsCount}
+                  totalShops={dashboardData.totalShopsCount}
+                />
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -126,21 +139,21 @@ export default function AdminDashboardPage() {
       {dashboardData && (
         <Card className="shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">KOL 활성 현황</CardTitle>
+            <CardTitle className="text-base md:text-lg">KOL 활성 현황</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-600">활성 KOL</p>
-                <p className="text-2xl font-bold">{dashboardData.activeKolsCount}</p>
+          <CardContent className="p-2 md:p-4">
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">활성 KOL</p>
+                <p className="text-lg md:text-2xl font-bold">{dashboardData.activeKolsCount}</p>
               </div>
-              <div>
-                <p className="text-gray-600">전체 KOL</p>
-                <p className="text-2xl font-bold">{dashboardData.totalKolsCount}</p>
+              <div className="text-center">
+                <p className="text-sm text-gray-600">전체 KOL</p>
+                <p className="text-lg md:text-2xl font-bold">{dashboardData.totalKolsCount}</p>
               </div>
-              <div>
-                <p className="text-gray-600">활성 비율</p>
-                <p className="text-2xl font-bold">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">활성 비율</p>
+                <p className="text-lg md:text-2xl font-bold">
                   {dashboardData.totalKolsCount > 0
                     ? `${Math.round((dashboardData.activeKolsCount / dashboardData.totalKolsCount) * 100)}%`
                     : '0%'}
@@ -150,39 +163,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       )}
-      
-      {/* 관리 바로가기 카드 섹션 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">KOL 관리</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 mb-4">등록된 KOL 현황 및 관리 기능</p>
-            <Link href="/admin/kols" className="btn-primary w-full block text-center">KOL 목록 보기</Link>
-          </CardContent>
-        </Card>
-        
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">전문점 관리</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 mb-4">전문점 정보 및 업데이트 관리</p>
-            <Link href="/admin/stores" className="btn-primary w-full block text-center">전문점 관리</Link>
-          </CardContent>
-        </Card>
-        
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">상세 통계</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 mb-4">판매 실적 및 상세 통계 데이터</p>
-            <Link href="/admin/sales" className="btn-primary w-full block text-center">통계 보기</Link>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 } 

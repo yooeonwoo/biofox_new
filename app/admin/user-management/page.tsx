@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * 관리자 사용자 관리 페이지
  * 
@@ -6,45 +8,94 @@
  * 2. 사용자 목록 조회
  * 3. 사용자 역할 관리
  */
-import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
-import UserForm from "./components/UserForm";
+import { useState } from "react";
 import UserTable from "./components/UserTable";
-import { getClientRole } from "@/lib/auth";
+import UserForm from "./components/UserForm";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
-export default async function UserManagementPage() {
-  // 현재 로그인한 사용자 정보 가져오기
-  const { userId } = await auth();
-  
-  // 로그인하지 않은 경우 로그인 페이지로 리다이렉트
-  if (!userId) {
-    redirect("/signin");
-  }
+export default function UserManagementPage() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // DB에서 관리자 권한 확인
-  const userRole = await getClientRole(userId);
-  
-  if (userRole !== "본사관리자") {
-    // 권한이 없는 경우 대시보드로 리다이렉트
-    redirect("/dashboard");
-  }
+  const handleFormClose = () => {
+    setIsDialogOpen(false);
+    setIsSheetOpen(false);
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-8 text-gray-800">사용자 관리</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* 사용자 등록 폼 */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">새 사용자 등록</h2>
-          <UserForm />
-        </div>
+    <div className="container mx-auto p-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">사용자 관리</h1>
         
-        {/* 사용자 목록 */}
-        <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">사용자 목록</h2>
-          <UserTable />
+        {/* 데스크톱 사용자 등록 버튼 */}
+        <div className="hidden md:block">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline"
+                className="font-medium bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                사용자 등록
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] p-0">
+              <DialogHeader className="px-6 py-4 border-b border-gray-200 bg-white">
+                <DialogTitle className="text-xl font-semibold text-gray-900">
+                  사용자 등록
+                </DialogTitle>
+              </DialogHeader>
+              <div className="px-6 py-4 bg-white">
+                <UserForm onClose={handleFormClose} />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
+
+        {/* 모바일 사용자 등록 시트 */}
+        <div className="block md:hidden w-full">
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button 
+                variant="outline"
+                className="w-full font-medium bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                사용자 등록
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[90vh] p-0 bg-white">
+              <SheetHeader className="px-6 py-4 border-b border-gray-200">
+                <SheetTitle className="text-xl font-semibold text-gray-900">
+                  사용자 등록
+                </SheetTitle>
+              </SheetHeader>
+              <div className="px-6 py-4 overflow-y-auto">
+                <UserForm onClose={handleFormClose} />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+
+      {/* 사용자 테이블/카드 목록 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <UserTable />
       </div>
     </div>
   );

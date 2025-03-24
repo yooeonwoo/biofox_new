@@ -239,43 +239,48 @@ export default function KolsPage() {
 
   // KOL 추가 폼 렌더링 (수정 필요)
   const renderAddForm = () => (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="name">원장님 성함</Label>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-sm font-medium text-gray-700">원장님 성함</Label>
           <Input
             id="name"
             name="name"
             value={formData.name}
             onChange={handleChange}
             placeholder="원장님 성함을 입력하세요"
+            className="w-full bg-white border-gray-200 focus:border-gray-300"
             required
           />
         </div>
-        <div>
-          <Label htmlFor="shopName">샵 명</Label>
+        <div className="space-y-2">
+          <Label htmlFor="shopName" className="text-sm font-medium text-gray-700">전문점명</Label>
           <Input
             id="shopName"
             name="shopName"
             value={formData.shopName}
             onChange={handleChange}
-            placeholder="샵 명을 입력하세요"
+            placeholder="전문점명을 입력하세요"
+            className="w-full bg-white border-gray-200 focus:border-gray-300"
             required
           />
         </div>
-        <div>
-          <Label htmlFor="region">지역</Label>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="region" className="text-sm font-medium text-gray-700">지역</Label>
           <Input
             id="region"
             name="region"
             value={formData.region}
             onChange={handleChange}
             placeholder="지역을 입력하세요"
+            className="w-full bg-white border-gray-200 focus:border-gray-300"
             required
           />
         </div>
-        <div>
-          <Label htmlFor="email">이메일</Label>
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium text-gray-700">이메일</Label>
           <Input
             id="email"
             name="email"
@@ -283,197 +288,225 @@ export default function KolsPage() {
             value={formData.email}
             onChange={handleChange}
             placeholder="이메일을 입력하세요"
+            className="w-full bg-white border-gray-200 focus:border-gray-300"
             required
           />
         </div>
-        <div className="sm:col-span-2">
-          <Label htmlFor="smartPlaceLink">스마트플레이스 링크</Label>
-          <Input
-            id="smartPlaceLink"
-            name="smartPlaceLink"
-            value={formData.smartPlaceLink}
-            onChange={handleChange}
-            placeholder="스마트플레이스 링크를 입력하세요"
-          />
-        </div>
       </div>
-      <DialogFooter>
-        <Button type="submit" disabled={loading}>
-          {loading ? "등록 중..." : "등록하기"}
+      <div className="space-y-2">
+        <Label htmlFor="smartPlaceLink" className="text-sm font-medium text-gray-700">스마트플레이스 링크</Label>
+        <Input
+          id="smartPlaceLink"
+          name="smartPlaceLink"
+          value={formData.smartPlaceLink}
+          onChange={handleChange}
+          placeholder="스마트플레이스 링크를 입력하세요"
+          className="w-full bg-white border-gray-200 focus:border-gray-300"
+        />
+      </div>
+      <DialogFooter className="mt-6">
+        <Button type="button" variant="outline" onClick={() => setOpen(false)} className="mr-2">
+          취소
         </Button>
+        <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">등록</Button>
       </DialogFooter>
     </form>
   );
 
   // KOL 편집 폼 렌더링 (수정 필요)
   const renderEditForm = () => (
-    <form onSubmit={handleUpdate} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="edit-name">원장님 성함</Label>
+    <form onSubmit={handleUpdate} className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="edit-name" className="text-sm font-medium text-gray-700">원장님 성함</Label>
           <Input
             id="edit-name"
             name="name"
             value={editData.name}
             onChange={(e) => setEditData({ ...editData, name: e.target.value })}
             placeholder="원장님 성함을 입력하세요"
+            className="w-full bg-white border-gray-200 focus:border-gray-300"
             required
           />
         </div>
-        <div>
-          <Label htmlFor="edit-shopName">샵 명</Label>
+        <div className="space-y-2">
+          <Label htmlFor="edit-shopName" className="text-sm font-medium text-gray-700">전문점명</Label>
           <Input
             id="edit-shopName"
             name="shopName"
             value={editData.shopName}
             onChange={(e) => setEditData({ ...editData, shopName: e.target.value })}
-            placeholder="샵 명을 입력하세요"
+            placeholder="전문점명을 입력하세요"
+            className="w-full bg-white border-gray-200 focus:border-gray-300"
             required
           />
         </div>
-        <div>
-          <Label htmlFor="edit-region">지역</Label>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="edit-region" className="text-sm font-medium text-gray-700">지역</Label>
           <Input
             id="edit-region"
             name="region"
             value={editData.region}
             onChange={(e) => setEditData({ ...editData, region: e.target.value })}
             placeholder="지역을 입력하세요"
+            className="w-full bg-white border-gray-200 focus:border-gray-300"
             required
           />
         </div>
-        <div>
-          <Label htmlFor="edit-smartPlaceLink">스마트플레이스 링크</Label>
-          <Input
-            id="edit-smartPlaceLink"
-            name="smartPlaceLink"
-            value={editData.smartPlaceLink}
-            onChange={(e) => setEditData({ ...editData, smartPlaceLink: e.target.value })}
-            placeholder="스마트플레이스 링크를 입력하세요"
-          />
+        <div className="space-y-2">
+          <Label htmlFor="edit-status" className="text-sm font-medium text-gray-700">상태</Label>
+          <select
+            id="edit-status"
+            name="status"
+            value={editData.status}
+            onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+            className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white focus:border-gray-300"
+            required
+          >
+            <option value="active">활성</option>
+            <option value="inactive">비활성</option>
+          </select>
         </div>
       </div>
-      <DialogFooter>
-        <Button type="submit" disabled={loading}>
-          {loading ? "업데이트 중..." : "업데이트"}
+      <div className="space-y-2">
+        <Label htmlFor="edit-smartPlaceLink" className="text-sm font-medium text-gray-700">스마트플레이스 링크</Label>
+        <Input
+          id="edit-smartPlaceLink"
+          name="smartPlaceLink"
+          value={editData.smartPlaceLink}
+          onChange={(e) => setEditData({ ...editData, smartPlaceLink: e.target.value })}
+          placeholder="스마트플레이스 링크를 입력하세요"
+          className="w-full bg-white border-gray-200 focus:border-gray-300"
+        />
+      </div>
+      <DialogFooter className="mt-6">
+        <Button type="button" variant="outline" onClick={() => setEditOpen(false)} className="mr-2">
+          취소
         </Button>
+        <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">수정</Button>
       </DialogFooter>
     </form>
   );
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>KOL 목록</CardTitle>
-            <CardDescription>전체 KOL 관리 및 정보 수정</CardDescription>
-          </div>
-          <Button onClick={handleAddKol}>
+    <div className="container mx-auto py-6 space-y-6">
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-end space-y-0 pb-2">
+          <Button onClick={handleAddKol} className="bg-primary hover:bg-primary/90">
             <PlusCircle className="mr-2 h-4 w-4" />
             KOL 등록
           </Button>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center items-center py-10">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-              <span className="ml-3 text-sm text-gray-500">데이터를 불러오는 중...</span>
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>원장님 성함</TableHead>
-                  <TableHead>샵 명</TableHead>
-                  <TableHead>지역</TableHead>
-                  <TableHead>이메일</TableHead>
-                  <TableHead>상태</TableHead>
-                  <TableHead>등록일</TableHead>
-                  <TableHead>작업</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {kols.map((kol) => (
-                  <TableRow key={kol.id}>
-                    <TableCell>{kol.id}</TableCell>
-                    <TableCell>{kol.name}</TableCell>
-                    <TableCell>{kol.shopName}</TableCell>
-                    <TableCell>{kol.region}</TableCell>
-                    <TableCell>{kol.user?.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={kol.status === "active" ? "default" : "secondary"}
-                      >
-                        {kol.status === "active" ? "활성" : "비활성"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(kol.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditKol(kol)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-500"
-                        onClick={() => handleDeleteKol(kol)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">ID</TableHead>
+                    <TableHead>원장님 성함</TableHead>
+                    <TableHead>전문점명</TableHead>
+                    <TableHead>지역</TableHead>
+                    <TableHead>상태</TableHead>
+                    <TableHead className="text-right">관리</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {kols.map((kol) => (
+                    <TableRow key={kol.id}>
+                      <TableCell className="font-medium">{kol.id}</TableCell>
+                      <TableCell>{kol.name}</TableCell>
+                      <TableCell>{kol.shopName}</TableCell>
+                      <TableCell>{kol.region}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={kol.status === 'active' ? 'default' : 'secondary'}
+                          className="capitalize"
+                        >
+                          {kol.status === 'active' ? '활성' : '비활성'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditKol(kol)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteKol(kol)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
-      
-      {/* KOL 등록 모달 */}
+
+      {/* 등록 모달 */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>KOL 등록</DialogTitle>
-            <DialogDescription>새로운 KOL 정보를 입력해주세요.</DialogDescription>
+        <DialogContent className="sm:max-w-[500px] bg-white shadow-md border rounded-lg">
+          <DialogHeader className="space-y-1 pb-2 bg-white">
+            <DialogTitle className="text-2xl font-bold text-gray-900">KOL 등록</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              새로운 KOL 정보를 입력해주세요.
+            </DialogDescription>
           </DialogHeader>
-          {renderAddForm()}
+          <div className="p-4 bg-white">
+            {renderAddForm()}
+          </div>
         </DialogContent>
       </Dialog>
-      
-      {/* KOL 수정 모달 */}
+
+      {/* 수정 모달 */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>KOL 정보 수정</DialogTitle>
-            <DialogDescription>KOL 정보를 수정합니다.</DialogDescription>
+        <DialogContent className="sm:max-w-[500px] bg-white shadow-md border rounded-lg">
+          <DialogHeader className="space-y-1 pb-2 bg-white">
+            <DialogTitle className="text-2xl font-bold text-gray-900">KOL 정보 수정</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              KOL 정보를 수정해주세요.
+            </DialogDescription>
           </DialogHeader>
-          {renderEditForm()}
+          <div className="p-4 bg-white">
+            {renderEditForm()}
+          </div>
         </DialogContent>
       </Dialog>
-      
-      {/* KOL 삭제 확인 모달 */}
+
+      {/* 삭제 확인 모달 */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>KOL 삭제</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[425px] bg-white shadow-md border rounded-lg">
+          <DialogHeader className="space-y-1 pb-2 bg-white">
+            <DialogTitle className="text-2xl font-bold text-gray-900">KOL 삭제</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
               정말로 이 KOL을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
-              취소
-            </Button>
-            <Button type="button" variant="destructive" onClick={handleDeleteConfirm}>
-              삭제
-            </Button>
-          </DialogFooter>
+          <div className="p-4 bg-white">
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} className="mr-2">
+                취소
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteConfirm}>
+                삭제
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

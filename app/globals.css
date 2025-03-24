@@ -1,58 +1,26 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  /* 레퍼런스 기반 컬러 팔레트 */
+  /* 기본 컬러 팔레트 */
   --color-dark-1: #383B44;
   --color-dark-2: #2E3035;
-  --color-pink-1: #F29FBD;
-  --color-pink-2: #E78FAF;
-  --color-purple-1: #ABA3F7;
-  --color-purple-2: #8E80F5;
   
-  /* 기존 변수 대체/재정의 */
+  /* 기본 변수 */
   --background: var(--color-dark-2);
   --foreground: #ffffff;
   
-  /* 텍스트 색상 추가 */
-  --text-light-bg: var(--color-dark-1); /* 밝은 배경에서 사용할 텍스트 색상 */
-  --text-dark-bg: #ffffff; /* 어두운 배경에서 사용할 텍스트 색상 */
+  /* 텍스트 색상 */
+  --text-light-bg: var(--color-dark-1);
+  --text-dark-bg: #ffffff;
   
-  --biofox-purple: var(--color-purple-2);
-  --biofox-purple-light: var(--color-purple-1);
-  --aura-silver: var(--color-dark-1);
-  --aura-silver-dark: var(--color-dark-2);
-
-  --aurora-pink: var(--color-pink-1);
-  --aurora-violet: var(--color-pink-2);
-  --aurora-blue: var(--color-purple-1);
-
+  --biofox-purple: #6D28D9;
+  --biofox-purple-light: #C0A6E3;
   --dark-gray-1: var(--color-dark-1);
   --dark-gray-2: var(--color-dark-2);
 
-  /* 그라데이션: 핑크 → 핑크2 → 라벤더 → 보라 톤 */
-  --gradient-primary: linear-gradient(
-    to right,
-    var(--color-pink-1),
-    var(--color-pink-2),
-    var(--color-purple-1),
-    var(--color-purple-2)
-  );
-  --gradient-subtle: linear-gradient(
-    to right,
-    rgba(242, 159, 189, 0.1),
-    rgba(231, 143, 175, 0.1),
-    rgba(171, 163, 247, 0.1),
-    rgba(142, 128, 245, 0.1)
-  );
-  --gradient-neon: linear-gradient(
-    to right,
-    rgba(242, 159, 189, 0.8),
-    rgba(231, 143, 175, 0.8),
-    rgba(171, 163, 247, 0.8),
-    rgba(142, 128, 245, 0.8)
-  );
-
-  /* 그림자, 블러 등은 기존과 동일하게 유지 */
-  --shadow-glow: 0 0 20px rgba(142, 128, 245, 0.5);
+  /* 그림자, 블러 */
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.2);
   --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.1);
   --blur-effect: blur(12px);
@@ -67,11 +35,11 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* 폰트 변경: SF Compact Text 사용 */
+  /* 폰트 */
   --font-sans: 'SF Compact Text', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   --font-mono: 'SF Mono', ui-monospace, SFMono-Regular;
 
-  /* 21세기 UI 스타일 변수 */
+  /* 테두리 반경 */
   --border-radius-sm: 8px;
   --border-radius-md: 12px;
   --border-radius-lg: 16px;
@@ -79,26 +47,25 @@
   --border-radius-full: 9999px;
 }
 
-/* 라이트 모드 설정 - data-theme="light"가 설정된 경우 */
+/* 라이트 모드 설정 */
 [data-theme="light"] {
   --background: #ffffff;
   --foreground: var(--color-dark-1);
   --card: #ffffff;
   --card-foreground: var(--color-dark-1);
-  --primary: var(--color-purple-2);
+  --primary: var(--biofox-purple);
   --primary-foreground: #ffffff;
   --secondary: var(--color-dark-1);
   --secondary-foreground: #ffffff;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: var(--color-purple-1);
+  --accent: var(--biofox-purple-light);
   --accent-foreground: #ffffff;
 }
 
 /* 다크 모드 설정 */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* 다크 모드에서도 같은 톤을 유지하도록 설정 */
     --background: var(--color-dark-2);
     --foreground: #f2f3f5;
     --card: var(--color-dark-1);
@@ -113,7 +80,7 @@
   --card-foreground: #f2f3f5;
 }
 
-/* 버튼 스타일 (기존 클래스 유지) */
+/* 버튼 스타일 */
 .btn-primary {
   background-color: var(--biofox-purple);
   color: white;
@@ -124,8 +91,7 @@
 }
 
 .btn-primary:hover {
-  background-image: var(--gradient-primary);
-  box-shadow: var(--shadow-glow);
+  background-color: var(--biofox-purple-light);
   transform: translateY(-2px);
 }
 
@@ -139,25 +105,8 @@
 }
 
 .btn-secondary:hover {
-  background-image: var(--gradient-primary);
+  background-color: var(--biofox-purple-light);
   color: white;
-  border-color: transparent;
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-2px);
-}
-
-.btn-gradient {
-  background-image: var(--gradient-primary);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: var(--border-radius-md);
-  font-weight: 600;
-  transition: all var(--transition-normal);
-  box-shadow: 0 2px 10px rgba(142, 128, 245, 0.3);
-}
-
-.btn-gradient:hover {
-  box-shadow: var(--shadow-glow);
   transform: translateY(-2px);
 }
 
@@ -171,187 +120,26 @@
 }
 
 .btn-ghost:hover {
-  background-color: rgba(142, 128, 245, 0.1);
+  background-color: rgba(109, 40, 217, 0.1);
   box-shadow: 0 0 0 1px var(--biofox-purple-light);
-}
-
-/* 21세기 UI 스타일 버튼 */
-.btn-21st {
-  background-color: rgba(142, 128, 245, 0.05);
-  backdrop-filter: var(--blur-effect);
-  -webkit-backdrop-filter: var(--blur-effect);
-  color: white;
-  border: 1px solid rgba(142, 128, 245, 0.3);
-  padding: 0.6rem 1.6rem;
-  border-radius: var(--border-radius-md);
-  font-weight: 500;
-  transition: all var(--transition-normal);
-}
-
-.btn-21st:hover {
-  background-color: rgba(142, 128, 245, 0.15);
-  border-color: rgba(142, 128, 245, 0.5);
-  box-shadow: 0 0 15px rgba(142, 128, 245, 0.3);
-  transform: translateY(-1px);
-}
-
-.btn-21st-gradient {
-  background: rgba(20, 20, 20, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  position: relative;
-  color: white;
-  padding: 0.6rem 1.6rem;
-  border-radius: var(--border-radius-md);
-  font-weight: 500;
-  overflow: hidden;
-  transition: all var(--transition-normal);
-  z-index: 1;
-}
-
-.btn-21st-gradient::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: var(--gradient-primary);
-  z-index: -2;
-  opacity: 0;
-  transition: opacity var(--transition-normal);
-  border-radius: calc(var(--border-radius-md) + 2px);
-}
-
-.btn-21st-gradient::after {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  right: 1px;
-  bottom: 1px;
-  background: rgba(20, 20, 20, 0.9);
-  border-radius: calc(var(--border-radius-md) - 1px);
-  z-index: -1;
-}
-
-.btn-21st-gradient:hover::before {
-  opacity: 1;
-}
-
-.btn-21st-gradient:hover {
-  box-shadow: 0 0 20px rgba(142, 128, 245, 0.3);
-  transform: translateY(-1px);
-  border-color: transparent;
 }
 
 /* 카드 스타일 */
 .card {
-  background-color: #ffffff;
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border-radius: var(--border-radius-md);
   padding: 1.5rem;
-  border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-card);
-  border: 1px solid var(--aura-silver);
   transition: all var(--transition-normal);
-  color: var(--color-dark-1); /* ← 수정: 흰 배경에서는 어두운 글씨로 */
 }
 
 .card:hover {
-  box-shadow: var(--shadow-glow);
-}
-
-/* 흰 배경 + 그라디언트가 들어간 카드도 마찬가지로 글씨색 보정 */
-.card-gradient {
-  background-color: #ffffff;
-  color: var(--color-dark-1); /* ← 수정: 흰 배경에서는 어두운 글씨로 */
-  padding: 1.5rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-glow);
-  border: 1px solid transparent;
-  background-image: var(--gradient-subtle);
-  transition: all var(--transition-normal);
-}
-
-.card-gradient h1, 
-.card-gradient h2, 
-.card-gradient h3, 
-.card-gradient h4, 
-.card-gradient h5, 
-.card-gradient h6 {
-  color: var(--color-dark-1); /* 모든 헤딩 태그에 어두운 색상 적용 */
-}
-
-.card-gradient:hover {
-  box-shadow: 0 0 25px rgba(171, 163, 247, 0.7);
-}
-
-.card-glass {
-  background-color: rgba(255, 255, 255, 0.05);
-  backdrop-filter: var(--blur-effect);
-  -webkit-backdrop-filter: var(--blur-effect);
-  padding: 1.5rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-card);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all var(--transition-normal);
-}
-
-.card-glass:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: var(--shadow-glow);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.card-dark {
-  background-color: var(--dark-gray-1);
-  color: white;
-  padding: 1.5rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-card);
-  border: 1px solid var(--dark-gray-2);
-  transition: all var(--transition-normal);
-}
-
-.card-dark:hover {
-  box-shadow: var(--shadow-glow);
-}
-
-.card-21st {
-  background-color: rgba(30, 30, 40, 0.5);
-  backdrop-filter: var(--blur-effect);
-  -webkit-backdrop-filter: var(--blur-effect);
-  padding: 1.5rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all var(--transition-normal);
-  position: relative;
-  overflow: hidden;
-}
-
-.card-21st::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-}
-
-.card-21st:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-glow);
-  border-color: rgba(142, 128, 245, 0.3);
+  box-shadow: var(--shadow-subtle);
 }
 
-/* 본문 */
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
-}
-
-/* 애니메이션 (기존 그대로) */
+/* 애니메이션 */
 @keyframes appear {
   from {
     opacity: 0;
@@ -366,7 +154,7 @@ body {
 @keyframes appear-zoom {
   from {
     opacity: 0;
-    transform: scale(0.8);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
@@ -374,106 +162,32 @@ body {
   }
 }
 
-@keyframes gradient-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes glow-pulse {
-  0%, 100% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-}
-
-@keyframes border-glow {
-  0%, 100% {
-    border-color: rgba(142, 128, 245, 0.3);
-    box-shadow: 0 0 5px rgba(142, 128, 245, 0.3);
-  }
-  50% {
-    border-color: rgba(142, 128, 245, 0.8);
-    box-shadow: 0 0 15px rgba(142, 128, 245, 0.5);
-  }
-}
-
 .animate-appear {
   animation: appear 0.5s ease-out forwards;
-  opacity: 0;
 }
 
 .animate-appear-zoom {
-  animation: appear-zoom 0.7s ease-out forwards;
-  opacity: 0;
+  animation: appear-zoom 0.5s ease-out forwards;
 }
 
-.animate-gradient {
-  background-size: 200% 200%;
-  animation: gradient-shift 8s ease infinite;
-  transform: translateZ(0);
-  will-change: background-position;
-}
+/* 딜레이 클래스 */
+.delay-100 { animation-delay: 0.1s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-1000 { animation-delay: 1s; }
 
-.animate-glow {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-.animate-border {
-  animation: border-glow 3s ease-in-out infinite;
-}
-
-/* 저사양 기기 고려 */
+/* 모션 감소 설정 */
 @media (prefers-reduced-motion: reduce) {
-  .animate-gradient,
-  .animate-glow,
-  .animate-border {
-    animation: none;
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* 애니메이션 딜레이 */
-.delay-100 {
-  animation-delay: 0.1s;
-}
-.delay-300 {
-  animation-delay: 0.3s;
-}
-.delay-500 {
-  animation-delay: 0.5s;
-}
-.delay-700 {
-  animation-delay: 0.7s;
-}
-.delay-1000 {
-  animation-delay: 1s;
-}
-
-/* 유틸리티 클래스 */
-.text-gradient {
-  background-image: var(--gradient-primary);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.border-gradient {
-  border: 2px solid transparent;
-  background-image: linear-gradient(#ffffff, #ffffff), var(--gradient-primary);
-  background-origin: border-box;
-  background-clip: content-box, border-box;
-}
-
+/* 기본 스타일 */
 .backdrop-blur {
   backdrop-filter: var(--blur-effect);
   -webkit-backdrop-filter: var(--blur-effect);
@@ -484,53 +198,10 @@ body {
   -webkit-backdrop-filter: var(--blur-heavy);
 }
 
-/* 21세기 UI 특화 클래스 */
-.glassmorphism {
-  background: rgba(30, 30, 40, 0.4);
-  backdrop-filter: var(--blur-effect);
-  -webkit-backdrop-filter: var(--blur-effect);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--border-radius-lg);
-}
-
-.neon-border {
-  position: relative;
-  border-radius: var(--border-radius-md);
-  overflow: hidden;
-}
-
-.neon-border::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: var(--gradient-neon);
-  z-index: -1;
-  border-radius: calc(var(--border-radius-md) + 2px);
-}
-
 .hover-lift {
   transition: transform var(--transition-normal);
 }
 
 .hover-lift:hover {
-  transform: translateY(-4px);
-}
-
-.glowing-dot {
-  position: relative;
-}
-
-.glowing-dot::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background-color: var(--color-pink-1);
-  border-radius: 50%;
-  margin-right: 8px;
-  box-shadow: 0 0 8px var(--color-pink-1);
-  animation: glow-pulse 2s ease-in-out infinite;
+  transform: translateY(-2px);
 }

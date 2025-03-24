@@ -4,7 +4,7 @@ import * as React from "react";
 import { Edit, Plus, Search, Trash2, Store, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -53,6 +53,8 @@ interface ISpecialtyStoreManagementProps {
   isLoading?: boolean;
   isAdmin?: boolean; // 관리자 모드인지 여부
   title?: string; // 컴포넌트 제목 커스터마이징 옵션
+  showAddModal?: boolean; // 모달 표시 여부
+  onOpenChange?: (open: boolean) => void; // 모달 상태 변경 핸들러
 }
 
 export function SpecialtyStoreManagement({
@@ -64,6 +66,8 @@ export function SpecialtyStoreManagement({
   isLoading = false,
   isAdmin = false, // 기본적으로 관리자 모드 아님 (KOL 전용 조회 모드)
   title = "전문점 관리",
+  showAddModal = false,
+  onOpenChange,
 }: ISpecialtyStoreManagementProps) {
   const [stores, setStores] = React.useState<ISpecialtyStore[]>(initialStores);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -85,6 +89,17 @@ export function SpecialtyStoreManagement({
   React.useEffect(() => {
     setStores(initialStores);
   }, [initialStores]);
+
+  // showAddModal prop이 변경되면 내부 상태도 업데이트
+  React.useEffect(() => {
+    setIsDialogOpen(showAddModal);
+  }, [showAddModal]);
+
+  // 내부 상태가 변경되면 부모에게 알림
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    onOpenChange?.(open);
+  };
 
   // 검색 기능
   const filteredStores = React.useMemo(() => {
@@ -384,7 +399,10 @@ export function SpecialtyStoreManagement({
         <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
         
         {isAdmin && (
-          <Button onClick={handleAddStore}>
+          <Button 
+            data-add-store
+            onClick={handleAddStore}
+          >
             <Plus className="mr-2 h-4 w-4" /> 전문점 추가
           </Button>
         )}
@@ -396,7 +414,7 @@ export function SpecialtyStoreManagement({
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="전문점 검색..."
-            className="pl-8"
+            className="pl-8 placeholder:text-gray-400"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -529,28 +547,35 @@ export function SpecialtyStoreManagement({
 
       {/* 전문점 추가/편집 대화상자 */}
       {isAdmin && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[550px]">
-            <DialogHeader>
-              <DialogTitle>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
+          <DialogContent className="sm:max-w-[550px] bg-white shadow-md border rounded-lg">
+            <DialogHeader className="space-y-1 pb-2 bg-white">
+              <DialogTitle className="text-2xl font-bold text-gray-900">
                 {currentStore ? "전문점 정보 수정" : "새 전문점 추가"}
               </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500">
+                {currentStore ? "전문점 정보를 수정해주세요." : "새로운 전문점 정보를 입력해주세요."}
+              </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* KOL 선택 필드 */}
                 <div className="space-y-2">
-                  <Label htmlFor="kolId">소속 KOL</Label>
+                  <Label htmlFor="kolId" className="text-sm font-medium text-gray-700">소속 KOL</Label>
                   <Select
                     onValueChange={handleKolChange}
                     value={formData.kolId}
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="KOL을 선택하세요" />
+                    <SelectTrigger className="w-full bg-white border-gray-200 focus:border-gray-300">
+                      <SelectValue placeholder="KOL을 선택하세요" className="text-gray-400" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white border rounded-md shadow-md">
                       {kols.map((kol) => (
-                        <SelectItem key={kol.id} value={kol.id}>
+                        <SelectItem 
+                          key={kol.id} 
+                          value={kol.id}
+                          className="hover:bg-gray-100 cursor-pointer py-2 px-3"
+                        >
                           {kol.name}
                         </SelectItem>
                       ))}
@@ -560,48 +585,54 @@ export function SpecialtyStoreManagement({
 
                 {/* 원장님 이름 필드 */}
                 <div className="space-y-2">
-                  <Label htmlFor="ownerName">원장님 이름</Label>
+                  <Label htmlFor="ownerName" className="text-sm font-medium text-gray-700">원장님 이름</Label>
                   <Input
                     id="ownerName"
                     name="ownerName"
                     value={formData.ownerName}
                     onChange={handleInputChange}
                     placeholder="원장님 이름을 입력하세요"
+                    className="w-full bg-white border-gray-200 focus:border-gray-300 placeholder:text-gray-400"
                     required
                   />
                 </div>
 
                 {/* 지역 필드 */}
                 <div className="space-y-2">
-                  <Label htmlFor="region">지역</Label>
+                  <Label htmlFor="region" className="text-sm font-medium text-gray-700">지역</Label>
                   <Input
                     id="region"
                     name="region"
                     value={formData.region}
                     onChange={handleInputChange}
                     placeholder="지역을 입력하세요"
+                    className="w-full bg-white border-gray-200 focus:border-gray-300 placeholder:text-gray-400"
                     required
                   />
                 </div>
 
                 {/* 스마트플레이스 링크 필드 */}
                 <div className="space-y-2">
-                  <Label htmlFor="smartPlaceLink">스마트플레이스 링크</Label>
+                  <Label htmlFor="smartPlaceLink" className="text-sm font-medium text-gray-700">스마트플레이스 링크</Label>
                   <Input
                     id="smartPlaceLink"
                     name="smartPlaceLink"
                     value={formData.smartPlaceLink}
                     onChange={handleInputChange}
                     placeholder="스마트플레이스 링크를 입력하세요"
+                    className="w-full bg-white border-gray-200 focus:border-gray-300 placeholder:text-gray-400"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-2 mt-4">
-                <Button type="submit" disabled={processing}>
+              <DialogFooter className="mt-6">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="mr-2">
+                  취소
+                </Button>
+                <Button type="submit" className="bg-primary hover:bg-primary/90 text-white" disabled={processing}>
                   {processing ? "처리 중..." : formData.id ? "수정" : "등록"}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>

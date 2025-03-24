@@ -11,6 +11,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Search, Plus, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // metadata는 클라이언트 컴포넌트에서 사용할 수 없으므로 제거
 // export const metadata: Metadata = {
@@ -24,6 +40,7 @@ export default function AdminStoresPage() {
   const [stores, setStores] = useState<ISpecialtyStore[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -203,31 +220,167 @@ export default function AdminStoresPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
-          <p className="font-bold">오류</p>
-          <p>{error}</p>
+    <div className="space-y-4">
+      {/* 모바일 헤더 */}
+      <div className="md:hidden">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-semibold"></h1>
         </div>
-      )}
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>전문점 관리</CardTitle>
-          <CardDescription>KOL에 소속된 전문점을 등록하고 관리할 수 있습니다</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SpecialtyStoreManagement 
-            initialStores={stores}
-            kols={kols}
-            isAdmin={true} 
-            onAddStore={handleAddStore}
-            onUpdateStore={handleUpdateStore}
-            onDeleteStore={handleDeleteStore}
-            isLoading={loading}
-          />
-        </CardContent>
-      </Card>
+        
+        {/* 모바일 필터 */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1">
+              <Select>
+                <SelectTrigger className="bg-white border-gray-300 font-medium text-gray-900">
+                  <SelectValue placeholder="KOL 선택" className="text-gray-500 font-medium" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border border-gray-200">
+                  <SelectItem value="all" className="font-medium text-gray-900 hover:bg-gray-100">
+                    전체 KOL
+                  </SelectItem>
+                  {kols.map((kol) => (
+                    <SelectItem 
+                      key={kol.id} 
+                      value={kol.id}
+                      className="font-medium text-gray-900 hover:bg-gray-100"
+                    >
+                      {kol.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setShowAddModal(true)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              등록
+            </Button>
+          </div>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="전문점 검색..."
+              className="pl-9"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 데스크톱 뷰 */}
+      <div className="hidden md:block">
+        <Card>
+          
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-[250px_1fr] gap-6">
+              {/* KOL 사이드바 */}
+              <div className="border rounded-lg p-4">
+                <div className="mb-4">
+                  <h3 className="font-medium text-sm text-gray-500 mb-2">KOL 목록</h3>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start font-normal mb-2"
+                    onClick={() => {}}
+                  >
+                    모든 전문점 ({stores.length})
+                  </Button>
+                </div>
+                <Accordion type="single" collapsible className="space-y-2">
+                  {kols.map((kol) => {
+                    const kolStores = stores.filter(store => store.kolId === kol.id);
+                    return (
+                      <AccordionItem key={kol.id} value={kol.id} className="border-none">
+                        <AccordionTrigger className="hover:bg-gray-100 rounded-md px-3 py-2 text-sm">
+                          <div className="flex items-center justify-between w-full">
+                            <span>{kol.name}</span>
+                            <span className="text-xs bg-gray-200 rounded-full px-2 py-0.5 text-gray-700">
+                              {kolStores.length}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-1 pb-2">
+                          <div className="space-y-1 pl-3">
+                            {kolStores.map((store) => (
+                              <Button
+                                key={store.id}
+                                variant="ghost"
+                                className="w-full justify-start text-sm font-normal h-8"
+                                onClick={() => {}}
+                              >
+                                {store.ownerName}
+                              </Button>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              </div>
+
+              {/* 메인 컨텐츠 */}
+              <div className="border rounded-lg p-4">
+                <SpecialtyStoreManagement 
+                  initialStores={stores}
+                  kols={kols}
+                  isAdmin={true} 
+                  onAddStore={handleAddStore}
+                  onUpdateStore={handleUpdateStore}
+                  onDeleteStore={handleDeleteStore}
+                  isLoading={loading}
+                  showAddModal={showAddModal}
+                  onOpenChange={setShowAddModal}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 모바일 전문점 목록 */}
+      <div className="md:hidden">
+        {stores.map((store) => (
+          <Card key={store.id} className="mb-4">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-base font-medium">{store.ownerName}</CardTitle>
+                  <CardDescription>{store.kolName}</CardDescription>
+                </div>
+                <div className="text-right">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    store.status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {store.status === 'active' ? '활성' : '비활성'}
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-sm text-gray-600">
+                {store.region}
+              </div>
+              {store.smartPlaceLink && (
+                <a 
+                  href={store.smartPlaceLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline mt-1 block"
+                >
+                  스마트플레이스
+                </a>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Toaster position="top-center" richColors />
     </div>
   );

@@ -1,11 +1,11 @@
 "use client";
 
-import { SalesRegistration, IProduct, IStore, ISalesOrder } from "@/components/kols/SalesRegistration";
+import { SalesRegistration, IProduct, IStore, ISalesOrder, ISalesItem } from "@/components/kols/SalesRegistration";
 import { Toaster } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo, useEffect } from "react";
-import { Search, Plus, ChevronRight, Loader2, Store } from "lucide-react";
+import { Search, Plus, ChevronRight, Loader2, Store, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import React from "react";
@@ -15,17 +15,38 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
-// 인터페이스 정의
+// 로컬 인터페이스 정의
+interface ILocalStore extends IStore {
+  kolId: string;
+}
+
+interface ILocalKol {
+  id: string;
+  name: string;
+}
+
 interface ISalesData {
   id: string;
   date: string;
@@ -35,18 +56,6 @@ interface ISalesData {
   kolName: string;
   amount: number;
   products: string[];
-}
-
-interface IKol {
-  id: string;
-  name: string;
-}
-
-// 로컬에서 사용하는 전문점 타입 (ILocalStore로 이름 변경)
-interface ILocalStore {
-  id: string;
-  name: string;
-  kolId: string;
 }
 
 export function SalesContent() {
@@ -61,7 +70,7 @@ export function SalesContent() {
   const [expandedKols, setExpandedKols] = useState<Record<string, boolean>>({});
   
   // 데이터 상태
-  const [kols, setKols] = useState<IKol[]>([]);
+  const [kols, setKols] = useState<ILocalKol[]>([]);
   const [stores, setStores] = useState<ILocalStore[]>([]);
   const [products, setProducts] = useState<IProduct[]>([]);
   const [sales, setSales] = useState<ISalesData[]>([]);
@@ -69,6 +78,13 @@ export function SalesContent() {
   // 로딩 및 에러 상태
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 매출 등록 모달 상태
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
+  const [selectedRegistrationStore, setSelectedRegistrationStore] = useState<string>("");
+
+  // 모바일 매출 등록 시트 상태
+  const [isRegistrationSheetOpen, setIsRegistrationSheetOpen] = useState(false);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -191,7 +207,7 @@ export function SalesContent() {
       const data = await response.json();
       
       // API 응답 데이터를 컴포넌트 형식에 맞게 변환
-      const formattedKols: IKol[] = data.map((kol: any) => ({
+      const formattedKols: ILocalKol[] = data.map((kol: any) => ({
         id: kol.id.toString(),
         name: kol.name || ""
       }));
@@ -397,6 +413,15 @@ export function SalesContent() {
     return filtered;
   }, [sales, searchQuery, selectedKolId, selectedStoreId]);
 
+  // 필터링된 매장 목록
+  const filteredStores = useMemo(() => {
+    return stores.filter(store => {
+      const matchesSearch = store.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesKol = selectedKolId === "all" || store.kolId === selectedKolId;
+      return matchesSearch && matchesKol;
+    });
+  }, [stores, searchQuery, selectedKolId]);
+
   // KOL 사이드바 토글
   const toggleKolExpanded = (kolId: string) => {
     setExpandedKols(prev => ({
@@ -419,204 +444,322 @@ export function SalesContent() {
     return kol.name;
   }, [selectedKolId, selectedStoreId, kols, stores]);
 
-  // 관리자용 매출 등록 핸들러
-  const handleSubmitOrder = async (order: ISalesOrder) => {
+  // 매출 등록 모달 열기
+  const openRegistrationModal = (storeId: string = "") => {
+    setSelectedRegistrationStore(storeId);
+    setIsRegistrationOpen(true);
+  };
+
+  // 매출 등록 처리 함수
+  const handleSalesRegistration = async (order: ISalesOrder) => {
     try {
-      // 실제 API 호출
-      const response = await fetch("/api/admin/orders", {
+      // 매출 등록 API 호출
+      const response = await fetch("/api/sales", {
         method: "POST",
-        credentials: 'include',
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(order),
+        credentials: "include",
+        body: JSON.stringify({
+          storeId: order.storeId,
+          items: order.items.map(item => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+            price: item.product.price
+          })),
+          totalAmount: order.totalAmount
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "매출 등록에 실패했습니다");
+        throw new Error("매출 등록에 실패했습니다.");
       }
 
-      await response.json();
-      // 성공 후 데이터 새로고침
-      fetchOrders();
-      return Promise.resolve();
+      // 성공 시 데이터 새로고침
+      await fetchData();
+      
+      toast.success("매출이 성공적으로 등록되었습니다.");
     } catch (error) {
-      console.error("매출 등록 실패:", error);
+      console.error("매출 등록 오류:", error);
       toast.error("매출 등록 실패", {
-        description: "매출 등록 중 오류가 발생했습니다."
+        description: "매출을 등록하는 중 오류가 발생했습니다."
       });
-      return Promise.reject(error);
     }
   };
 
-  // KOL 사이드바 항목 컴포넌트
-  const KolSidebarItem = ({ kol }: { kol: IKol }) => {
-    const isExpanded = expandedKols[kol.id] ?? false;
-    const kolStores = stores.filter((store) => store.kolId === kol.id);
-    
+  // 매출 등록 컴포넌트 렌더링
+  const renderSalesRegistration = (isSheet: boolean = false) => {
+    const selectedStores = selectedKolId === "all" 
+      ? stores 
+      : stores.filter(store => store.kolId === selectedKolId);
+
     return (
-      <div className="mb-2">
-        <div
-          className={cn(
-            "flex items-center justify-between p-2 rounded-md cursor-pointer",
-            selectedKolId === kol.id
-              ? "bg-blue-50 text-blue-700 font-medium"
-              : "hover:bg-gray-100"
-          )}
-          onClick={() => toggleKolExpanded(kol.id)}
+      <SalesRegistration
+        stores={selectedStores}
+        products={products}
+        isAdmin={true}
+        onSubmitOrder={handleSalesRegistration}
+        isOpen={isSheet ? isRegistrationSheetOpen : isRegistrationOpen}
+        onOpenChange={isSheet ? setIsRegistrationSheetOpen : setIsRegistrationOpen}
+        buttonLabel="매출 등록"
+        initialStoreId={selectedRegistrationStore}
+      />
+    );
+  };
+
+  // KOL 사이드바 아이템 컴포넌트
+  const KolSidebarItem = ({ kol }: { kol: ILocalKol }) => {
+    const isExpanded = expandedKols[kol.id];
+    const isSelected = selectedKolId === kol.id;
+    const kolStores = storesByKol[kol.id] || [];
+
+    return (
+      <div className="space-y-1">
+        <Collapsible
+          open={isExpanded}
+          onOpenChange={() => toggleKolExpanded(kol.id)}
         >
-          <div className="flex items-center">
-            <span>{kol.name}</span>
-            <span className="ml-2 text-xs bg-gray-200 rounded-full px-2 py-0.5 text-gray-700">
-              {kolStores.length}
-            </span>
-          </div>
-          <ChevronRight
-            className={cn(
-              "h-4 w-4 transition-transform",
-              isExpanded ? "transform rotate-90" : ""
-            )}
-          />
-        </div>
-        
-        {isExpanded && (
-          <div className="ml-4 mt-1 space-y-1">
-            {kolStores.map((store) => (
-              <div
-                key={store.id}
-                className={cn(
-                  "flex items-center p-2 rounded-md cursor-pointer",
-                  selectedStoreId === store.id
-                    ? "bg-blue-50 text-blue-700 font-medium"
-                    : "hover:bg-gray-100"
-                )}
-                onClick={() => setSelectedStoreId(store.id)}
-              >
-                <Store className="h-4 w-4 mr-2" />
-                <span className="text-sm">{store.name}</span>
+          <CollapsibleTrigger className="w-full">
+            <div
+              className={cn(
+                "flex items-center justify-between p-3 rounded-lg transition-all",
+                isSelected && !selectedStoreId
+                  ? "bg-purple-50 text-purple-700 font-medium shadow-sm"
+                  : "hover:bg-purple-50/50 text-gray-700"
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedKolId(kol.id);
+                setSelectedStoreId(null);
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{kol.name}</span>
+                <span className="text-xs text-gray-500">({kolStores.length})</span>
               </div>
-            ))}
-            {kolStores.length === 0 && (
-              <div className="p-2 text-sm text-gray-500">전문점 없음</div>
-            )}
-          </div>
-        )}
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-gray-500 transition-transform duration-200",
+                  isExpanded ? "transform rotate-180" : ""
+                )}
+              />
+            </div>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent>
+            <div className="mt-1 ml-2 space-y-1 border-l-2 border-purple-100">
+              {kolStores.map((store) => (
+                <div
+                  key={store.id}
+                  className={cn(
+                    "flex items-center justify-between py-2 px-3 rounded-md cursor-pointer transition-all",
+                    selectedStoreId === store.id
+                      ? "bg-purple-50 text-purple-700 font-medium shadow-sm"
+                      : "hover:bg-purple-50/50 text-gray-600"
+                  )}
+                  onClick={() => {
+                    setSelectedKolId(kol.id);
+                    setSelectedStoreId(store.id);
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Store className="h-4 w-4" />
+                    <span className="text-sm">{store.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 hover:bg-purple-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openRegistrationModal(store.id);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     );
   };
 
-  return (
-    <div className="space-y-6">
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
-          <p className="font-bold">오류</p>
-          <p>{error}</p>
-        </div>
-      )}
-      
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+  // 매출 카드 컴포넌트
+  const SalesCard = ({ sale }: { sale: ISalesData }) => (
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
           <div>
-            <CardTitle>매출 현황</CardTitle>
-            <CardDescription>KOL 및 전문점별 매출 관리</CardDescription>
+            <CardTitle className="text-base font-medium">{sale.storeName}</CardTitle>
+            <CardDescription>{sale.kolName}</CardDescription>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="KOL, 전문점으로 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            {!isLoading && (
-              <Button onClick={() => handleSubmitOrder({ storeId: "", items: [], totalAmount: 0 })}>
-                <Plus className="h-4 w-4 mr-2" /> 매출 등록
-              </Button>
-            )}
+          <div className="text-right">
+            <p className="text-lg font-bold">{new Intl.NumberFormat('ko-KR').format(sale.amount)}원</p>
+            <p className="text-sm text-gray-500">{sale.date}</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-[250px_1fr] gap-6">
-            {/* KOL 및 전문점 사이드바 */}
-            <div className="border rounded-md p-2 space-y-1 h-[calc(100vh-250px)] overflow-y-auto">
-              <div className="font-medium mb-2 p-2">KOL 및 전문점</div>
-              
-              <div
-                className={cn(
-                  "flex items-center p-2 rounded-md cursor-pointer mb-2",
-                  selectedKolId === "all"
-                    ? "bg-blue-50 text-blue-700 font-medium"
-                    : "hover:bg-gray-100"
-                )}
-                onClick={() => {
-                  setSelectedKolId("all");
-                  setSelectedStoreId(null);
-                }}
-              >
-                <span>모든 매출</span>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="text-sm text-gray-600">
+          {sale.products.join(", ")}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="container mx-auto p-4">
+      <Toaster />
+      
+      {/* 헤더 영역 */}
+      <div className="flex flex-col gap-4 mb-6">
+        {/* 매출 등록 버튼 영역 */}
+        <div className="flex justify-end w-full">
+          {/* 데스크톱 매출 등록 버튼 */}
+          <div className="hidden md:block">
+            {renderSalesRegistration(false)}
+          </div>
+          
+          {/* 모바일 매출 등록 시트 */}
+          <div className="block md:hidden w-full md:w-auto">
+            <Sheet open={isRegistrationSheetOpen} onOpenChange={setIsRegistrationSheetOpen}>
+              <SheetTrigger asChild>
+                <Button className="w-full md:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  매출 등록
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[90vh]">
+                <SheetHeader>
+                  <SheetTitle>매출 등록</SheetTitle>
+                </SheetHeader>
+                {renderSalesRegistration(true)}
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+        
+        {/* 검색 필드 영역 */}
+        <div className="w-full">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 w-full"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 데스크톱 레이아웃 */}
+      <div className="hidden md:flex md:space-x-6">
+        {/* KOL 사이드바 */}
+        <div className="w-64 shrink-0">
+          <Card className="sticky top-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold">KOL 목록</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                <button
+                  onClick={() => setSelectedKolId("all")}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                    selectedKolId === "all"
+                      ? "bg-purple-50 text-purple-700 shadow-sm"
+                      : "text-gray-600 hover:bg-purple-50/50"
+                  )}
+                >
+                  전체 KOL
+                </button>
+                {kols.map((kol) => (
+                  <KolSidebarItem key={kol.id} kol={kol} />
+                ))}
               </div>
-              
-              {kols.map((kol) => (
-                <KolSidebarItem key={kol.id} kol={kol} />
-              ))}
-            </div>
-            
-            {/* 매출 데이터 테이블 */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">{selectedTitle}</h3>
-              
-              {isLoading ? (
-                <div className="flex justify-center items-center py-10">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-                  <span className="ml-3 text-sm text-gray-500">데이터를 불러오는 중...</span>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 메인 컨텐츠 */}
+        <div className="flex-1">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-xl font-semibold">
+                  {selectedTitle}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* 데스크톱 테이블 뷰 */}
+              <div className="hidden md:block">
+                <div className="rounded-lg border">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">날짜</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">전문점</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">KOL</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">매출액</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">제품</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredSales.map((sale, index) => (
+                        <tr 
+                          key={sale.id}
+                          className={cn(
+                            "border-b transition-colors hover:bg-gray-50",
+                            index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                          )}
+                        >
+                          <td className="px-4 py-3 text-sm">{sale.date}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Store className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm font-medium">{sale.storeName}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm">{sale.kolName}</td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="text-sm font-semibold">
+                              {new Intl.NumberFormat('ko-KR').format(sale.amount)}원
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {sale.products.map((product, i) => (
+                                <span 
+                                  key={i}
+                                  className="inline-flex items-center px-2 py-1 rounded-full bg-purple-50 text-purple-700 text-xs"
+                                >
+                                  {product}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>날짜</TableHead>
-                      <TableHead>KOL</TableHead>
-                      <TableHead>전문점</TableHead>
-                      <TableHead>제품</TableHead>
-                      <TableHead className="text-right">매출액</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSales.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center text-gray-500">
-                          등록된 매출이 없습니다.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredSales.map((sale) => (
-                        <TableRow key={sale.id}>
-                          <TableCell>{new Date(sale.date).toLocaleDateString()}</TableCell>
-                          <TableCell>{sale.kolName}</TableCell>
-                          <TableCell>{sale.storeName}</TableCell>
-                          <TableCell>
-                            <div className="max-w-xs truncate">{sale.products.join(", ")}</div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {new Intl.NumberFormat("ko-KR", {
-                              style: "currency",
-                              currency: "KRW",
-                            }).format(sale.amount)}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Toaster position="top-center" richColors />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* 모바일 매출 목록 */}
+      <div className="md:hidden">
+        {sales.map((sale) => (
+          <SalesCard key={sale.id} sale={sale} />
+        ))}
+      </div>
     </div>
   );
 }

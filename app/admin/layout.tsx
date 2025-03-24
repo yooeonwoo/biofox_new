@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import DashboardLayout from "@/components/layout/dashboard-layout";
+import MobileTabBar from "@/components/layout/mobile-tab-bar";
 import { Metadata } from "next";
 import { getClientRole } from "@/lib/auth";
 
@@ -30,7 +31,12 @@ export default async function AdminLayout({
   
   return (
     <DashboardLayout title="관리자 대시보드" role="본사관리자">
-      {children}
+      <div className="bg-white min-h-screen pb-16 md:pb-0">
+        <div className="p-3 md:p-6">
+          {children}
+        </div>
+        <MobileTabBar />
+      </div>
     </DashboardLayout>
   );
 }

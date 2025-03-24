@@ -195,7 +195,7 @@ export default function DashboardLayout({ children, title, role }: DashboardLayo
           <div className="flex items-center justify-center h-14 border-b border-gray-200">
             <FoxLogo className="h-8 w-8 mr-2" />
             <span className="text-xl font-semibold">
-              <AuroraText text="BIOFOX KOL" className="text-xl font-semibold" />
+              {title}
             </span>
           </div>
           <div className="flex flex-col flex-grow px-4 mt-5">

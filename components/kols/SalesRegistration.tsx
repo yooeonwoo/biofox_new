@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Minus, Store, Eye } from "lucide-react";
+import { Plus, Minus, Store, Eye, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // 타입 정의
 export interface IProduct {
@@ -49,7 +50,7 @@ export interface ISalesOrder {
   orderDate?: string | Date;
 }
 
-interface ISalesRegistrationProps {
+export interface ISalesRegistrationProps {
   stores: IStore[];
   products: IProduct[];
   isAdmin?: boolean; // 관리자 모드인지 여부
@@ -57,6 +58,7 @@ interface ISalesRegistrationProps {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   buttonLabel?: string;
+  initialStoreId?: string; // 초기 선택 전문점 ID
 }
 
 export function SalesRegistration({
@@ -67,9 +69,10 @@ export function SalesRegistration({
   isOpen,
   onOpenChange,
   buttonLabel = isAdmin ? "매출 등록" : "매출 조회",
+  initialStoreId,
 }: ISalesRegistrationProps) {
   const [open, setOpen] = React.useState(false);
-  const [selectedStore, setSelectedStore] = React.useState<string>("");
+  const [selectedStore, setSelectedStore] = React.useState<string>(initialStoreId || "");
   const [selectedItems, setSelectedItems] = React.useState<ISalesItem[]>([]);
   const [processing, setProcessing] = React.useState(false);
 
@@ -77,6 +80,13 @@ export function SalesRegistration({
   const isControlled = isOpen !== undefined && onOpenChange !== undefined;
   const isDialogOpen = isControlled ? isOpen : open;
   const setIsDialogOpen = isControlled ? onOpenChange : setOpen;
+
+  // 초기 전문점 ID가 변경될 때 선택된 전문점 업데이트
+  React.useEffect(() => {
+    if (initialStoreId) {
+      setSelectedStore(initialStoreId);
+    }
+  }, [initialStoreId]);
 
   // 제품 추가 (관리자만 가능)
   const handleAddProduct = (product: IProduct) => {
@@ -195,167 +205,201 @@ export function SalesRegistration({
             {buttonLabel}
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>매출 등록</DialogTitle>
+        <DialogContent className="max-w-[800px] p-0 gap-0 bg-gray-100">
+          <DialogHeader className="px-6 py-4 border-b bg-white">
+            <DialogTitle className="text-xl">매출 등록</DialogTitle>
             <DialogDescription>
               전문점을 선택하고 판매한 제품과 수량을 입력하세요.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="store">전문점</Label>
-                <Select
-                  value={selectedStore}
-                  onValueChange={setSelectedStore}
-                  disabled={!isAdmin}
-                >
-                  <SelectTrigger id="store" className="w-full">
-                    <SelectValue placeholder="전문점 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stores.map((store) => (
-                      <SelectItem 
-                        key={store.id} 
-                        value={store.id}
-                      >
-                        {store.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>제품 선택</Label>
-                
-                {isAdmin && (
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    {products.map((product) => (
-                      <Button
-                        key={product.id}
-                        type="button"
-                        variant="outline"
-                        className="justify-start text-sm h-auto py-2 px-3"
-                        onClick={() => handleAddProduct(product)}
-                      >
-                        <Plus className="mr-2 h-4 w-4" /> {product.name}
-                      </Button>
-                    ))}
+          <form onSubmit={handleSubmit} className="bg-gray-100">
+            <div className="px-6 py-4">
+              <div className="grid gap-6">
+                {/* 전문점 선택 */}
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">전문점 선택</Label>
                   </div>
-                )}
+                  <Select
+                    value={selectedStore}
+                    onValueChange={setSelectedStore}
+                    disabled={!isAdmin}
+                  >
+                    <SelectTrigger className="bg-white border border-gray-200 rounded-lg h-10">
+                      <SelectValue placeholder="전문점을 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border border-gray-200">
+                      {stores.map((store) => (
+                        <SelectItem 
+                          key={store.id} 
+                          value={store.id}
+                          className="cursor-pointer hover:bg-gray-50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Store className="h-4 w-4" />
+                            <span>{store.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                {/* 선택한 제품 목록 */}
-                <div className="border rounded-md divide-y">
-                  {selectedItems.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">
-                      선택한 제품이 없습니다.
-                    </div>
-                  ) : (
-                    selectedItems.map((item) => (
-                      <div
-                        key={item.product.id}
-                        className="p-3 flex items-center justify-between"
-                      >
-                        <div className="flex flex-col">
-                          <span className="font-medium">{item.product.name}</span>
+                {/* 제품 선택 */}
+                <div className="grid gap-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">제품 선택</Label>
+                  </div>
+                  
+                  {isAdmin && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {products.map((product) => (
+                        <Button
+                          key={product.id}
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            "justify-between text-sm h-auto py-3 px-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50",
+                            selectedItems.some(item => item.product.id === product.id) &&
+                            "border-blue-500 bg-blue-50 text-blue-700"
+                          )}
+                          onClick={() => handleAddProduct(product)}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            <span className="font-normal">{product.name}</span>
+                          </span>
                           <span className="text-sm text-gray-500">
                             {new Intl.NumberFormat("ko-KR", {
                               style: "currency",
                               currency: "KRW",
-                            }).format(item.product.price)} / 개
+                            }).format(product.price)}
                           </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Label className="text-gray-700">수량:</Label>
-                          <div className="flex items-center gap-1">
-                            {isAdmin && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-7 w-7 p-0"
-                                onClick={() =>
-                                  handleQuantityChange(
-                                    item.product.id,
-                                    Math.max(1, item.quantity - 1)
-                                  )
-                                }
-                                disabled={!isAdmin}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                            )}
-                            <Input
-                              type="number"
-                              min="1"
-                              className="w-14 h-8 text-center"
-                              value={item.quantity}
-                              onChange={(e) =>
-                                handleQuantityChange(
-                                  item.product.id,
-                                  parseInt(e.target.value) || 1
-                                )
-                              }
-                              disabled={!isAdmin}
-                            />
-                            {isAdmin && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-7 w-7 p-0"
-                                onClick={() =>
-                                  handleQuantityChange(
-                                    item.product.id,
-                                    item.quantity + 1
-                                  )
-                                }
-                                disabled={!isAdmin}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                          {isAdmin && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-red-500"
-                              onClick={() => handleRemoveProduct(item.product.id)}
-                              disabled={!isAdmin}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))
+                        </Button>
+                      ))}
+                    </div>
                   )}
-                </div>
-              </div>
 
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>총 매출액:</span>
-                  <span>
-                    {new Intl.NumberFormat("ko-KR", {
-                      style: "currency",
-                      currency: "KRW",
-                    }).format(totalSales)}
-                  </span>
+                  {/* 선택한 제품 목록 */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                    <div className="max-h-[300px] overflow-y-auto">
+                      {selectedItems.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          선택한 제품이 없습니다
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-gray-200">
+                          {selectedItems.map((item) => (
+                            <div
+                              key={item.product.id}
+                              className="p-3 flex items-center justify-between hover:bg-gray-50"
+                            >
+                              <div className="flex flex-col gap-1">
+                                <span className="font-medium">{item.product.name}</span>
+                                <span className="text-sm text-gray-500">
+                                  {new Intl.NumberFormat("ko-KR", {
+                                    style: "currency",
+                                    currency: "KRW",
+                                  }).format(item.product.price)} × {item.quantity} = 
+                                  {new Intl.NumberFormat("ko-KR", {
+                                    style: "currency",
+                                    currency: "KRW",
+                                  }).format(item.product.price * item.quantity)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {isAdmin && (
+                                  <>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 bg-white border border-gray-200 rounded-md"
+                                      onClick={() =>
+                                        handleQuantityChange(
+                                          item.product.id,
+                                          Math.max(1, item.quantity - 1)
+                                        )
+                                      }
+                                    >
+                                      <Minus className="h-4 w-4" />
+                                    </Button>
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      className="w-16 h-8 text-center bg-white border border-gray-200 rounded-md"
+                                      value={item.quantity}
+                                      onChange={(e) =>
+                                        handleQuantityChange(
+                                          item.product.id,
+                                          parseInt(e.target.value) || 1
+                                        )
+                                      }
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 bg-white border border-gray-200 rounded-md"
+                                      onClick={() =>
+                                        handleQuantityChange(
+                                          item.product.id,
+                                          item.quantity + 1
+                                        )
+                                      }
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                                      onClick={() => handleRemoveProduct(item.product.id)}
+                                    >
+                                      <Minus className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 총 매출액 */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-base font-medium">총 매출액</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      {new Intl.NumberFormat("ko-KR", {
+                        style: "currency",
+                        currency: "KRW",
+                      }).format(totalSales)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-            <DialogFooter>
+
+            <DialogFooter className="px-6 py-4 border-t border-gray-200 bg-white">
               {isAdmin && (
                 <Button 
                   type="submit"
+                  className="w-[120px] bg-blue-500 hover:bg-blue-600 rounded-lg"
                   disabled={processing || !selectedStore || selectedItems.length === 0}
                 >
-                  {processing ? "등록 중..." : "매출 등록"}
+                  {processing ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>등록 중...</span>
+                    </div>
+                  ) : (
+                    "매출 등록"
+                  )}
                 </Button>
               )}
             </DialogFooter>

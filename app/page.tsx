@@ -3,9 +3,8 @@
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowRight, Github } from "lucide-react";
-import { ModernGradientBackground } from "@/components/ui/modern-gradient-background";
 import { Button } from "@/components/ui/button";
-import { AuroraCard, AuroraText } from "@/components/ui/aurora-gradient";
+import { Card } from "@/components/ui/card";
 
 export default function Home() {
   const router = useRouter();
@@ -21,16 +20,9 @@ export default function Home() {
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* 배경 그라데이션 */}
-      <ModernGradientBackground 
-        gradientBackgroundStart="rgb(10, 10, 10)" 
-        gradientBackgroundEnd="rgb(15, 15, 15)"
-        firstColor="255, 138, 226"  // aurora-pink
-        secondColor="139, 92, 246"  // aurora-violet
-        thirdColor="103, 232, 249"  // aurora-blue
-        fourthColor="109, 40, 217"  // biofox-purple
-        blendingValue="soft-light"
-        containerClassName="fixed inset-0 z-0"
-      />
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-aurora-pink/30 via-aurora-violet/30 to-aurora-blue/30 rounded-full blur-3xl opacity-30 animate-pulse"></div>
+      </div>
       
       {/* 네비게이션 헤더 */}
       <header className="w-full bg-background/10 backdrop-blur-md border-b border-white/5 z-40 sticky top-0">
@@ -119,13 +111,12 @@ export default function Home() {
                   color: "from-aurora-blue/20 to-aurora-blue/5"
                 }
               ].map((feature, index) => (
-                <AuroraCard
-                  key={index}
-                  className="border border-white/10 bg-gradient-to-b p-4 h-full"
-                >
-                  <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
+                <Card variant="glass" className="p-6">
+                  <h1 className="text-3xl font-bold text-white">
+                    {feature.title}
+                  </h1>
                   <p className="text-white/70 text-sm">{feature.description}</p>
-                </AuroraCard>
+                </Card>
               ))}
             </div>
           </div>

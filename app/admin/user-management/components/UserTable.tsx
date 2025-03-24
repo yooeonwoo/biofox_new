@@ -10,6 +10,16 @@
  */
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
 
 // 사용자 인터페이스 정의
 interface IUser {
@@ -18,6 +28,57 @@ interface IUser {
   firstName: string;
   role: string;
   createdAt: string;
+}
+
+// 사용자 카드 컴포넌트
+function UserCard({ user, onDelete }: { user: IUser; onDelete: (id: string) => void }) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!confirm("정말로 이 사용자를 삭제하시겠습니까?")) return;
+    setIsDeleting(true);
+    await onDelete(user.id);
+    setIsDeleting(false);
+  };
+
+  return (
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-base font-medium">{user.firstName}</CardTitle>
+            <p className="text-sm text-gray-500">{user.email}</p>
+          </div>
+          <Badge variant={user.role === "본사관리자" ? "default" : "secondary"}>
+            {user.role}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-gray-500">
+            {new Date(user.createdAt).toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "삭제"
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function UserTable() {
@@ -35,7 +96,6 @@ export default function UserTable() {
     setError(null);
 
     try {
-      // 새로운 API 엔드포인트 사용
       const response = await fetch("/api/admin/users-backend");
       
       if (!response.ok) {
@@ -68,14 +128,9 @@ export default function UserTable() {
 
   // 사용자 삭제 처리
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("정말로 이 사용자를 삭제하시겠습니까?")) {
-      return;
-    }
-
     setIsDeleting(userId);
 
     try {
-      // 새로운 API 엔드포인트 사용
       const response = await fetch(`/api/admin/users-backend?id=${userId}`, {
         method: "DELETE",
       });
@@ -85,9 +140,7 @@ export default function UserTable() {
         throw new Error(data.error || "사용자 삭제에 실패했습니다.");
       }
 
-      // 성공 시 목록에서 제거
       setUsers(users.filter(user => user.id !== userId));
-      // 테이블 새로고침을 위해 라우터 새로고침
       router.refresh();
     } catch (err) {
       alert(err instanceof Error ? err.message : "사용자 삭제 중 오류가 발생했습니다.");
@@ -96,51 +149,44 @@ export default function UserTable() {
     }
   };
 
-  // 날짜 포맷팅 함수
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   return (
     <div>
       {/* 필터링 컨트롤 */}
-      <div className="mb-4 flex justify-between items-center">
-        <div>
-          <label htmlFor="roleFilter" className="mr-2 text-sm font-medium text-gray-700">
-            역할 필터:
-          </label>
-          <select
-            id="roleFilter"
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-          >
-            <option value="all">전체</option>
-            <option value="본사관리자">본사관리자</option>
-            <option value="kol">KOL</option>
-          </select>
+      <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="w-full md:w-auto">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-full md:w-[200px]">
+              <SelectValue placeholder="역할 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체</SelectItem>
+              <SelectItem value="본사관리자">본사관리자</SelectItem>
+              <SelectItem value="kol">KOL</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <button
-          onClick={() => fetchUsers()}
-          className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+        <Button
+          variant="outline"
+          onClick={fetchUsers}
+          className="w-full md:w-auto"
+          disabled={loading}
         >
-          새로고침
-        </button>
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            "새로고침"
+          )}
+        </Button>
       </div>
 
       {/* 오류 메시지 */}
       {error && (
-        <div className="text-red-500 mb-4">{error}</div>
+        <div className="text-red-500 mb-4 p-4 bg-red-50 rounded-md">{error}</div>
       )}
 
-      {/* 사용자 목록 테이블 */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      {/* 데스크톱 테이블 뷰 */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -163,8 +209,8 @@ export default function UserTable() {
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                  로딩 중...
+                <td colSpan={5} className="px-6 py-4 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 </td>
               </tr>
             ) : filteredUsers.length === 0 ? (
@@ -182,32 +228,58 @@ export default function UserTable() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {user.firstName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.role === "본사관리자" 
-                        ? "bg-purple-100 text-purple-800" 
-                        : "bg-green-100 text-green-800"
-                    }`}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Badge variant={user.role === "본사관리자" ? "default" : "secondary"}>
                       {user.role}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(user.createdAt)}
+                    {new Date(user.createdAt).toLocaleDateString("ko-KR", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleDeleteUser(user.id)}
                       disabled={isDeleting === user.id}
-                      className="text-red-600 hover:text-red-900 disabled:opacity-50"
                     >
-                      {isDeleting === user.id ? "삭제 중..." : "삭제"}
-                    </button>
+                      {isDeleting === user.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "삭제"
+                      )}
+                    </Button>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* 모바일 카드 뷰 */}
+      <div className="md:hidden">
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            사용자가 없습니다.
+          </div>
+        ) : (
+          filteredUsers.map((user) => (
+            <UserCard
+              key={user.id}
+              user={user}
+              onDelete={handleDeleteUser}
+            />
+          ))
+        )}
       </div>
     </div>
   );

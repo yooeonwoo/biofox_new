@@ -17,7 +17,6 @@ import {
   BarChart
 } from "lucide-react";
 import { FoxLogo } from '@/components/ui/fox-logo';
-import { AuroraText } from '@/components/ui/aurora-gradient';
 import { cn } from '@/lib/utils';
 
 interface SubMenuItem {
@@ -237,7 +236,9 @@ export default function Sidebar({ role, isMobileOpen, onCloseMobile }: SidebarPr
         <div className="flex items-center gap-2">
           <FoxLogo className="h-8 w-8" />
           <h1 className="text-xl font-bold biofox-gradient-text">
-            <AuroraText text="BIOFOX" className="text-xl font-semibold" />
+            <span className="text-xl font-semibold text-white">
+              BIOFOX KOL
+            </span>
           </h1>
         </div>
         <button 
