@@ -33,6 +33,17 @@ const config = {
   
   // 매니페스트 최적화 (PWA)
   productionBrowserSourceMaps: false,
+  
+  // Service Worker 설정
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default config; 

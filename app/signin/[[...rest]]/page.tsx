@@ -6,6 +6,12 @@ export const metadata = {
   description: "BIOFOX KOL 계정으로 로그인하세요.",
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function SignInPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8" style={{ 
@@ -23,9 +29,7 @@ export default function SignInPage() {
               BIOFOX KOL
             </h1>
           </Link>
-          <p className="text-center text-gray-600 mt-2">
-            KOL 및 전문점 관리 시스템
-          </p>
+          
         </div>
         
         <div className="card-gradient">
@@ -35,7 +39,7 @@ export default function SignInPage() {
                 formButtonPrimary: "btn-primary",
                 card: "shadow-none bg-transparent",
                 headerTitle: "text-xl font-semibold",
-                headerSubtitle: "text-gray-500",
+                headerSubtitle: "",
                 socialButtonsBlockButton: "border border-solid hover:border-[#C0A6E3]",
                 socialButtonsBlockButtonText: "text-gray-600",
                 formFieldLabel: "text-gray-700",
@@ -48,8 +52,10 @@ export default function SignInPage() {
                 main: "p-0 sm:p-0"
               },
             }}
-            afterSignInUrl="/dashboard"
+            path="/signin"
+            routing="path"
             signUpUrl="/signup"
+            redirectUrl="/dashboard"
           />
         </div>
       </div>

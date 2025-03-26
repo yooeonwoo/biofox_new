@@ -4,22 +4,14 @@
 
 :root {
   /* 기본 컬러 팔레트 */
-  --color-dark-1: #383B44;
-  --color-dark-2: #2E3035;
+  --biofox-purple: #6a0dad;
+  --biofox-cyan: #00f0ff;
+  --biofox-blue: #0077be;
   
   /* 기본 변수 */
-  --background: var(--color-dark-2);
+  --background: #000000;
   --foreground: #ffffff;
   
-  /* 텍스트 색상 */
-  --text-light-bg: var(--color-dark-1);
-  --text-dark-bg: #ffffff;
-  
-  --biofox-purple: #6D28D9;
-  --biofox-purple-light: #C0A6E3;
-  --dark-gray-1: var(--color-dark-1);
-  --dark-gray-2: var(--color-dark-2);
-
   /* 그림자, 블러 */
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.2);
   --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -30,10 +22,6 @@
   --transition-fast: 0.2s;
   --transition-normal: 0.3s;
   --transition-slow: 0.5s;
-
-  /* 테마용 */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
 
   /* 폰트 */
   --font-sans: 'SF Compact Text', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
@@ -47,39 +35,6 @@
   --border-radius-full: 9999px;
 }
 
-/* 라이트 모드 설정 */
-[data-theme="light"] {
-  --background: #ffffff;
-  --foreground: var(--color-dark-1);
-  --card: #ffffff;
-  --card-foreground: var(--color-dark-1);
-  --primary: var(--biofox-purple);
-  --primary-foreground: #ffffff;
-  --secondary: var(--color-dark-1);
-  --secondary-foreground: #ffffff;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: var(--biofox-purple-light);
-  --accent-foreground: #ffffff;
-}
-
-/* 다크 모드 설정 */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--color-dark-2);
-    --foreground: #f2f3f5;
-    --card: var(--color-dark-1);
-    --card-foreground: #f2f3f5;
-  }
-}
-
-[data-theme="dark"] {
-  --background: var(--color-dark-2);
-  --foreground: #f2f3f5;
-  --card: var(--color-dark-1);
-  --card-foreground: #f2f3f5;
-}
-
 /* 버튼 스타일 */
 .btn-primary {
   background-color: var(--biofox-purple);
@@ -91,12 +46,12 @@
 }
 
 .btn-primary:hover {
-  background-color: var(--biofox-purple-light);
+  background-color: var(--biofox-cyan);
   transform: translateY(-2px);
 }
 
 .btn-secondary {
-  border: 1px solid var(--biofox-purple-light);
+  border: 1px solid var(--biofox-cyan);
   color: var(--biofox-purple);
   padding: 0.5rem 1.5rem;
   border-radius: var(--border-radius-md);
@@ -105,7 +60,7 @@
 }
 
 .btn-secondary:hover {
-  background-color: var(--biofox-purple-light);
+  background-color: var(--biofox-cyan);
   color: white;
   transform: translateY(-2px);
 }
@@ -120,23 +75,26 @@
 }
 
 .btn-ghost:hover {
-  background-color: rgba(109, 40, 217, 0.1);
-  box-shadow: 0 0 0 1px var(--biofox-purple-light);
+  background-color: rgba(106, 13, 173, 0.1);
+  box-shadow: 0 0 0 1px var(--biofox-cyan);
 }
 
 /* 카드 스타일 */
 .card {
-  background-color: var(--card);
-  color: var(--card-foreground);
+  background-color: rgba(0, 0, 0, 0.2);
+  color: var(--foreground);
   border-radius: var(--border-radius-md);
   padding: 1.5rem;
   box-shadow: var(--shadow-card);
   transition: all var(--transition-normal);
+  backdrop-filter: var(--blur-effect);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-subtle);
+  border-color: var(--biofox-cyan);
 }
 
 /* 애니메이션 */

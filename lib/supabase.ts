@@ -1,34 +1,33 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
+// 환경 변수 체크
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL 환경 변수가 설정되지 않았습니다.');
+}
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY 환경 변수가 설정되지 않았습니다.');
+}
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY 환경 변수가 설정되지 않았습니다.');
+}
 
-// 서버 사이드 전용 Supabase 클라이언트 (API 라우트에서 사용)
-export const serverSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    persistSession: false,
-  },
-  db: {
-    schema: 'public',
-  },
-  global: {
-    fetch: (...args) => {
-      // 커스텀 fetch 옵션 추가 (타임아웃 등)
-      return fetch(...args);
+// 클라이언트 사이드용 Supabase 인스턴스
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
+// 서버 사이드용 Supabase 인스턴스 (admin 권한)
+export const serverSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
     }
-  },
-});
-
-// 클라이언트 사이드 Supabase 클라이언트
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true, // 클라이언트에서는 세션 유지
-  },
-  db: {
-    schema: 'public',
-  },
-});
+  }
+);
 
 // 캐싱 설정 상수 (모든 API에서 공통으로 사용)
 export const CACHE_SETTINGS = {
