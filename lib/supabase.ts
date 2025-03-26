@@ -1,33 +1,74 @@
 import { createClient } from '@supabase/supabase-js';
 
-// 환경 변수 체크
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL 환경 변수가 설정되지 않았습니다.');
-}
-if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY 환경 변수가 설정되지 않았습니다.');
-}
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY 환경 변수가 설정되지 않았습니다.');
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
 
-// 클라이언트 사이드용 Supabase 인스턴스
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+// 서버 사이드 전용 Supabase 클라이언트 (API 라우트에서 사용)
+export const serverSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    persistSession: false,
+  },
+  db: {
+    schema: 'public',
+  },
+  global: {
+    fetch: async (...args) => {
+      const [url, config] = args;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초 타임아웃
 
-// 서버 사이드용 Supabase 인스턴스 (admin 권한)
-export const serverSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+      try {
+        const response = await fetch(url, {
+          ...config,
+          signal: controller.signal,
+          keepalive: true,
+        });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          throw new Error('Database connection timeout');
+        }
+        throw error;
+      }
+    },
+  },
+});
+
+// 클라이언트 사이드 Supabase 클라이언트
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+  db: {
+    schema: 'public',
+  },
+  global: {
+    fetch: async (...args) => {
+      const [url, config] = args;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15초 타임아웃 (클라이언트는 더 짧게)
+
+      try {
+        const response = await fetch(url, {
+          ...config,
+          signal: controller.signal,
+          keepalive: true,
+        });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          throw new Error('Database connection timeout');
+        }
+        throw error;
+      }
+    },
+  },
+});
 
 // 캐싱 설정 상수 (모든 API에서 공통으로 사용)
 export const CACHE_SETTINGS = {
