@@ -4,9 +4,9 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "../../../../db";
-import { users } from "../../../../db/schema";
+import { users, kols } from "../../../../db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
 
 /**
  * GET 요청 처리 - 모든 사용자 목록을 조회합니다.
@@ -14,8 +14,8 @@ import { auth } from "@clerk/nextjs";
 export async function GET(req: NextRequest) {
   try {
     // 관리자 권한 확인
-    const { userId } = auth();
-    if (!userId) {
+    const user = await currentUser();
+    if (!user) {
       return NextResponse.json(
         { error: "인증이 필요합니다." },
         { status: 401 }
@@ -39,13 +39,12 @@ export async function GET(req: NextRequest) {
 /**
  * POST 요청 처리 - 새 사용자를 등록합니다.
  * 이 API는 데이터베이스에만 사용자 정보를 저장합니다.
- * 실제 Clerk 사용자 생성은 별도의 API를 통해 처리해야 합니다.
  */
 export async function POST(req: NextRequest) {
   try {
     // 관리자 권한 확인
-    const { userId } = auth();
-    if (!userId) {
+    const user = await currentUser();
+    if (!user) {
       return NextResponse.json(
         { error: "인증이 필요합니다." },
         { status: 401 }
@@ -55,12 +54,20 @@ export async function POST(req: NextRequest) {
     // TODO: 실제 프로덕션에서는 사용자 권한을 확인하는 로직 추가 필요
 
     // 요청 본문 파싱
-    const { clerkId, email, role } = await req.json();
+    const { email, role, kolName, shopName, region, smartPlaceLink } = await req.json();
 
     // 필수 필드 검증
-    if (!clerkId || !email || !role) {
+    if (!email || !role) {
       return NextResponse.json(
-        { error: "clerkId, email, role 필드는 필수입니다." },
+        { error: "email, role 필드는 필수입니다." },
+        { status: 400 }
+      );
+    }
+
+    // KOL 역할인 경우 필수 필드 추가 검증
+    if (role === 'kol' && (!kolName || !shopName || !region)) {
+      return NextResponse.json(
+        { error: "KOL 정보(이름, 매장명, 지역)는 필수입니다." },
         { status: 400 }
       );
     }
@@ -78,18 +85,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 사용자 등록
+    // 임시 clerkId 생성 (실제로는 Clerk API를 통해 사용자를 생성하고 ID를 받아야 함)
+    const tempClerkId = `temp_${Date.now()}`;
+
+    // 1. 사용자 등록
     const newUser = await db.insert(users).values({
-      clerkId,
+      clerkId: tempClerkId,
       email,
       role,
+      name: role === 'kol' ? kolName : email.split('@')[0],
     }).returning();
+
+    // 2. KOL 역할인 경우 KOL 정보 추가 등록
+    if (role === 'kol' && newUser.length > 0) {
+      await db.insert(kols).values({
+        userId: newUser[0].id,
+        name: kolName,
+        shopName: shopName,
+        region: region,
+        smartPlaceLink: smartPlaceLink || null,
+      });
+    }
 
     return NextResponse.json({ user: newUser[0] }, { status: 201 });
   } catch (error) {
     console.error("사용자 등록 실패:", error);
+    // 오류 유형에 따라 다른 메시지 반환
+    const errorMessage = error instanceof Error 
+      ? `사용자 등록 중 오류가 발생했습니다: ${error.message}`
+      : "사용자 등록 중 알 수 없는 오류가 발생했습니다.";
+    
     return NextResponse.json(
-      { error: "사용자 등록 중 오류가 발생했습니다." },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -103,8 +130,8 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     // 관리자 권한 확인
-    const { userId } = auth();
-    if (!userId) {
+    const user = await currentUser();
+    if (!user) {
       return NextResponse.json(
         { error: "인증이 필요합니다." },
         { status: 401 }
@@ -140,8 +167,13 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("사용자 삭제 실패:", error);
+    // 오류 유형에 따라 다른 메시지 반환
+    const errorMessage = error instanceof Error 
+      ? `사용자 삭제 중 오류가 발생했습니다: ${error.message}`
+      : "사용자 삭제 중 알 수 없는 오류가 발생했습니다.";
+    
     return NextResponse.json(
-      { error: "사용자 삭제 중 오류가 발생했습니다." },
+      { error: errorMessage },
       { status: 500 }
     );
   }

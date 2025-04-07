@@ -7,7 +7,8 @@ import {
   Menu,
   User,
   Settings,
-  ExternalLink
+  ExternalLink,
+  LogOut
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../../../components/ui/sheet";
@@ -24,6 +25,7 @@ interface KolHeaderProps {
   userImage?: string;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
+  onSignOut?: () => void;
 }
 
 export default function KolHeader({ 
@@ -31,7 +33,8 @@ export default function KolHeader({
   shopName, 
   userImage,
   mobileMenuOpen,
-  setMobileMenuOpen
+  setMobileMenuOpen,
+  onSignOut
 }: KolHeaderProps) {
   const userInitials = userName?.substring(0, 2) || "KL";
 
@@ -52,6 +55,7 @@ export default function KolHeader({
                 shopName={shopName} 
                 userImage={userImage} 
                 setMobileMenuOpen={setMobileMenuOpen} 
+                onSignOut={onSignOut}
               />
             </SheetContent>
           </Sheet>
@@ -88,8 +92,8 @@ export default function KolHeader({
                 <span>설정</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <ExternalLink className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={onSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
                 <span>로그아웃</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -1,22 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Store, BarChart3, Settings } from "lucide-react";
+import { Home, Store, BarChart3, Settings, LogOut } from "lucide-react";
 import { Separator } from "../../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
+import { Button } from "../../../components/ui/button";
 
 interface KolMobileMenuProps {
   userName?: string;
   shopName?: string;
   userImage?: string;
   setMobileMenuOpen: (open: boolean) => void;
+  onSignOut?: () => void;
 }
 
 export default function KolMobileMenu({
   userName,
   shopName,
   userImage,
-  setMobileMenuOpen
+  setMobileMenuOpen,
+  onSignOut
 }: KolMobileMenuProps) {
   const userInitials = userName?.substring(0, 2) || "KL";
 
@@ -66,6 +69,18 @@ export default function KolMobileMenu({
           <Settings className="h-4 w-4" />
           <span>설정</span>
         </Link>
+        <Separator className="my-2" />
+        <Button 
+          variant="ghost" 
+          onClick={() => {
+            setMobileMenuOpen(false);
+            onSignOut && onSignOut();
+          }}
+          className="flex items-center justify-start gap-2 rounded-md px-4 py-2 text-sm font-normal hover:bg-muted"
+        >
+          <LogOut className="h-4 w-4 text-red-500" />
+          <span className="text-red-500">로그아웃</span>
+        </Button>
       </nav>
     </div>
   );

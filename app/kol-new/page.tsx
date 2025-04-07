@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { 
   Search, 
@@ -24,6 +24,9 @@ import KolSidebar from "../components/layout/KolSidebar";
 import KolFooter from "../components/layout/KolFooter";
 import MetricCard from "../components/dashboard/MetricCard";
 import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { DialogTitle } from "@/components/ui/dialog";
+import KolMobileMenu from "../components/layout/KolMobileMenu";
 
 // 대시보드 데이터 타입 정의
 interface DashboardData {
@@ -80,6 +83,7 @@ interface ActivityData {
 
 export default function KolNewPage() {
   const { isLoaded, isSignedIn, user } = useUser();
+  const { signOut } = useClerk();
   const [isKol, setIsKol] = useState<boolean | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -156,6 +160,17 @@ export default function KolNewPage() {
     }
   }, [isLoaded, isSignedIn, isKol]);
 
+  // 로그아웃 함수
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      // 로그아웃 후 홈으로 리다이렉트 (선택적)
+      // window.location.href = '/';
+    } catch (error) {
+      console.error('로그아웃 중 오류가 발생했습니다:', error);
+    }
+  };
+
   // 로딩 중이거나 사용자 정보 확인 중인 경우
   if (!isLoaded || isKol === null) {
     return (
@@ -223,6 +238,7 @@ export default function KolNewPage() {
         userImage={user?.imageUrl}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
+        onSignOut={handleSignOut}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -426,6 +442,27 @@ export default function KolNewPage() {
           </div>
         </main>
       </div>
+
+      {/* Mobile Menu */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetTrigger className="block sm:hidden">
+          <div className="flex items-center justify-center p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+            </svg>
+          </div>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-[250px] sm:w-[300px]">
+          <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
+          <KolMobileMenu 
+            userName={dashboardData?.kol?.name} 
+            shopName={dashboardData?.kol?.shopName} 
+            userImage={user?.imageUrl} 
+            setMobileMenuOpen={setMobileMenuOpen} 
+            onSignOut={handleSignOut}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

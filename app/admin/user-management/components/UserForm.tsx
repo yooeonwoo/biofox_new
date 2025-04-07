@@ -99,7 +99,7 @@ export default function UserForm({ onClose }: UserFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "사용자 등록에 실패했습니다.");
+        throw new Error(errorData.error || "사용자 등록에 실패했습니다.");
       }
 
       toast.success("사용자가 성공적으로 등록되었습니다.");
