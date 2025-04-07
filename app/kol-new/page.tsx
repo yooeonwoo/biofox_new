@@ -4,10 +4,26 @@ import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
-import { ArrowLeft, Bell, ChevronDown, Search, CoinsIcon, TrendingUp, Store, Wallet, Settings } from "lucide-react";
+import { 
+  Search, 
+  CoinsIcon,
+  TrendingUp,
+  Store,
+  Wallet,
+  ArrowRight,
+  ClipboardList,
+  FileText
+} from "lucide-react";
 import SalesChart from "@/components/sales-chart";
 import StoreRankingTable from "@/components/store-ranking-table";
 import UpcomingTasks from "@/components/upcoming-tasks";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import KolHeader from "../components/layout/KolHeader";
+import KolSidebar from "../components/layout/KolSidebar";
+import KolFooter from "../components/layout/KolFooter";
+import MetricCard from "../components/dashboard/MetricCard";
+import { Separator } from "@/components/ui/separator";
 
 // 대시보드 데이터 타입 정의
 interface DashboardData {
@@ -30,6 +46,7 @@ interface DashboardData {
     total: number;
     ordering: number;
     notOrdering: number;
+    lastAddedDate?: string;
   };
 }
 
@@ -40,6 +57,7 @@ interface ShopData {
   region: string;
   status: string;
   createdAt: string;
+  is_owner_kol?: boolean;
   sales: {
     total: number;
     product: number;
@@ -49,14 +67,15 @@ interface ShopData {
 }
 
 // 태스크 데이터 타입 정의
-interface TaskData {
+interface ActivityData {
   id: number;
-  title: string;
-  description: string;
+  shopId?: number;
+  shopName?: string;
+  activityDate: string;
+  content: string;
   createdAt: string;
-  completed: boolean;
-  dueDate: string | null;
-  type: string;
+  timeAgo: string;
+  icon: React.ReactNode;
 }
 
 export default function KolNewPage() {
@@ -65,8 +84,9 @@ export default function KolNewPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [shopsData, setShopsData] = useState<ShopData[]>([]);
-  const [tasksData, setTasksData] = useState<TaskData[]>([]);
+  const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -79,53 +99,75 @@ export default function KolNewPage() {
   // 대시보드 데이터 로드
   useEffect(() => {
     if (isLoaded && isSignedIn && isKol) {
-      const fetchDashboardData = async () => {
+      const fetchData = async () => {
         try {
           setLoading(true);
-          // 대시보드 데이터 가져오기
+          // 대시보드 데이터 로드
           const dashboardResponse = await fetch('/api/kol-new/dashboard');
-          if (!dashboardResponse.ok) {
-            throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
-          }
+          if (!dashboardResponse.ok) throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
           const dashboardResult = await dashboardResponse.json();
           setDashboardData(dashboardResult);
 
-          // 전문점 데이터 가져오기
+          // 전문점 데이터 로드
           const shopsResponse = await fetch('/api/kol-new/shops');
-          if (!shopsResponse.ok) {
-            throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
-          }
+          if (!shopsResponse.ok) throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
           const shopsResult = await shopsResponse.json();
           setShopsData(shopsResult);
 
-          // 태스크 데이터 가져오기
-          const tasksResponse = await fetch('/api/kol-new/tasks');
-          if (!tasksResponse.ok) {
-            throw new Error('태스크 데이터를 불러오는데 실패했습니다.');
+          // 영업 일지 데이터 로드
+          const activityResponse = await fetch('/api/kol-new/activities'); 
+          if (!activityResponse.ok) {
+            throw new Error('영업 일지 데이터를 불러오는데 실패했습니다.');
           }
-          const tasksResult = await tasksResponse.json();
-          setTasksData(tasksResult);
+          const activityResult = await activityResponse.json();
+          
+          // 영업 일지 데이터 포맷팅
+          const formattedActivities = activityResult.map((act: any) => {
+            // 날짜 포맷팅
+            const activityDate = new Date(act.activity_date);
+            const now = new Date();
+            const diffTime = Math.abs(now.getTime() - activityDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return {
+              id: act.id,
+              shopId: act.shop_id,
+              shopName: act.shop_name, // API에서 전달받는 경우
+              activityDate: new Date(act.activity_date).toLocaleDateString('ko-KR'),
+              content: act.content,
+              createdAt: new Date(act.created_at).toLocaleDateString('ko-KR'),
+              timeAgo: diffDays === 0 ? '오늘' : `${diffDays}일 전`,
+              icon: act.shop_id ? 
+                <Store className="h-4 w-4 text-blue-500" /> : 
+                <ClipboardList className="h-4 w-4 text-purple-500" />
+            };
+          });
+          
+          setActivityData(formattedActivities);
 
           setLoading(false);
-        } catch (error) {
-          console.error('데이터 로드 에러:', error);
-          setError(error.message || '데이터를 불러오는데 실패했습니다.');
+        } catch (err: unknown) {
+          console.error('데이터 로드 에러:', err);
+          setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
           setLoading(false);
         }
       };
-
-      fetchDashboardData();
+      fetchData();
     }
   }, [isLoaded, isSignedIn, isKol]);
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
   if (!isLoaded || isKol === null) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-        <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold text-center text-gray-800">로딩 중...</h1>
-          <p className="text-center text-gray-600">사용자 정보를 확인하는 중입니다.</p>
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">로딩 중...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">사용자 정보를 확인하는 중입니다.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -138,11 +180,15 @@ export default function KolNewPage() {
   // 데이터 로딩 중인 경우
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-        <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold text-center text-gray-800">데이터 로딩 중...</h1>
-          <p className="text-center text-gray-600">대시보드 정보를 불러오는 중입니다.</p>
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">데이터 로딩 중...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">대시보드 정보를 불러오는 중입니다.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -150,19 +196,20 @@ export default function KolNewPage() {
   // 에러가 발생한 경우
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-        <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold text-center text-red-600">에러 발생</h1>
-          <p className="text-center text-gray-600">{error}</p>
-          <div className="flex justify-center">
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-            >
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center text-destructive">에러 발생</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">{error}</p>
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            <Button onClick={() => window.location.reload()}>
               다시 시도
-            </button>
-          </div>
-        </div>
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     );
   }
@@ -170,143 +217,215 @@ export default function KolNewPage() {
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
-      <header className="flex items-center border-b px-4 py-2">
-        <Link href="#" className="mr-2">
-          <ArrowLeft className="h-5 w-5 text-gray-500" />
-        </Link>
-        <div className="flex items-center font-bold">
-          <span className="ml-2">BIOFOX CRM</span>
-        </div>
-        <div className="mx-4 flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="리드, 세미나, 전문점 검색..."
-              className="w-full rounded-md bg-gray-100 py-2 pl-10 pr-4 text-sm"
-            />
-          </div>
-        </div>
-        <button className="mr-4">
-          <Bell className="h-5 w-5 text-gray-500" />
-        </button>
-        <div className="flex items-center">
-          <span className="mr-1 text-sm">{dashboardData?.kol?.shopName || "로딩 중..."}</span>
-          <ChevronDown className="h-4 w-4 text-gray-500" />
-        </div>
-      </header>
+      <KolHeader 
+        userName={dashboardData?.kol?.name}
+        shopName={dashboardData?.kol?.shopName}
+        userImage={user?.imageUrl}
+        mobileMenuOpen={mobileMenuOpen}
+        setMobileMenuOpen={setMobileMenuOpen}
+      />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-48 border-r">
-          <nav className="p-2">
-            <Link href="#" className="flex items-center rounded-md px-4 py-3 text-sm hover:bg-gray-100">
-              <Bell className="mr-3 h-5 w-5" />
-              <span>알림</span>
-            </Link>
-            <Link href="#" className="flex items-center rounded-md px-4 py-3 text-sm hover:bg-gray-100">
-              <Settings className="mr-3 h-5 w-5" />
-              <span>설정</span>
-            </Link>
-          </nav>
-        </aside>
+        {/* Sidebar - Desktop Only */}
+        <KolSidebar />
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto p-6">
-          <h1 className="mb-6 text-2xl font-bold">{dashboardData?.kol?.shopName || "로딩 중..."} - {dashboardData?.kol?.name || "로딩 중..."} KOL</h1>
-
-          {/* Metrics Row */}
-          <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* Combined Sales and Allowance Card */}
-            <div className="rounded-lg border bg-white">
-              {/* Sales Section */}
-              <div className="border-b p-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">당월 매출: {(dashboardData?.sales?.currentMonth || 0).toLocaleString()}만</h3>
-                  <div className="rounded-full bg-amber-50 p-2">
-                    <CoinsIcon className="h-5 w-5 text-amber-500" />
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center text-sm">
-                  <TrendingUp className="mr-1 h-4 w-4 text-green-500" />
-                  <span className="text-green-500">전월 대비 {(dashboardData?.sales?.growth || 0).toLocaleString()} 만 증가</span>
-                </div>
-              </div>
-
-              {/* Allowance Section */}
-              <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">당월 수당: {(dashboardData?.allowance?.currentMonth || 0).toLocaleString()}만</h3>
-                  <div className="rounded-full bg-purple-50 p-2">
-                    <Wallet className="h-5 w-5 text-purple-500" />
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center text-sm">
-                  <TrendingUp className="mr-1 h-4 w-4 text-green-500" />
-                  <span className="text-green-500">전월 대비 {(dashboardData?.allowance?.growth || 0).toLocaleString()} 만 증가</span>
-                </div>
-              </div>
+        <main className="flex-1 overflow-auto bg-muted/10 p-4 md:p-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-6">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{dashboardData?.kol?.shopName || "..."} - {dashboardData?.kol?.name || "..."} KOL</h1>
             </div>
 
-            {/* Combined Stores Status and Ordering Stores Card */}
-            <div className="rounded-lg border bg-white">
-              {/* Stores Status Section */}
-              <div className="border-b p-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">전문점 현황: {dashboardData?.shops?.total || 0}곳</h3>
-                  <div className="rounded-full bg-blue-50 p-2">
-                    <Store className="h-5 w-5 text-blue-500" />
+            {/* 상단 메트릭 카드 영역 (2개 카드) */}
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* 카드 1: 매출 & 수당 */}
+              <Card>
+                <CardContent className="p-4">
+                  {/* 당월 매출 섹션 */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm sm:text-lg md:text-xl font-bold">당월 매출:</span>
+                      <span className="text-sm sm:text-lg md:text-xl font-bold">
+                        {dashboardData?.sales?.currentMonth?.toLocaleString() || 0}만
+                      </span>
+                    </div>
+                    <div className="rounded-full bg-yellow-100 p-1 sm:p-1.5 text-yellow-700">
+                       <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </div>
                   </div>
-                </div>
-                <div className="mt-2 text-sm text-gray-500">
-                  {new Date().getMonth() + 1}월 {new Date().getDate()}일 전문점 계약이 없었습니다.
-                </div>
-              </div>
+                  {dashboardData?.sales?.growth && (
+                    <div className="mt-1 flex items-center text-[10px] sm:text-xs text-green-600">
+                      <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                      <span>전월 대비 {dashboardData.sales.growth.toLocaleString()}만 증가</span>
+                    </div>
+                  )}
+                  
+                  {/* 구분선 스타일 강화 */}
+                  <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
 
-              {/* Ordering Stores Section */}
-              <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">당월 주문 전문점: {dashboardData?.shops?.ordering || 0}곳</h3>
-                  <div className="rounded-full bg-green-50 p-2">
-                    <Store className="h-5 w-5 text-green-500" />
+                  {/* 당월 수당 섹션 */}
+                   <div className="flex items-center justify-between">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm sm:text-lg md:text-xl font-bold">당월 수당:</span>
+                      <span className="text-sm sm:text-lg md:text-xl font-bold">
+                        {dashboardData?.allowance?.currentMonth?.toLocaleString() || 0}만
+                      </span>
+                    </div>
+                    <div className="rounded-full bg-purple-100 p-1 sm:p-1.5 text-purple-700">
+                       <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </div>
                   </div>
-                </div>
-                <div className="mt-2 text-sm text-gray-500">
-                  {dashboardData?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
-                </div>
-              </div>
+                  {dashboardData?.allowance?.growth && (
+                    <div className="mt-1 flex items-center text-[10px] sm:text-xs text-green-600">
+                      <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                      <span>전월 대비 {dashboardData.allowance.growth.toLocaleString()}만 증가</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 카드 2: 현황 & 주문 */}
+              <Card>
+                <CardContent className="p-4">
+                  {/* 전문점 현황 섹션 */}
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-baseline gap-2">
+                      <span className="text-sm sm:text-lg md:text-xl font-bold">전문점 현황:</span>
+                      <span className="text-sm sm:text-lg md:text-xl font-bold">
+                         {dashboardData?.shops?.total || 0}곳
+                      </span>
+                    </div>
+                    <div className="rounded-full bg-blue-100 p-1 sm:p-1.5 text-blue-700">
+                       <Store className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </div>
+                  </div>
+                  <div className="mt-1 text-[10px] sm:text-xs text-orange-500">
+                    {(() => {
+                      // 마지막 전문점 추가일 (가정: dashboardData에 lastShopAddedDate가 있음)
+                      const lastAddedDate = dashboardData?.shops?.lastAddedDate ? new Date(dashboardData.shops.lastAddedDate) : null;
+                      
+                      if (!lastAddedDate) return "최근 전문점 계약 정보가 없습니다.";
+                      
+                      // 오늘 날짜와의 차이 계산
+                      const today = new Date();
+                      const diffTime = Math.abs(today.getTime() - lastAddedDate.getTime());
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      
+                      return `${diffDays}일 동안 전문점 계약이 없었습니다.`;
+                    })()}
+                  </div>
+                  
+                  {/* 구분선 스타일 강화 */}
+                  <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
+
+                  {/* 당월 주문 전문점 섹션 */}
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-baseline gap-2">
+                      <span className="text-sm sm:text-lg md:text-xl font-bold">당월 주문 전문점:</span>
+                      <span className="text-sm sm:text-lg md:text-xl font-bold">
+                        {dashboardData?.shops?.ordering || 0}곳
+                      </span>
+                    </div>
+                    <div className="rounded-full bg-green-100 p-1 sm:p-1.5 text-green-700">
+                       <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </div>
+                  </div>
+                  <div className="mt-1 text-[10px] sm:text-xs text-red-500">
+                    {dashboardData?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
 
-          {/* Tables Row */}
-          <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <StoreRankingTable shops={shopsData} />
-            <UpcomingTasks tasks={tasksData} />
-          </div>
-
-          {/* Chart */}
-          <div className="rounded-lg border bg-white p-6">
-            <h2 className="mb-6 text-lg font-medium">나의 월별 매출 및 수당</h2>
-            <SalesChart kolId={dashboardData?.kol?.id} />
-          </div>
-
-          {/* Footer */}
-          <footer className="mt-8 flex items-center justify-between text-xs text-gray-500">
-            <div>© 2025 BioFox CRM. All rights reserved.</div>
-            <div className="flex space-x-4">
-              <Link href="#" className="hover:underline">
-                이용약관
-              </Link>
-              <Link href="#" className="hover:underline">
-                개인정보처리방침
-              </Link>
-              <Link href="#" className="hover:underline">
-                고객지원
-              </Link>
+            {/* 테이블 및 영업 일지 영역 */}
+            <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* 전문점 매출 순위 카드 */}
+              <Card className="flex flex-col h-full"> 
+                <CardContent className="flex flex-1 flex-col p-0 overflow-auto">
+                  <StoreRankingTable shops={shopsData} />
+                </CardContent>
+                <CardFooter className="mt-auto border-t px-6 py-3">
+                  <div className="ml-auto">
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href="/kol-new/stores"> 
+                        모든 전문점 보기
+                        <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+              
+              {/* 내 영업 일지 카드 - 반응형 높이 */}
+              <Card className="flex flex-col h-full">
+                <CardHeader className="pb-0">
+                  <CardTitle className="text-sm sm:text-base md:text-lg">내 영업 일지</CardTitle>
+                </CardHeader>
+                
+                {/* 높이 자동 조절을 위한 flex 구조 적용 */}
+                <CardContent className="flex flex-1 flex-col">
+                  {activityData.length === 0 ? (
+                    <div className="flex flex-1 items-center justify-center py-8">
+                      <p className="text-center text-[10px] sm:text-xs md:text-sm text-muted-foreground">영업 일지 데이터가 없습니다.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 mt-2">
+                      {activityData.slice(0, 5).map((activity) => (
+                        <div key={activity.id} className="flex items-start space-x-3 border-b border-gray-100 pb-2">
+                          <div className="rounded-full bg-gray-100 p-1.5">
+                            {activity.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-baseline">
+                              <p className="font-medium text-xs sm:text-sm">
+                                {activity.shopName ? `${activity.shopName} 방문` : '일반 활동'}
+                              </p>
+                              <span className="text-[10px] sm:text-xs text-gray-500">{activity.timeAgo}</span>
+                            </div>
+                            <p className="text-[10px] sm:text-xs text-gray-700 line-clamp-2 mt-0.5">
+                              {activity.content}
+                            </p>
+                            <p className="text-[9px] sm:text-[10px] text-gray-400 mt-1">
+                              {activity.activityDate}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+                
+                {/* 푸터는 항상 하단에 고정 */}
+                <CardFooter className="mt-auto border-t px-6 py-3">
+                  <div className="ml-auto">
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href="/kol-new/activities"> 
+                        모든 영업 일지 보기
+                        <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
             </div>
-          </footer>
+
+            {/* Chart */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-sm sm:text-base md:text-lg">나의 월별 매출 및 수당</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <SalesChart kolId={dashboardData?.kol?.id} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Footer */}
+            <KolFooter />
+          </div>
         </main>
       </div>
     </div>
   );
-} 
+}

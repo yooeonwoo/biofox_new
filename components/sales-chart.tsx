@@ -2,17 +2,16 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   Legend,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+  ResponsiveContainer
+} from 'recharts';
+import { useTheme } from 'next-themes';
 
 // Props 타입 정의
 interface SalesChartProps {
@@ -26,22 +25,11 @@ interface MonthlyData {
   allowance: number;
 }
 
-// Chart.js 등록
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
 export default function SalesChart({ kolId }: SalesChartProps) {
   const [chartData, setChartData] = useState<MonthlyData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { theme } = useTheme();
 
   // KOL 월별 매출 및 수당 데이터 가져오기
   useEffect(() => {
@@ -72,84 +60,53 @@ export default function SalesChart({ kolId }: SalesChartProps) {
   }, [kolId]);
 
   // 차트가 준비되지 않았거나 kolId가 없는 경우 목업 데이터 사용
-  const months = chartData.length > 0 
-    ? chartData.map(d => d.month) 
-    : ['1월', '2월', '3월', '4월', '5월', '6월'];
-  
-  const salesData = chartData.length > 0 
-    ? chartData.map(d => d.sales) 
-    : [1200, 1900, 1500, 2050, 2300, 4004];
-  
-  const allowanceData = chartData.length > 0 
-    ? chartData.map(d => d.allowance) 
-    : [600, 800, 700, 1100, 1200, 2100];
+  const formattedData = chartData.length > 0 
+    ? chartData
+    : [
+        { month: '11월', sales: 1500, allowance: 800 },
+        { month: '12월', sales: 1800, allowance: 900 },
+        { month: '01월', sales: 2000, allowance: 1000 },
+        { month: '02월', sales: 2300, allowance: 1200 },
+        { month: '03월', sales: 2000, allowance: 1100 },
+        { month: '04월', sales: 4000, allowance: 2000 },
+      ];
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            let label = context.dataset.label || '';
-            if (label) {
-              label += ': ';
-            }
-            if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('ko-KR').format(context.parsed.y) + '만';
-            }
-            return label;
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          // y축 레이블 포맷 설정
-          callback: function(value) {
-            return value.toLocaleString() + '만';
-          }
-        }
-      }
+  // recharts의 커스텀 툴팁
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean;
+    payload?: Array<{
+      value: number;
+      name: string;
+    }>;
+    label?: string;
+  }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg border bg-white dark:bg-slate-800 p-2 shadow-md z-50">
+          <p className="font-medium text-sm">{label}</p>
+          <p className="text-xs text-blue-500">
+            매출: {payload[0].value.toLocaleString()}만원
+          </p>
+          <p className="text-xs text-purple-500">
+            수당: {payload[1].value.toLocaleString()}만원
+          </p>
+        </div>
+      );
     }
-  };
-
-  const data = {
-    labels: months,
-    datasets: [
-      {
-        label: '매출',
-        data: salesData,
-        backgroundColor: 'rgba(53, 162, 235, 0.5)',
-        borderColor: 'rgba(53, 162, 235, 1)',
-        borderWidth: 1
-      },
-      {
-        label: '수당',
-        data: allowanceData,
-        backgroundColor: 'rgba(153, 102, 255, 0.5)',
-        borderColor: 'rgba(153, 102, 255, 1)',
-        borderWidth: 1
-      }
-    ]
+    return null;
   };
 
   if (loading) {
-    return <div className="flex h-80 items-center justify-center">데이터 로딩 중...</div>;
+    return <div className="flex h-full items-center justify-center text-muted-foreground">데이터 로딩 중...</div>;
   }
 
   if (error) {
     return (
-      <div className="flex h-80 flex-col items-center justify-center text-red-500">
-        <p className="mb-2">{error}</p>
+      <div className="flex h-full flex-col items-center justify-center text-destructive">
+        <p className="mb-4">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           다시 시도
         </button>
@@ -158,8 +115,57 @@ export default function SalesChart({ kolId }: SalesChartProps) {
   }
 
   return (
-    <div className="h-80">
-      <Bar options={options} data={data} />
+    <div className="h-full w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={formattedData}
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+        >
+          <defs>
+            <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+            </linearGradient>
+            <linearGradient id="colorAllowance" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.2)" />
+          <XAxis 
+            dataKey="month" 
+            className="text-xs" 
+            tick={{ fill: 'hsl(var(--foreground))' }}
+          />
+          <YAxis 
+            tickFormatter={(value) => `${value}만`}
+            className="text-xs"
+            tick={{ fill: 'hsl(var(--foreground))' }}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend 
+            wrapperStyle={{ paddingTop: '10px' }}
+            formatter={(value) => <span className="text-xs font-medium">{value}</span>}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="sales" 
+            name="매출" 
+            stroke="#3b82f6" 
+            fillOpacity={1} 
+            fill="url(#colorSales)" 
+            activeDot={{ r: 6 }}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="allowance" 
+            name="수당" 
+            stroke="#8b5cf6" 
+            fillOpacity={1} 
+            fill="url(#colorAllowance)" 
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
-} 
+}

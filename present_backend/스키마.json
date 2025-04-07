@@ -2,6 +2,53 @@
     {
       "get_schema_details": [
         {
+          "table_name": "sales_activities",
+          "columns": [
+            {
+              "column_name": "id",
+              "data_type": "integer",
+              "is_nullable": "NO",
+              "column_default": "nextval('sales_activities_id_seq'::regclass)"
+            },
+            {
+              "column_name": "kol_id",
+              "data_type": "integer",
+              "is_nullable": "NO",
+              "column_default": null
+            },
+            {
+              "column_name": "shop_id",
+              "data_type": "integer",
+              "is_nullable": "YES",
+              "column_default": null
+            },
+            {
+              "column_name": "activity_date",
+              "data_type": "date",
+              "is_nullable": "NO",
+              "column_default": "CURRENT_DATE"
+            },
+            {
+              "column_name": "content",
+              "data_type": "text",
+              "is_nullable": "NO",
+              "column_default": null
+            },
+            {
+              "column_name": "created_at",
+              "data_type": "timestamp with time zone",
+              "is_nullable": "NO",
+              "column_default": "now()"
+            },
+            {
+              "column_name": "updated_at",
+              "data_type": "timestamp with time zone",
+              "is_nullable": "NO",
+              "column_default": "now()"
+            }
+          ]
+        },
+        {
           "table_name": "kol_hierarchy",
           "columns": [
             {
@@ -923,6 +970,18 @@
             {
               "column_name": "smart_place_link",
               "data_type": "character varying",
+              "is_nullable": "YES",
+              "column_default": null
+            },
+            {
+              "column_name": "is_owner_kol",
+              "data_type": "boolean",
+              "is_nullable": "YES",
+              "column_default": "false"
+            },
+            {
+              "column_name": "contract_date",
+              "data_type": "timestamp with time zone",
               "is_nullable": "YES",
               "column_default": null
             }

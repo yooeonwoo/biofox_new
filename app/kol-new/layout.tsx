@@ -32,8 +32,8 @@ export default async function KolNewLayout({
   }
   
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {children}
     </div>
   );
-} 
+}

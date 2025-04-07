@@ -3,6 +3,14 @@ import { supabase } from '@/lib/supabase';
 import { auth } from '@clerk/nextjs/server';
 import { getCurrentDate } from '@/lib/date-utils';
 
+// 매출 데이터 타입 정의
+interface MonthlySales {
+  shop_id: number;
+  total_sales: number;
+  product_sales: number;
+  device_sales: number;
+}
+
 // KOL 전문점 목록 API 라우트
 export async function GET() {
   try {
@@ -22,7 +30,7 @@ export async function GET() {
     // KOL ID 조회 - 로그인한 사용자의 KOL ID 가져오기
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, name')
       .eq('clerk_id', userId)
       .single();
 
@@ -35,7 +43,7 @@ export async function GET() {
 
     const { data: kolData, error: kolError } = await supabase
       .from('kols')
-      .select('id')
+      .select('id, name')
       .eq('user_id', userData.id)
       .single();
 
@@ -75,25 +83,31 @@ export async function GET() {
     }
 
     // 매출 데이터를 맵으로 변환하여 조회 효율성 높이기
-    const salesByShop = salesData.reduce((acc, curr) => {
-      acc[curr.shop_id] = curr;
-      return acc;
-    }, {});
+    const salesByShop: Record<number, MonthlySales> = {};
+    salesData.forEach((sale: MonthlySales) => {
+      salesByShop[sale.shop_id] = sale;
+    });
 
     // 전문점 데이터와 매출 데이터 조합
-    const shopsWithSales = shops.map(shop => ({
-      id: shop.id,
-      ownerName: shop.owner_name,
-      region: shop.region || '',
-      status: shop.status,
-      createdAt: shop.created_at,
-      sales: {
-        total: salesByShop[shop.id]?.total_sales || 0,
-        product: salesByShop[shop.id]?.product_sales || 0,
-        device: salesByShop[shop.id]?.device_sales || 0,
-        hasOrdered: Boolean(salesByShop[shop.id] && salesByShop[shop.id].total_sales > 0)
-      }
-    }));
+    const shopsWithSales = shops.map(shop => {
+      // KOL과 전문점 소유자 이름이 같으면 직영점으로 판단
+      const is_owner_kol = shop.owner_name === kolData.name;
+      
+      return {
+        id: shop.id,
+        ownerName: shop.owner_name,
+        region: shop.region || '',
+        status: shop.status,
+        createdAt: shop.created_at,
+        is_owner_kol, // 직영점 여부 추가
+        sales: {
+          total: salesByShop[shop.id]?.total_sales || 0,
+          product: salesByShop[shop.id]?.product_sales || 0,
+          device: salesByShop[shop.id]?.device_sales || 0,
+          hasOrdered: Boolean(salesByShop[shop.id] && salesByShop[shop.id].total_sales > 0)
+        }
+      };
+    });
 
     // 매출 기준 내림차순 정렬
     const sortedShops = shopsWithSales.sort((a, b) => b.sales.total - a.sales.total);
