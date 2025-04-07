@@ -1,42 +1,75 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { ArrowUpIcon } from 'lucide-react';
 
-export default function StoreRankingTable() {
+// Shop 데이터 타입 정의
+interface ShopData {
+  id: number;
+  ownerName: string;
+  region: string;
+  status: string;
+  createdAt: string;
+  sales: {
+    total: number;
+    product: number;
+    device: number;
+    hasOrdered: boolean;
+  };
+}
+
+// Props 타입 정의
+interface StoreRankingTableProps {
+  shops: ShopData[];
+}
+
+export default function StoreRankingTable({ shops = [] }: StoreRankingTableProps) {
+  // 매출 기준 정렬된 상위 5개 전문점
+  const topShops = useMemo(() => {
+    return [...shops]
+      .sort((a, b) => b.sales.total - a.sales.total)
+      .slice(0, 5);
+  }, [shops]);
+
   return (
-    <div className="rounded-lg border bg-white p-6">
-      <h2 className="mb-4 text-lg font-medium">전문점 순위</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">순위</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">전문점명</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">매출</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">증감률</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            <tr className="text-sm">
-              <td className="px-6 py-4 whitespace-nowrap font-medium">1</td>
-              <td className="px-6 py-4 whitespace-nowrap">아바에 성동</td>
-              <td className="px-6 py-4 whitespace-nowrap">1,204만</td>
-              <td className="px-6 py-4 whitespace-nowrap text-green-600">↑ 21%</td>
-            </tr>
-            <tr className="text-sm">
-              <td className="px-6 py-4 whitespace-nowrap font-medium">2</td>
-              <td className="px-6 py-4 whitespace-nowrap">아바에 강남</td>
-              <td className="px-6 py-4 whitespace-nowrap">980만</td>
-              <td className="px-6 py-4 whitespace-nowrap text-green-600">↑ 12%</td>
-            </tr>
-            <tr className="text-sm">
-              <td className="px-6 py-4 whitespace-nowrap font-medium">3</td>
-              <td className="px-6 py-4 whitespace-nowrap">아바에 송파</td>
-              <td className="px-6 py-4 whitespace-nowrap">892만</td>
-              <td className="px-6 py-4 whitespace-nowrap text-red-600">↓ 5%</td>
-            </tr>
-          </tbody>
-        </table>
+    <div className="rounded-lg border bg-white">
+      <div className="p-6">
+        <h2 className="text-lg font-medium">전문점 매출 순위</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b text-left text-sm font-medium text-gray-500">
+                <th className="pb-2">전문점</th>
+                <th className="pb-2">지역</th>
+                <th className="pb-2 text-right">매출</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topShops.length > 0 ? (
+                topShops.map((shop, index) => (
+                  <tr key={shop.id} className="border-b py-2 text-sm">
+                    <td className="py-3">{shop.ownerName}</td>
+                    <td>{shop.region || '-'}</td>
+                    <td className="text-right">
+                      <div className="flex items-center justify-end">
+                        <span>{(shop.sales.total || 0).toLocaleString()} 만</span>
+                        {index === 0 && (
+                          <ArrowUpIcon className="ml-1 h-4 w-4 text-green-500" />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={3} className="py-4 text-center text-gray-500">
+                    데이터가 없습니다
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

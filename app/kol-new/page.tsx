@@ -9,17 +9,114 @@ import SalesChart from "@/components/sales-chart";
 import StoreRankingTable from "@/components/store-ranking-table";
 import UpcomingTasks from "@/components/upcoming-tasks";
 
+// 대시보드 데이터 타입 정의
+interface DashboardData {
+  kol: {
+    id: number;
+    name: string;
+    shopName: string;
+  };
+  sales: {
+    currentMonth: number;
+    previousMonth: number;
+    growth: number;
+  };
+  allowance: {
+    currentMonth: number;
+    previousMonth: number;
+    growth: number;
+  };
+  shops: {
+    total: number;
+    ordering: number;
+    notOrdering: number;
+  };
+}
+
+// 전문점 데이터 타입 정의
+interface ShopData {
+  id: number;
+  ownerName: string;
+  region: string;
+  status: string;
+  createdAt: string;
+  sales: {
+    total: number;
+    product: number;
+    device: number;
+    hasOrdered: boolean;
+  };
+}
+
+// 태스크 데이터 타입 정의
+interface TaskData {
+  id: number;
+  title: string;
+  description: string;
+  createdAt: string;
+  completed: boolean;
+  dueDate: string | null;
+  type: string;
+}
+
 export default function KolNewPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const [isKol, setIsKol] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [shopsData, setShopsData] = useState<ShopData[]>([]);
+  const [tasksData, setTasksData] = useState<TaskData[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
+  // 사용자 역할 확인
   useEffect(() => {
-    // 사용자가 로드되었고 로그인되어 있으면 역할 확인
     if (isLoaded && isSignedIn && user) {
       const userRole = user.publicMetadata?.role as string || "kol";
       setIsKol(userRole === "kol");
     }
   }, [isLoaded, isSignedIn, user]);
+
+  // 대시보드 데이터 로드
+  useEffect(() => {
+    if (isLoaded && isSignedIn && isKol) {
+      const fetchDashboardData = async () => {
+        try {
+          setLoading(true);
+          // 대시보드 데이터 가져오기
+          const dashboardResponse = await fetch('/api/kol-new/dashboard');
+          if (!dashboardResponse.ok) {
+            throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
+          }
+          const dashboardResult = await dashboardResponse.json();
+          setDashboardData(dashboardResult);
+
+          // 전문점 데이터 가져오기
+          const shopsResponse = await fetch('/api/kol-new/shops');
+          if (!shopsResponse.ok) {
+            throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
+          }
+          const shopsResult = await shopsResponse.json();
+          setShopsData(shopsResult);
+
+          // 태스크 데이터 가져오기
+          const tasksResponse = await fetch('/api/kol-new/tasks');
+          if (!tasksResponse.ok) {
+            throw new Error('태스크 데이터를 불러오는데 실패했습니다.');
+          }
+          const tasksResult = await tasksResponse.json();
+          setTasksData(tasksResult);
+
+          setLoading(false);
+        } catch (error) {
+          console.error('데이터 로드 에러:', error);
+          setError(error.message || '데이터를 불러오는데 실패했습니다.');
+          setLoading(false);
+        }
+      };
+
+      fetchDashboardData();
+    }
+  }, [isLoaded, isSignedIn, isKol]);
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
   if (!isLoaded || isKol === null) {
@@ -36,6 +133,38 @@ export default function KolNewPage() {
   // KOL이 아닌 경우 홈으로 리다이렉트
   if (!isKol) {
     return redirect('/');
+  }
+
+  // 데이터 로딩 중인 경우
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-lg">
+          <h1 className="text-2xl font-bold text-center text-gray-800">데이터 로딩 중...</h1>
+          <p className="text-center text-gray-600">대시보드 정보를 불러오는 중입니다.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 에러가 발생한 경우
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-lg">
+          <h1 className="text-2xl font-bold text-center text-red-600">에러 발생</h1>
+          <p className="text-center text-gray-600">{error}</p>
+          <div className="flex justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -62,7 +191,7 @@ export default function KolNewPage() {
           <Bell className="h-5 w-5 text-gray-500" />
         </button>
         <div className="flex items-center">
-          <span className="mr-1 text-sm">아바에 대구</span>
+          <span className="mr-1 text-sm">{dashboardData?.kol?.shopName || "로딩 중..."}</span>
           <ChevronDown className="h-4 w-4 text-gray-500" />
         </div>
       </header>
@@ -84,7 +213,7 @@ export default function KolNewPage() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-6">
-          <h1 className="mb-6 text-2xl font-bold">아바에 대구 - 윤경숙 KOL</h1>
+          <h1 className="mb-6 text-2xl font-bold">{dashboardData?.kol?.shopName || "로딩 중..."} - {dashboardData?.kol?.name || "로딩 중..."} KOL</h1>
 
           {/* Metrics Row */}
           <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -93,28 +222,28 @@ export default function KolNewPage() {
               {/* Sales Section */}
               <div className="border-b p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">당월 매출: 4,004만</h3>
+                  <h3 className="text-lg font-medium">당월 매출: {(dashboardData?.sales?.currentMonth || 0).toLocaleString()}만</h3>
                   <div className="rounded-full bg-amber-50 p-2">
                     <CoinsIcon className="h-5 w-5 text-amber-500" />
                   </div>
                 </div>
                 <div className="mt-2 flex items-center text-sm">
                   <TrendingUp className="mr-1 h-4 w-4 text-green-500" />
-                  <span className="text-green-500">전월 대비 1,952 만 증가</span>
+                  <span className="text-green-500">전월 대비 {(dashboardData?.sales?.growth || 0).toLocaleString()} 만 증가</span>
                 </div>
               </div>
 
               {/* Allowance Section */}
               <div className="p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">당월 수당: 2,100만</h3>
+                  <h3 className="text-lg font-medium">당월 수당: {(dashboardData?.allowance?.currentMonth || 0).toLocaleString()}만</h3>
                   <div className="rounded-full bg-purple-50 p-2">
                     <Wallet className="h-5 w-5 text-purple-500" />
                   </div>
                 </div>
                 <div className="mt-2 flex items-center text-sm">
                   <TrendingUp className="mr-1 h-4 w-4 text-green-500" />
-                  <span className="text-green-500">전월 대비 985 만 증가</span>
+                  <span className="text-green-500">전월 대비 {(dashboardData?.allowance?.growth || 0).toLocaleString()} 만 증가</span>
                 </div>
               </div>
             </div>
@@ -124,37 +253,41 @@ export default function KolNewPage() {
               {/* Stores Status Section */}
               <div className="border-b p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">전문점 현황: 7곳</h3>
+                  <h3 className="text-lg font-medium">전문점 현황: {dashboardData?.shops?.total || 0}곳</h3>
                   <div className="rounded-full bg-blue-50 p-2">
                     <Store className="h-5 w-5 text-blue-500" />
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-gray-500">7월 5일 전문점 계약이 없었습니다.</div>
+                <div className="mt-2 text-sm text-gray-500">
+                  {new Date().getMonth() + 1}월 {new Date().getDate()}일 전문점 계약이 없었습니다.
+                </div>
               </div>
 
               {/* Ordering Stores Section */}
               <div className="p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">당월 주문 전문점: 4곳</h3>
+                  <h3 className="text-lg font-medium">당월 주문 전문점: {dashboardData?.shops?.ordering || 0}곳</h3>
                   <div className="rounded-full bg-green-50 p-2">
                     <Store className="h-5 w-5 text-green-500" />
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-gray-500">3곳이 아직 주문하지 않았습니다.</div>
+                <div className="mt-2 text-sm text-gray-500">
+                  {dashboardData?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
+                </div>
               </div>
             </div>
           </div>
 
           {/* Tables Row */}
           <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <StoreRankingTable />
-            <UpcomingTasks />
+            <StoreRankingTable shops={shopsData} />
+            <UpcomingTasks tasks={tasksData} />
           </div>
 
           {/* Chart */}
           <div className="rounded-lg border bg-white p-6">
             <h2 className="mb-6 text-lg font-medium">나의 월별 매출 및 수당</h2>
-            <SalesChart />
+            <SalesChart kolId={dashboardData?.kol?.id} />
           </div>
 
           {/* Footer */}
