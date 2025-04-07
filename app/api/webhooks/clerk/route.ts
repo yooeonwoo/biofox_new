@@ -1,47 +1,70 @@
 import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/db/utils';
+import { WebhookEvent } from '@clerk/nextjs/server';
 
 export async function POST(req: Request) {
   const headersList = headers();
-  const svix_id = headersList.get('svix-id');
-  const svix_timestamp = headersList.get('svix-timestamp');
-  const svix_signature = headersList.get('svix-signature');
-
-  if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response('Error: Missing svix headers', { status: 400 });
-  }
-
-  // Webhook 시크릿 키
-  const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
   
-  if (!webhookSecret) {
-    return new Response('Error: Missing webhook secret', { status: 500 });
+  // 환경 변수 검증
+  const CLERK_WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
+  
+  if (!CLERK_WEBHOOK_SECRET) {
+    console.error('CLERK_WEBHOOK_SECRET 환경 변수가 설정되지 않았습니다.');
+    return NextResponse.json(
+      { error: 'Webhook secret is not configured' },
+      { status: 500 }
+    );
   }
 
-  // Clerk 이벤트 검증
+  // svix-id, svix-timestamp, svix-signature 헤더 가져오기
+  const svixId = headersList.get('svix-id');
+  const svixTimestamp = headersList.get('svix-timestamp');
+  const svixSignature = headersList.get('svix-signature');
+
+  // 필수 헤더 검증
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    console.error('웹훅 헤더 누락:', { svixId, svixTimestamp, svixSignature });
+    return NextResponse.json(
+      { error: 'Missing svix headers' },
+      { status: 400 }
+    );
+  }
+
+  // 요청 본문 가져오기
   const payload = await req.json();
   const body = JSON.stringify(payload);
 
-  const webhook = new Webhook(webhookSecret);
-  
+  // svix 인스턴스 생성 및 서명 검증
+  let evt: WebhookEvent;
   try {
-    webhook.verify(body, {
-      'svix-id': svix_id,
-      'svix-timestamp': svix_timestamp,
-      'svix-signature': svix_signature,
-    });
+    const wh = new Webhook(CLERK_WEBHOOK_SECRET);
+    evt = wh.verify(body, {
+      'svix-id': svixId,
+      'svix-timestamp': svixTimestamp,
+      'svix-signature': svixSignature,
+    }) as WebhookEvent;
   } catch (err) {
-    console.error('Webhook 검증 오류:', err);
-    return new Response('Error: Invalid webhook signature', { status: 400 });
+    console.error('웹훅 서명 검증 실패:', err);
+    return NextResponse.json(
+      { error: 'Invalid signature' },
+      { status: 400 }
+    );
   }
 
-  // 이벤트 처리
-  const { type, data } = payload;
+  // 이벤트 유형 및 데이터 가져오기
+  const { type, data } = evt;
+  console.log(`웹훅 이벤트: ${type}`);
   
+  // user.created 이벤트 처리
   if (type === 'user.created') {
     try {
+      if (!data.email_addresses || data.email_addresses.length === 0) {
+        console.error('이메일 주소 없음:', data);
+        return NextResponse.json({ error: 'No email address found' }, { status: 400 });
+      }
+      
       // users 테이블에서 이메일 확인
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -72,7 +95,12 @@ export async function POST(req: Request) {
       const CLERK_API = 'https://api.clerk.dev/v1';
       const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
       
-      await fetch(`${CLERK_API}/users/${data.id}/metadata`, {
+      if (!CLERK_SECRET_KEY) {
+        console.error('CLERK_SECRET_KEY 환경 변수가 설정되지 않았습니다.');
+        return NextResponse.json({ error: 'Clerk API key is not configured' }, { status: 500 });
+      }
+      
+      const response = await fetch(`${CLERK_API}/users/${data.id}/metadata`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${CLERK_SECRET_KEY}`,
@@ -85,6 +113,12 @@ export async function POST(req: Request) {
         }),
       });
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Clerk API 오류:', errorData);
+        return NextResponse.json({ error: 'Clerk API error' }, { status: 500 });
+      }
+      
       console.log('사용자 등록 완료:', data.id, data.email_addresses[0].email_address);
       return NextResponse.json({ success: true, message: 'User created and metadata updated' });
     } catch (error) {
@@ -92,6 +126,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
   }
-
-  return NextResponse.json({ message: 'Webhook processed' });
+  
+  // 다른 이벤트는 성공으로 처리
+  return NextResponse.json({ success: true, message: `Webhook received: ${type}` });
 } 
