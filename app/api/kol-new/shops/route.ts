@@ -9,6 +9,7 @@ interface MonthlySales {
   total_sales: number;
   product_sales: number;
   device_sales: number;
+  commission: number;
 }
 
 // KOL 전문점 목록 API 라우트
@@ -71,7 +72,7 @@ export async function GET() {
     // 전문점별 월간 매출 데이터 조회
     const { data: salesData, error: salesError } = await supabase
       .from('monthly_sales')
-      .select('shop_id, total_sales, product_sales, device_sales')
+      .select('shop_id, total_sales, product_sales, device_sales, commission')
       .eq('kol_id', kolData.id)
       .eq('year_month', currentMonth);
 
@@ -107,6 +108,7 @@ export async function GET() {
           total: salesByShop[shop.id]?.total_sales || 0,
           product: salesByShop[shop.id]?.product_sales || 0,
           device: salesByShop[shop.id]?.device_sales || 0,
+          commission: salesByShop[shop.id]?.commission || 0,
           hasOrdered: Boolean(salesByShop[shop.id] && salesByShop[shop.id].total_sales > 0)
         }
       };

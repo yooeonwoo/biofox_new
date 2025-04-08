@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Store, BarChart3, Settings, LogOut } from "lucide-react";
+import { Home, Store, BarChart3, LogOut, Bell, FileText } from "lucide-react";
 import { Separator } from "../../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { Button } from "../../../components/ui/button";
@@ -38,15 +38,15 @@ export default function KolMobileMenu({
       <Separator />
       <nav className="flex flex-1 flex-col gap-1">
         <Link 
-          href="#" 
+          href="/kol-new" 
           onClick={() => setMobileMenuOpen(false)}
           className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
         >
           <Home className="h-4 w-4" />
-          <span>홈</span>
+          <span>대시보드</span>
         </Link>
         <Link 
-          href="#" 
+          href="/kol-new/stores" 
           onClick={() => setMobileMenuOpen(false)}
           className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
         >
@@ -54,20 +54,21 @@ export default function KolMobileMenu({
           <span>전문점 관리</span>
         </Link>
         <Link 
-          href="#" 
+          href="/kol-new/activities" 
           onClick={() => setMobileMenuOpen(false)}
           className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
         >
-          <BarChart3 className="h-4 w-4" />
-          <span>매출 분석</span>
+          <FileText className="h-4 w-4" />
+          <span>영업 일지</span>
         </Link>
+        <Separator className="my-2" />
         <Link 
-          href="#" 
+          href="/kol-new/notifications" 
           onClick={() => setMobileMenuOpen(false)}
           className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
         >
-          <Settings className="h-4 w-4" />
-          <span>설정</span>
+          <Bell className="h-4 w-4" />
+          <span>알림</span>
         </Link>
         <Separator className="my-2" />
         <Button 

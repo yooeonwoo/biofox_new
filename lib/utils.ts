@@ -53,3 +53,51 @@ export function unslugify(str: string) {
 export function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+export function formatNumber(value: number) {
+  return new Intl.NumberFormat("ko-KR").format(value)
+}
+
+export function formatCurrency(value: number) {
+  return new Intl.NumberFormat("ko-KR", {
+    style: "currency",
+    currency: "KRW",
+    currencyDisplay: "symbol",
+    maximumFractionDigits: 0
+  }).format(value)
+}
+
+export function formatDateString(dateString: string) {
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  }).format(date)
+}
+
+export function formatDateTimeString(dateString: string) {
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date)
+}
+
+export function getYearMonth() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  return `${year}-${month}`
+}
+
+export function getPreviousYearMonth() {
+  const now = new Date()
+  now.setMonth(now.getMonth() - 1)
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  return `${year}-${month}`
+}

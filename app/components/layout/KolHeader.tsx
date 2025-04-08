@@ -2,12 +2,8 @@
 
 import Link from 'next/link';
 import { 
-  Bell, 
   ChevronDown, 
   Menu,
-  User,
-  Settings,
-  ExternalLink,
   LogOut
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
@@ -59,16 +55,11 @@ export default function KolHeader({
               />
             </SheetContent>
           </Sheet>
-          <Link href="#" className="flex w-full items-center justify-center font-bold text-sm md:text-lg">
+          <Link href="/kol-new" className="flex w-full items-center justify-center font-bold text-sm md:text-lg">
             BIOFOX CRM
           </Link>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -right-1 -top-1 h-5 w-5 p-0 text-xs">3</Badge>
-          </Button>
-          <Separator orientation="vertical" className="h-6" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
@@ -82,15 +73,6 @@ export default function KolHeader({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-white">
               <DropdownMenuLabel>내 계정</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>프로필</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>설정</span>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />

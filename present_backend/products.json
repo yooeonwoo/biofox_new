@@ -1,0 +1,86 @@
+[
+    {
+      "id": 7,
+      "name": "큐어 부스터",
+      "price": 74800,
+      "is_device": false,
+      "description": null,
+      "image": null,
+      "category": null,
+      "status": "active",
+      "created_at": "2025-04-07 15:44:30.964675+00",
+      "updated_at": "2025-04-07 15:44:30.964675+00"
+    },
+    {
+      "id": 8,
+      "name": "올인원 세럼",
+      "price": 77000,
+      "is_device": false,
+      "description": null,
+      "image": null,
+      "category": null,
+      "status": "active",
+      "created_at": "2025-04-07 15:44:30.964675+00",
+      "updated_at": "2025-04-07 15:44:30.964675+00"
+    },
+    {
+      "id": 9,
+      "name": "큐어 마스크팩",
+      "price": 33000,
+      "is_device": false,
+      "description": null,
+      "image": null,
+      "category": null,
+      "status": "active",
+      "created_at": "2025-04-07 15:44:30.964675+00",
+      "updated_at": "2025-04-07 15:44:30.964675+00"
+    },
+    {
+      "id": 10,
+      "name": "프리미엄 마스크팩",
+      "price": 66000,
+      "is_device": false,
+      "description": null,
+      "image": null,
+      "category": null,
+      "status": "active",
+      "created_at": "2025-04-07 15:44:30.964675+00",
+      "updated_at": "2025-04-07 15:44:30.964675+00"
+    },
+    {
+      "id": 11,
+      "name": "V-앰플",
+      "price": 220000,
+      "is_device": false,
+      "description": null,
+      "image": null,
+      "category": null,
+      "status": "active",
+      "created_at": "2025-04-07 15:44:30.964675+00",
+      "updated_at": "2025-04-07 15:44:30.964675+00"
+    },
+    {
+      "id": 12,
+      "name": "프리미엄 앰플",
+      "price": 418000,
+      "is_device": false,
+      "description": null,
+      "image": null,
+      "category": null,
+      "status": "active",
+      "created_at": "2025-04-07 15:44:30.964675+00",
+      "updated_at": "2025-04-07 15:44:30.964675+00"
+    },
+    {
+      "id": 13,
+      "name": "마이크로젯 부스터",
+      "price": 149000,
+      "is_device": false,
+      "description": null,
+      "image": null,
+      "category": null,
+      "status": "active",
+      "created_at": "2025-04-07 15:44:30.964675+00",
+      "updated_at": "2025-04-07 15:44:30.964675+00"
+    }
+  ]

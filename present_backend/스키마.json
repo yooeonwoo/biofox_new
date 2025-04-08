@@ -1,1039 +1,1317 @@
 [
-    {
-      "get_schema_details": [
-        {
-          "table_name": "sales_activities",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('sales_activities_id_seq'::regclass)"
-            },
-            {
-              "column_name": "kol_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "shop_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "activity_date",
-              "data_type": "date",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_DATE"
-            },
-            {
-              "column_name": "content",
-              "data_type": "text",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "kol_hierarchy",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('kol_hierarchy_id_seq'::regclass)"
-            },
-            {
-              "column_name": "parent_kol_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "child_kol_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "child_start_month",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "admin_dashboard_stats",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('admin_dashboard_stats_id_seq'::regclass)"
-            },
-            {
-              "column_name": "year_month",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "total_kols_count",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "total_shops_count",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "active_kols_count",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "active_shops_count",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "total_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "product_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "device_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "total_commission",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "previous_month_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "previous_month_commission",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "sales_growth_rate",
-              "data_type": "numeric",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "commission_growth_rate",
-              "data_type": "numeric",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp without time zone",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_TIMESTAMP"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp without time zone",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_TIMESTAMP"
-            }
-          ]
-        },
-        {
-          "table_name": "admin_kol_access",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('admin_kol_access_id_seq'::regclass)"
-            },
-            {
-              "column_name": "user_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "kol_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "access_level",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": "'view'::character varying"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp without time zone",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_TIMESTAMP"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp without time zone",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_TIMESTAMP"
-            }
-          ]
-        },
-        {
-          "table_name": "kol_monthly_summary",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('kol_monthly_summary_id_seq'::regclass)"
-            },
-            {
-              "column_name": "kol_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "year_month",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "monthly_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "monthly_commission",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "avg_monthly_sales",
-              "data_type": "double precision",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "cumulative_commission",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "previous_month_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "previous_month_commission",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "active_shops_count",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "total_shops_count",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "monthly_sales",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('monthly_sales_id_seq'::regclass)"
-            },
-            {
-              "column_name": "kol_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "shop_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "year_month",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "product_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "device_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "total_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "commission",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "kols",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('kols_new_id_seq'::regclass)"
-            },
-            {
-              "column_name": "user_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "name",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "shop_name",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "region",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "smart_place_link",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "status",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": "'active'::character varying"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "kol_total_monthly_sales",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('kol_total_monthly_sales_id_seq'::regclass)"
-            },
-            {
-              "column_name": "kol_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "year_month",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "total_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "product_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "device_sales",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "total_commission",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "total_active_shops",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "total_shops",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "direct_sales_ratio",
-              "data_type": "numeric",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "indirect_sales_ratio",
-              "data_type": "numeric",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp without time zone",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_TIMESTAMP"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp without time zone",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_TIMESTAMP"
-            }
-          ]
-        },
-        {
-          "table_name": "notifications",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('notifications_id_seq'::regclass)"
-            },
-            {
-              "column_name": "user_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "title",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "content",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "read",
-              "data_type": "boolean",
-              "is_nullable": "NO",
-              "column_default": "false"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "orders",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('orders_id_seq'::regclass)"
-            },
-            {
-              "column_name": "order_number",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "shop_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "total_amount",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "status",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": "'pending'::character varying"
-            },
-            {
-              "column_name": "order_date",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "payment_method",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "payment_status",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": "'pending'::character varying"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "product_sales_ratios",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('product_sales_ratios_id_seq'::regclass)"
-            },
-            {
-              "column_name": "shop_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "kol_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "year_month",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "product_id",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "sales_amount",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "sales_ratio",
-              "data_type": "double precision",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "product_total_sales_stats",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('product_total_sales_stats_id_seq'::regclass)"
-            },
-            {
-              "column_name": "year_month",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "product_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "total_sales_amount",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "sales_ratio",
-              "data_type": "numeric",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "sales_growth_rate",
-              "data_type": "numeric",
-              "is_nullable": "NO",
-              "column_default": "0"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp without time zone",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_TIMESTAMP"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp without time zone",
-              "is_nullable": "NO",
-              "column_default": "CURRENT_TIMESTAMP"
-            },
-            {
-              "column_name": "order_count",
-              "data_type": "integer",
-              "is_nullable": "YES",
-              "column_default": "0"
-            }
-          ]
-        },
-        {
-          "table_name": "products",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('products_id_seq'::regclass)"
-            },
-            {
-              "column_name": "name",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "price",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "is_device",
-              "data_type": "boolean",
-              "is_nullable": "NO",
-              "column_default": "false"
-            },
-            {
-              "column_name": "description",
-              "data_type": "text",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "image",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "category",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "status",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": "'active'::character varying"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "users",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('users_id_seq'::regclass)"
-            },
-            {
-              "column_name": "clerk_id",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "email",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "role",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": "'kol'::character varying"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "name",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            }
-          ]
-        },
-        {
-          "table_name": "commissions",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('commissions_id_seq'::regclass)"
-            },
-            {
-              "column_name": "kol_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "order_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "amount",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "settled",
-              "data_type": "boolean",
-              "is_nullable": "NO",
-              "column_default": "false"
-            },
-            {
-              "column_name": "settled_date",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "settled_note",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            }
-          ]
-        },
-        {
-          "table_name": "shops",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('shops_id_seq'::regclass)"
-            },
-            {
-              "column_name": "owner_name",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "kol_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "status",
-              "data_type": "character varying",
-              "is_nullable": "NO",
-              "column_default": "'active'::character varying"
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "region",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "smart_place_link",
-              "data_type": "character varying",
-              "is_nullable": "YES",
-              "column_default": null
-            },
-            {
-              "column_name": "is_owner_kol",
-              "data_type": "boolean",
-              "is_nullable": "YES",
-              "column_default": "false"
-            },
-            {
-              "column_name": "contract_date",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "YES",
-              "column_default": null
-            }
-          ]
-        },
-        {
-          "table_name": "order_items",
-          "columns": [
-            {
-              "column_name": "id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": "nextval('order_items_id_seq'::regclass)"
-            },
-            {
-              "column_name": "order_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "product_id",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "quantity",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "price",
-              "data_type": "integer",
-              "is_nullable": "NO",
-              "column_default": null
-            },
-            {
-              "column_name": "created_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            },
-            {
-              "column_name": "updated_at",
-              "data_type": "timestamp with time zone",
-              "is_nullable": "NO",
-              "column_default": "now()"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+  {
+    "get_schema_details": [
+      {
+        "table_name": "shop_sales_summary",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('shop_sales_summary_id_seq'::regclass)"
+          },
+          {
+            "column_name": "shop_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "current_month_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "avg_monthly_sales",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_accumulated_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "last_updated_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "month_count",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "1"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "current_month_commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_accumulated_commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          }
+        ]
+      },
+      {
+        "table_name": "sales_activities",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('sales_activities_id_seq'::regclass)"
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "shop_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "activity_date",
+            "data_type": "date",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_DATE"
+          },
+          {
+            "column_name": "content",
+            "data_type": "text",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "kol_total_monthly_sales",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('kol_total_monthly_sales_id_seq'::regclass)"
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "total_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "product_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "device_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_active_shops",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_shops",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "direct_sales_ratio",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "indirect_sales_ratio",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp without time zone",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_TIMESTAMP"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp without time zone",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_TIMESTAMP"
+          }
+        ]
+      },
+      {
+        "table_name": "kol_hierarchy",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('kol_hierarchy_id_seq'::regclass)"
+          },
+          {
+            "column_name": "parent_kol_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "child_kol_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "child_start_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "admin_dashboard_stats",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('admin_dashboard_stats_id_seq'::regclass)"
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "total_kols_count",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_shops_count",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "active_kols_count",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "active_shops_count",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "product_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "device_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "previous_month_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "previous_month_commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "sales_growth_rate",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "commission_growth_rate",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp without time zone",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_TIMESTAMP"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp without time zone",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_TIMESTAMP"
+          }
+        ]
+      },
+      {
+        "table_name": "kol_monthly_summary",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('kol_monthly_summary_id_seq'::regclass)"
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "monthly_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "monthly_commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "avg_monthly_sales",
+            "data_type": "double precision",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "cumulative_commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "previous_month_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "previous_month_commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "active_shops_count",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_shops_count",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "admin_kol_access",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('admin_kol_access_id_seq'::regclass)"
+          },
+          {
+            "column_name": "user_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "access_level",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": "'view'::character varying"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp without time zone",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_TIMESTAMP"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp without time zone",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_TIMESTAMP"
+          }
+        ]
+      },
+      {
+        "table_name": "monthly_sales",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('monthly_sales_id_seq'::regclass)"
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "shop_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "product_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "device_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_sales",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "commission",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "kol_shop_name",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "shop_name",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          }
+        ]
+      },
+      {
+        "table_name": "kols",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('kols_new_id_seq'::regclass)"
+          },
+          {
+            "column_name": "user_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "name",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "shop_name",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "region",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "smart_place_link",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "status",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": "'active'::character varying"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "notifications",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('notifications_id_seq'::regclass)"
+          },
+          {
+            "column_name": "user_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "title",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "content",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "read",
+            "data_type": "boolean",
+            "is_nullable": "NO",
+            "column_default": "false"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "shop_product_usage",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('shop_product_usage_id_seq'::regclass)"
+          },
+          {
+            "column_name": "shop_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "product_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "usage_quantity",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "orders",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('orders_id_seq'::regclass)"
+          },
+          {
+            "column_name": "order_number",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "shop_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "total_amount",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "status",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": "'pending'::character varying"
+          },
+          {
+            "column_name": "order_date",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "payment_method",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "payment_status",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": "'pending'::character varying"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "product_sales_ratios",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('product_sales_ratios_id_seq'::regclass)"
+          },
+          {
+            "column_name": "shop_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "product_id",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "sales_amount",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "sales_ratio",
+            "data_type": "double precision",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "product_total_sales_stats",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('product_total_sales_stats_id_seq'::regclass)"
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "product_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "total_sales_amount",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "sales_ratio",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "sales_growth_rate",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp without time zone",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_TIMESTAMP"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp without time zone",
+            "is_nullable": "NO",
+            "column_default": "CURRENT_TIMESTAMP"
+          },
+          {
+            "column_name": "order_count",
+            "data_type": "integer",
+            "is_nullable": "YES",
+            "column_default": "0"
+          }
+        ]
+      },
+      {
+        "table_name": "products",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('products_id_seq'::regclass)"
+          },
+          {
+            "column_name": "name",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "price",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "is_device",
+            "data_type": "boolean",
+            "is_nullable": "NO",
+            "column_default": "false"
+          },
+          {
+            "column_name": "description",
+            "data_type": "text",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "image",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "category",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "status",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": "'active'::character varying"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "users",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('users_id_seq'::regclass)"
+          },
+          {
+            "column_name": "clerk_id",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "email",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "role",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": "'kol'::character varying"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "name",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          }
+        ]
+      },
+      {
+        "table_name": "shop_product_sales",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('shop_product_sales_id_seq'::regclass)"
+          },
+          {
+            "column_name": "shop_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "product_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "usage_quantity",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "sales_amount",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "shop_ratio",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "commissions",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('commissions_id_seq'::regclass)"
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "order_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "amount",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "settled",
+            "data_type": "boolean",
+            "is_nullable": "NO",
+            "column_default": "false"
+          },
+          {
+            "column_name": "settled_date",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "settled_note",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "shops",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('shops_id_seq'::regclass)"
+          },
+          {
+            "column_name": "owner_name",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "status",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": "'active'::character varying"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "region",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "smart_place_link",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "is_owner_kol",
+            "data_type": "boolean",
+            "is_nullable": "YES",
+            "column_default": "false"
+          },
+          {
+            "column_name": "contract_date",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "YES",
+            "column_default": null
+          },
+          {
+            "column_name": "shop_name",
+            "data_type": "character varying",
+            "is_nullable": "YES",
+            "column_default": null
+          }
+        ]
+      },
+      {
+        "table_name": "order_items",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('order_items_id_seq'::regclass)"
+          },
+          {
+            "column_name": "order_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "product_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "quantity",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "price",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      },
+      {
+        "table_name": "kol_product_summary",
+        "columns": [
+          {
+            "column_name": "id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "nextval('kol_product_summary_id_seq'::regclass)"
+          },
+          {
+            "column_name": "kol_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "product_id",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "year_month",
+            "data_type": "character varying",
+            "is_nullable": "NO",
+            "column_default": null
+          },
+          {
+            "column_name": "total_quantity",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_sales_amount",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "sales_ratio",
+            "data_type": "numeric",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "total_shops_count",
+            "data_type": "integer",
+            "is_nullable": "NO",
+            "column_default": "0"
+          },
+          {
+            "column_name": "created_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          },
+          {
+            "column_name": "updated_at",
+            "data_type": "timestamp with time zone",
+            "is_nullable": "NO",
+            "column_default": "now()"
+          }
+        ]
+      }
+    ]
+  }
+]
