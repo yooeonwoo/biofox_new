@@ -8,6 +8,7 @@ import {
   Search, 
   CoinsIcon,
   TrendingUp,
+  TrendingDown,
   Store,
   Wallet,
   ArrowRight,
@@ -27,6 +28,19 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DialogTitle } from "@/components/ui/dialog";
 import KolMobileMenu from "../components/layout/KolMobileMenu";
+
+// 숫자를 만 단위로 포맷팅하는 유틸리티 함수
+const formatToManUnit = (value: number): string => {
+  if (value >= 10000) {
+    const man = Math.floor(value / 10000);
+    const rest = value % 10000;
+    if (rest === 0) {
+      return `${man}만`;
+    }
+    return `${man}만 ${rest.toLocaleString()}`;
+  }
+  return value.toLocaleString();
+};
 
 // 대시보드 데이터 타입 정의
 interface DashboardData {
@@ -259,42 +273,51 @@ export default function KolNewPage() {
                 <CardContent className="p-4">
                   {/* 당월 매출 섹션 */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm sm:text-lg md:text-xl font-bold">당월 매출:</span>
-                      <span className="text-sm sm:text-lg md:text-xl font-bold">
-                        {dashboardData?.sales?.currentMonth?.toLocaleString() || 0}만
+                    <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
+                      <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 매출:</span>
+                      <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+                        {dashboardData?.sales?.currentMonth !== undefined 
+                          ? dashboardData.sales.currentMonth.toLocaleString() 
+                          : 0} 원
                       </span>
                     </div>
-                    <div className="rounded-full bg-yellow-100 p-1 sm:p-1.5 text-yellow-700">
+                    <div className="rounded-full bg-yellow-100 p-1 sm:p-1.5 text-yellow-700 flex-shrink-0">
                        <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                     </div>
                   </div>
-                  {dashboardData?.sales?.growth && (
-                    <div className="mt-1 flex items-center text-[10px] sm:text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                      <span>전월 대비 {dashboardData.sales.growth.toLocaleString()}만 증가</span>
+                  
+                  {/* 빈 공간 추가하여 높이 맞추기 */}
+                  <div className="mt-1 invisible h-[21px] sm:h-[24px]">
+                    <div className="flex items-center text-[10px] sm:text-xs">
+                      <span>&nbsp;</span>
                     </div>
-                  )}
+                  </div>
                   
                   {/* 구분선 스타일 강화 */}
                   <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
 
                   {/* 당월 수당 섹션 */}
                    <div className="flex items-center justify-between">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm sm:text-lg md:text-xl font-bold">당월 수당:</span>
-                      <span className="text-sm sm:text-lg md:text-xl font-bold">
-                        {dashboardData?.allowance?.currentMonth?.toLocaleString() || 0}만
+                    <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
+                      <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 수당:</span>
+                      <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+                        {dashboardData?.allowance?.currentMonth !== undefined 
+                          ? dashboardData.allowance.currentMonth.toLocaleString() 
+                          : 0} 원
                       </span>
                     </div>
-                    <div className="rounded-full bg-purple-100 p-1 sm:p-1.5 text-purple-700">
+                    <div className="rounded-full bg-purple-100 p-1 sm:p-1.5 text-purple-700 flex-shrink-0">
                        <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
                     </div>
                   </div>
-                  {dashboardData?.allowance?.growth && (
-                    <div className="mt-1 flex items-center text-[10px] sm:text-xs text-green-600">
-                      <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                      <span>전월 대비 {dashboardData.allowance.growth.toLocaleString()}만 증가</span>
+                  {dashboardData?.allowance?.growth !== undefined && (
+                    <div className={`mt-1 flex items-center text-[10px] sm:text-xs ${dashboardData.allowance.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {dashboardData.allowance.growth >= 0 ? (
+                        <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                      ) : (
+                        <TrendingDown className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                      )}
+                      <span>전월 대비 {Math.abs(dashboardData.allowance.growth).toLocaleString()} 원 {dashboardData.allowance.growth >= 0 ? '증가' : '감소'}</span>
                     </div>
                   )}
                 </CardContent>
@@ -428,7 +451,7 @@ export default function KolNewPage() {
             {/* Chart */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="text-sm sm:text-base md:text-lg">나의 월별 매출 및 수당</CardTitle>
+                <CardTitle className="text-sm sm:text-base md:text-lg">나의 월별 수당</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-80">
