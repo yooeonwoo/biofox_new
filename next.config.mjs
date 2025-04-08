@@ -3,7 +3,7 @@ const config = {
   // 성능 최적화 설정
   poweredByHeader: false,
   reactStrictMode: true,
-  swcMinify: true, // 더 빠른 Minification
+  // swcMinify: true, // 더 이상 사용되지 않음
   
   // 이미지 최적화
   images: {
@@ -18,8 +18,7 @@ const config = {
   
   // 실험적 기능 활성화
   experimental: {
-    // 더 빠른 서버 컴포넌트 스트리밍
-    serverComponentsExternalPackages: [],
+    // serverExternalPackages도 더 이상 지원되지 않음
     // 병렬 라우트 최적화
     optimizePackageImports: [
       'recharts',
@@ -27,8 +26,7 @@ const config = {
       '@radix-ui/react-dialog',
       '@radix-ui/react-select',
     ],
-    // 정적 페이지 캐싱 개선
-    isrMemoryCacheSize: 0, // 0은 무제한
+    // isrMemoryCacheSize 옵션은 제거 (더 이상 지원되지 않음)
   },
   
   // 매니페스트 최적화 (PWA)

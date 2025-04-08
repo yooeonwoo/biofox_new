@@ -6,8 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { serverSupabase, CACHE_SETTINGS, snakeToCamel } from "@/lib/supabase";
 import { checkAuthSupabase } from "@/lib/auth";
 
-// 응답 캐싱 설정
-export const revalidate = CACHE_SETTINGS.REVALIDATE_TIME;
+// 응답 캐싱 설정 - Next.js 15의 새로운 방식으로 변경
+export const dynamic = 'force-dynamic'; // 또는 'auto'
+// 이전 방식: export const revalidate = CACHE_SETTINGS.REVALIDATE_TIME;
 
 /**
  * GET 요청 처리 - KOL 세부 통계 정보 조회
