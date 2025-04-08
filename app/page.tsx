@@ -42,6 +42,7 @@ export default function Home() {
                 className="object-contain p-8 md:p-10 pt-28 sm:pt-24 md:pt-28 rounded-3xl group-hover/card:scale-110 transition-all duration-500 ease-out"
                 alt="BIOFOX"
                 priority
+                unoptimized={true}
               />
             </CardItem>
 
