@@ -4,7 +4,6 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
-// import { Clerk } from "@clerk/nextjs/server"; // 더 이상 지원되지 않음
 import type { User } from "@clerk/nextjs/server";
 import { supabase } from "@/db/utils";
 
@@ -26,9 +25,8 @@ export async function GET(req: NextRequest) {
 
     // TODO: 실제 프로덕션에서는 사용자 권한을 확인하는 로직 추가 필요
 
-    // Clerk API를 사용하여 사용자 목록 조회 - clerkClient 사용
-    const clerk = await clerkClient();
-    const response = await clerk.users.getUserList({
+    // Clerk API를 사용하여 사용자 목록 조회
+    const response = await clerkClient.users.getUserList({
       limit: 100,
     });
 
@@ -81,9 +79,8 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Clerk API를 사용하여 사용자 삭제 - clerkClient 사용
-    const clerk = await clerkClient();
-    await clerk.users.deleteUser(id);
+    // Clerk API를 사용하여 사용자 삭제
+    await clerkClient.users.deleteUser(id);
 
     // Supabase에서도 사용자 삭제
     const { error: supabaseError } = await supabase
