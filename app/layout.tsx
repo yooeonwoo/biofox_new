@@ -32,11 +32,12 @@ export const metadata: Metadata = {
   title: "BIOFOX KOL",
   description: "KOL 및 전문점 관리 시스템",
   metadataBase: new URL('https://biofox-kol.vercel.app'),
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
