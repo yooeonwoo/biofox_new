@@ -5,6 +5,9 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/auth";
 
+// 동적 라우트 처리 설정
+export const dynamic = 'force-dynamic';
+
 // 특정 전문점 조회
 export async function GET(
   req: NextRequest,

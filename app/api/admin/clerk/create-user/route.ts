@@ -3,8 +3,8 @@
  * 관리자가 새 사용자를 등록할 수 있는 API를 제공합니다.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { Clerk } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
+// import { Clerk } from "@clerk/nextjs/server"; // 더 이상 지원되지 않음
 import { supabase } from "@/db/utils";
 
 export async function POST(req: NextRequest) {
@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
       // 임의 비밀번호 생성
       const password = Math.random().toString(36).substring(2, 10);
       
-      // Clerk API를 사용하여 사용자 생성
-      const clerk = Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
+      // Clerk API를 사용하여 사용자 생성 - clerkClient 사용
+      const clerk = await clerkClient();
       const newUser = await clerk.users.createUser({
         emailAddress: [email],
         firstName,

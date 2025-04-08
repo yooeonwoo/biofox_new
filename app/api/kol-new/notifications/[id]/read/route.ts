@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 
+// 동적 라우트 처리 설정
+export const dynamic = 'force-dynamic';
+
 // PUT: 특정 알림을 읽음으로 표시
 export async function PUT(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const notificationId = params.id;
+  
   try {
-    const notificationId = params.id;
-    
     // 현재 인증된 사용자 확인
     const authResult = await auth();
     const userId = authResult.userId;

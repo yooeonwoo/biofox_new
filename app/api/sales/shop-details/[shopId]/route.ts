@@ -43,13 +43,17 @@ interface ShopDetailsResponse {
   }[];
 }
 
+// 동적 라우트 처리 설정
+export const dynamic = 'force-dynamic';
+
+// GET 요청 처리
 export async function GET(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: { shopId: string } }
 ) {
   try {
     const shopId = params.shopId;
-    const searchParams = request.nextUrl.searchParams;
+    const searchParams = req.nextUrl.searchParams;
     const yearMonth = searchParams.get('yearMonth') || getCurrentYearMonth();
     
     console.log(`전문점 상세 정보 조회: 전문점 ID ${shopId}, 연월 ${yearMonth}`);

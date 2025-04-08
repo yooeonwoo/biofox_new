@@ -2,6 +2,9 @@ import { supabase } from "@/lib/supabase";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
+// 동적 라우트 처리 설정
+export const dynamic = 'force-dynamic';
+
 // 특정 KOL 조회
 export async function GET(
   req: NextRequest,

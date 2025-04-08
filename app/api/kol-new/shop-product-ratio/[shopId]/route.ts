@@ -3,11 +3,16 @@ import { supabase } from '@/lib/supabase';
 import { auth } from '@clerk/nextjs/server';
 import { getCurrentDate } from '@/lib/date-utils';
 
+// 동적 라우트 처리 설정
+export const dynamic = 'force-dynamic';
+
 // 상점별 제품 판매 비율 API
 export async function GET(
   request: NextRequest,
   { params }: { params: { shopId: string } }
 ) {
+  const shopId = params.shopId;
+  
   try {
     // 인증 확인
     const { userId } = await auth();
@@ -18,7 +23,6 @@ export async function GET(
       );
     }
 
-    const shopId = params.shopId;
     if (!shopId) {
       return NextResponse.json(
         { error: '상점 ID가 제공되지 않았습니다.' },

@@ -75,7 +75,9 @@ export default function KolMobileMenu({
           variant="ghost" 
           onClick={() => {
             setMobileMenuOpen(false);
-            onSignOut && onSignOut();
+            if (onSignOut) {
+              onSignOut();
+            }
           }}
           className="flex items-center justify-start gap-2 rounded-md px-4 py-2 text-sm font-normal hover:bg-muted"
         >

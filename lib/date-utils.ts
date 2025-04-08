@@ -48,7 +48,7 @@ export function getMonthsBetween(startDate: string, endDate: string): string[] {
   const end = new Date(endDate);
   const months: string[] = [];
   
-  let current = new Date(start);
+  const current = new Date(start);
   current.setDate(1); // 월의 첫날로 설정
   
   while (current <= end) {

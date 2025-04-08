@@ -112,7 +112,7 @@ export function SalesContent() {
       
       // 각 API 호출 함수를 개별적으로 실행하고 오류를 개별적으로 처리
       let hasLoadedSomeData = false;
-      let errorMessages = [];
+      const errorMessages = [];
       
       try {
         const kolData = await fetchKols();
