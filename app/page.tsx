@@ -37,7 +37,7 @@ export default function Home() {
               className="w-full h-full relative flex items-center justify-center"
             >
               <Image
-                src="/images/biofox-logo.svg"
+                src="/images/biofox-logo.png"
                 fill
                 className="object-contain p-8 md:p-10 pt-28 sm:pt-24 md:pt-28 rounded-3xl group-hover/card:scale-110 transition-all duration-500 ease-out"
                 alt="BIOFOX"
