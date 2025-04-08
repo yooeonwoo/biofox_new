@@ -22,7 +22,7 @@ export default function Home() {
       {/* 메인 컨텐츠 */}
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
         <CardContainer className="inter-var">
-          <CardBody className="relative group/card dark:hover:shadow-2xl dark:hover:shadow-aurora-violet/[0.1] dark:bg-white/[0.08] dark:border-black/[0.8] border-black/[0.8] w-[95vw] h-[135vw] sm:w-[70vw] sm:h-[85vw] md:w-[45rem] md:h-[50rem] rounded-3xl border backdrop-blur-sm flex flex-col items-center justify-center">
+          <CardBody className="relative group/card dark:hover:shadow-2xl dark:hover:shadow-aurora-violet/[0.1] dark:bg-white/[0.08] dark:border-black/[0.8] border-black/[0.8] w-[85vw] h-[110vw] sm:w-[55vw] sm:h-[65vw] md:w-[32rem] md:h-[38rem] rounded-3xl border backdrop-blur-sm flex flex-col items-center justify-center">
             {/* 헤딩 텍스트 */}
             <CardItem
               translateZ={80}
