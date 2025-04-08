@@ -86,6 +86,7 @@ export default function RootLayout({
           identityPreviewEditButton: "text-[#6D28D9] hover:text-[#8B5CF6]",
         },
       }}
+      developmentMode={false}
     >
       <html lang="ko">
         <body className={`${inter.variable} ${notoSansKr.variable}`}>

@@ -50,6 +50,7 @@ export default function SignUpPage() {
             }}
             afterSignUpUrl="/dashboard"
             signInUrl="/signin"
+            developmentMode={false}
           />
         </div>
       </div>
