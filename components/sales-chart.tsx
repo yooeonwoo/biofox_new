@@ -13,15 +13,58 @@ import {
 } from 'recharts';
 import { useTheme } from 'next-themes';
 
+// 숫자를 만 단위로 포맷팅하는 유틸리티 함수
+const formatToManUnit = (value: number): string => {
+  if (value === 0) return "0원";
+  
+  // 만 단위 계산
+  const man = Math.floor(value / 10000);
+  const rest = value % 10000;
+  
+  if (man > 0) {
+    // 만 단위가 있는 경우
+    if (rest > 0) {
+      // 나머지가 있는 경우 (예: 510만 4740원)
+      return `${man}만`;
+    }
+    // 나머지가 없는 경우 (예: 500만원)
+    return `${man}만`;
+  } else {
+    // 만 단위가 없는 경우 (예: 9800원)
+    return `${value}`;
+  }
+};
+
+// 툴팁에서 사용할 상세 포맷팅 함수
+const formatDetailedAmount = (value: number): string => {
+  if (value === 0) return "0원";
+  
+  // 만 단위 계산
+  const man = Math.floor(value / 10000);
+  const rest = value % 10000;
+  
+  if (man > 0) {
+    // 만 단위가 있는 경우
+    if (rest > 0) {
+      // 나머지가 있는 경우 (예: 2100만 4302원)
+      return `${man.toLocaleString()}만 ${rest}원`;
+    }
+    // 나머지가 없는 경우 (예: 2000만원)
+    return `${man.toLocaleString()}만원`;
+  } else {
+    // 만 단위가 없는 경우 (예: 9800원)
+    return `${value.toLocaleString()}원`;
+  }
+};
+
 // Props 타입 정의
 interface SalesChartProps {
   kolId?: number;
 }
 
-// 월별 매출 데이터 타입
+// 월별 데이터 타입
 interface MonthlyData {
   month: string;
-  sales: number;
   allowance: number;
 }
 
@@ -31,7 +74,7 @@ export default function SalesChart({ kolId }: SalesChartProps) {
   const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
 
-  // KOL 월별 매출 및 수당 데이터 가져오기
+  // KOL 월별 수당 데이터 가져오기
   useEffect(() => {
     const fetchMonthlySales = async () => {
       if (!kolId) return;
@@ -43,10 +86,11 @@ export default function SalesChart({ kolId }: SalesChartProps) {
         // 최근 6개월 데이터 가져오기
         const response = await fetch(`/api/kol-new/monthly-sales?kolId=${kolId}`);
         if (!response.ok) {
-          throw new Error('월별 매출 데이터를 불러오는데 실패했습니다.');
+          throw new Error('월별 수당 데이터를 불러오는데 실패했습니다.');
         }
 
         const data = await response.json();
+        // 매출 데이터를 제외하고 수당 데이터만 사용
         setChartData(data);
       } catch (err) {
         console.error('차트 데이터 로드 에러:', err);
@@ -59,17 +103,10 @@ export default function SalesChart({ kolId }: SalesChartProps) {
     fetchMonthlySales();
   }, [kolId]);
 
-  // 차트가 준비되지 않았거나 kolId가 없는 경우 목업 데이터 사용
-  const formattedData = chartData.length > 0 
-    ? chartData
-    : [
-        { month: '11월', sales: 1500, allowance: 800 },
-        { month: '12월', sales: 1800, allowance: 900 },
-        { month: '01월', sales: 2000, allowance: 1000 },
-        { month: '02월', sales: 2300, allowance: 1200 },
-        { month: '03월', sales: 2000, allowance: 1100 },
-        { month: '04월', sales: 4000, allowance: 2000 },
-      ];
+  // 차트가 준비되지 않았거나 kolId가 없는 경우 데이터 없음 표시
+  if (chartData.length === 0) {
+    return <div className="flex h-full items-center justify-center text-muted-foreground">데이터가 존재하지 않습니다.</div>;
+  }
 
   // recharts의 커스텀 툴팁
   const CustomTooltip = ({ active, payload, label }: {
@@ -84,11 +121,8 @@ export default function SalesChart({ kolId }: SalesChartProps) {
       return (
         <div className="rounded-lg border bg-white dark:bg-slate-800 p-2 shadow-md z-50">
           <p className="font-medium text-sm">{label}</p>
-          <p className="text-xs text-blue-500">
-            매출: {payload[0].value.toLocaleString()}만원
-          </p>
           <p className="text-xs text-purple-500">
-            수당: {payload[1].value.toLocaleString()}만원
+            수당: {formatDetailedAmount(payload[0].value)}
           </p>
         </div>
       );
@@ -118,14 +152,10 @@ export default function SalesChart({ kolId }: SalesChartProps) {
     <div className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={formattedData}
-          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+          data={chartData}
+          margin={{ top: 10, right: 30, left: 60, bottom: 0 }}
         >
           <defs>
-            <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-            </linearGradient>
             <linearGradient id="colorAllowance" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
               <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
@@ -138,9 +168,11 @@ export default function SalesChart({ kolId }: SalesChartProps) {
             tick={{ fill: 'hsl(var(--foreground))' }}
           />
           <YAxis 
-            tickFormatter={(value) => `${value}만`}
+            tickFormatter={(value) => formatToManUnit(value)}
             className="text-xs"
             tick={{ fill: 'hsl(var(--foreground))' }}
+            width={50}
+            domain={[0, 'auto']}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend 
@@ -149,20 +181,12 @@ export default function SalesChart({ kolId }: SalesChartProps) {
           />
           <Area 
             type="monotone" 
-            dataKey="sales" 
-            name="매출" 
-            stroke="#3b82f6" 
-            fillOpacity={1} 
-            fill="url(#colorSales)" 
-            activeDot={{ r: 6 }}
-          />
-          <Area 
-            type="monotone" 
             dataKey="allowance" 
             name="수당" 
             stroke="#8b5cf6" 
             fillOpacity={1} 
             fill="url(#colorAllowance)" 
+            activeDot={{ r: 6 }}
           />
         </AreaChart>
       </ResponsiveContainer>

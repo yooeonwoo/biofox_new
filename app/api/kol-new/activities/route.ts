@@ -6,6 +6,7 @@ import { auth } from '@clerk/nextjs/server';
 interface ShopInfo {
   id: number;
   owner_name: string;
+  shop_name?: string;
 }
 
 // 영업 활동 타입 정의
@@ -94,7 +95,7 @@ export async function GET() {
     if (uniqueShopIds.length > 0) {
       const { data: shops, error: shopsError } = await supabase
         .from('shops')
-        .select('id, owner_name')
+        .select('id, owner_name, shop_name')
         .in('id', uniqueShopIds);
 
       if (shopsError) {
@@ -113,7 +114,7 @@ export async function GET() {
       
       return {
         ...activity,
-        shop_name: shopInfo ? shopInfo.owner_name : null
+        shop_name: shopInfo ? (shopInfo.shop_name || shopInfo.owner_name) : null
       };
     });
 

@@ -55,26 +55,18 @@ export async function GET() {
       .eq('year_month', currentMonth)
       .single();
 
-    // 전문점 정보 조회
-    const { data: shopsData, error: shopsError } = await supabase
-      .from('shops')
-      .select('id')
-      .eq('kol_id', kolData.id)
-      .eq('status', 'active');
-
-    // 활성 전문점 수와 주문한 전문점 수 계산
-    const totalShops = shopsData?.length || 0;
-    
-    // 이번 달에 주문한 전문점 조회
-    const { data: orderingShopsData, error: orderingShopsError } = await supabase
-      .from('monthly_sales')
-      .select('shop_id')
+    // kol_total_monthly_sales 테이블에서 전문점 정보 조회
+    const { data: totalMonthlyData, error: totalMonthlyError } = await supabase
+      .from('kol_total_monthly_sales')
+      .select('total_shops, total_active_shops')
       .eq('kol_id', kolData.id)
       .eq('year_month', currentMonth)
-      .gt('total_sales', 0);
+      .single();
 
-    const orderingShops = new Set(orderingShopsData?.map(shop => shop.shop_id) || []);
-    const activeOrderingShops = orderingShops.size;
+    // 전문점 수 계산
+    const totalShops = totalMonthlyData?.total_shops || 0;
+    const activeOrderingShops = totalMonthlyData?.total_active_shops || 0;
+    const notOrderingShops = totalShops - activeOrderingShops;
 
     // 대시보드 데이터 구성
     const dashboardData = {
@@ -96,7 +88,7 @@ export async function GET() {
       shops: {
         total: totalShops,
         ordering: activeOrderingShops,
-        notOrdering: totalShops - activeOrderingShops
+        notOrdering: notOrderingShops
       }
     };
     

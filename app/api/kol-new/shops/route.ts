@@ -57,7 +57,7 @@ export async function GET() {
     // KOL 소속 전문점 정보 조회
     const { data: shops, error: shopsError } = await supabase
       .from('shops')
-      .select('id, owner_name, region, status, created_at')
+      .select('id, owner_name, shop_name, region, status, created_at, is_owner_kol')
       .eq('kol_id', kolData.id)
       .order('created_at', { ascending: false });
 
@@ -90,12 +90,15 @@ export async function GET() {
 
     // 전문점 데이터와 매출 데이터 조합
     const shopsWithSales = shops.map(shop => {
-      // KOL과 전문점 소유자 이름이 같으면 직영점으로 판단
-      const is_owner_kol = shop.owner_name === kolData.name;
+      // shops 테이블에 is_owner_kol 필드가 있으면 사용, 없으면 이름 비교로 판단
+      const is_owner_kol = shop.is_owner_kol !== undefined && shop.is_owner_kol !== null 
+        ? shop.is_owner_kol 
+        : (shop.owner_name === kolData.name);
       
       return {
         id: shop.id,
         ownerName: shop.owner_name,
+        shop_name: shop.shop_name || shop.owner_name, // shop_name이 없는 경우 owner_name을 사용
         region: shop.region || '',
         status: shop.status,
         createdAt: shop.created_at,

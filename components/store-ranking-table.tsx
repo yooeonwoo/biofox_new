@@ -20,10 +20,33 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// 숫자를 만 단위로 포맷팅하는 유틸리티 함수
+const formatToManUnit = (value: number): string => {
+  if (value === 0) return "0원";
+  
+  // 만 단위 계산
+  const man = Math.floor(value / 10000);
+  const rest = value % 10000;
+  
+  if (man > 0) {
+    // 만 단위가 있는 경우
+    if (rest > 0) {
+      // 나머지가 있는 경우 (예: 510만 4740원)
+      return `${man.toLocaleString()}만 ${rest}원`;
+    }
+    // 나머지가 없는 경우 (예: 500만원)
+    return `${man.toLocaleString()}만원`;
+  } else {
+    // 만 단위가 없는 경우 (예: 9800원)
+    return `${value.toLocaleString()}원`;
+  }
+};
+
 // Shop 데이터 타입 정의
 interface ShopData {
   id: number;
   ownerName: string;
+  shop_name: string;
   region: string;
   status: string;
   createdAt: string;
@@ -42,9 +65,24 @@ interface StoreRankingTableProps {
 }
 
 export default function StoreRankingTable({ shops }: StoreRankingTableProps) {
-  // limit 적용 제거, 모든 데이터 사용
+  // 복합 정렬 기준 적용: 매출 높은순 → KOL 직영점 우선 → 이름순
   const sortedShops = [...shops]
-    .sort((a, b) => b.sales.total - a.sales.total)
+    .sort((a, b) => {
+      // 1. 매출 높은순 (내림차순)
+      if (b.sales.total !== a.sales.total) {
+        return b.sales.total - a.sales.total;
+      }
+      
+      // 2. KOL 직영점 우선 (true가 앞으로)
+      if ((a.is_owner_kol || false) !== (b.is_owner_kol || false)) {
+        return (b.is_owner_kol || false) ? 1 : -1;
+      }
+      
+      // 3. 이름순 오름차순
+      const aName = a.shop_name || a.ownerName || '';
+      const bName = b.shop_name || b.ownerName || '';
+      return aName.localeCompare(bName);
+    })
     .map((shop, index) => ({ ...shop, rank: index + 1 }));
 
   // 배경색 결정 함수 (hover 색상 변경)
@@ -67,6 +105,7 @@ export default function StoreRankingTable({ shops }: StoreRankingTableProps) {
           <TableHeader>
             <TableRow className="border-b-0 hover:bg-transparent">
               <TableHead className="w-[40px] sm:w-[60px] px-2 sm:px-4 py-2 sm:py-3 text-center"></TableHead>
+              <TableHead className="w-[30px] px-0 py-2 sm:py-3"></TableHead>
               <TableHead className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 font-medium">전문점명</TableHead>
               <TableHead className="px-2 sm:px-4 pr-4 sm:pr-9 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-500 font-medium">당월 매출</TableHead>
             </TableRow>
@@ -74,7 +113,7 @@ export default function StoreRankingTable({ shops }: StoreRankingTableProps) {
           <TableBody>
             {sortedShops.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="h-16 sm:h-24 px-2 sm:px-4 py-2 sm:py-3 text-center">
+                <TableCell colSpan={4} className="h-16 sm:h-24 px-2 sm:px-4 py-2 sm:py-3 text-center">
                   <span className="font-bold text-xs sm:text-base">전문점 데이터가 없습니다.</span>
                 </TableCell>
               </TableRow>
@@ -100,17 +139,17 @@ export default function StoreRankingTable({ shops }: StoreRankingTableProps) {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell className="px-0 py-2 sm:py-3 w-[30px] text-center">
+                    {shop.is_owner_kol && (
+                      <CrownIcon className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
+                    )}
+                  </TableCell>
                   <TableCell className="px-2 sm:px-4 py-2 sm:py-3">
-                    <div className="flex items-center">
-                      {shop.is_owner_kol && (
-                        <CrownIcon className="mr-1 sm:mr-1.5 h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
-                      )}
-                      <span className="font-bold text-xs sm:text-base">{shop.ownerName}</span>
-                    </div>
+                    <span className="font-bold text-xs sm:text-base">{shop.shop_name || shop.ownerName}</span>
                   </TableCell>
                   <TableCell className="px-2 sm:px-4 py-2 sm:py-3 text-right">
                     <div className="flex items-center justify-end">
-                      <span className="font-bold text-xs sm:text-base">{shop.sales.total.toLocaleString()}만원</span>
+                      <span className="font-bold text-xs sm:text-base">{formatToManUnit(shop.sales.total)}</span>
                       {shop.sales.total > 0 ? (
                         <TrendingUpIcon className="ml-1 sm:ml-1.5 h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                       ) : (

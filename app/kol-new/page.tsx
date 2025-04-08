@@ -31,15 +31,24 @@ import KolMobileMenu from "../components/layout/KolMobileMenu";
 
 // 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
-  if (value >= 10000) {
-    const man = Math.floor(value / 10000);
-    const rest = value % 10000;
-    if (rest === 0) {
-      return `${man}만`;
+  if (value === 0) return "0원";
+  
+  // 만 단위 계산
+  const man = Math.floor(value / 10000);
+  const rest = value % 10000;
+  
+  if (man > 0) {
+    // 만 단위가 있는 경우
+    if (rest > 0) {
+      // 나머지가 있는 경우 (예: 510만 4740원)
+      return `${man.toLocaleString()}만 ${rest}원`;
     }
-    return `${man}만 ${rest.toLocaleString()}`;
+    // 나머지가 없는 경우 (예: 500만원)
+    return `${man.toLocaleString()}만원`;
+  } else {
+    // 만 단위가 없는 경우 (예: 9800원)
+    return `${value.toLocaleString()}원`;
   }
-  return value.toLocaleString();
 };
 
 // 대시보드 데이터 타입 정의
@@ -71,6 +80,7 @@ interface DashboardData {
 interface ShopData {
   id: number;
   ownerName: string;
+  shop_name: string;
   region: string;
   status: string;
   createdAt: string;
@@ -130,7 +140,21 @@ export default function KolNewPage() {
           const shopsResponse = await fetch('/api/kol-new/shops');
           if (!shopsResponse.ok) throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
           const shopsResult = await shopsResponse.json();
-          setShopsData(shopsResult);
+          
+          // 전문점 데이터 가공 - shop_name 및 is_owner_kol 활용하고 매출은 만원 단위로 변환
+          const formattedShops = shopsResult.map((shop: any) => ({
+            ...shop,
+            shop_name: shop.shop_name || shop.ownerName, // API에서 shop_name을 우선적으로 사용
+            sales: {
+              ...shop.sales,
+              // 숫자 데이터는 그대로 유지하되, StoreRankingTable 컴포넌트에서 표시 시 만원 단위로 보여짐
+              total: shop.sales.total,
+              product: shop.sales.product,
+              device: shop.sales.device
+            }
+          }));
+          
+          setShopsData(formattedShops);
 
           // 영업 일지 데이터 로드
           const activityResponse = await fetch('/api/kol-new/activities'); 
@@ -277,8 +301,8 @@ export default function KolNewPage() {
                       <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 매출:</span>
                       <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
                         {dashboardData?.sales?.currentMonth !== undefined 
-                          ? dashboardData.sales.currentMonth.toLocaleString() 
-                          : 0} 원
+                          ? formatToManUnit(dashboardData.sales.currentMonth)
+                          : "0원"}
                       </span>
                     </div>
                     <div className="rounded-full bg-yellow-100 p-1 sm:p-1.5 text-yellow-700 flex-shrink-0">
@@ -302,8 +326,8 @@ export default function KolNewPage() {
                       <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 수당:</span>
                       <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
                         {dashboardData?.allowance?.currentMonth !== undefined 
-                          ? dashboardData.allowance.currentMonth.toLocaleString() 
-                          : 0} 원
+                          ? formatToManUnit(dashboardData.allowance.currentMonth)
+                          : "0원"}
                       </span>
                     </div>
                     <div className="rounded-full bg-purple-100 p-1 sm:p-1.5 text-purple-700 flex-shrink-0">
@@ -317,7 +341,9 @@ export default function KolNewPage() {
                       ) : (
                         <TrendingDown className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
                       )}
-                      <span>전월 대비 {Math.abs(dashboardData.allowance.growth).toLocaleString()} 원 {dashboardData.allowance.growth >= 0 ? '증가' : '감소'}</span>
+                      <span>전월 대비 {Math.abs(dashboardData.allowance.growth) >= 10000 
+                        ? formatToManUnit(Math.abs(dashboardData.allowance.growth)) 
+                        : Math.abs(dashboardData.allowance.growth).toLocaleString() + '원'} {dashboardData.allowance.growth >= 0 ? '증가' : '감소'}</span>
                     </div>
                   )}
                 </CardContent>
