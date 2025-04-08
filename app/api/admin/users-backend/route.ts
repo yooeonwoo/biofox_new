@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { supabase } from "@/db/utils";
+import { serverSupabase as supabase } from "@/lib/supabase";
 
 /**
  * POST 요청 처리 - 새 사용자 등록

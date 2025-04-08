@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { supabaseAdmin } from './utils';
+import { serverSupabase as supabaseAdmin } from '@/lib/supabase';
 import { initializeRpcFunctions } from './init-rpc';
 import { executeSql } from './utils/execute-sql';
 

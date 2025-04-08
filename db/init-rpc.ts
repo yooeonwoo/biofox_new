@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './utils/index';
+import { serverSupabase as supabaseAdmin } from '@/lib/supabase';
 import { executeSql as execSql } from './utils/execute-sql';
 import fs from 'fs';
 import path from 'path';

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { migrateDatabase } from "@/db/migrate";
 import { auth } from "@clerk/nextjs/server";
 import { initializeRpcFunctions, executeSql } from "@/db/init-rpc";
-import { supabase, supabaseAdmin } from "@/db/utils";
+import { serverSupabase as supabase, serverSupabase as supabaseAdmin } from "@/lib/supabase";
 import path from "path";
 import fs from "fs";
 import { getAuth } from "@/lib/auth";

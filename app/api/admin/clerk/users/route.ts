@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import type { User } from "@clerk/nextjs/server";
-import { supabase } from "@/db/utils";
+import { serverSupabase as supabase } from "@/lib/supabase";
 
 /**
  * GET 요청 처리 - 사용자 목록 조회

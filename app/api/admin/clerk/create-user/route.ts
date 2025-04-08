@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { supabase } from "@/db/utils";
+import { serverSupabase as supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   try {

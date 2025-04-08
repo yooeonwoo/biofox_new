@@ -1,7 +1,7 @@
 import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { supabase } from '@/db/utils';
+import { serverSupabase as supabase } from '@/lib/supabase';
 import { WebhookEvent } from '@clerk/nextjs/server';
 
 export async function POST(req: Request) {

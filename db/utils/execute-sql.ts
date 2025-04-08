@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './index';
+import { serverSupabase as supabaseAdmin } from '@/lib/supabase';
 
 /**
  * SQL을 실행하는 함수
