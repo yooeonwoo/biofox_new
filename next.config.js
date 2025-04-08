@@ -18,7 +18,6 @@ const nextConfig = {
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
-    quality: 100,
   },
   
   // 실험적 기능 활성화
