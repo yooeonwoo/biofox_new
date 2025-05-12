@@ -7,7 +7,7 @@ import { useUser, useAuth } from '@clerk/nextjs';
 // 아이콘 컴포넌트
 import { 
   LayoutDashboard, Users, Store, BarChart3, 
-  PieChart, LogOut, Menu, X, UserPlus 
+  PieChart, LogOut, Menu, X, UserPlus, FileInput, BarChart
 } from 'lucide-react';
 
 export default function AdminDashboardLayout({
@@ -76,6 +76,8 @@ export default function AdminDashboardLayout({
     { name: 'KOL 월별 지표', href: '/admin-dashboard/kol-metrics', icon: <BarChart3 size={20} /> },
     { name: '전문점 매출 관리', href: '/admin-dashboard/shop-sales', icon: <Store size={20} /> },
     { name: '제품 매출 비율', href: '/admin-dashboard/product-sales', icon: <PieChart size={20} /> },
+    { name: 'KOL 데이터 입력', href: '/admin-dashboard/kol-data-entry', icon: <FileInput size={20} /> },
+    { name: 'KOL 현황', href: '/admin-dashboard/kol-dashboard', icon: <BarChart size={20} /> },
   ];
 
   // 로그아웃 함수
