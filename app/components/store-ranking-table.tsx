@@ -1,1 +1,1 @@
- 
+// 이 파일은 사용되지 않습니다. 대신 components/store-ranking-table.tsx를 사용하세요. 

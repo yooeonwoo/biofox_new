@@ -15,9 +15,9 @@ import {
   ClipboardList,
   FileText
 } from "lucide-react";
-import SalesChart from "@/components/sales-chart";
-import StoreRankingTable from "@/components/store-ranking-table";
-import UpcomingTasks from "@/components/upcoming-tasks";
+import SalesChart from "../../components/sales-chart";
+import StoreRankingTable from "../../components/store-ranking-table";
+import UpcomingTasks from "../../components/upcoming-tasks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import KolHeader from "../components/layout/KolHeader";
