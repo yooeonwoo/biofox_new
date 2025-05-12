@@ -4,7 +4,6 @@ import { db } from '@/db';
 import { users, kols } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { serverSupabase } from './supabase';
-// @ts-ignore - supabase-admin 모듈은 존재하지만 타입 문제로 무시
 import { supabaseAdmin } from './supabase-admin';
 import { cookies } from 'next/headers';
 
