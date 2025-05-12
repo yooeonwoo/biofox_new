@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, integer, boolean, text, decimal } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, boolean, text, numeric } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // 사용자 테이블
@@ -118,7 +118,7 @@ export const salesActivities = pgTable("sales_activities", {
   id: serial("id").primaryKey(),
   kolId: integer("kol_id").references(() => kols.id).notNull(),
   shopId: integer("shop_id").references(() => shops.id),
-  activityDate: timestamp("activity_date").defaultNow().notNull(),
+  activityDate: timestamp("activity_date", { mode: 'date' }).defaultNow().notNull(),
   content: text("content").notNull(),
   activityType: varchar("activity_type", { length: 50 }).default("general"),
   shopName: text("shop_name"),
@@ -189,7 +189,7 @@ export const productSalesMetrics = pgTable("product_sales_metrics", {
   yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
   quantity: integer("quantity").default(0).notNull(),
   salesAmount: integer("sales_amount").default(0).notNull(),
-  salesRatio: decimal("sales_ratio", { precision: 10, scale: 4 }).default("0").notNull(),
+  salesRatio: numeric("sales_ratio").default("0").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
@@ -221,10 +221,10 @@ export const kolTotalMonthlySales = pgTable("kol_total_monthly_sales", {
   totalCommission: integer("total_commission").default(0).notNull(),
   totalActiveShops: integer("total_active_shops").default(0).notNull(),
   totalShops: integer("total_shops").default(0).notNull(),
-  directSalesRatio: decimal("direct_sales_ratio", { precision: 5, scale: 2 }).default("0").notNull(),
-  indirectSalesRatio: decimal("indirect_sales_ratio", { precision: 5, scale: 2 }).default("0").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
+  directSalesRatio: numeric("direct_sales_ratio").default("0").notNull(),
+  indirectSalesRatio: numeric("indirect_sales_ratio").default("0").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: false }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: false }).defaultNow().notNull()
 });
 
 // KOL 총 월간 매출 관계 정의
@@ -241,11 +241,11 @@ export const productTotalSalesStats = pgTable("product_total_sales_stats", {
   yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
   productId: integer("product_id").references(() => products.id).notNull(),
   totalSalesAmount: integer("total_sales_amount").default(0).notNull(),
-  salesRatio: decimal("sales_ratio", { precision: 5, scale: 4 }).default("0").notNull(),
-  salesGrowthRate: decimal("sales_growth_rate", { precision: 5, scale: 2 }).default("0").notNull(),
+  salesRatio: numeric("sales_ratio").default("0").notNull(),
+  salesGrowthRate: numeric("sales_growth_rate").default("0").notNull(),
   orderCount: integer("order_count").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
+  createdAt: timestamp("created_at", { withTimezone: false }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: false }).defaultNow().notNull()
 });
 
 // 제품 총 매출 통계 관계 정의

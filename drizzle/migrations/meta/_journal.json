@@ -1,26 +1,47 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
+  "version": "5",
+  "dialect": "pg",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1742720413868,
+      "version": "5",
+      "when": 1705744891446,
       "tag": "0000_jazzy_moira_mactaggert",
       "breakpoints": true
     },
     {
       "idx": 1,
-      "version": "7",
-      "when": 1742741188672,
+      "version": "5",
+      "when": 1706026064683,
       "tag": "0001_perpetual_jack_flag",
       "breakpoints": true
     },
     {
       "idx": 2,
-      "version": "7",
-      "when": 1742767401833,
+      "version": "5",
+      "when": 1706026085146,
+      "tag": "0001_kol_shop_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1706432629911,
       "tag": "0002_odd_banshee",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1714294729851,
+      "tag": "0005_remove_whitelist_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1715240700000,
+      "tag": "0006_update_schema",
       "breakpoints": true
     }
   ]

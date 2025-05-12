@@ -3,31 +3,32 @@
  * 전체 애플리케이션에서 일관된 Supabase 클라이언트 제공
  */
 import { serverSupabase } from '../lib/supabase';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from '@neondatabase/serverless';
 import * as schema from './schema';
 
 // Supabase 클라이언트 내보내기
 export const supabase = serverSupabase;
 
-// 기본 연결 설정
-const connectionString = process.env.DATABASE_URL || '';
+// 환경 변수에서 데이터베이스 URL을 가져옵니다.
+const connectionString = process.env.DATABASE_URL;
+
 if (!connectionString) {
   throw new Error('DATABASE_URL 환경 변수가 설정되지 않았습니다.');
 }
 
-// 연결 풀 최적화 설정
-const connectionPoolConfig = {
-  max: 10,        // 최대 연결 수 증가
-  idle_timeout: 30, // 유휴 연결 유지 시간
-  connect_timeout: 10, // 연결 타임아웃 설정
+// Neon 데이터베이스 연결 풀을 생성합니다.
+const pool = new Pool({ connectionString });
+
+// Drizzle ORM 클라이언트를 생성합니다.
+export const db = drizzle(pool, { schema });
+
+// 단일 객체로 내보내기 (ESLint 경고 방지)
+const dbExports = {
+  db
 };
 
-// 연결 초기화 - 최적화된 설정 적용
-const queryClient = postgres(connectionString, connectionPoolConfig);
-
-// Drizzle ORM 초기화 및 내보내기
-export const db = drizzle(queryClient, { schema });
+export default dbExports;
 
 // 이전 코드 호환성을 위해 getDB 함수도 유지
 export async function getDB() {

@@ -1,1 +1,0 @@
-DROP TABLE "whitelisted_emails" CASCADE;
