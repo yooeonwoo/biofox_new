@@ -1,7 +1,0 @@
-id,name,description,created_at,updated_at
-,Admin,모든 기능에 접근 가능,,
-,Sales Manager,영업 팀 관리 및 모든 영업 데이터 접근,,
-,Sales Rep,자신의 영업 활동과 관련된 데이터만 접근,,
-,KOL, KOL 관리 및 세미나 조직,,
-,Marketing,마케팅 캠페인 및 세미나 관련 작업,,
-,SHOP,전문점,,

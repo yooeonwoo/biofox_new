@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, integer, boolean, foreignKey, text, decimal } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, boolean, text, decimal } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // 사용자 테이블
@@ -7,7 +7,7 @@ export const users = pgTable("users", {
   clerkId: varchar("clerk_id", { length: 255 }).notNull().unique(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }),
-  role: varchar("role", { length: 50 }).notNull().default("kol"), // 본사관리자, kol
+  role: varchar("role", { length: 50 }).notNull().default("kol"), // admin, kol
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
@@ -41,20 +41,23 @@ export const kolsRelations = relations(kols, ({ one, many }) => ({
     references: [users.id],
   }),
   shops: many(shops),
-  commissions: many(commissions),
-  monthlySummaries: many(kolMonthlySummary),
-  monthlySales: many(monthlySales),
-  childKols: many(kolHierarchy, { relationName: "parentKols" }),
-  parentKols: many(kolHierarchy, { relationName: "childKols" }),
+  dashboardMetrics: many(kolDashboardMetrics),
+  totalMonthlySales: many(kolTotalMonthlySales),
+  salesActivities: many(salesActivities),
+  productSalesMetrics: many(productSalesMetrics),
 }));
 
 // 전문점 테이블
 export const shops = pgTable("shops", {
   id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
   ownerName: varchar("owner_name", { length: 255 }).notNull(),
+  shopName: varchar("shop_name", { length: 255 }).notNull(),
+  kolId: integer("kol_id").references(() => kols.id).notNull(),
   region: varchar("region", { length: 100 }),
   smartPlaceLink: varchar("smart_place_link", { length: 500 }),
+  isOwnerKol: boolean("is_owner_kol").default(false).notNull(),
+  contractDate: timestamp("contract_date"),
+  email: varchar("email", { length: 255 }),
   status: varchar("status", { length: 50 }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
@@ -66,9 +69,9 @@ export const shopsRelations = relations(shops, ({ one, many }) => ({
     fields: [shops.kolId],
     references: [kols.id],
   }),
-  orders: many(orders),
-  monthlySales: many(monthlySales),
-  productRatios: many(productSalesRatios),
+  salesMetrics: many(shopSalesMetrics),
+  salesActivities: many(salesActivities),
+  productSalesMetrics: many(productSalesMetrics),
 }));
 
 // 제품 테이블
@@ -87,83 +90,8 @@ export const products = pgTable("products", {
 
 // 제품 관계 정의
 export const productsRelations = relations(products, ({ many }) => ({
-  orderItems: many(orderItems),
-  salesRatios: many(productSalesRatios),
-}));
-
-// 주문 테이블
-export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  orderNumber: varchar("order_number", { length: 255 }).notNull().unique(),
-  shopId: integer("shop_id").references(() => shops.id).notNull(),
-  totalAmount: integer("total_amount").notNull(),
-  status: varchar("status", { length: 50 }).default("pending").notNull(),
-  orderDate: timestamp("order_date").defaultNow().notNull(),
-  paymentMethod: varchar("payment_method", { length: 100 }),
-  paymentStatus: varchar("payment_status", { length: 50 }).default("pending").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 주문 관계 정의
-export const ordersRelations = relations(orders, ({ one, many }) => ({
-  shop: one(shops, {
-    fields: [orders.shopId],
-    references: [shops.id],
-  }),
-  orderItems: many(orderItems),
-  commission: one(commissions, {
-    fields: [orders.id],
-    references: [commissions.orderId],
-  }),
-}));
-
-// 주문 상세 테이블
-export const orderItems = pgTable("order_items", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
-  productId: integer("product_id").references(() => products.id).notNull(),
-  quantity: integer("quantity").notNull(),
-  price: integer("price").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 주문 상세 관계 정의
-export const orderItemsRelations = relations(orderItems, ({ one }) => ({
-  order: one(orders, {
-    fields: [orderItems.orderId],
-    references: [orders.id],
-  }),
-  product: one(products, {
-    fields: [orderItems.productId],
-    references: [products.id],
-  }),
-}));
-
-// 수당 테이블
-export const commissions = pgTable("commissions", {
-  id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
-  amount: integer("amount").notNull(),
-  settled: boolean("settled").default(false).notNull(),
-  settledDate: timestamp("settled_date"),
-  settledNote: varchar("settled_note", { length: 500 }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 수당 관계 정의
-export const commissionsRelations = relations(commissions, ({ one }) => ({
-  kol: one(kols, {
-    fields: [commissions.kolId],
-    references: [kols.id],
-  }),
-  order: one(orders, {
-    fields: [commissions.orderId],
-    references: [orders.id],
-  }),
+  productSalesMetrics: many(productSalesMetrics),
+  totalSalesStats: many(productTotalSalesStats),
 }));
 
 // 알림 테이블
@@ -185,148 +113,121 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
-// 월별 매출 및 수당 관리 테이블
-export const monthlySales = pgTable("monthly_sales", {
+// 영업 활동 테이블
+export const salesActivities = pgTable("sales_activities", {
   id: serial("id").primaryKey(),
   kolId: integer("kol_id").references(() => kols.id).notNull(),
-  shopId: integer("shop_id").references(() => shops.id).notNull(),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  productSales: integer("product_sales").notNull().default(0), // 제품 매출 합계 (기기 제외)
-  deviceSales: integer("device_sales").notNull().default(0), // 기기 매출 합계
-  totalSales: integer("total_sales").notNull().default(0), // 총 매출 (제품+기기)
-  commission: integer("commission").notNull().default(0), // 수당 합계
+  shopId: integer("shop_id").references(() => shops.id),
+  activityDate: timestamp("activity_date").defaultNow().notNull(),
+  content: text("content").notNull(),
+  activityType: varchar("activity_type", { length: 50 }).default("general"),
+  shopName: text("shop_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// 월별 매출 관계 정의
-export const monthlySalesRelations = relations(monthlySales, ({ one }) => ({
+// 영업 활동 관계 정의
+export const salesActivitiesRelations = relations(salesActivities, ({ one }) => ({
   kol: one(kols, {
-    fields: [monthlySales.kolId],
+    fields: [salesActivities.kolId],
     references: [kols.id],
   }),
   shop: one(shops, {
-    fields: [monthlySales.shopId],
+    fields: [salesActivities.shopId],
     references: [shops.id],
   }),
 }));
 
-// 제품별 매출 비율 테이블
-export const productSalesRatios = pgTable("product_sales_ratios", {
+// KOL 대시보드 메트릭 테이블
+export const kolDashboardMetrics = pgTable("kol_dashboard_metrics", {
   id: serial("id").primaryKey(),
-  shopId: integer("shop_id").references(() => shops.id).notNull(),
   kolId: integer("kol_id").references(() => kols.id).notNull(),
   yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  productId: integer("product_id").references(() => products.id).notNull(),
-  salesAmount: integer("sales_amount").notNull().default(0), // 제품별 매출 합계
-  salesRatio: decimal("sales_ratio", { precision: 5, scale: 4 }).notNull().default("0"), // 해당 월 제품별 매출 비율 (0~1)
+  monthlySales: integer("monthly_sales").default(0).notNull(),
+  monthlyCommission: integer("monthly_commission").default(0).notNull(),
+  activeShopsCount: integer("active_shops_count").default(0).notNull(),
+  totalShopsCount: integer("total_shops_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// 제품별 매출 비율 관계 정의
-export const productSalesRatiosRelations = relations(productSalesRatios, ({ one }) => ({
+// KOL 대시보드 메트릭 관계 정의
+export const kolDashboardMetricsRelations = relations(kolDashboardMetrics, ({ one }) => ({
+  kol: one(kols, {
+    fields: [kolDashboardMetrics.kolId],
+    references: [kols.id],
+  }),
+}));
+
+// 전문점 매출 메트릭 테이블
+export const shopSalesMetrics = pgTable("shop_sales_metrics", {
+  id: serial("id").primaryKey(),
+  shopId: integer("shop_id").references(() => shops.id).notNull(),
+  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
+  totalSales: integer("total_sales").default(0).notNull(),
+  productSales: integer("product_sales").default(0).notNull(),
+  deviceSales: integer("device_sales").default(0).notNull(),
+  commission: integer("commission").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// 전문점 매출 메트릭 관계 정의
+export const shopSalesMetricsRelations = relations(shopSalesMetrics, ({ one }) => ({
   shop: one(shops, {
-    fields: [productSalesRatios.shopId],
+    fields: [shopSalesMetrics.shopId],
     references: [shops.id],
   }),
+}));
+
+// 제품 매출 메트릭 테이블
+export const productSalesMetrics = pgTable("product_sales_metrics", {
+  id: serial("id").primaryKey(),
+  kolId: integer("kol_id").references(() => kols.id).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  shopId: integer("shop_id").references(() => shops.id),
+  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
+  quantity: integer("quantity").default(0).notNull(),
+  salesAmount: integer("sales_amount").default(0).notNull(),
+  salesRatio: decimal("sales_ratio", { precision: 10, scale: 4 }).default("0").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+// 제품 매출 메트릭 관계 정의
+export const productSalesMetricsRelations = relations(productSalesMetrics, ({ one }) => ({
   kol: one(kols, {
-    fields: [productSalesRatios.kolId],
+    fields: [productSalesMetrics.kolId],
     references: [kols.id],
   }),
   product: one(products, {
-    fields: [productSalesRatios.productId],
+    fields: [productSalesMetrics.productId],
     references: [products.id],
   }),
-}));
-
-// KOL 계층 구조 테이블
-export const kolHierarchy = pgTable("kol_hierarchy", {
-  id: serial("id").primaryKey(),
-  parentKolId: integer("parent_kol_id").references(() => kols.id).notNull(),
-  childKolId: integer("child_kol_id").references(() => kols.id).notNull(),
-  childStartMonth: varchar("child_start_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// KOL 계층 구조 관계 정의
-export const kolHierarchyRelations = relations(kolHierarchy, ({ one }) => ({
-  parentKol: one(kols, {
-    fields: [kolHierarchy.parentKolId],
-    references: [kols.id],
-    relationName: "parentKols",
-  }),
-  childKol: one(kols, {
-    fields: [kolHierarchy.childKolId],
-    references: [kols.id],
-    relationName: "childKols",
+  shop: one(shops, {
+    fields: [productSalesMetrics.shopId],
+    references: [shops.id],
   }),
 }));
 
-// KOL 월별 요약 테이블
-export const kolMonthlySummary = pgTable("kol_monthly_summary", {
-  id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  monthlySales: integer("monthly_sales").notNull().default(0), // 당월 매출
-  monthlyCommission: integer("monthly_commission").notNull().default(0), // 당월 수당
-  avgMonthlySales: decimal("avg_monthly_sales", { precision: 12, scale: 2 }).notNull().default("0"), // 월평균 매출 (최근 3개월 기준)
-  cumulativeCommission: integer("cumulative_commission").notNull().default(0), // 누적 수당
-  previousMonthSales: integer("previous_month_sales").notNull().default(0), // 전월 매출
-  previousMonthCommission: integer("previous_month_commission").notNull().default(0), // 전월 수당
-  activeShopsCount: integer("active_shops_count").notNull().default(0), // 당월 주문이 있는 전문점 수
-  totalShopsCount: integer("total_shops_count").notNull().default(0), // 소속된 전체 전문점 수
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// KOL 월별 요약 관계 정의
-export const kolMonthlySummaryRelations = relations(kolMonthlySummary, ({ one }) => ({
-  kol: one(kols, {
-    fields: [kolMonthlySummary.kolId],
-    references: [kols.id],
-  }),
-}));
-
-// 관리자 대시보드용 전체 KOL 통계 테이블
-export const adminDashboardStats = pgTable("admin_dashboard_stats", {
-  id: serial("id").primaryKey(),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  totalKolsCount: integer("total_kols_count").notNull().default(0), // 전체 KOL 수
-  totalShopsCount: integer("total_shops_count").notNull().default(0), // 전체 전문점 수
-  activeKolsCount: integer("active_kols_count").notNull().default(0), // 활동 중인 KOL 수 
-  activeShopsCount: integer("active_shops_count").notNull().default(0), // 활동 중인 전문점 수
-  totalSales: integer("total_sales").notNull().default(0), // 전체 매출 합계
-  productSales: integer("product_sales").notNull().default(0), // 제품 매출 합계
-  deviceSales: integer("device_sales").notNull().default(0), // 기기 매출 합계
-  totalCommission: integer("total_commission").notNull().default(0), // 전체 수당 합계
-  previousMonthSales: integer("previous_month_sales").notNull().default(0), // 전월 전체 매출
-  previousMonthCommission: integer("previous_month_commission").notNull().default(0), // 전월 전체 수당
-  salesGrowthRate: decimal("sales_growth_rate", { precision: 5, scale: 2 }).notNull().default("0"), // 매출 성장률 (%)
-  commissionGrowthRate: decimal("commission_growth_rate", { precision: 5, scale: 2 }).notNull().default("0"), // 수당 성장률 (%)
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 관리자 통계를 위한 KOL별 월간 매출 합계 테이블
+// KOL 총 월간 매출 테이블
 export const kolTotalMonthlySales = pgTable("kol_total_monthly_sales", {
   id: serial("id").primaryKey(),
   kolId: integer("kol_id").references(() => kols.id).notNull(),
   yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  totalSales: integer("total_sales").notNull().default(0), // 해당 KOL의 모든 전문점 매출 합계
-  productSales: integer("product_sales").notNull().default(0), // 제품 매출 합계
-  deviceSales: integer("device_sales").notNull().default(0), // 기기 매출 합계
-  totalCommission: integer("total_commission").notNull().default(0), // 수당 합계
-  totalActiveShops: integer("total_active_shops").notNull().default(0), // 활동 중인 전문점 수
-  totalShops: integer("total_shops").notNull().default(0), // 전체 전문점 수
-  directSalesRatio: decimal("direct_sales_ratio", { precision: 5, scale: 2 }).notNull().default("0"), // 직접 판매 비율 (%)
-  indirectSalesRatio: decimal("indirect_sales_ratio", { precision: 5, scale: 2 }).notNull().default("0"), // 간접 판매 비율 (%)
+  totalSales: integer("total_sales").default(0).notNull(),
+  productSales: integer("product_sales").default(0).notNull(),
+  deviceSales: integer("device_sales").default(0).notNull(),
+  totalCommission: integer("total_commission").default(0).notNull(),
+  totalActiveShops: integer("total_active_shops").default(0).notNull(),
+  totalShops: integer("total_shops").default(0).notNull(),
+  directSalesRatio: decimal("direct_sales_ratio", { precision: 5, scale: 2 }).default("0").notNull(),
+  indirectSalesRatio: decimal("indirect_sales_ratio", { precision: 5, scale: 2 }).default("0").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// KOL별 월간 매출 합계 관계 정의
+// KOL 총 월간 매출 관계 정의
 export const kolTotalMonthlySalesRelations = relations(kolTotalMonthlySales, ({ one }) => ({
   kol: one(kols, {
     fields: [kolTotalMonthlySales.kolId],
@@ -334,45 +235,23 @@ export const kolTotalMonthlySalesRelations = relations(kolTotalMonthlySales, ({ 
   }),
 }));
 
-// 전체 제품별 매출 비율 통계 테이블
+// 제품 총 매출 통계 테이블
 export const productTotalSalesStats = pgTable("product_total_sales_stats", {
   id: serial("id").primaryKey(),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM
+  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
   productId: integer("product_id").references(() => products.id).notNull(),
-  totalSalesAmount: integer("total_sales_amount").notNull().default(0), // 제품별 전체 매출액
-  salesRatio: decimal("sales_ratio", { precision: 5, scale: 4 }).notNull().default("0"), // 제품별 매출 비율
-  salesGrowthRate: decimal("sales_growth_rate", { precision: 5, scale: 2 }).notNull().default("0"), // 전월 대비 성장률
-  orderCount: integer("order_count").notNull().default(0), // 주문 수량
+  totalSalesAmount: integer("total_sales_amount").default(0).notNull(),
+  salesRatio: decimal("sales_ratio", { precision: 5, scale: 4 }).default("0").notNull(),
+  salesGrowthRate: decimal("sales_growth_rate", { precision: 5, scale: 2 }).default("0").notNull(),
+  orderCount: integer("order_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// 제품별 매출 비율 관계 정의
+// 제품 총 매출 통계 관계 정의
 export const productTotalSalesStatsRelations = relations(productTotalSalesStats, ({ one }) => ({
   product: one(products, {
     fields: [productTotalSalesStats.productId],
     references: [products.id],
-  }),
-}));
-
-// 관리자 권한 관리 테이블 (관리자가 특정 KOL 그룹만 관리하도록 설정)
-export const adminKolAccess = pgTable("admin_kol_access", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(), // 관리자 사용자 ID
-  kolId: integer("kol_id").references(() => kols.id).notNull(), // 접근 가능한 KOL ID
-  accessLevel: varchar("access_level", { length: 50 }).notNull().default("view"), // view, edit, full_access 등
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 관리자 KOL 접근 권한 관계 정의
-export const adminKolAccessRelations = relations(adminKolAccess, ({ one }) => ({
-  user: one(users, {
-    fields: [adminKolAccess.userId],
-    references: [users.id],
-  }),
-  kol: one(kols, {
-    fields: [adminKolAccess.kolId],
-    references: [kols.id],
   }),
 })); 
