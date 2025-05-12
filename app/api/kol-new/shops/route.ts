@@ -69,11 +69,10 @@ export async function GET() {
       );
     }
 
-    // 전문점별 월간 매출 데이터 조회
+    // 전문점별 월간 매출 데이터 조회 (새로운 테이블 사용)
     const { data: salesData, error: salesError } = await supabase
-      .from('monthly_sales')
+      .from('shop_sales_metrics')
       .select('shop_id, total_sales, product_sales, device_sales, commission')
-      .eq('kol_id', kolData.id)
       .eq('year_month', currentMonth);
 
     if (salesError) {
@@ -84,8 +83,8 @@ export async function GET() {
     }
 
     // 매출 데이터를 맵으로 변환하여 조회 효율성 높이기
-    const salesByShop: Record<number, MonthlySales> = {};
-    salesData.forEach((sale: MonthlySales) => {
+    const salesByShop: Record<number, any> = {};
+    salesData.forEach((sale: any) => {
       salesByShop[sale.shop_id] = sale;
     });
 

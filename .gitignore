@@ -71,3 +71,5 @@ next-env.d.ts
 # 중첩된 Git 저장소
 biofox-kol/
 n8n-workflow-builder/
+
+**/.claude/settings.local.json

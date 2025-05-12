@@ -1,8 +1,19 @@
 /**
  * Clerk Admin API 유틸리티 함수
  * 관리자 페이지에서 사용자 관리를 위한 함수들을 제공합니다.
+ * Next.js 15와 Clerk 호환성 문제로 직접 API 호출 방식으로 구현됩니다.
  */
-import { clerkClient } from "@clerk/nextjs/server";
+import clerkApi from "../clerk-direct-api";
+
+// 사용자 데이터 타입 정의
+interface ClerkUser {
+  id: string;
+  email_addresses?: Array<{ email_address: string }>;
+  first_name?: string;
+  last_name?: string;
+  public_metadata?: Record<string, any>;
+  private_metadata?: Record<string, any>;
+}
 
 /**
  * 새 사용자를 생성합니다
@@ -21,24 +32,22 @@ export async function createUser(
   role: string
 ) {
   try {
-    // Clerk API를 사용하여 사용자 생성
-    const user = await clerkClient.users.createUser({
-      emailAddress: [email],
+    console.log("Clerk Admin: 사용자 생성 시작", { email, firstName, lastName, role });
+    // 직접 API 호출로 사용자 생성 - 생성 시 역할도 함께 설정
+    const user = await clerkApi.createUser({
+      email_address: [email],
       password,
-      firstName,
-      lastName,
-    });
-
-    // 사용자 메타데이터에 역할 추가
-    await clerkClient.users.updateUserMetadata(user.id, {
-      publicMetadata: {
+      first_name: firstName,
+      last_name: lastName,
+      public_metadata: {
         role,
       },
     });
 
+    console.log("Clerk Admin: 사용자 생성 및 역할 설정 완료:", user.id);
     return user;
   } catch (error) {
-    console.error("사용자 생성 실패:", error);
+    console.error("Clerk Admin: 사용자 생성 실패:", error);
     throw error;
   }
 }
@@ -51,14 +60,16 @@ export async function createUser(
  */
 export async function updateUserRole(userId: string, role: string) {
   try {
-    const user = await clerkClient.users.updateUserMetadata(userId, {
-      publicMetadata: {
+    console.log("Clerk Admin: 사용자 역할 업데이트 시작", { userId, role });
+    const user = await clerkApi.updateUserMetadata(userId, {
+      public_metadata: {
         role,
       },
     });
+    console.log("Clerk Admin: 사용자 역할 업데이트 완료");
     return user;
   } catch (error) {
-    console.error("사용자 역할 업데이트 실패:", error);
+    console.error("Clerk Admin: 사용자 역할 업데이트 실패:", error);
     throw error;
   }
 }
@@ -70,9 +81,12 @@ export async function updateUserRole(userId: string, role: string) {
  */
 export async function deleteUser(userId: string) {
   try {
-    return await clerkClient.users.deleteUser(userId);
+    console.log("Clerk Admin: 사용자 삭제 시작", userId);
+    const result = await clerkApi.deleteUser(userId);
+    console.log("Clerk Admin: 사용자 삭제 완료");
+    return result;
   } catch (error) {
-    console.error("사용자 삭제 실패:", error);
+    console.error("Clerk Admin: 사용자 삭제 실패:", error);
     throw error;
   }
 }
@@ -83,10 +97,12 @@ export async function deleteUser(userId: string) {
  */
 export async function getAllUsers() {
   try {
-    const users = await clerkClient.users.getUserList();
+    console.log("Clerk Admin: 사용자 목록 조회 시작");
+    const users = await clerkApi.getUserList(100, 0); // 최대 100명 조회
+    console.log(`Clerk Admin: 사용자 목록 조회 완료 (${users.length}명)`);
     return users;
   } catch (error) {
-    console.error("사용자 목록 조회 실패:", error);
+    console.error("Clerk Admin: 사용자 목록 조회 실패:", error);
     throw error;
   }
 }
@@ -98,12 +114,16 @@ export async function getAllUsers() {
  */
 export async function getUsersByRole(role: string) {
   try {
-    const users = await clerkClient.users.getUserList({
-      query: JSON.stringify({ publicMetadata: { role } }),
-    });
-    return users;
+    console.log(`Clerk Admin: ${role} 역할 사용자 목록 조회 시작`);
+    // 모든 사용자를 가져와서 필터링
+    const allUsers = await clerkApi.getUserList(100, 0);
+    const filteredUsers = allUsers.filter((user: ClerkUser) => 
+      user.public_metadata && user.public_metadata.role === role
+    );
+    console.log(`Clerk Admin: ${role} 역할 사용자 목록 조회 완료 (${filteredUsers.length}명)`);
+    return filteredUsers;
   } catch (error) {
-    console.error(`${role} 역할 사용자 목록 조회 실패:`, error);
+    console.error(`Clerk Admin: ${role} 역할 사용자 목록 조회 실패:`, error);
     throw error;
   }
 } 

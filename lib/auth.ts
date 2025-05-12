@@ -217,7 +217,7 @@ export async function getAuthSupabase(): Promise<{userId: string | null, role: s
 /**
  * [모든 API용] Clerk와 DB를 사용한 인증 검증 유틸리티 함수
  * Supabase 세션 문제를 해결하기 위해 Clerk 인증을 사용하고 DB에서 직접 역할을 조회합니다.
- * 
+ *
  * @param allowedRoles 허용할 역할 목록 (선택적)
  * @returns 응답 객체 또는 null (인증 성공 시)
  */
@@ -227,7 +227,7 @@ export async function checkAuthSupabase(
   try {
     // Clerk에서 현재 사용자 정보 가져오기
     const user = await currentUser();
-    
+
     // 인증되지 않은 경우
     if (!user || !user.emailAddresses || user.emailAddresses.length === 0) {
       console.error('인증되지 않은 사용자의 API 접근');
@@ -236,15 +236,15 @@ export async function checkAuthSupabase(
         { status: 401 }
       );
     }
-    
+
     // 사용자 기본 이메일 주소 가져오기
     const primaryEmail = user.emailAddresses[0].emailAddress;
-    
-    // DB에서 사용자 정보와 역할 조회 (supabaseAdmin 또는 직접 db 쿼리 사용)
+
+    // DB에서 사용자 정보와 역할 조회
     const userInfo = await db.query.users.findFirst({
       where: eq(users.email, primaryEmail),
     });
-    
+
     if (!userInfo) {
       console.error('사용자 정보를 DB에서 찾을 수 없음:', primaryEmail);
       return NextResponse.json(
@@ -252,7 +252,7 @@ export async function checkAuthSupabase(
         { status: 404 }
       );
     }
-    
+
     // 역할 검증이 필요한 경우
     if (allowedRoles && allowedRoles.length > 0) {
       if (!userInfo.role || !allowedRoles.includes(userInfo.role)) {
@@ -263,12 +263,12 @@ export async function checkAuthSupabase(
         );
       }
     }
-    
+
     // 인증 및 권한 검증 성공 - 사용자 정보 반환
-    return { 
-      userId: user.id, 
+    return {
+      userId: user.id,
       role: userInfo.role as string,
-      email: primaryEmail 
+      email: primaryEmail
     };
   } catch (error) {
     console.error('인증 검증 중 오류:', error);
@@ -325,4 +325,4 @@ const authExports = {
   getClientRole,
 };
 
-export default authExports; 
+export default authExports;

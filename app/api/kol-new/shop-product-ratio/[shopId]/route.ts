@@ -6,6 +6,19 @@ import { getCurrentDate } from '@/lib/date-utils';
 // 동적 라우트 처리 설정
 export const dynamic = 'force-dynamic';
 
+// 새로운 제품 판매 메트릭스 응답 타입
+interface ProductSalesMetricsItem {
+  product_id: number;
+  quantity: number;
+  sales_amount: number;
+  sales_ratio: number;
+  products: {
+    name: string;
+  } | {
+    name: string;
+  }[];
+}
+
 // 상점별 제품 판매 비율 API
 export async function GET(
   request: NextRequest,
@@ -60,21 +73,23 @@ export async function GET(
       );
     }
 
-    // shop_product_sales 테이블에서 특정 상점의 제품별 판매 데이터 조회
-    const { data: shopProductSales, error: shopProductError } = await supabase
-      .from('shop_product_sales')
+    // product_sales_metrics 테이블에서 특정 상점의 제품별 판매 데이터 조회
+    const { data: metricsData, error: metricsError } = await supabase
+      .from('product_sales_metrics')
       .select(`
         product_id,
+        products(name),
+        quantity,
         sales_amount,
-        shop_ratio,
-        products(id, name)
+        sales_ratio
       `)
       .eq('shop_id', shopId)
       .eq('kol_id', kolData.id)
-      .eq('year_month', yearMonth);
+      .eq('year_month', yearMonth)
+      .order('sales_ratio', { ascending: false });
 
-    if (shopProductError) {
-      console.error('상점 제품별 판매 데이터 조회 오류:', shopProductError);
+    if (metricsError) {
+      console.error('product_sales_metrics 조회 오류:', metricsError);
       return NextResponse.json(
         { error: '상점 제품별 판매 데이터를 불러오는데 실패했습니다.' },
         { status: 500 }
@@ -82,18 +97,20 @@ export async function GET(
     }
 
     // 데이터가 없는 경우 빈 배열 반환
-    if (!shopProductSales || shopProductSales.length === 0) {
+    if (!metricsData || metricsData.length === 0) {
+      // 이전 호환성을 위한 기존 데이터 조회 (주석 처리함)
+      /*
+      // shop_product_sales 테이블에서 특정 상점의 제품별 판매 데이터 조회
+      const { data: shopProductSales, error: shopProductError } = await supabase
+        .from('shop_product_sales')
+        ...
+      */
+      
       return NextResponse.json([], { status: 200 });
     }
 
-    // 총 매출액 계산
-    const totalSalesAmount = shopProductSales.reduce(
-      (sum, item) => sum + (item.sales_amount || 0),
-      0
-    );
-
     // 제품별 판매 비율 계산
-    const formattedData = shopProductSales.map((item: any) => {
+    const formattedData = metricsData.map((item: ProductSalesMetricsItem) => {
       // products가 배열인 경우와 객체인 경우 모두 처리
       let productName = '알 수 없는 제품';
       if (item.products) {
@@ -106,23 +123,13 @@ export async function GET(
         }
       }
 
-      // 비율 계산 (총 매출이 0인 경우 0으로 설정)
-      const salesRatio = totalSalesAmount > 0 
-        ? (item.sales_amount / totalSalesAmount).toFixed(4)
-        : '0.0000';
-
       return {
         productId: item.product_id,
         productName,
         totalSalesAmount: item.sales_amount || 0,
-        salesRatio
+        salesRatio: item.sales_ratio.toString()
       };
     });
-
-    // 판매 비율 기준으로 내림차순 정렬
-    formattedData.sort((a, b) => 
-      parseFloat(b.salesRatio) - parseFloat(a.salesRatio)
-    );
 
     return NextResponse.json(formattedData, { status: 200 });
 

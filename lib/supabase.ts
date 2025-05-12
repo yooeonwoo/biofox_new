@@ -40,28 +40,51 @@ if (!isValidUrl(supabaseUrl)) {
 export const serverSupabase = createClient(validSupabaseUrl, validServiceKey, {
   auth: {
     persistSession: false,
+    autoRefreshToken: false,
   },
   db: {
     schema: 'public',
   },
   global: {
+    headers: {
+      'X-Client-Info': 'biofox-kol-server',
+    },
     fetch: async (...args) => {
       const [url, config] = args;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초 타임아웃
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10초 타임아웃으로 단축
 
       try {
-        const response = await fetch(url, {
+        // IPv4 강제 적용을 위한 URL 직접 수정
+        let urlObj;
+        try {
+          urlObj = new URL(url.toString());
+          // 수정된 부분: URL의 hostname이 IPv6 주소인 경우 처리
+          if (urlObj.hostname.includes(':')) {
+            console.log('IPv6 주소 감지, IPv4로 변환 시도');
+            // Supabase URL이 있다면 그것을 사용
+            if (validSupabaseUrl && validSupabaseUrl !== 'https://placeholder-url.supabase.co') {
+              urlObj = new URL(validSupabaseUrl);
+            }
+          }
+        } catch (e) {
+          console.error('URL 파싱 오류:', e);
+        }
+
+        const customConfig = {
           ...config,
           signal: controller.signal,
           keepalive: true,
-        });
+        };
+
+        const response = await fetch(urlObj || url, customConfig);
         clearTimeout(timeoutId);
         return response;
       } catch (error: any) {
         if (error.name === 'AbortError') {
           throw new Error('Database connection timeout');
         }
+        console.error('Supabase 연결 오류:', error);
         throw error;
       }
     },
@@ -79,17 +102,38 @@ export const supabase = createClient(validSupabaseUrl, validSupabaseKey, {
     schema: 'public',
   },
   global: {
+    headers: {
+      'X-Client-Info': 'biofox-kol-client',
+    },
     fetch: async (...args) => {
       const [url, config] = args;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15초 타임아웃 (클라이언트는 더 짧게)
 
       try {
-        const response = await fetch(url, {
+        // IPv4 강제 적용을 위한 URL 직접 수정
+        let urlObj;
+        try {
+          urlObj = new URL(url.toString());
+          // 수정된 부분: URL의 hostname이 IPv6 주소인 경우 처리
+          if (urlObj.hostname.includes(':')) {
+            console.log('IPv6 주소 감지, IPv4로 변환 시도');
+            // Supabase URL이 있다면 그것을 사용
+            if (validSupabaseUrl && validSupabaseUrl !== 'https://placeholder-url.supabase.co') {
+              urlObj = new URL(validSupabaseUrl);
+            }
+          }
+        } catch (e) {
+          console.error('URL 파싱 오류:', e);
+        }
+
+        const customConfig = {
           ...config,
           signal: controller.signal,
           keepalive: true,
-        });
+        };
+
+        const response = await fetch(urlObj || url, customConfig);
         clearTimeout(timeoutId);
         return response;
       } catch (error: any) {

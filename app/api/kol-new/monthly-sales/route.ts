@@ -93,9 +93,9 @@ export async function GET(request: NextRequest) {
     // 최근 N개월 범위 생성
     const monthRange = getMonthsBetween(startDate, currentDate);
 
-    // KOL 월별 요약 데이터 조회
+    // KOL 월별 요약 데이터 조회 (새로운 테이블 사용)
     const { data: summaryData, error: summaryError } = await supabase
-      .from('kol_monthly_summary')
+      .from('kol_dashboard_metrics')
       .select('year_month, monthly_sales, monthly_commission')
       .eq('kol_id', kolId)
       .in('year_month', monthRange)

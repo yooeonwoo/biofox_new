@@ -12,6 +12,7 @@ const publicPaths = [
 // 미들웨어에서 무시할 경로 (리다이렉트 고려 대상에서 제외)
 const ignorePaths = [
   "/kol-new(.*)",
+  "/admin-dashboard(.*)",
   "/api/(.*)"
 ];
 

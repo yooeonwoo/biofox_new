@@ -47,25 +47,37 @@ export async function GET() {
       );
     }
 
-    // KOL 월별 요약 정보 조회
-    const { data: summaryData, error: summaryError } = await supabase
-      .from('kol_monthly_summary')
+    // KOL 월별 요약 정보 조회 (새로운 테이블 사용)
+    const { data: dashboardMetrics, error: dashboardError } = await supabase
+      .from('kol_dashboard_metrics')
       .select('*')
       .eq('kol_id', kolData.id)
       .eq('year_month', currentMonth)
       .single();
 
-    // kol_total_monthly_sales 테이블에서 전문점 정보 조회
-    const { data: totalMonthlyData, error: totalMonthlyError } = await supabase
+    // 이전 월 데이터 조회
+    const { data: previousMonthData, error: previousMonthError } = await supabase
+      .from('kol_dashboard_metrics')
+      .select('monthly_sales, monthly_commission')
+      .eq('kol_id', kolData.id)
+      .eq('year_month', previousMonth)
+      .single();
+
+    // 전문점 정보 조회 (새로운 테이블 사용)
+    const { data: shopMetrics, error: shopMetricsError } = await supabase
       .from('kol_total_monthly_sales')
       .select('total_shops, total_active_shops')
       .eq('kol_id', kolData.id)
       .eq('year_month', currentMonth)
       .single();
 
-    // 전문점 수 계산
-    const totalShops = totalMonthlyData?.total_shops || 0;
-    const activeOrderingShops = totalMonthlyData?.total_active_shops || 0;
+    // 기본값 설정
+    const monthlySales = dashboardMetrics?.monthly_sales || 0;
+    const monthlyCommission = dashboardMetrics?.monthly_commission || 0;
+    const previousMonthSales = previousMonthData?.monthly_sales || 0;
+    const previousMonthCommission = previousMonthData?.monthly_commission || 0;
+    const totalShops = shopMetrics?.total_shops || 0;
+    const activeOrderingShops = shopMetrics?.total_active_shops || 0;
     const notOrderingShops = totalShops - activeOrderingShops;
 
     // 대시보드 데이터 구성
@@ -76,14 +88,14 @@ export async function GET() {
         shopName: kolData.shop_name
       },
       sales: {
-        currentMonth: summaryData?.monthly_sales || 0,
-        previousMonth: summaryData?.previous_month_sales || 0,
-        growth: summaryData?.monthly_sales - (summaryData?.previous_month_sales || 0)
+        currentMonth: monthlySales,
+        previousMonth: previousMonthSales,
+        growth: monthlySales - previousMonthSales
       },
       allowance: {
-        currentMonth: summaryData?.monthly_commission || 0,
-        previousMonth: summaryData?.previous_month_commission || 0,
-        growth: summaryData?.monthly_commission - (summaryData?.previous_month_commission || 0)
+        currentMonth: monthlyCommission,
+        previousMonth: previousMonthCommission,
+        growth: monthlyCommission - previousMonthCommission
       },
       shops: {
         total: totalShops,

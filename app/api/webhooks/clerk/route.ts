@@ -3,9 +3,11 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { serverSupabase as supabase } from '@/lib/supabase';
 import { WebhookEvent } from '@clerk/nextjs/server';
+import clerkApi from '@/lib/clerk-direct-api';
 
 export async function POST(req: Request) {
-  const headersList = headers();
+  // Next.js 15의 비동기 headers API 처리
+  const headersList = await headers();
   
   // 환경 변수 검증
   const CLERK_WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -91,36 +93,20 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: updateError.message }, { status: 500 });
       }
 
-      // Clerk 사용자 메타데이터 업데이트
-      const CLERK_API = 'https://api.clerk.dev/v1';
-      const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
-      
-      if (!CLERK_SECRET_KEY) {
-        console.error('CLERK_SECRET_KEY 환경 변수가 설정되지 않았습니다.');
-        return NextResponse.json({ error: 'Clerk API key is not configured' }, { status: 500 });
-      }
-      
-      const response = await fetch(`${CLERK_API}/users/${data.id}/metadata`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${CLERK_SECRET_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          public_metadata: {
+      // Clerk 사용자 메타데이터 업데이트 - 직접 API 클라이언트 사용
+      try {
+        await clerkApi.updateUserMetadata(data.id, {
+          publicMetadata: {
             role: userData.role || 'kol',
-          },
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Clerk API 오류:', errorData);
+          }
+        });
+        
+        console.log('사용자 등록 완료:', data.id, data.email_addresses[0].email_address);
+        return NextResponse.json({ success: true, message: 'User created and metadata updated' });
+      } catch (apiError) {
+        console.error('Clerk API 오류:', apiError);
         return NextResponse.json({ error: 'Clerk API error' }, { status: 500 });
       }
-      
-      console.log('사용자 등록 완료:', data.id, data.email_addresses[0].email_address);
-      return NextResponse.json({ success: true, message: 'User created and metadata updated' });
     } catch (error) {
       console.error('웹훅 처리 오류:', error);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
