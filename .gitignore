@@ -73,3 +73,16 @@ biofox-kol/
 n8n-workflow-builder/
 
 **/.claude/settings.local.json
+
+# 대용량 파일 및 DeepView 관련 파일
+repomix-output.xml
+*.xml
+deepview-env/
+split_codebase/
+run_deepview_test.sh
+test_deepview*.py
+test_packages.py
+test_python.py
+run_python.sh
+split_codebase.py
+project_structure.txt
