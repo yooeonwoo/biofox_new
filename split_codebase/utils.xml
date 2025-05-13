@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<code>
+  <file path="utils/cn.ts">
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+</file>
+</code>

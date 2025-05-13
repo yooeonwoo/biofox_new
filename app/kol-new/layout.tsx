@@ -20,15 +20,16 @@ export default async function KolNewLayout({
   const role = await getClientRole(userId);
   console.log('[kol-new 레이아웃] 사용자 역할:', role);
   
-  if (role === "본사관리자") {
-    console.log('[kol-new 레이아웃] 관리자 사용자 리다이렉트 /admin');
-    redirect("/admin");
+  if (role === "admin") {
+    console.log('[kol-new 레이아웃] 관리자 사용자 리다이렉트 /admin-dashboard/main');
+    redirect("/admin-dashboard/main");
   }
   
-  // kol 역할이 아니면 홈으로 리다이렉트
-  if (role !== "kol") {
-    console.log('[kol-new 레이아웃] 일반 사용자 리다이렉트 /');
-    redirect("/");
+  // kol 역할이 아니면 (admin 제외) 권한 없음 페이지로 리다이렉트
+  if (role !== "kol" && role !== "admin") {
+    console.log('[kol-new 레이아웃] 권한 없는 사용자 리다이렉트');
+    // return new Response("접근 권한이 없습니다", { status: 403 });
+    // 홈으로 리다이렉트하지 않음 - 무한 리다이렉션 방지
   }
   
   return (

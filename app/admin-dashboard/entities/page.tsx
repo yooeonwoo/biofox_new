@@ -477,15 +477,29 @@ export default function EntitiesPage() {
       return;
     }
 
-    const { data: userData } = await supabase
+    if (!kolForm.email) {
+      alert('이메일은 필수 입력사항입니다.');
+      return;
+    }
+
+    // 이메일로 사용자 정보 조회
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('role', 'admin')
-      .limit(1)
+      .eq('email', kolForm.email)
       .single();
 
+    if (userError) {
+      if (userError.code === 'PGRST116') { // 사용자가 없는 경우
+        alert(`입력한 이메일(${kolForm.email})로 등록된 사용자가 없습니다. 먼저 사용자 등록이 필요합니다.`);
+      } else {
+        alert(`사용자 조회 중 오류가 발생했습니다: ${userError.message}`);
+      }
+      return;
+    }
+
     if (!userData) {
-      alert('관리자 계정을 찾을 수 없습니다.');
+      alert('해당 이메일의 사용자를 찾을 수 없습니다.');
       return;
     }
 

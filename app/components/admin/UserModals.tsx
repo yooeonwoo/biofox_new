@@ -27,16 +27,14 @@ interface AddUserModalProps {
   onClose: () => void;
   userForm: {
     email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
+    name: string;
+    shopName: string;
     role: string;
   };
   setUserForm: (form: {
     email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
+    name: string;
+    shopName: string;
     role: string;
   }) => void;
   onSubmit: () => void;
@@ -76,7 +74,7 @@ export function AddUserModal({
           새 사용자 추가
         </h3>
         <p className="text-sm text-gray-500 mb-4">
-          Clerk과 연동된 사용자 계정을 생성합니다. 사용자 정보를 입력하세요.
+          이메일만 등록하면 사용자가 나중에 직접 가입하거나 로그인할 때 계정을 설정할 수 있습니다.
         </p>
         <div className="space-y-4">
           <div>
@@ -94,42 +92,15 @@ export function AddUserModal({
           </div>
           
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              비밀번호 *
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              이름 (선택)
             </label>
             <Input
-              id="password"
-              type="password"
-              value={userForm.password}
-              onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-              placeholder="8자 이상 입력"
-              required
+              id="name"
+              value={userForm.name}
+              onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+              placeholder="홍길동"
             />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                이름
-              </label>
-              <Input
-                id="firstName"
-                value={userForm.firstName}
-                onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
-                placeholder="홍"
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                성
-              </label>
-              <Input
-                id="lastName"
-                value={userForm.lastName}
-                onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
-                placeholder="길동"
-              />
-            </div>
           </div>
           
           <div>
@@ -143,12 +114,26 @@ export function AddUserModal({
               <SelectTrigger id="role">
                 <SelectValue placeholder="역할 선택" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white border-2 border-gray-300 shadow-lg">
                 <SelectItem value="admin">본사관리자</SelectItem>
                 <SelectItem value="kol">KOL</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          
+          {userForm.role === 'kol' && (
+            <div>
+              <label htmlFor="shopName" className="block text-sm font-medium text-gray-700 mb-1">
+                샵명 (선택)
+              </label>
+              <Input
+                id="shopName"
+                value={userForm.shopName}
+                onChange={(e) => setUserForm({ ...userForm, shopName: e.target.value })}
+                placeholder="홍길동의 매장"
+              />
+            </div>
+          )}
         </div>
         <div className="mt-5 flex justify-end space-x-3">
           <Button
@@ -198,7 +183,7 @@ export function EditRoleModal({
               <SelectTrigger id="edit-role">
                 <SelectValue placeholder="역할 선택" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white border-2 border-gray-300 shadow-lg">
                 <SelectItem value="admin">본사관리자</SelectItem>
                 <SelectItem value="kol">KOL</SelectItem>
               </SelectContent>

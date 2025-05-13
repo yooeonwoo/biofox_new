@@ -113,20 +113,20 @@ export function KolModal({
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
           </div>
-          {selectedKol && (
-            <div>
-              <label htmlFor="kol-email" className="block text-sm font-medium text-gray-700 flex items-center">
-                <Mail size={16} className="mr-1" /> 이메일 (읽기 전용)
-              </label>
-              <input
-                type="text"
-                id="kol-email"
-                value={kolForm.email}
-                readOnly
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-gray-500 sm:text-sm"
-              />
-            </div>
-          )}
+          <div>
+            <label htmlFor="kol-email" className="block text-sm font-medium text-gray-700 flex items-center">
+              <Mail size={16} className="mr-1" /> 이메일 {selectedKol ? '(읽기 전용)' : '*'}
+            </label>
+            <input
+              type="email"
+              id="kol-email"
+              value={kolForm.email}
+              onChange={(e) => setKolForm({ ...kolForm, email: e.target.value })}
+              readOnly={selectedKol !== null}
+              className={`mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${selectedKol ? 'bg-gray-50 text-gray-500' : ''}`}
+              placeholder={selectedKol ? undefined : '연결할 사용자 이메일 주소'}
+            />
+          </div>
         </div>
         <div className="mt-5 flex justify-end space-x-3">
           <button

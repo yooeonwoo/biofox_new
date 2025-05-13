@@ -1,6 +1,8 @@
 'use client';
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import { CardContainer, CardBody, CardItem } from "@/components/ui/aceternity/3d-card";
 import { TextRevealCard, TextRevealCardTitle, TextRevealCardDescription } from "@/components/ui/aceternity/text-reveal-card";
@@ -8,6 +10,24 @@ import Aurora from "@/components/ui/Aurora";
 
 export default function Home() {
   const router = useRouter();
+  const { isLoaded, isSignedIn, user } = useUser();
+  
+  // 사용자가 이미 로그인되어 있으면 역할에 따라 리다이렉트
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user) {
+      // publicMetadata나 privateMetadata에서 사용자 역할 가져오기
+      const userRole = user.publicMetadata?.role as string || "kol";
+      
+      if (userRole === "admin") {
+        router.push("/admin-dashboard/main");
+      } else if (userRole === "kol") {
+        router.push("/kol-new");
+      } else {
+        // 기본 리다이렉션
+        router.push("/kol-new");
+      }
+    }
+  }, [isLoaded, isSignedIn, user, router]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">

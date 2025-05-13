@@ -60,9 +60,8 @@ export default function UserManagementPage() {
   // 새 사용자 폼 상태
   const [newUser, setNewUser] = useState({
     email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
+    name: '',
+    shopName: '',
     role: 'kol', // 기본값은 KOL
   });
 
@@ -122,10 +121,10 @@ export default function UserManagementPage() {
   const handleAddUser = async () => {
     try {
       // 폼 유효성 검사
-      if (!newUser.email || !newUser.password || !newUser.role) {
+      if (!newUser.email || !newUser.role) {
         toast({
           title: '입력 오류',
-          description: '이메일, 비밀번호, 역할은 필수 입력 항목입니다.',
+          description: '이메일과 역할은 필수 입력 항목입니다.',
           variant: 'destructive',
         });
         return;
@@ -156,17 +155,16 @@ export default function UserManagementPage() {
       
       // 성공 알림
       toast({
-        title: '사용자 추가 성공',
-        description: '새로운 사용자가 추가되었습니다.',
+        title: '사용자 초대 성공',
+        description: '이메일로 사용자가 등록되었습니다. 사용자는 첫 로그인 시 계정을 설정할 수 있습니다.',
       });
       
       // 모달 닫고 폼 초기화
       setIsAddModalOpen(false);
       setNewUser({
         email: '',
-        password: '',
-        firstName: '',
-        lastName: '',
+        name: '',
+        shopName: '',
         role: 'kol',
       });
       
@@ -238,7 +236,7 @@ export default function UserManagementPage() {
       // 서버 API 호출
       console.log('사용자 삭제 요청:', selectedUser.id);
 
-      const response = await fetch(`/api/admin/users?userId=${selectedUser.id}`, {
+      const response = await fetch(`/api/admin/users?id=${selectedUser.id}`, {
         method: 'DELETE',
       });
 
@@ -246,9 +244,17 @@ export default function UserManagementPage() {
 
       if (!response.ok) {
         console.error('사용자 삭제 API 응답 오류:', responseData);
-        const errorMessage = responseData.details
-          ? `${responseData.error}: ${responseData.details}`
-          : responseData.error || '사용자를 삭제하는 중 오류가 발생했습니다.';
+        let errorMessage = '사용자를 삭제하는 중 오류가 발생했습니다.';
+        
+        if (responseData.error) {
+          errorMessage = responseData.error;
+          
+          // 상세 메시지가 있으면 포함
+          if (responseData.details) {
+            errorMessage += `\n${responseData.details}`;
+          }
+        }
+        
         throw new Error(errorMessage);
       }
 
@@ -262,7 +268,7 @@ export default function UserManagementPage() {
       setIsDeleteModalOpen(false);
       fetchUsers();
     } catch (error: any) {
-      console.error('사용자 삭제 실패:', error);
+      console.error('사용자 삭제 중 오류가 발생했습니다:', error);
       toast({
         title: '사용자 삭제 실패',
         description: error.message || '사용자를 삭제하는 중 오류가 발생했습니다.',
@@ -309,7 +315,7 @@ export default function UserManagementPage() {
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="역할별 필터링" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white border-2 border-gray-300 shadow-lg">
             <SelectItem value="">전체 역할</SelectItem>
             <SelectItem value="admin">본사관리자</SelectItem>
             <SelectItem value="kol">KOL</SelectItem>

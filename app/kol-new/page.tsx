@@ -13,7 +13,8 @@ import {
   Wallet,
   ArrowRight,
   ClipboardList,
-  FileText
+  FileText,
+  AlertTriangle
 } from "lucide-react";
 import SalesChart from "../../components/sales-chart";
 import StoreRankingTable from "../../components/store-ranking-table";
@@ -114,13 +115,22 @@ export default function KolNewPage() {
   const [shopsData, setShopsData] = useState<ShopData[]>([]);
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 사용자 역할 확인
   useEffect(() => {
     if (isLoaded && isSignedIn && user) {
-      const userRole = user.publicMetadata?.role as string || "kol";
-      setIsKol(userRole === "kol");
+      try {
+        const userRole = user.publicMetadata?.role as string || "kol";
+        console.log('사용자 역할:', userRole);
+        setIsKol(userRole === "kol");
+      } catch (err) {
+        console.error('사용자 역할 확인 중 오류:', err);
+        // 기본값으로 KOL 설정
+        setIsKol(true);
+      }
     }
   }, [isLoaded, isSignedIn, user]);
 
@@ -130,15 +140,33 @@ export default function KolNewPage() {
       const fetchData = async () => {
         try {
           setLoading(true);
+          setError(null);
+          setErrorDetails(null);
+          
           // 대시보드 데이터 로드
+          console.log('대시보드 데이터 로드 시작...');
           const dashboardResponse = await fetch('/api/kol-new/dashboard');
-          if (!dashboardResponse.ok) throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
+          
+          if (!dashboardResponse.ok) {
+            const errorData = await dashboardResponse.json().catch(() => ({}));
+            const errorMessage = errorData.error || '대시보드 데이터를 불러오는데 실패했습니다.';
+            const details = errorData.details || '';
+            
+            console.error('대시보드 API 에러:', errorMessage, details);
+            throw new Error(errorMessage, { cause: details });
+          }
+          
           const dashboardResult = await dashboardResponse.json();
+          console.log('대시보드 데이터 로드 완료');
           setDashboardData(dashboardResult);
 
           // 전문점 데이터 로드
           const shopsResponse = await fetch('/api/kol-new/shops');
-          if (!shopsResponse.ok) throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
+          if (!shopsResponse.ok) {
+            const errorData = await shopsResponse.json().catch(() => ({}));
+            console.error('전문점 API 에러:', errorData.error);
+            throw new Error(errorData.error || '전문점 데이터를 불러오는데 실패했습니다.');
+          }
           const shopsResult = await shopsResponse.json();
           
           // 전문점 데이터 가공 - shop_name 및 is_owner_kol 활용하고 매출은 만원 단위로 변환
@@ -159,7 +187,9 @@ export default function KolNewPage() {
           // 영업 일지 데이터 로드
           const activityResponse = await fetch('/api/kol-new/activities'); 
           if (!activityResponse.ok) {
-            throw new Error('영업 일지 데이터를 불러오는데 실패했습니다.');
+            const errorData = await activityResponse.json().catch(() => ({}));
+            console.error('영업 일지 API 에러:', errorData.error);
+            throw new Error(errorData.error || '영업 일지 데이터를 불러오는데 실패했습니다.');
           }
           const activityResult = await activityResponse.json();
           
@@ -186,17 +216,26 @@ export default function KolNewPage() {
           });
           
           setActivityData(formattedActivities);
-
           setLoading(false);
+          setRetryCount(0); // 성공 시 재시도 카운트 초기화
         } catch (err: unknown) {
           console.error('데이터 로드 에러:', err);
-          setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
+          
+          // 오류 정보 설정
+          if (err instanceof Error) {
+            setError(err.message);
+            setErrorDetails(err.cause as string || '');
+          } else {
+            setError('데이터를 불러오는데 실패했습니다.');
+          }
+          
           setLoading(false);
         }
       };
+      
       fetchData();
     }
-  }, [isLoaded, isSignedIn, isKol]);
+  }, [isLoaded, isSignedIn, isKol, retryCount]);
 
   // 로그아웃 함수
   const handleSignOut = async () => {
@@ -207,6 +246,11 @@ export default function KolNewPage() {
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
+  };
+
+  // 데이터 다시 로드
+  const handleRetry = () => {
+    setRetryCount(prevCount => prevCount + 1);
   };
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
@@ -252,13 +296,40 @@ export default function KolNewPage() {
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center text-destructive">에러 발생</CardTitle>
+            <div className="flex justify-center items-center text-destructive mb-2">
+              <AlertTriangle className="h-8 w-8 mr-2" />
+              <CardTitle className="text-center text-destructive">에러 발생</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="text-center text-muted-foreground">{error}</p>
+            {errorDetails && (
+              <p className="text-center text-sm text-gray-500 border-t pt-2">
+                {errorDetails}
+              </p>
+            )}
+            <div className="bg-amber-50 p-4 rounded-md border border-amber-200">
+              <p className="text-sm text-amber-800">
+                <strong>가능한 해결책:</strong>
+              </p>
+              <ul className="list-disc list-inside text-sm text-amber-700 mt-2">
+                <li>페이지 새로고침을 시도해보세요.</li>
+                <li>로그아웃 후 다시 로그인해보세요.</li>
+                <li>계속 오류가 발생하면 관리자에게 문의하세요.</li>
+              </ul>
+            </div>
           </CardContent>
-          <CardFooter className="flex justify-center">
-            <Button onClick={() => window.location.reload()}>
+          <CardFooter className="flex justify-center space-x-4">
+            <Button 
+              variant="outline" 
+              onClick={handleSignOut}
+            >
+              로그아웃
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={handleRetry}
+            >
               다시 시도
             </Button>
           </CardFooter>

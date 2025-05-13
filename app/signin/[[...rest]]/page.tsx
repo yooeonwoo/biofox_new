@@ -55,7 +55,7 @@ export default function SignInPage() {
             path="/signin"
             routing="path"
             signUpUrl="/signup"
-            fallbackRedirectUrl="/dashboard"
+            fallbackRedirectUrl="/dashboard" // 로그인 성공 후 dashboard로 리다이렉션 (미들웨어에서 역할별로 처리)
             developmentMode={false}
           />
         </div>
