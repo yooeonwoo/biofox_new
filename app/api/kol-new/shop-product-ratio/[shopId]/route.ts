@@ -6,7 +6,7 @@ import { getCurrentDate } from '@/lib/date-utils';
 // 동적 라우트 처리 설정
 export const dynamic = 'force-dynamic';
 
-// 새로운 제품 판매 메트릭스 응답 타입
+// 제품 판매 메트릭스 응답 타입
 interface ProductSalesMetricsItem {
   product_id: number;
   quantity: number;
@@ -14,9 +14,7 @@ interface ProductSalesMetricsItem {
   sales_ratio: number;
   products: {
     name: string;
-  } | {
-    name: string;
-  }[];
+  };
 }
 
 // 상점별 제품 판매 비율 API
@@ -24,7 +22,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { shopId: string } }
 ) {
-  const shopId = params.shopId;
+  // params를 await로 처리
+  const { shopId } = await Promise.resolve(params);
   
   try {
     // 인증 확인
@@ -43,8 +42,12 @@ export async function GET(
       );
     }
 
-    // 파라미터 가져오기
-    const yearMonth = request.nextUrl.searchParams.get('yearMonth') || getCurrentDate().substring(0, 7);
+    // 파라미터 가져오기 (YYYY-MM 형식)
+    const paramYearMonth = request.nextUrl.searchParams.get('yearMonth') || getCurrentDate().substring(0, 7);
+    // 형식 변환: YYYY-MM → YYYYMM (테이블에 저장된 형식으로 변환)
+    const yearMonth = paramYearMonth.replace('-', '');
+
+    console.log(`상점 ${shopId}의 제품 비율 조회 월: ${paramYearMonth} (변환됨: ${yearMonth})`);
 
     // KOL ID 조회 - 로그인한 사용자의 KOL ID 가져오기
     const { data: userData, error: userError } = await supabase
@@ -78,7 +81,9 @@ export async function GET(
       .from('product_sales_metrics')
       .select(`
         product_id,
-        products(name),
+        products (
+          name
+        ),
         quantity,
         sales_amount,
         sales_ratio
@@ -96,38 +101,55 @@ export async function GET(
       );
     }
 
+    console.log(`상점 ${shopId}의 제품별 매출 데이터 조회 결과: ${metricsData?.length || 0}개 항목`);
+
+    // 디버깅: 상점 정보 확인
+    const { data: shopInfo, error: shopInfoError } = await supabase
+      .from('shops')
+      .select('shop_name, owner_name')
+      .eq('id', shopId)
+      .single();
+      
+    if (!shopInfoError && shopInfo) {
+      console.log(`상점 정보: ID=${shopId}, 이름=${shopInfo.shop_name}, 소유자=${shopInfo.owner_name}`);
+    }
+
     // 데이터가 없는 경우 빈 배열 반환
     if (!metricsData || metricsData.length === 0) {
-      // 이전 호환성을 위한 기존 데이터 조회 (주석 처리함)
-      /*
-      // shop_product_sales 테이블에서 특정 상점의 제품별 판매 데이터 조회
-      const { data: shopProductSales, error: shopProductError } = await supabase
-        .from('shop_product_sales')
-        ...
-      */
+      // 디버깅을 위해 상점의 다른 월 데이터 확인
+      const { data: otherMonthData, error: otherMonthError } = await supabase
+        .from('product_sales_metrics')
+        .select('year_month, product_id')
+        .eq('shop_id', shopId)
+        .limit(5);
+        
+      if (!otherMonthError && otherMonthData && otherMonthData.length > 0) {
+        console.log(`상점 ${shopId}의 다른 월 데이터 존재:`, otherMonthData);
+      } else {
+        console.log(`상점 ${shopId}의 제품 매출 데이터 없음`);
+      }
       
       return NextResponse.json([], { status: 200 });
     }
 
     // 제품별 판매 비율 계산
-    const formattedData = metricsData.map((item: ProductSalesMetricsItem) => {
-      // products가 배열인 경우와 객체인 경우 모두 처리
+    const formattedData = metricsData.map((item: any) => {
+      // 제품 이름 안전하게 추출
       let productName = '알 수 없는 제품';
-      if (item.products) {
-        if (Array.isArray(item.products)) {
-          if (item.products.length > 0 && item.products[0]?.name) {
-            productName = item.products[0].name;
-          }
-        } else if (item.products?.name) {
-          productName = item.products.name;
-        }
+      if (item.products && item.products.name) {
+        productName = item.products.name;
       }
+
+      // sales_ratio가 numeric 타입이므로 문자열로 변환
+      const salesRatio = typeof item.sales_ratio === 'number' 
+        ? item.sales_ratio.toString() 
+        : (item.sales_ratio || '0');
 
       return {
         productId: item.product_id,
         productName,
         totalSalesAmount: item.sales_amount || 0,
-        salesRatio: item.sales_ratio.toString()
+        salesRatio
       };
     });
 

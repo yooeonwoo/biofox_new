@@ -158,6 +158,12 @@ export default function KolNewPage() {
           
           const dashboardResult = await dashboardResponse.json();
           console.log('대시보드 데이터 로드 완료');
+          
+          // 수정: 초기 로딩 시 ordering 값이 activeShopsCount와 일치하도록 확인
+          if (dashboardResult.shops) {
+            console.log('초기 대시보드 데이터 shops 정보:', dashboardResult.shops);
+          }
+          
           setDashboardData(dashboardResult);
 
           // 전문점 데이터 로드
@@ -168,9 +174,17 @@ export default function KolNewPage() {
             throw new Error(errorData.error || '전문점 데이터를 불러오는데 실패했습니다.');
           }
           const shopsResult = await shopsResponse.json();
+          console.log('전문점 데이터 구조:', shopsResult);
           
           // 전문점 데이터 가공 - shop_name 및 is_owner_kol 활용하고 매출은 만원 단위로 변환
-          const formattedShops = shopsResult.map((shop: any) => ({
+          // 새로운 API 응답 구조(객체) 또는 이전 구조(배열) 모두 지원
+          const shopsData = Array.isArray(shopsResult.shops) 
+            ? shopsResult.shops  // 새 구조: { shops: [...], meta: {...} }
+            : Array.isArray(shopsResult) 
+              ? shopsResult      // 이전 구조: [...] (배열)
+              : [];              // 기본값
+          
+          const formattedShops = shopsData.map((shop: any) => ({
             ...shop,
             shop_name: shop.shop_name || shop.ownerName, // API에서 shop_name을 우선적으로 사용
             sales: {
@@ -183,6 +197,62 @@ export default function KolNewPage() {
           }));
           
           setShopsData(formattedShops);
+          
+          // DashboardData의 shops 정보 업데이트
+          // dashboardData가 이미 설정되어 있다면 업데이트
+          if (dashboardData) {
+            // 전문점 메타 데이터가 있으면 사용, 없으면 직접 계산
+            if (shopsResult.meta) {
+              console.log('대시보드 메타 데이터 상세:', {
+                totalShopsCount: shopsResult.meta.totalShopsCount,
+                activeShopsCount: shopsResult.meta.activeShopsCount
+              });
+              
+              // 활성 전문점 목록 (매출이 있는 전문점)
+              const activeShops = formattedShops.filter((shop: ShopData) => 
+                shop.sales.hasOrdered
+              );
+              console.log('대시보드 직접 계산한 활성 전문점:', activeShops.length);
+              console.log('대시보드 활성 전문점 목록:', activeShops.map((shop: ShopData) => ({
+                name: shop.shop_name,
+                hasOrdered: shop.sales.hasOrdered,
+                total: shop.sales.total
+              })));
+              
+              // 이 부분이 중요: shops.ordering에 activeShopsCount를 정확히 할당
+              setDashboardData({
+                ...dashboardData,
+                shops: {
+                  total: shopsResult.meta.totalShopsCount || 0,
+                  ordering: shopsResult.meta.activeShopsCount || 0, // 활성 전문점 수
+                  notOrdering: (shopsResult.meta.totalShopsCount || 0) - (shopsResult.meta.activeShopsCount || 0),
+                  lastAddedDate: dashboardData.shops?.lastAddedDate // 기존 값 유지
+                }
+              });
+
+              // 디버깅 로그 추가
+              console.log('대시보드 전문점 데이터 설정:', {
+                total: shopsResult.meta.totalShopsCount,
+                ordering: shopsResult.meta.activeShopsCount,
+                notOrdering: shopsResult.meta.totalShopsCount - shopsResult.meta.activeShopsCount
+              });
+            } else {
+              // 이전 API 구조 호환성 유지 (직접 계산)
+              const activeShops = formattedShops.filter((shop: ShopData) => 
+                shop.sales.hasOrdered // 매출 여부만 고려
+              ).length;
+              
+              setDashboardData({
+                ...dashboardData,
+                shops: {
+                  total: formattedShops.length,
+                  ordering: activeShops,
+                  notOrdering: formattedShops.length - activeShops,
+                  lastAddedDate: dashboardData.shops?.lastAddedDate // 기존 값 유지
+                }
+              });
+            }
+          }
 
           // 영업 일지 데이터 로드
           const activityResponse = await fetch('/api/kol-new/activities'); 
@@ -232,6 +302,7 @@ export default function KolNewPage() {
           setLoading(false);
         }
       };
+      
       
       fetchData();
     }

@@ -27,10 +27,19 @@ type Shop = {
   id: number;
   shop_name: string;
   owner_name: string;
-  kol_id?: number;
+  kol_id?: number | null;
   region: string;
   status: string;
   email?: string;
+  relationship_type?: string | null;
+  owner_kol_id?: number | null;
+};
+
+// KOL-Shop 관계 타입
+type KolShopRelation = {
+  kol_id: number;
+  shop_id: number;
+  relationship_type: string;
 };
 
 // Supabase 응답 타입 수정
@@ -225,21 +234,24 @@ export default function EntitiesPage() {
   // 모든 전문점 목록 조회
   const fetchAllShops = async () => {
     try {
+      console.log('모든 전문점을 조회합니다.');
+      
       if (!supabase) {
         console.error('Supabase 클라이언트가 초기화되지 않았습니다.');
         return;
       }
-      
+
+      // 1. 모든 전문점 조회
       const { data: shopsData, error } = await supabase
         .from('shops')
         .select(`
           id, 
           shop_name, 
           owner_name, 
-          kol_id, 
           region, 
           status,
-          email
+          email,
+          owner_kol_id
         `)
         .order('shop_name');
       
@@ -256,17 +268,46 @@ export default function EntitiesPage() {
       }
       
       console.log(`총 ${shopsData.length}개의 전문점을 조회했습니다.`);
+
+      // 2. kol_shops 관계 데이터 조회
+      const { data: kolShopsData, error: kolShopsError } = await supabase
+        .from('kol_shops')
+        .select(`
+          kol_id,
+          shop_id,
+          relationship_type
+        `);
+      
+      if (kolShopsError) {
+        console.error('KOL-전문점 관계 조회 중 오류 발생:', kolShopsError.message);
+      }
+      
+      // KOL-Shop 관계 맵 생성
+      const kolShopMap: Record<number, { kol_id: number, relationship_type: string }> = {};
+      
+      if (kolShopsData && kolShopsData.length > 0) {
+        kolShopsData.forEach(relation => {
+          kolShopMap[relation.shop_id] = {
+            kol_id: relation.kol_id,
+            relationship_type: relation.relationship_type
+          };
+        });
+      }
       
       // 타입 안전하게 처리
       const shopsWithEmail: Shop[] = shopsData.map((shop: any) => {
+        const relation = kolShopMap[shop.id];
+        
         return {
           id: shop.id,
           shop_name: shop.shop_name,
           owner_name: shop.owner_name,
-          kol_id: shop.kol_id || null,
+          kol_id: relation ? relation.kol_id : null,
           region: shop.region,
           status: shop.status,
-          email: shop.email || ''
+          email: shop.email || '',
+          relationship_type: relation ? relation.relationship_type : null,
+          owner_kol_id: shop.owner_kol_id
         };
       });
       
@@ -329,26 +370,29 @@ export default function EntitiesPage() {
         return [];
       }
       
+      // kol_shops 관계 테이블을 통해 전문점 조회
       const { data: kolShopsData, error } = await supabase
-        .from('shops')
+        .from('kol_shops')
         .select(`
-          id, 
-          shop_name, 
-          owner_name, 
-          kol_id, 
-          region, 
-          status,
-          email
+          relationship_type,
+          shops (
+            id, 
+            shop_name, 
+            owner_name, 
+            region, 
+            status,
+            email,
+            owner_kol_id
+          )
         `)
-        .eq('kol_id', kolId)
-        .order('shop_name');
+        .eq('kol_id', kolId);
       
       if (error) {
         console.error(`KOL ID ${kolId}의 전문점 조회 중 오류 발생:`, error.message, error.details, error.hint);
         return [];
       }
       
-      if (!kolShopsData) {
+      if (!kolShopsData || kolShopsData.length === 0) {
         console.log(`KOL ID ${kolId}에 대한 전문점 데이터가 없습니다.`);
         return [];
       }
@@ -356,15 +400,18 @@ export default function EntitiesPage() {
       console.log(`KOL ID ${kolId}에 ${kolShopsData.length}개의 전문점이 있습니다.`);
       
       // 타입 안전하게 처리
-      const shopsWithEmail: Shop[] = kolShopsData.map((shop: any) => {
+      const shopsWithEmail: Shop[] = kolShopsData.map((item: any) => {
+        const shop = item.shops;
         return {
           id: shop.id,
           shop_name: shop.shop_name,
           owner_name: shop.owner_name,
-          kol_id: shop.kol_id || null,
+          kol_id: kolId, // 현재 KOL ID 설정
           region: shop.region,
           status: shop.status,
-          email: shop.email || ''
+          email: shop.email || '',
+          relationship_type: item.relationship_type,
+          owner_kol_id: shop.owner_kol_id
         };
       });
       
@@ -793,91 +840,195 @@ export default function EntitiesPage() {
     }
   };
 
-  // 전문점 추가 함수
+  // 샵 추가 함수
   const addShop = async () => {
     if (!shopForm.shop_name || !shopForm.owner_name) {
-      alert('매장명과 소유자명은 필수 입력사항입니다.');
+      alert('샵 이름과 운영자 이름은 필수 입력사항입니다.');
       return;
     }
 
-    // 사용자 검색 (관리자 계정 사용)
-    const { data: userData } = await supabase
-      .from('users')
-      .select('id')
-      .eq('role', 'admin')
-      .limit(1)
-      .single();
+    try {
+      const shopData = {
+        shop_name: shopForm.shop_name,
+        owner_name: shopForm.owner_name,
+        region: shopForm.region || null,
+        status: 'active',
+        email: shopForm.email || null
+      };
 
-    if (!userData) {
-      alert('관리자 계정을 찾을 수 없습니다.');
-      return;
-    }
+      // 1. 먼저 shops 테이블에 기본 정보 추가
+      const { data: newShop, error: shopError } = await supabase
+        .from('shops')
+        .insert([shopData])
+        .select();
 
-    const userId = userData.id;
+      if (shopError) {
+        throw new Error(`전문점 추가 중 오류 발생: ${shopError.message}`);
+      }
 
-    const { data, error } = await supabase
-      .from('shops')
-      .insert([
-        {
-          shop_name: shopForm.shop_name,
-          owner_name: shopForm.owner_name,
-          kol_id: shopForm.kol_id ? parseInt(shopForm.kol_id) : null,
-          region: shopForm.region || null,
-          status: 'active',
-          email: shopForm.email || null
-        },
-      ])
-      .select();
+      if (!newShop || newShop.length === 0) {
+        throw new Error('전문점 추가 후 반환된 데이터가 없습니다.');
+      }
 
-    if (error) {
-      alert(`오류가 발생했습니다: ${error.message}`);
-    } else {
+      // 2. KOL ID가 제공된 경우, kol_shops 관계 테이블에 레코드 추가
+      if (shopForm.kol_id && shopForm.kol_id !== '0') {
+        const kolId = parseInt(shopForm.kol_id);
+        
+        // KOL이 자신의 샵을 관리하는지 확인 (owner_kol_id 업데이트)
+        // KOL 정보 조회
+        const { data: kolData, error: kolError } = await supabase
+          .from('kols')
+          .select('name, shop_name')
+          .eq('id', kolId)
+          .single();
+          
+        if (kolError) {
+          console.error('KOL 정보 조회 중 오류 발생:', kolError.message);
+        }
+        
+        // KOL 이름과 샵 운영자 이름이 같으면 자신의 샵으로 간주
+        const isOwnShop = kolData && kolData.name === shopForm.owner_name;
+        const relationshipType = isOwnShop ? 'owner' : 'manager';
+        
+        // 소유자 KOL ID 설정 (자신의 샵인 경우)
+        if (isOwnShop) {
+          await supabase
+            .from('shops')
+            .update({ owner_kol_id: kolId })
+            .eq('id', newShop[0].id);
+        }
+        
+        // kol_shops 관계 테이블에 레코드 추가
+        const { error: kolShopsError } = await supabase
+          .from('kol_shops')
+          .insert([{
+            kol_id: kolId,
+            shop_id: newShop[0].id,
+            relationship_type: relationshipType
+          }]);
+        
+        if (kolShopsError) {
+          throw new Error(`KOL-전문점 관계 추가 중 오류 발생: ${kolShopsError.message}`);
+        }
+      }
+
       setShopForm({ shop_name: '', owner_name: '', kol_id: '', region: '', email: '' });
       setIsShopModalOpen(false);
       
-      // 데이터 다시 로드
+      // 전문점 목록 새로고침
       await fetchAllShops();
       
       // 현재 확장된 KOL의 ID가 있다면, 그 KOL의 전문점 목록도 업데이트
-      if (expandedKolId) {
+      if (expandedKolId && shopForm.kol_id === expandedKolId.toString()) {
         await fetchShopsByKol(expandedKolId);
       }
+      
+    } catch (error) {
+      alert(`오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
   };
 
-  // 전문점 수정 함수
+  // 샵 수정 함수
   const updateShop = async () => {
     if (!selectedShop) return;
     if (!shopForm.shop_name || !shopForm.owner_name) {
-      alert('매장명과 소유자명은 필수 입력사항입니다.');
+      alert('샵 이름과 운영자 이름은 필수 입력사항입니다.');
       return;
     }
 
-    const { error } = await supabase
-      .from('shops')
-      .update({
-        shop_name: shopForm.shop_name,
-        owner_name: shopForm.owner_name,
-        kol_id: shopForm.kol_id ? parseInt(shopForm.kol_id) : null,
-        region: shopForm.region || null,
-        email: shopForm.email || null
-      })
-      .eq('id', selectedShop.id);
+    try {
+      // 1. 기본 샵 정보 업데이트
+      const { error: shopUpdateError } = await supabase
+        .from('shops')
+        .update({
+          shop_name: shopForm.shop_name,
+          owner_name: shopForm.owner_name,
+          region: shopForm.region || null,
+          email: shopForm.email || null
+        })
+        .eq('id', selectedShop.id);
 
-    if (error) {
-      alert(`오류가 발생했습니다: ${error.message}`);
-    } else {
+      if (shopUpdateError) {
+        throw new Error(`전문점 정보 업데이트 중 오류 발생: ${shopUpdateError.message}`);
+      }
+
+      // 2. 관계 정보 업데이트
+      // 2.1 기존 KOL ID와 새로운 KOL ID 비교
+      const newKolId = shopForm.kol_id ? parseInt(shopForm.kol_id) : null;
+      const oldKolId = selectedShop.kol_id || null;
+
+      // KOL 관계가 변경된 경우
+      if (newKolId !== oldKolId) {
+        // 기존 관계 데이터가 있으면 삭제
+        if (oldKolId) {
+          const { error: deleteRelationError } = await supabase
+            .from('kol_shops')
+            .delete()
+            .eq('kol_id', oldKolId)
+            .eq('shop_id', selectedShop.id);
+            
+          if (deleteRelationError) {
+            console.error('기존 KOL-전문점 관계 삭제 중 오류:', deleteRelationError.message);
+          }
+        }
+
+        // 새 KOL ID가 있으면 새 관계 추가
+        if (newKolId) {
+          // KOL 정보 조회
+          const { data: kolData, error: kolError } = await supabase
+            .from('kols')
+            .select('name, shop_name')
+            .eq('id', newKolId)
+            .single();
+            
+          if (kolError) {
+            console.error('KOL 정보 조회 중 오류 발생:', kolError.message);
+          }
+          
+          // KOL 이름과 샵 운영자 이름이 같으면 자신의 샵으로 간주
+          const isOwnShop = kolData && kolData.name === shopForm.owner_name;
+          const relationshipType = isOwnShop ? 'owner' : 'manager';
+          
+          // 소유자 KOL ID 설정 (자신의 샵인 경우)
+          if (isOwnShop) {
+            await supabase
+              .from('shops')
+              .update({ owner_kol_id: newKolId })
+              .eq('id', selectedShop.id);
+          } else {
+            // 자신의 샵이 아닌 경우에는 owner_kol_id를 null로 설정할 필요가 없음
+            // 이미 다른 KOL이 소유자인 경우 그대로 유지
+          }
+          
+          // kol_shops 관계 테이블에 레코드 추가
+          const { error: addRelationError } = await supabase
+            .from('kol_shops')
+            .insert([{
+              kol_id: newKolId,
+              shop_id: selectedShop.id,
+              relationship_type: relationshipType
+            }]);
+            
+          if (addRelationError) {
+            throw new Error(`새 KOL-전문점 관계 추가 중 오류 발생: ${addRelationError.message}`);
+          }
+        }
+      }
+
       setShopForm({ shop_name: '', owner_name: '', kol_id: '', region: '', email: '' });
       setSelectedShop(null);
       setIsShopModalOpen(false);
       
-      // 데이터 다시 로드
+      // 전문점 목록 새로고침
       await fetchAllShops();
       
       // 현재 확장된 KOL의 ID가 있다면, 그 KOL의 전문점 목록도 업데이트
       if (expandedKolId) {
         await fetchShopsByKol(expandedKolId);
       }
+      
+    } catch (error) {
+      alert(`오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
   };
 
@@ -886,6 +1037,16 @@ export default function EntitiesPage() {
     if (!deleteItemId) return;
 
     try {
+      // 1. kol_shops 관계 테이블에서 해당 shop_id 관련 레코드 삭제
+      const { error: kolShopsDeleteError } = await supabase
+        .from('kol_shops')
+        .delete()
+        .eq('shop_id', deleteItemId);
+      
+      if (kolShopsDeleteError) {
+        console.error('KOL-전문점 관계 삭제 중 오류:', kolShopsDeleteError.message);
+      }
+
       // -1. 먼저 전문점의 주문을 조회하고 각 주문에 대한 수수료 데이터를 삭제
       const { data: relatedOrders } = await supabase
         .from('orders')

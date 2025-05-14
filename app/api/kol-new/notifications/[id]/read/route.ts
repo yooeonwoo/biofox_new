@@ -10,7 +10,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const notificationId = params.id;
+  // params를 await로 처리
+  const { id: notificationId } = await Promise.resolve(params);
   
   try {
     // 현재 인증된 사용자 확인

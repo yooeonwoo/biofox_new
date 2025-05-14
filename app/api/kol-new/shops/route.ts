@@ -12,6 +12,63 @@ interface MonthlySales {
   commission: number;
 }
 
+// 타입 정의 추가
+interface ShopInfo {
+  id: number;
+  owner_name: string;
+  shop_name: string;
+  region: string | null;
+  status: string;
+  created_at: string;
+  owner_kol_id: number | null;
+}
+
+interface KolShopRelation {
+  shop_id: number;
+  relationship_type: 'owner' | 'manager';
+  shops: ShopInfo;
+}
+
+interface ShopData {
+  id: number;
+  owner_name: string;
+  shop_name: string;
+  region: string | null;
+  status: string;
+  created_at: string;
+  relationship_type: 'owner' | 'manager';
+  owner_kol_id: number | null;
+}
+
+// 중복된 전문점 이름 처리를 위한 함수
+function processDuplicateShopNames(shops: any[]): any[] {
+  // 이름별 전문점 인덱스 맵 생성
+  const shopNameMap: Record<string, number[]> = {};
+  
+  // 각 상점의 이름을 키로 인덱스 맵핑
+  shops.forEach((shop, index) => {
+    const shopName = shop.shop_name.trim();
+    if (!shopNameMap[shopName]) {
+      shopNameMap[shopName] = [];
+    }
+    shopNameMap[shopName].push(index);
+  });
+  
+  // 중복된 이름이 있는 경우 구분자 추가
+  Object.entries(shopNameMap).forEach(([name, indices]) => {
+    if (indices.length > 1) {
+      // 중복된 이름이 있는 경우, 인덱스 순서대로 번호 추가
+      indices.forEach((index, i) => {
+        if (i > 0) { // 첫 번째 항목은 그대로 두고 두 번째부터 번호 추가
+          shops[index].shop_name = `${shops[index].shop_name} (${i + 1})`;
+        }
+      });
+    }
+  });
+  
+  return shops;
+}
+
 // KOL 전문점 목록 API 라우트
 export async function GET() {
   try {
@@ -29,6 +86,10 @@ export async function GET() {
     // 현재 월 계산 (YYYY-MM 형식)
     const currentDate = getCurrentDate();
     const currentMonth = currentDate.substring(0, 7);
+    // 형식 변환: YYYY-MM → YYYYMM (테이블에 저장된 형식으로 변환)
+    const formattedMonth = currentMonth.replace('-', '');
+
+    console.log(`조회할 월 정보: ${currentMonth} (변환됨: ${formattedMonth})`);
 
     // KOL ID 조회 - 로그인한 사용자의 KOL ID 가져오기
     let { data: userData, error: userError } = await supabase
@@ -87,7 +148,7 @@ export async function GET() {
 
     let { data: kolData, error: kolError } = await supabase
       .from('kols')
-      .select('id, name')
+      .select('id, name, shop_name')
       .eq('user_id', userData.id)
       .single();
 
@@ -109,40 +170,75 @@ export async function GET() {
 
     console.log(`KOL 조회 성공: ID=${kolData.id}, Name=${kolData.name}`);
 
-    // KOL 소속 전문점 정보 조회
-    const { data: shops, error: shopsError } = await supabase
-      .from('shops')
-      .select('id, owner_name, shop_name, region, status, created_at, is_owner_kol')
-      .eq('kol_id', kolData.id)
-      .order('created_at', { ascending: false });
+    // KOL이 관리하는 전문점 정보 조회 (kol_shops 테이블 사용)
+    const { data: kolShops, error: kolShopsError } = await supabase
+      .from('kol_shops')
+      .select(`
+        shop_id,
+        relationship_type,
+        shops (
+          id, 
+          owner_name, 
+          shop_name, 
+          region, 
+          status, 
+          created_at,
+          owner_kol_id
+        )
+      `)
+      .eq('kol_id', kolData.id);
 
-    if (shopsError) {
-      console.error(`전문점 정보 조회 오류(kol_id=${kolData.id}):`, shopsError);
+    if (kolShopsError) {
+      console.error(`KOL-전문점 관계 조회 오류(kol_id=${kolData.id}):`, kolShopsError);
       return NextResponse.json(
-        { error: '전문점 정보를 조회하는 중 오류가 발생했습니다.' },
+        { error: 'KOL-전문점 관계 정보를 조회하는 중 오류가 발생했습니다.' },
         { status: 500 }
       );
     }
 
-    if (!shops || shops.length === 0) {
+    if (!kolShops || kolShops.length === 0) {
       console.log(`전문점 데이터 없음(kol_id=${kolData.id})`);
-      return NextResponse.json([]);
+      return NextResponse.json({ shops: [], meta: { totalShopsCount: 0, activeShopsCount: 0 } });
     }
 
-    // 전문점별 월간 매출 데이터 조회 (새로운 테이블 사용)
+    // 전문점 정보를 플랫하게 변환
+    const shops: ShopData[] = kolShops.map((item: any) => ({
+      id: item.shops.id,
+      owner_name: item.shops.owner_name,
+      shop_name: item.shops.shop_name,
+      region: item.shops.region,
+      status: item.shops.status,
+      created_at: item.shops.created_at,
+      relationship_type: item.relationship_type,
+      owner_kol_id: item.shops.owner_kol_id
+    }));
+
+    // shop_sales_metrics 테이블에서 전문점별 월간 매출 데이터 조회
     const { data: salesData, error: salesError } = await supabase
       .from('shop_sales_metrics')
       .select('shop_id, total_sales, product_sales, device_sales, commission')
-      .eq('year_month', currentMonth);
+      .eq('year_month', formattedMonth);
 
     if (salesError) {
-      console.error(`매출 데이터 조회 오류(kol_id=${kolData.id}, month=${currentMonth}):`, salesError);
+      console.error(`매출 데이터 조회 오류(year_month=${formattedMonth}):`, salesError);
       return NextResponse.json(
         { error: '매출 데이터를 조회하는 중 오류가 발생했습니다.' },
         { status: 500 }
       );
     }
 
+    console.log(`조회된 매출 데이터 수: ${salesData?.length || 0}`);
+    
+    // 각 샵별 매출 데이터 로깅 (특히 믈리에스킨, 마음에점을찍다 확인)
+    console.log("샵별 매출 데이터:");
+    if (salesData && salesData.length > 0) {
+      console.log(salesData.map((sale: any) => ({
+        shop_id: sale.shop_id,
+        total_sales: sale.total_sales,
+        hasOrdered: Boolean(sale.total_sales > 0)
+      })));
+    }
+    
     // 매출 데이터를 맵으로 변환하여 조회 효율성 높이기
     const salesByShop: Record<number, any> = {};
     if (salesData && salesData.length > 0) {
@@ -152,35 +248,115 @@ export async function GET() {
     }
 
     // 전문점 데이터와 매출 데이터 조합
-    const shopsWithSales = shops.map(shop => {
-      // shops 테이블에 is_owner_kol 필드가 있으면 사용, 없으면 이름 비교로 판단
-      const is_owner_kol = shop.is_owner_kol !== undefined && shop.is_owner_kol !== null 
-        ? shop.is_owner_kol 
-        : (shop.owner_name === kolData.name);
+    let shopsWithSales = shops.map(shop => {
+      // 소유 관계 확인 (현재 KOL이 소유자인지)
+      const is_owner_kol = shop.relationship_type === 'owner';
+      
+      // 자신의 샵인지 확인 - 소유자가 현재 KOL이고 관계 타입이 owner인 경우
+      // 수정: 두 조건 모두 만족할 때만 자기 샵으로 판단 (일부 자기 샵이 누락되는 문제 해결)
+      const is_self_shop = shop.owner_kol_id === kolData.id && shop.relationship_type === 'owner';
+      
+      // shop_name 필드가 존재하고 값이 있는지 확인
+      const shop_name = shop.shop_name && shop.shop_name.trim() !== '' 
+        ? shop.shop_name 
+        : shop.owner_name;
+      
+      // 매출 데이터 가져오기 (없으면 기본값 사용)
+      const shopSalesData = salesByShop[shop.id] || {
+        total_sales: 0,
+        product_sales: 0,
+        device_sales: 0,
+        commission: 0
+      };
       
       return {
         id: shop.id,
         ownerName: shop.owner_name,
-        shop_name: shop.shop_name || shop.owner_name, // shop_name이 없는 경우 owner_name을 사용
+        shop_name,
         region: shop.region || '',
         status: shop.status,
         createdAt: shop.created_at,
-        is_owner_kol, // 직영점 여부 추가
+        relationship_type: shop.relationship_type,
+        is_owner_kol,
+        is_self_shop,
+        owner_kol_id: shop.owner_kol_id,
         sales: {
-          total: salesByShop[shop.id]?.total_sales || 0,
-          product: salesByShop[shop.id]?.product_sales || 0,
-          device: salesByShop[shop.id]?.device_sales || 0,
-          commission: salesByShop[shop.id]?.commission || 0,
-          hasOrdered: Boolean(salesByShop[shop.id] && salesByShop[shop.id].total_sales > 0)
+          total: shopSalesData.total_sales || 0,
+          product: shopSalesData.product_sales || 0,
+          device: shopSalesData.device_sales || 0,
+          commission: shopSalesData.commission || 0,
+          hasOrdered: Boolean(shopSalesData.total_sales > 0)
         }
       };
     });
 
+    // 중복된 전문점 이름 처리
+    shopsWithSales = processDuplicateShopNames(shopsWithSales);
+    
+    // 디버깅 로그 추가 - 모든 전문점 데이터 상세 출력 (특히 믈리에스킨과 마음에점을찍다 관련)
+    console.log("상세 전문점 데이터 디버깅:", shopsWithSales.map(shop => ({
+      id: shop.id,
+      name: shop.shop_name,
+      owner: shop.ownerName,
+      is_self: shop.is_self_shop,
+      status: shop.status,
+      has_ordered: shop.sales.hasOrdered,
+      owner_kol_id: shop.owner_kol_id,
+      relationship: shop.relationship_type,
+      sales_total: shop.sales.total
+    })));
+    
+    // 중요: 이제 샵 필터링을 제거하고 모든 샵을 표시하도록 수정
+    // KOL 본인의 샵 포함 (모든 샵 표시)
+    // const filteredShops = shopsWithSales.filter(shop => !shop.is_self_shop);
+    const filteredShops = shopsWithSales; // 모든 샵 표시로 변경
+    
     // 매출 기준 내림차순 정렬
-    const sortedShops = shopsWithSales.sort((a, b) => b.sales.total - a.sales.total);
+    const sortedShops = filteredShops.sort((a, b) => b.sales.total - a.sales.total);
 
-    console.log(`전문점 데이터 조회 완료: KOL ID=${kolData.id}, 전문점 수=${sortedShops.length}`);
-    return NextResponse.json(sortedShops);
+    // 전문점 통계 정보 추가
+    // 전체 전문점 수: 모든 샵 카운트 (자기 샵 포함)
+    const totalShopsCount = shopsWithSales.length;
+    
+    // 각 전문점의 활성 여부 디버깅
+    console.log("각 전문점 활성 상태 점검 (매출 유무로만 판단):");
+    shopsWithSales.forEach(shop => {
+      console.log(`샵: ${shop.shop_name}, 상태: ${shop.status}, 매출있음: ${shop.sales.hasOrdered}, 매출액: ${shop.sales.total}, 활성여부(매출기준): ${shop.sales.hasOrdered}`);
+    });
+    
+    // 활성 전문점 수 계산 - 매출이 있는 모든 샵 (상태는 고려 안함)
+    const activeShopsCount = shopsWithSales.filter(shop => 
+      shop.sales.hasOrdered
+    ).length;
+
+    console.log(`전문점 데이터 조회 완료: KOL ID=${kolData.id}, 전문점 수=${totalShopsCount}, 활성 전문점 수=${activeShopsCount}`);
+    
+    // 활성 전문점 상세 정보 로깅
+    console.log(`활성 전문점 상세:`, shopsWithSales
+      .filter(shop => shop.sales.hasOrdered)
+      .map(shop => ({ 
+        id: shop.id, 
+        name: shop.shop_name, 
+        owner: shop.ownerName,
+        sales: shop.sales.total,
+        relationship: shop.relationship_type,
+        is_self: shop.is_self_shop
+      }))
+    );
+
+    // 메타 정보 포함 응답
+    console.log("API 응답으로 보내는 메타 정보:", {
+      totalShopsCount,
+      activeShopsCount
+    });
+    
+    return NextResponse.json({
+      shops: sortedShops,
+      meta: {
+        totalShopsCount,
+        activeShopsCount
+      }
+    });
   } catch (error) {
     console.error('KOL 전문점 목록 조회 에러:', error);
     const errorMessage = error instanceof Error 

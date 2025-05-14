@@ -70,6 +70,9 @@ interface ShopData {
   status: string;
   createdAt: string;
   is_owner_kol?: boolean;
+  is_self_shop?: boolean;
+  relationship_type?: 'owner' | 'manager';
+  owner_kol_id?: number | null;
   sales: {
     total: number;
     product: number;
@@ -120,6 +123,11 @@ export default function StoresPage() {
   const [error, setError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [kolInfo, setKolInfo] = useState<{ name: string; shopName: string } | null>(null);
+  // 전문점 통계 정보를 저장할 상태 추가
+  const [shopStats, setShopStats] = useState<{ totalShopsCount: number; activeShopsCount: number }>({
+    totalShopsCount: 0,
+    activeShopsCount: 0
+  });
 
   // 선택된 상점의 상세 정보를 저장할 상태 추가
   const [selectedShop, setSelectedShop] = useState<ShopData | null>(null);
@@ -132,6 +140,32 @@ export default function StoresPage() {
     salesRatio: string;
   }[]>([]);
   const [isLoadingShopDetail, setIsLoadingShopDetail] = useState(false);
+
+  // 필터링된 전문점 데이터 (API 응답 포맷에 맞춰 수정)
+  const showAllShops = true; // true로 변경하여 모든 전문점 표시
+  
+  // 필터링 로직 개선
+  // 모든 샵을 표시하도록 변경 (API에서 이미 필터링 제거)
+  console.log(`필터링 전 전문점 수: ${shopsData.length}`);
+  const filteredShops = shopsData; // 모든 샵 표시
+  console.log(`필터링 후 전문점 수: ${filteredShops.length}`);
+
+  // 파이 차트 데이터 준비
+  const pieChartColors = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c', '#d0ed57', '#ffc658'];
+  const pieChartData = productRatioData.map((item, index) => ({
+    name: item.productName,
+    value: item.totalSalesAmount,
+    ratio: parseFloat(item.salesRatio),
+    fill: pieChartColors[index % pieChartColors.length]
+  }));
+
+  // 당월 매출 기준 바 차트 데이터 (제한 없이 전체 데이터)
+  const currentMonthBarData = filteredShops
+    .sort((a, b) => b.sales.total - a.sales.total)
+    .map(shop => ({
+      name: shop.shop_name,
+      매출: shop.sales.total
+    }));
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -162,20 +196,101 @@ export default function StoresPage() {
           if (!shopsResponse.ok) throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
           const shopsResult = await shopsResponse.json();
           
-          // 전문점 데이터 가공 (monthly_sales 테이블의 total_sales와 commission 사용)
-          const formattedShops = shopsResult.map((shop: any) => ({
-            ...shop,
-            shop_name: shop.shop_name || shop.ownerName,
-            sales: {
-              ...shop.sales,
-              total: shop.sales.total,
-              product: shop.sales.product,
-              device: shop.sales.device,
-              commission: shop.sales.commission // monthly_sales 테이블에서 직접 가져온 commission 값
-            }
-          }));
+          // API 응답 구조 확인 및 로그
+          console.log('API 응답 구조:', {
+            hasShops: Boolean(shopsResult.shops),
+            shopsCount: shopsResult.shops?.length || 0,
+            hasMeta: Boolean(shopsResult.meta),
+            meta: shopsResult.meta
+          });
           
-          setShopsData(formattedShops);
+          // 변경된 API 구조 처리 (shops와 meta 객체)
+          if (shopsResult.shops && Array.isArray(shopsResult.shops)) {
+            const formattedShops = shopsResult.shops.map((shop: any) => ({
+              ...shop,
+              shop_name: shop.shop_name || shop.ownerName,
+              sales: {
+                ...shop.sales,
+                total: shop.sales.total,
+                product: shop.sales.product,
+                device: shop.sales.device,
+                commission: shop.sales.commission
+              }
+            }));
+            
+            setShopsData(formattedShops);
+            
+            // 메타 데이터가 있으면 사용 (새 API 구조)
+            if (shopsResult.meta) {
+              console.log('메타 데이터 상세:', {
+                totalShopsCount: shopsResult.meta.totalShopsCount,
+                activeShopsCount: shopsResult.meta.activeShopsCount,
+                activeShopsFormatted: typeof shopsResult.meta.activeShopsCount
+              });
+              
+              // 활성 전문점 상태 체크
+              const activeShopsFromAPI = formattedShops.filter((shop: ShopData) => 
+                shop.status === 'active' // 수정: 매출 여부는 고려하지 않음
+              );
+              console.log('활성 전문점 직접 계산:', activeShopsFromAPI.length);
+              console.log('활성 전문점 목록:', activeShopsFromAPI.map((shop: ShopData) => ({
+                name: shop.shop_name,
+                hasOrdered: shop.sales.hasOrdered,
+                total: shop.sales.total,
+                status: shop.status
+              })));
+              
+              setShopStats({
+                totalShopsCount: shopsResult.meta.totalShopsCount || 0,
+                activeShopsCount: shopsResult.meta.activeShopsCount || 0
+              });
+              
+              // 상태 업데이트 후 확인
+              setTimeout(() => {
+                console.log('설정된 상태 값:', shopStats);
+              }, 0);
+            } else {
+              // 메타 데이터가 없으면 직접 계산 (구 API 구조 호환성 유지)
+              console.log('메타 데이터 없음, 직접 계산');
+              setShopStats({
+                totalShopsCount: formattedShops.length,
+                activeShopsCount: formattedShops.filter((shop: ShopData) => 
+                  shop.sales.hasOrdered
+                ).length
+              });
+            }
+          } else if (Array.isArray(shopsResult)) {
+            // 이전 API 구조도 지원 (호환성 유지)
+            console.log('이전 API 구조 사용');
+            const formattedShops = shopsResult.map((shop: any) => ({
+              ...shop,
+              shop_name: shop.shop_name || shop.ownerName,
+              sales: {
+                ...shop.sales,
+                total: shop.sales.total,
+                product: shop.sales.product,
+                device: shop.sales.device,
+                commission: shop.sales.commission
+              }
+            }));
+            
+            setShopsData(formattedShops);
+            
+            // 이전 API 구조에서는 직접 계산
+            setShopStats({
+              totalShopsCount: formattedShops.length,
+              activeShopsCount: formattedShops.filter((shop: ShopData) => 
+                shop.sales.hasOrdered
+              ).length
+            });
+          } else {
+            console.log('API 응답에 샵 데이터 없음');
+            setShopsData([]);
+            setShopStats({
+              totalShopsCount: 0,
+              activeShopsCount: 0
+            });
+          }
 
           // 제품 비율 데이터 로드 (API 형태에 따라 조정 필요)
           const productRatioResponse = await fetch('/api/kol-new/product-ratio');
@@ -202,27 +317,6 @@ export default function StoresPage() {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
   };
-
-  // 필터링된 전문점 데이터
-  const filteredShops = shopsData
-    .sort((a, b) => b.sales.total - a.sales.total); // 항상 매출 높은 순으로 정렬
-
-  // 파이 차트 데이터 준비
-  const pieChartColors = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c', '#d0ed57', '#ffc658'];
-  const pieChartData = productRatioData.map((item, index) => ({
-    name: item.productName,
-    value: item.totalSalesAmount,
-    ratio: parseFloat(item.salesRatio),
-    fill: pieChartColors[index % pieChartColors.length]
-  }));
-
-  // 당월 매출 기준 바 차트 데이터 (제한 없이 전체 데이터)
-  const currentMonthBarData = filteredShops
-    .sort((a, b) => b.sales.total - a.sales.total)
-    .map(shop => ({
-      name: shop.shop_name,
-      매출: shop.sales.total
-    }));
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
   if (!isLoaded || isKol === null) {
@@ -575,6 +669,33 @@ export default function StoresPage() {
                         </ResponsiveContainer>
                       </div>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 전문점 통계 정보 */}
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col">
+                    <div className="text-sm text-gray-500 mb-1">전체 전문점</div>
+                    <div className="flex items-baseline">
+                      <span className="text-2xl font-bold">{shopStats.totalShopsCount}</span>
+                      <span className="ml-1 text-sm text-gray-500">개</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col">
+                    <div className="text-sm text-gray-500 mb-1">활성 전문점</div>
+                    <div className="flex items-baseline">
+                      <span className="text-2xl font-bold">{shopStats.activeShopsCount}</span>
+                      <span className="ml-1 text-sm text-gray-500">개</span>
+                      <span className="ml-2 text-xs text-gray-400">(당월 매출 기준)</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
