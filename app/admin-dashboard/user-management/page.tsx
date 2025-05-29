@@ -29,10 +29,15 @@ import {
 type User = {
   id: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
   role?: string;
+  name?: string;
   createdAt: string;
+  // KOL 정보 추가
+  kolId?: number | null;
+  kolName?: string | null;
+  shopName?: string | null;
+  kolStatus?: string | null;
+  region?: string | null;
 };
 
 // 필터 상태 타입 정의
@@ -109,8 +114,9 @@ export default function UserManagementPage() {
   const filteredUsers = users.filter((user) => {
     const searchMatch = 
       user.email.toLowerCase().includes(filters.search.toLowerCase()) || 
-      (user.firstName && user.firstName.toLowerCase().includes(filters.search.toLowerCase())) ||
-      (user.lastName && user.lastName.toLowerCase().includes(filters.search.toLowerCase()));
+      (user.name && user.name.toLowerCase().includes(filters.search.toLowerCase())) ||
+      (user.kolName && user.kolName.toLowerCase().includes(filters.search.toLowerCase())) ||
+      (user.shopName && user.shopName.toLowerCase().includes(filters.search.toLowerCase()));
       
     const roleMatch = !filters.role || user.role === filters.role;
     
@@ -344,7 +350,9 @@ export default function UserManagementPage() {
               <TableRow>
                 <TableHead>이메일</TableHead>
                 <TableHead>이름</TableHead>
+                <TableHead>샵명</TableHead>
                 <TableHead>역할</TableHead>
+                <TableHead>상태</TableHead>
                 <TableHead>생성일</TableHead>
                 <TableHead className="text-right">관리</TableHead>
               </TableRow>
@@ -352,7 +360,7 @@ export default function UserManagementPage() {
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-32">
+                  <TableCell colSpan={7} className="text-center h-32">
                     <div className="flex flex-col items-center justify-center">
                       <p className="mb-2 text-muted-foreground">사용자가 없습니다.</p>
                       {filters.search || filters.role ? (
@@ -371,7 +379,8 @@ export default function UserManagementPage() {
                 filteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>{`${user.firstName || ''} ${user.lastName || ''}`}</TableCell>
+                    <TableCell>{user.name || user.kolName || '-'}</TableCell>
+                    <TableCell>{user.shopName || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center">
                         {user.role === 'admin' ? (
@@ -389,7 +398,28 @@ export default function UserManagementPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{user.createdAt}</TableCell>
+                    <TableCell>
+                      {user.role === 'kol' && user.kolStatus ? (
+                        <div className="flex items-center">
+                          {user.kolStatus === 'active' ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                              활성
+                            </span>
+                          ) : user.kolStatus === 'pending' ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              대기중
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              비활성
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{new Date(user.createdAt).toLocaleDateString('ko-KR')}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button

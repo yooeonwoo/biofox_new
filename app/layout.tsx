@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { koKR } from "@clerk/localizations";
+import { Toaster } from "@/components/ui/toaster";
 
 // 환경 변수 체크
 const hasClerkKeys = !!(
@@ -55,6 +56,7 @@ export default function RootLayout({
             <p>Clerk과 Supabase 설정을 위해 .env 파일을 확인해주세요.</p>
           </div>
           {children}
+          <Toaster />
         </body>
       </html>
     );
@@ -91,6 +93,7 @@ export default function RootLayout({
       <html lang="ko">
         <body className={`${inter.variable} ${notoSansKr.variable}`}>
           {children}
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>

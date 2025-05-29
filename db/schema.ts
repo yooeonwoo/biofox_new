@@ -1,5 +1,8 @@
-import { pgTable, serial, varchar, timestamp, integer, boolean, text, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, boolean, text, numeric, date, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+
+// Enum 정의
+export const activityTypeEnum = pgEnum('activity_type_enum', ['general', 'visit']);
 
 // 사용자 테이블
 export const users = pgTable("users", {
@@ -41,6 +44,9 @@ export const kolsRelations = relations(kols, ({ one, many }) => ({
     references: [users.id],
   }),
   shops: many(shops),
+  ownedShops: many(shops, {
+    relationName: "ownedShops"
+  }),
   dashboardMetrics: many(kolDashboardMetrics),
   totalMonthlySales: many(kolTotalMonthlySales),
   salesActivities: many(salesActivities),
@@ -58,6 +64,8 @@ export const shops = pgTable("shops", {
   isOwnerKol: boolean("is_owner_kol").default(false).notNull(),
   contractDate: timestamp("contract_date"),
   email: varchar("email", { length: 255 }),
+  ownerKolId: integer("owner_kol_id").references(() => kols.id),
+  isSelfShop: boolean("is_self_shop").default(false).notNull(),
   status: varchar("status", { length: 50 }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
@@ -67,6 +75,10 @@ export const shops = pgTable("shops", {
 export const shopsRelations = relations(shops, ({ one, many }) => ({
   kol: one(kols, {
     fields: [shops.kolId],
+    references: [kols.id],
+  }),
+  ownerKol: one(kols, {
+    fields: [shops.ownerKolId],
     references: [kols.id],
   }),
   salesMetrics: many(shopSalesMetrics),
@@ -118,9 +130,9 @@ export const salesActivities = pgTable("sales_activities", {
   id: serial("id").primaryKey(),
   kolId: integer("kol_id").references(() => kols.id).notNull(),
   shopId: integer("shop_id").references(() => shops.id),
-  activityDate: timestamp("activity_date", { mode: 'date' }).defaultNow().notNull(),
+  activityDate: date("activity_date").defaultNow().notNull(),
   content: text("content").notNull(),
-  activityType: varchar("activity_type", { length: 50 }).default("general"),
+  activityType: activityTypeEnum("activity_type").default("general"),
   shopName: text("shop_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
@@ -254,4 +266,6 @@ export const productTotalSalesStatsRelations = relations(productTotalSalesStats,
     fields: [productTotalSalesStats.productId],
     references: [products.id],
   }),
-})); 
+}));
+
+ 

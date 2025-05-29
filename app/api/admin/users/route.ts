@@ -24,8 +24,26 @@ export async function GET(req: NextRequest) {
 
     // TODO: 실제 프로덕션에서는 사용자 권한을 확인하는 로직 추가 필요
 
-    // 사용자 목록 조회
-    const userList = await db.select().from(users);
+    // 사용자 목록 조회 (KOL 정보 포함)
+    const userList = await db
+      .select({
+        id: users.id,
+        clerkId: users.clerkId,
+        email: users.email,
+        role: users.role,
+        name: users.name,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        // KOL 정보 추가
+        kolId: kols.id,
+        kolName: kols.name,
+        shopName: kols.shopName,
+        kolStatus: kols.status,
+        region: kols.region
+      })
+      .from(users)
+      .leftJoin(kols, eq(users.id, kols.userId));
+    
     return NextResponse.json({ users: userList });
   } catch (error) {
     console.error("사용자 목록 조회 실패:", error);

@@ -77,6 +77,8 @@ export type Database = {
           is_owner_kol: boolean
           contract_date: string | null
           email: string | null
+          owner_kol_id: number | null
+          is_self_shop: boolean
           status: string
           created_at: string
           updated_at: string
@@ -91,6 +93,8 @@ export type Database = {
           is_owner_kol?: boolean
           contract_date?: string | null
           email?: string | null
+          owner_kol_id?: number | null
+          is_self_shop?: boolean
           status?: string
           created_at?: string
           updated_at?: string
@@ -105,6 +109,8 @@ export type Database = {
           is_owner_kol?: boolean
           contract_date?: string | null
           email?: string | null
+          owner_kol_id?: number | null
+          is_self_shop?: boolean
           status?: string
           created_at?: string
           updated_at?: string
@@ -455,6 +461,8 @@ export type ShopCamel = {
   isOwnerKol: boolean
   contractDate: string | null
   email: string | null
+  ownerKolId: number | null
+  isSelfShop: boolean
   status: string
   createdAt: string
   updatedAt: string
@@ -495,6 +503,7 @@ export type ShopSalesMetricCamel = {
   createdAt: string
   updatedAt: string
 }
+
 
 // 대시보드 데이터 타입 (kol-new 페이지에서 사용)
 export type DashboardData = {

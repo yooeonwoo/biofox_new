@@ -62,10 +62,11 @@ export default function ShopDataEntry() {
         if (kolError) throw kolError;
         setKols(kolData || []);
         
-        // 매장 정보 가져오기
+        // 매장 정보 가져오기 (KOL 본인 샵 제외)
         const { data: shopData, error: shopError } = await supabase
           .from('shops')
-          .select('id, shop_name, owner_name, kol_id');
+          .select('id, shop_name, owner_name, kol_id')
+          .eq('is_self_shop', false);
         
         if (shopError) throw shopError;
         setShops(shopData || []);
