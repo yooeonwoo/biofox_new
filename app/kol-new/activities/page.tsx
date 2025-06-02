@@ -102,7 +102,7 @@ export default function ActivitiesPage() {
           }
           
           const shopsData = await shopsResponse.json();
-          const formattedShops = shopsData.map((shop: any) => ({
+          const formattedShops = (shopsData.shops || []).map((shop: any) => ({
             id: shop.id,
             name: shop.shop_name || shop.ownerName
           }));

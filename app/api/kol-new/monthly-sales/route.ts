@@ -27,30 +27,35 @@ export async function GET(request: NextRequest) {
       // 로그인한 사용자의 KOL ID 가져오기
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id')
+        .select('id, name, email')
         .eq('clerk_id', userId)
         .single();
 
       if (userError || !userData) {
+        console.error('월별 수당 API - 사용자 조회 실패:', { userId, userError });
         return NextResponse.json(
           { error: '사용자 정보를 찾을 수 없습니다.' },
           { status: 404 }
         );
       }
 
+      console.log('월별 수당 API - 사용자 정보:', userData);
+
       const { data: kolData, error: kolError } = await supabase
         .from('kols')
-        .select('id')
+        .select('id, name, shop_name')
         .eq('user_id', userData.id)
         .single();
 
       if (kolError || !kolData) {
+        console.error('월별 수당 API - KOL 조회 실패:', { userId: userData.id, kolError });
         return NextResponse.json(
           { error: 'KOL 정보를 찾을 수 없습니다.' },
           { status: 404 }
         );
       }
       
+      console.log('월별 수당 API - KOL 정보:', kolData);
       kolId = kolData.id;
     } else {
       kolId = parseInt(kolIdParam);
@@ -90,15 +95,26 @@ export async function GET(request: NextRequest) {
     monthsAgo.setMonth(monthsAgo.getMonth() - (parseInt(months) - 1));
     const startDate = monthsAgo.toISOString().split('T')[0];
     
-    // 최근 N개월 범위 생성
+    // 최근 N개월 범위 생성 (YYYY-MM 형식)
     const monthRange = getMonthsBetween(startDate, currentDate);
+    
+    console.log('월별 수당 API - 조회 범위:', {
+      startDate,
+      currentDate,
+      monthRange,
+      kolId
+    });
 
-    // KOL 월별 요약 데이터 조회 (새로운 테이블 사용)
+    // KOL 월별 요약 데이터 조회 - 수당만 조회
+    // 하이픈 있는 형식: 2025-01, 2025-02
+    // 하이픈 없는 형식: 202501, 202502
+    const monthRangeWithoutHyphen = monthRange.map(month => month.replace('-', ''));
+    
     const { data: summaryData, error: summaryError } = await supabase
       .from('kol_dashboard_metrics')
-      .select('year_month, monthly_sales, monthly_commission')
+      .select('year_month, monthly_commission')
       .eq('kol_id', kolId)
-      .in('year_month', monthRange)
+      .or(`year_month.in.(${monthRange.join(',')}),year_month.in.(${monthRangeWithoutHyphen.join(',')})`)
       .order('year_month', { ascending: true });
 
     if (summaryError) {
@@ -109,12 +125,40 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 결과 데이터 가공
-    const monthlyData = summaryData.map(item => ({
-      month: item.year_month.substring(5) + '월', // 'MM월' 형식으로 변환
-      sales: item.monthly_sales,
-      allowance: item.monthly_commission
-    }));
+    console.log('월별 수당 API - DB 조회 결과:', {
+      resultCount: summaryData?.length || 0,
+      summaryData
+    });
+
+    // 데이터가 없는 경우 빈 배열이지만 월별 구조는 유지
+    if (!summaryData || summaryData.length === 0) {
+      console.log('월별 수당 API - 데이터 없음, 빈 월별 구조 생성');
+      
+      // 빈 월별 데이터 구조 생성
+      const emptyMonthlyData = monthRange.map(yearMonth => ({
+        month: yearMonth.substring(5) + '월', // 'MM월' 형식으로 변환
+        allowance: 0
+      }));
+      
+      console.log('월별 수당 API - 빈 데이터 응답:', emptyMonthlyData);
+      return NextResponse.json(emptyMonthlyData);
+    }
+
+    // 결과 데이터 가공 - 모든 월에 대해 데이터가 있도록 보장
+    const monthlyData = monthRange.map(yearMonth => {
+      // 하이픈 있는 형식과 없는 형식 모두 검색
+      const yearMonthWithoutHyphen = yearMonth.replace('-', '');
+      const existingData = summaryData.find(item => 
+        item.year_month === yearMonth || item.year_month === yearMonthWithoutHyphen
+      );
+      
+      return {
+        month: yearMonth.substring(5) + '월', // 'MM월' 형식으로 변환
+        allowance: existingData?.monthly_commission || 0
+      };
+    });
+
+    console.log('월별 수당 API - 최종 응답:', monthlyData);
 
     return NextResponse.json(monthlyData);
   } catch (error) {

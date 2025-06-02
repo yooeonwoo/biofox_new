@@ -4,10 +4,11 @@
 
 /**
  * 오늘 날짜를 YYYY-MM-DD 형식으로 반환
+ * 임시로 2025-05-15로 고정
  */
 export function getCurrentDate(): string {
-  const now = new Date();
-  return now.toISOString().split('T')[0];
+  // 임시로 5월 데이터를 당월로 표시
+  return '2025-05-15';
 }
 
 /**

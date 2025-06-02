@@ -21,12 +21,8 @@ interface ShopInfo {
   status: string;
   created_at: string;
   owner_kol_id: number | null;
-}
-
-interface KolShopRelation {
-  shop_id: number;
-  relationship_type: 'owner' | 'manager';
-  shops: ShopInfo;
+  is_self_shop: boolean;
+  is_owner_kol: boolean;
 }
 
 interface ShopData {
@@ -38,6 +34,8 @@ interface ShopData {
   created_at: string;
   relationship_type: 'owner' | 'manager';
   owner_kol_id: number | null;
+  is_self_shop: boolean;
+  is_owner_kol: boolean;
 }
 
 // 중복된 전문점 이름 처리를 위한 함수
@@ -170,48 +168,38 @@ export async function GET() {
 
     console.log(`KOL 조회 성공: ID=${kolData.id}, Name=${kolData.name}`);
 
-    // KOL이 관리하는 전문점 정보 조회 (kol_shops 테이블 사용)
-    const { data: kolShops, error: kolShopsError } = await supabase
-      .from('kol_shops')
+    console.log(`전문점 조회 시작: KOL ID=${kolData.id}`);
+    
+    // KOL이 관리하는 전문점 정보 조회 (shops 테이블 직접 사용)
+    const { data: shops, error: shopsError } = await supabase
+      .from('shops')
       .select(`
-        shop_id,
-        relationship_type,
-        shops (
-          id, 
-          owner_name, 
-          shop_name, 
-          region, 
-          status, 
-          created_at,
-          owner_kol_id
-        )
+        id, 
+        owner_name, 
+        shop_name, 
+        region, 
+        status, 
+        created_at,
+        owner_kol_id,
+        is_self_shop,
+        is_owner_kol
       `)
       .eq('kol_id', kolData.id);
 
-    if (kolShopsError) {
-      console.error(`KOL-전문점 관계 조회 오류(kol_id=${kolData.id}):`, kolShopsError);
+    if (shopsError) {
+      console.error(`전문점 조회 오류(kol_id=${kolData.id}):`, shopsError);
       return NextResponse.json(
-        { error: 'KOL-전문점 관계 정보를 조회하는 중 오류가 발생했습니다.' },
+        { error: `전문점 정보를 조회하는 중 오류가 발생했습니다: ${shopsError.message}` },
         { status: 500 }
       );
     }
 
-    if (!kolShops || kolShops.length === 0) {
+    console.log(`전문점 조회 성공: KOL ID=${kolData.id}, 전문점 수=${shops?.length || 0}`);
+
+    if (!shops || shops.length === 0) {
       console.log(`전문점 데이터 없음(kol_id=${kolData.id})`);
       return NextResponse.json({ shops: [], meta: { totalShopsCount: 0, activeShopsCount: 0 } });
     }
-
-    // 전문점 정보를 플랫하게 변환
-    const shops: ShopData[] = kolShops.map((item: any) => ({
-      id: item.shops.id,
-      owner_name: item.shops.owner_name,
-      shop_name: item.shops.shop_name,
-      region: item.shops.region,
-      status: item.shops.status,
-      created_at: item.shops.created_at,
-      relationship_type: item.relationship_type,
-      owner_kol_id: item.shops.owner_kol_id
-    }));
 
     // shop_sales_metrics 테이블에서 전문점별 월간 매출 데이터 조회
     const { data: salesData, error: salesError } = await supabase
@@ -249,12 +237,9 @@ export async function GET() {
 
     // 전문점 데이터와 매출 데이터 조합
     let shopsWithSales = shops.map(shop => {
-      // 소유 관계 확인 (현재 KOL이 소유자인지)
-      const is_owner_kol = shop.relationship_type === 'owner';
-      
-      // 자신의 샵인지 확인 - 소유자가 현재 KOL이고 관계 타입이 owner인 경우
-      // 수정: 두 조건 모두 만족할 때만 자기 샵으로 판단 (일부 자기 샵이 누락되는 문제 해결)
-      const is_self_shop = shop.owner_kol_id === kolData.id && shop.relationship_type === 'owner';
+      // 데이터베이스에서 가져온 is_self_shop, is_owner_kol 값 사용
+      const is_owner_kol = shop.is_owner_kol;
+      const is_self_shop = shop.is_self_shop;
       
       // shop_name 필드가 존재하고 값이 있는지 확인
       const shop_name = shop.shop_name && shop.shop_name.trim() !== '' 
@@ -276,7 +261,7 @@ export async function GET() {
         region: shop.region || '',
         status: shop.status,
         createdAt: shop.created_at,
-        relationship_type: shop.relationship_type,
+        relationship_type: is_self_shop ? 'owner' : 'manager', // is_self_shop 기반으로 관계 설정
         is_owner_kol,
         is_self_shop,
         owner_kol_id: shop.owner_kol_id,
@@ -306,27 +291,25 @@ export async function GET() {
       sales_total: shop.sales.total
     })));
     
-    // 중요: 이제 샵 필터링을 제거하고 모든 샵을 표시하도록 수정
-    // KOL 본인의 샵 포함 (모든 샵 표시)
-    // const filteredShops = shopsWithSales.filter(shop => !shop.is_self_shop);
-    const filteredShops = shopsWithSales; // 모든 샵 표시로 변경
+    // 전문점 필터링: 본인 샵 제외하고 표시 (비즈니스 로직에 따라)
+    const filteredShops = shopsWithSales.filter(shop => !shop.is_self_shop);
     
     // 매출 기준 내림차순 정렬
     const sortedShops = filteredShops.sort((a, b) => b.sales.total - a.sales.total);
 
-    // 전문점 통계 정보 추가
-    // 전체 전문점 수: 모든 샵 카운트 (자기 샵 포함)
-    const totalShopsCount = shopsWithSales.length;
+    // 전문점 통계 정보 계산
+    // 전체 전문점 수: 본인 샵 제외한 관리 전문점 수
+    const totalShopsCount = shopsWithSales.filter(shop => !shop.is_self_shop).length;
     
     // 각 전문점의 활성 여부 디버깅
     console.log("각 전문점 활성 상태 점검 (매출 유무로만 판단):");
     shopsWithSales.forEach(shop => {
-      console.log(`샵: ${shop.shop_name}, 상태: ${shop.status}, 매출있음: ${shop.sales.hasOrdered}, 매출액: ${shop.sales.total}, 활성여부(매출기준): ${shop.sales.hasOrdered}`);
+      console.log(`샵: ${shop.shop_name}, 본인샵: ${shop.is_self_shop}, 상태: ${shop.status}, 매출있음: ${shop.sales.hasOrdered}, 매출액: ${shop.sales.total}`);
     });
     
-    // 활성 전문점 수 계산 - 매출이 있는 모든 샵 (상태는 고려 안함)
+    // 활성 전문점 수 계산 - 본인 샵 제외하고 매출이 있는 전문점만
     const activeShopsCount = shopsWithSales.filter(shop => 
-      shop.sales.hasOrdered
+      !shop.is_self_shop && shop.sales.hasOrdered
     ).length;
 
     console.log(`전문점 데이터 조회 완료: KOL ID=${kolData.id}, 전문점 수=${totalShopsCount}, 활성 전문점 수=${activeShopsCount}`);

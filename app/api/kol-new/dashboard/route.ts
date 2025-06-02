@@ -19,9 +19,15 @@ export async function GET() {
 
     // 현재 월과 이전 월 계산 (YYYY-MM 형식)
     const currentDate = getCurrentDate();
-    // 데이터 형식을 'YYYYMM'으로 변환 (하이픈 제거)
-    const currentMonth = currentDate.substring(0, 7).replace('-', '');
-    const previousMonth = getPreviousMonth(currentDate).replace('-', '');
+    // 임시로 5월과 4월로 고정
+    const currentMonth = currentDate.substring(0, 7); // "2025-05"
+    const previousMonth = getPreviousMonth(currentDate); // "2025-04"
+
+    console.log(`대시보드 API - 월 정보:`, {
+      currentDate,
+      currentMonth,
+      previousMonth
+    });
 
     // KOL ID 조회 - 로그인한 사용자의 KOL ID 가져오기
     let { data: userData, error: userError } = await supabase
@@ -185,7 +191,7 @@ export async function GET() {
       // 새 메트릭 데이터 생성
       const newMetricsData = {
         kol_id: kolData.id,
-        year_month: currentMonth,
+        year_month: currentMonth, // "2025-05" 형식으로 저장
         monthly_sales: 0,
         monthly_commission: 0,
         active_shops_count: 0,
@@ -227,7 +233,7 @@ export async function GET() {
       // 새 메트릭 데이터 생성
       const newPrevMetricsData = {
         kol_id: kolData.id,
-        year_month: previousMonth,
+        year_month: previousMonth, // "2025-04" 형식으로 저장
         monthly_sales: 0,
         monthly_commission: 0,
         active_shops_count: 0,

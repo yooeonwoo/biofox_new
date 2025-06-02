@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Store, BarChart3, LogOut, Bell, FileText } from "lucide-react";
+import { Home, Store, BarChart3, LogOut, Bell, FileText, ShoppingBag } from "lucide-react";
 import { Separator } from "../../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { Button } from "../../../components/ui/button";
+import { FoxLogo } from "../../../components/ui/fox-logo";
 
 interface KolMobileMenuProps {
   userName?: string;
@@ -61,6 +62,26 @@ export default function KolMobileMenu({
           <FileText className="h-4 w-4" />
           <span>영업 일지</span>
         </Link>
+        <a 
+          href="https://biofoxpro.co.kr/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          onClick={() => setMobileMenuOpen(false)}
+          className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
+        >
+          <ShoppingBag className="h-4 w-4" />
+          <span>전문가몰</span>
+        </a>
+        <a 
+          href="https://ad.biofoxi.com/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          onClick={() => setMobileMenuOpen(false)}
+          className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
+        >
+          <FoxLogo className="h-4 w-4" />
+          <span>폭시</span>
+        </a>
         <Separator className="my-2" />
         <Link 
           href="/kol-new/notifications" 

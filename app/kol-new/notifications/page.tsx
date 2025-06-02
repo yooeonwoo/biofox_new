@@ -73,8 +73,8 @@ export default function NotificationsPage() {
         try {
           setLoading(true);
           
-          // 사용자의 KOL 정보 가져오기
-          const response = await fetch('/api/kols/me', { 
+          // 대시보드 API를 사용하여 KOL 정보 가져오기
+          const response = await fetch('/api/kol-new/dashboard', { 
             credentials: 'include',
             headers: { 'Cache-Control': 'no-cache' } 
           });
@@ -83,11 +83,11 @@ export default function NotificationsPage() {
             throw new Error('KOL 정보를 불러오는데 실패했습니다.');
           }
           
-          const kolData = await response.json();
+          const data = await response.json();
           
           setKolInfo({
-            name: kolData.name || user?.firstName || user?.username || '사용자',
-            shopName: kolData.shops?.[0]?.name || kolData.shop_name || '내 상점'
+            name: data.kolInfo?.name || user?.firstName || user?.username || '사용자',
+            shopName: data.kolInfo?.shop_name || '내 상점'
           });
         } catch (error) {
           console.error('KOL 정보 조회 중 오류:', error);

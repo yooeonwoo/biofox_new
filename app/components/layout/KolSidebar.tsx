@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Store, FileText, Bell } from "lucide-react";
+import { Home, Store, FileText, Bell, ShoppingBag } from "lucide-react";
 import { Separator } from "../../../components/ui/separator";
+import { FoxLogo } from "../../../components/ui/fox-logo";
 
 export default function KolSidebar() {
   return (
@@ -23,6 +24,14 @@ export default function KolSidebar() {
               <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>영업 일지</span>
             </Link>
+            <a href="https://biofoxpro.co.kr/" target="_blank" rel="noopener noreferrer" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
+              <ShoppingBag className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>전문가몰</span>
+            </a>
+            <a href="https://ad.biofoxi.com/" target="_blank" rel="noopener noreferrer" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
+              <FoxLogo className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>폭시</span>
+            </a>
           </nav>
         </div>
         <Separator className="my-3" />
