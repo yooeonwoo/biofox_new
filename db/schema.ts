@@ -50,7 +50,6 @@ export const kolsRelations = relations(kols, ({ one, many }) => ({
   dashboardMetrics: many(kolDashboardMetrics),
   totalMonthlySales: many(kolTotalMonthlySales),
   salesActivities: many(salesActivities),
-  productSalesMetrics: many(productSalesMetrics),
 }));
 
 // 전문점 테이블
@@ -83,7 +82,6 @@ export const shopsRelations = relations(shops, ({ one, many }) => ({
   }),
   salesMetrics: many(shopSalesMetrics),
   salesActivities: many(salesActivities),
-  productSalesMetrics: many(productSalesMetrics),
 }));
 
 // 제품 테이블
@@ -102,8 +100,6 @@ export const products = pgTable("products", {
 
 // 제품 관계 정의
 export const productsRelations = relations(products, ({ many }) => ({
-  productSalesMetrics: many(productSalesMetrics),
-  totalSalesStats: many(productTotalSalesStats),
 }));
 
 // 알림 테이블
@@ -192,35 +188,6 @@ export const shopSalesMetricsRelations = relations(shopSalesMetrics, ({ one }) =
   }),
 }));
 
-// 제품 매출 메트릭 테이블
-export const productSalesMetrics = pgTable("product_sales_metrics", {
-  id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  productId: integer("product_id").references(() => products.id).notNull(),
-  shopId: integer("shop_id").references(() => shops.id),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  quantity: integer("quantity").default(0).notNull(),
-  salesAmount: integer("sales_amount").default(0).notNull(),
-  salesRatio: numeric("sales_ratio").default("0").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 제품 매출 메트릭 관계 정의
-export const productSalesMetricsRelations = relations(productSalesMetrics, ({ one }) => ({
-  kol: one(kols, {
-    fields: [productSalesMetrics.kolId],
-    references: [kols.id],
-  }),
-  product: one(products, {
-    fields: [productSalesMetrics.productId],
-    references: [products.id],
-  }),
-  shop: one(shops, {
-    fields: [productSalesMetrics.shopId],
-    references: [shops.id],
-  }),
-}));
 
 // KOL 총 월간 매출 테이블
 export const kolTotalMonthlySales = pgTable("kol_total_monthly_sales", {
@@ -247,25 +214,5 @@ export const kolTotalMonthlySalesRelations = relations(kolTotalMonthlySales, ({ 
   }),
 }));
 
-// 제품 총 매출 통계 테이블
-export const productTotalSalesStats = pgTable("product_total_sales_stats", {
-  id: serial("id").primaryKey(),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  productId: integer("product_id").references(() => products.id).notNull(),
-  totalSalesAmount: integer("total_sales_amount").default(0).notNull(),
-  salesRatio: numeric("sales_ratio").default("0").notNull(),
-  salesGrowthRate: numeric("sales_growth_rate").default("0").notNull(),
-  orderCount: integer("order_count").default(0).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: false }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: false }).defaultNow().notNull()
-});
-
-// 제품 총 매출 통계 관계 정의
-export const productTotalSalesStatsRelations = relations(productTotalSalesStats, ({ one }) => ({
-  product: one(products, {
-    fields: [productTotalSalesStats.productId],
-    references: [products.id],
-  }),
-}));
 
  

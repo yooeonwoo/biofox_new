@@ -288,44 +288,6 @@ export type Database = {
           updated_at?: string
         }
       }
-      product_sales_metrics: {
-        Row: {
-          id: number
-          kol_id: number
-          product_id: number
-          shop_id: number | null
-          year_month: string
-          quantity: number
-          sales_amount: number
-          sales_ratio: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: number
-          kol_id: number
-          product_id: number
-          shop_id?: number | null
-          year_month: string
-          quantity?: number
-          sales_amount?: number
-          sales_ratio?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: number
-          kol_id?: number
-          product_id?: number
-          shop_id?: number | null
-          year_month?: string
-          quantity?: number
-          sales_amount?: number
-          sales_ratio?: number
-          created_at?: string
-          updated_at?: string
-        }
-      }
       kol_total_monthly_sales: {
         Row: {
           id: number
@@ -373,41 +335,6 @@ export type Database = {
           updated_at?: string
         }
       }
-      product_total_sales_stats: {
-        Row: {
-          id: number
-          year_month: string
-          product_id: number
-          total_sales_amount: number
-          sales_ratio: number
-          sales_growth_rate: number
-          order_count: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: number
-          year_month: string
-          product_id: number
-          total_sales_amount?: number
-          sales_ratio?: number
-          sales_growth_rate?: number
-          order_count?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: number
-          year_month?: string
-          product_id?: number
-          total_sales_amount?: number
-          sales_ratio?: number
-          sales_growth_rate?: number
-          order_count?: number
-          created_at?: string
-          updated_at?: string
-        }
-      }
     }
     // 복잡한 쿼리 결과에 대한 타입 정의
     Views: {}
@@ -424,9 +351,7 @@ export type Notification = Database['public']['Tables']['notifications']['Row']
 export type SalesActivity = Database['public']['Tables']['sales_activities']['Row']
 export type KolDashboardMetric = Database['public']['Tables']['kol_dashboard_metrics']['Row']
 export type ShopSalesMetric = Database['public']['Tables']['shop_sales_metrics']['Row']
-export type ProductSalesMetric = Database['public']['Tables']['product_sales_metrics']['Row']
 export type KolTotalMonthlySale = Database['public']['Tables']['kol_total_monthly_sales']['Row']
-export type ProductTotalSalesStat = Database['public']['Tables']['product_total_sales_stats']['Row']
 
 // 카멜케이스로 변환된 타입 (프론트엔드에서 사용)
 export type UserCamel = {

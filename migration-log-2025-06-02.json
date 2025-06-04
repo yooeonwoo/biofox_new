@@ -1,0 +1,224 @@
+{
+  "timestamp": "2025-06-02T10:02:25.746Z",
+  "totalUsers": 36,
+  "successful": 0,
+  "failed": 36,
+  "results": [
+    {
+      "success": false,
+      "userId": 41,
+      "email": "yeojiyoon@temp.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 42,
+      "email": "shineuijeong@temp.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 10,
+      "email": "melierskin@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 11,
+      "email": "yourcos22@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 12,
+      "email": "curecore1@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 13,
+      "email": "kyj716565@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 14,
+      "email": "whgpwls031@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 15,
+      "email": "dybc005@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 16,
+      "email": "seoin.tree@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 18,
+      "email": "kwonsuzy.83@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 19,
+      "email": "begin.pmu@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 20,
+      "email": "jloveh12@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 21,
+      "email": "kkuljamlab@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 22,
+      "email": "makeupartistlek@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 23,
+      "email": "seonhee9335@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 24,
+      "email": "clean1474@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 25,
+      "email": "hong840412@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 26,
+      "email": "yseowoo85@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 27,
+      "email": "lsugaringwaxing@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 28,
+      "email": "n93359939n0513@gmail.com",
+      "error": "Unprocessable Entity"
+    },
+    {
+      "success": false,
+      "userId": 29,
+      "email": "aaa82222228@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 30,
+      "email": "ckzkswls@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 31,
+      "email": "yun.mentor@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 32,
+      "email": "zardu80@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 33,
+      "email": "wke1982@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 7,
+      "email": "a582850072@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 17,
+      "email": "avie801002@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 35,
+      "email": "gnldls411@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 34,
+      "email": "cuttyeni85@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 36,
+      "email": "1004tlsyd@naver.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 6,
+      "email": "reflance88@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 43,
+      "email": "kimyujin@temp.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 44,
+      "email": "choijiyoung@temp.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 45,
+      "email": "leejungmi@temp.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 50,
+      "email": "as03041000@gmail.com",
+      "error": "Too Many Requests"
+    },
+    {
+      "success": false,
+      "userId": 49,
+      "email": "csj3232@gmail.com",
+      "error": "Too Many Requests"
+    }
+  ]
+}

@@ -1,0 +1,362 @@
+[
+  {
+    "original_id": 41,
+    "original_clerk_id": "temp_yeojiyoon",
+    "email": "yeojiyoon@temp.com",
+    "role": "kol",
+    "name": "여지윤",
+    "created_at": "2025-05-12T17:39:37.027299+00:00",
+    "backup_date": "2025-06-02T10:04:41.160Z",
+    "kol_info": "{\"id\":39,\"name\":\"여지윤\",\"region\":null,\"status\":\"active\",\"shop_name\":\"마음에점을찍다\"}"
+  },
+  {
+    "original_id": 42,
+    "original_clerk_id": "temp_shineuijeong",
+    "email": "shineuijeong@temp.com",
+    "role": "kol",
+    "name": "신의정",
+    "created_at": "2025-05-12T17:39:37.027299+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":40,\"name\":\"신의정\",\"region\":null,\"status\":\"active\",\"shop_name\":\"스킨스파\"}"
+  },
+  {
+    "original_id": 10,
+    "original_clerk_id": "user_2vP5RFeayksmX7JYAW2T0aajgbR",
+    "email": "melierskin@gmail.com",
+    "role": "kol",
+    "name": "이은혜",
+    "created_at": "2025-04-07T13:59:21.237804+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":6,\"name\":\"이은혜\",\"region\":null,\"status\":\"active\",\"shop_name\":\"믈리에스킨\"}"
+  },
+  {
+    "original_id": 11,
+    "original_clerk_id": "user_2vP5UUar5b0wUw8vXFGyuxClnJF",
+    "email": "yourcos22@gmail.com",
+    "role": "kol",
+    "name": "서현주",
+    "created_at": "2025-04-07T14:00:02.248324+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":7,\"name\":\"서현주\",\"region\":null,\"status\":\"active\",\"shop_name\":\"캄앤큐어\"}"
+  },
+  {
+    "original_id": 12,
+    "original_clerk_id": "user_2vP5VRAtDp5ZgqH5klLW0PeZ7I8",
+    "email": "curecore1@gmail.com",
+    "role": "kol",
+    "name": "박서연",
+    "created_at": "2025-04-07T14:00:36.901553+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":8,\"name\":\"박서연\",\"region\":null,\"status\":\"active\",\"shop_name\":\"어반뷰티\"}"
+  },
+  {
+    "original_id": 13,
+    "original_clerk_id": "user_2vP5Wcl3XEwcAqRau4nDbYl7Eq4",
+    "email": "kyj716565@gmail.com",
+    "role": "kol",
+    "name": "강영주",
+    "created_at": "2025-04-07T14:01:05.144546+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":9,\"name\":\"강영주\",\"region\":null,\"status\":\"active\",\"shop_name\":\"뷰티케이\"}"
+  },
+  {
+    "original_id": 14,
+    "original_clerk_id": "user_2vP5XVWEmv8qkAYY8EvdjLGiiPa",
+    "email": "whgpwls031@gmail.com",
+    "role": "kol",
+    "name": "조혜진",
+    "created_at": "2025-04-07T14:01:24.635963+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":10,\"name\":\"조혜진\",\"region\":null,\"status\":\"active\",\"shop_name\":\"엑스날 평내호평\"}"
+  },
+  {
+    "original_id": 15,
+    "original_clerk_id": "user_2vP5ZDHBrRcRbNfbClVpIaz3W5s",
+    "email": "dybc005@gmail.com",
+    "role": "kol",
+    "name": "손지혜",
+    "created_at": "2025-04-07T14:01:58.215253+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":11,\"name\":\"손지혜\",\"region\":null,\"status\":\"active\",\"shop_name\":\"플라움뷰티\"}"
+  },
+  {
+    "original_id": 16,
+    "original_clerk_id": "user_2vP5a3BzN8hW6nPBlxhFBccxVRx",
+    "email": "seoin.tree@gmail.com",
+    "role": "kol",
+    "name": "안규미",
+    "created_at": "2025-04-07T14:02:25.177494+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":12,\"name\":\"안규미\",\"region\":null,\"status\":\"active\",\"shop_name\":\"쥬아나 스킨케어\"}"
+  },
+  {
+    "original_id": 18,
+    "original_clerk_id": "user_2vP5bkSLiYOWdLIhPW0qE0p7zdx",
+    "email": "kwonsuzy.83@gmail.com",
+    "role": "kol",
+    "name": "권수지",
+    "created_at": "2025-04-07T14:03:15.464476+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":14,\"name\":\"권수지\",\"region\":null,\"status\":\"active\",\"shop_name\":\"동안미학 압구정 본점\"}"
+  },
+  {
+    "original_id": 19,
+    "original_clerk_id": "user_2vP5cSs1R1SOTxIFCIniYqlyZCS",
+    "email": "begin.pmu@gmail.com",
+    "role": "kol",
+    "name": "김미정",
+    "created_at": "2025-04-07T14:03:41.503236+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":15,\"name\":\"김미정\",\"region\":null,\"status\":\"active\",\"shop_name\":\"비긴비 뷰티\"}"
+  },
+  {
+    "original_id": 20,
+    "original_clerk_id": "user_2vP5dLNMPUsj4w9KfUvJGOZ60fJ",
+    "email": "jloveh12@gmail.com",
+    "role": "kol",
+    "name": "이주희",
+    "created_at": "2025-04-07T14:04:08.545506+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":16,\"name\":\"이주희\",\"region\":null,\"status\":\"active\",\"shop_name\":\"루브온\"}"
+  },
+  {
+    "original_id": 21,
+    "original_clerk_id": "user_2vP5eP4KvgObj3FP96aHY4O2Ly3",
+    "email": "kkuljamlab@gmail.com",
+    "role": "kol",
+    "name": "김나영",
+    "created_at": "2025-04-07T14:04:39.366937+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":17,\"name\":\"김나영\",\"region\":null,\"status\":\"active\",\"shop_name\":\"꿀잠연구소\"}"
+  },
+  {
+    "original_id": 22,
+    "original_clerk_id": "user_2vP5jy90GWcDKpE20t7ie2dIlj9",
+    "email": "makeupartistlek@gmail.com",
+    "role": "kol",
+    "name": "이은경",
+    "created_at": "2025-04-07T14:05:01.820874+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":18,\"name\":\"이은경\",\"region\":null,\"status\":\"active\",\"shop_name\":\"앙로즈\"}"
+  },
+  {
+    "original_id": 23,
+    "original_clerk_id": "user_2vP5l3OzehKDJzdAFA0kjly4TtD",
+    "email": "seonhee9335@gmail.com",
+    "role": "kol",
+    "name": "배선희",
+    "created_at": "2025-04-07T14:05:25.83871+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":19,\"name\":\"배선희\",\"region\":null,\"status\":\"active\",\"shop_name\":\"더스무스 김포검단점\"}"
+  },
+  {
+    "original_id": 24,
+    "original_clerk_id": "user_2vP5liY1rOmqm2LKoLmyktZhdks",
+    "email": "clean1474@gmail.com",
+    "role": "kol",
+    "name": "김두현",
+    "created_at": "2025-04-07T14:05:48.429853+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":20,\"name\":\"김두현\",\"region\":null,\"status\":\"active\",\"shop_name\":\"두앤두 뷰티센터\"}"
+  },
+  {
+    "original_id": 25,
+    "original_clerk_id": "user_2vP5mSuY6KggUIxtsnftXj4cVaD",
+    "email": "hong840412@gmail.com",
+    "role": "kol",
+    "name": "홍주영",
+    "created_at": "2025-04-07T14:06:14.221382+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":21,\"name\":\"홍주영\",\"region\":null,\"status\":\"active\",\"shop_name\":\"아비에 광주\"}"
+  },
+  {
+    "original_id": 26,
+    "original_clerk_id": "user_2vP5nJX9OsxTSiiKo7iBdAAvo56",
+    "email": "yseowoo85@gmail.com",
+    "role": "kol",
+    "name": "양서우",
+    "created_at": "2025-04-07T14:06:41.242933+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":22,\"name\":\"양서우\",\"region\":null,\"status\":\"active\",\"shop_name\":\"아비에 대전\"}"
+  },
+  {
+    "original_id": 27,
+    "original_clerk_id": "user_2vP5pCdE1dUemSlswPThrUvrUHu",
+    "email": "lsugaringwaxing@gmail.com",
+    "role": "kol",
+    "name": "이선화",
+    "created_at": "2025-04-07T14:07:02.432094+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":23,\"name\":\"이선화\",\"region\":null,\"status\":\"active\",\"shop_name\":\"엘슈가링\"}"
+  },
+  {
+    "original_id": 28,
+    "original_clerk_id": "user_2vP5q3iLHBxq6ORxZp905yqRSoE",
+    "email": "n93359939n0513@gmail.com",
+    "role": "kol",
+    "name": "김현미",
+    "created_at": "2025-04-07T14:07:24.044171+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":24,\"name\":\"김현미\",\"region\":null,\"status\":\"active\",\"shop_name\":\"뷰티가브\"}"
+  },
+  {
+    "original_id": 29,
+    "original_clerk_id": "user_2vP5r3GQkF3WBo4ox5hpljn85Jy",
+    "email": "aaa82222228@gmail.com",
+    "role": "kol",
+    "name": "박미리내",
+    "created_at": "2025-04-07T14:07:42.976097+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":25,\"name\":\"박미리내\",\"region\":null,\"status\":\"active\",\"shop_name\":\"더나인 분당\"}"
+  },
+  {
+    "original_id": 30,
+    "original_clerk_id": "user_2vP5rseqFYUVOL9Cb7gXdY0TvBP",
+    "email": "ckzkswls@gmail.com",
+    "role": "kol",
+    "name": "손유진",
+    "created_at": "2025-04-07T14:08:00.008626+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":26,\"name\":\"손유진\",\"region\":null,\"status\":\"active\",\"shop_name\":\"더샤인뷰티\"}"
+  },
+  {
+    "original_id": 31,
+    "original_clerk_id": "user_2vP5TO7PFxjpxPPwa1BqGgHtvfW",
+    "email": "yun.mentor@gmail.com",
+    "role": "kol",
+    "name": "김지윤",
+    "created_at": "2025-04-07T15:26:48.753017+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":27,\"name\":\"김지윤\",\"region\":null,\"status\":\"active\",\"shop_name\":\"스킨멘토\"}"
+  },
+  {
+    "original_id": 32,
+    "original_clerk_id": "user_2vP5QDtyoDfmZ9JnbFy468n5Ldg",
+    "email": "zardu80@gmail.com",
+    "role": "kol",
+    "name": "이슬기",
+    "created_at": "2025-04-07T15:28:10.922946+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":28,\"name\":\"이슬기\",\"region\":null,\"status\":\"active\",\"shop_name\":\"더슬림바디라인\"}"
+  },
+  {
+    "original_id": 33,
+    "original_clerk_id": "user_2vP5SCZVT95G89Nsp65EKEBS8ps",
+    "email": "wke1982@gmail.com",
+    "role": "kol",
+    "name": "우경은",
+    "created_at": "2025-04-07T15:31:29.011603+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":29,\"name\":\"우경은\",\"region\":null,\"status\":\"active\",\"shop_name\":\"피부미인\"}"
+  },
+  {
+    "original_id": 7,
+    "original_clerk_id": "user_2uhvxm79jiTyujlCXfpHDVUuVFB",
+    "email": "a582850072@gmail.com",
+    "role": "kol",
+    "name": "유언우",
+    "created_at": "2025-03-24T00:49:47.53494+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": null
+  },
+  {
+    "original_id": 17,
+    "original_clerk_id": "user_2vTIg2GAU1zVs51M3NXQfg7VDFe",
+    "email": "avie801002@gmail.com",
+    "role": "kol",
+    "name": "윤경숙",
+    "created_at": "2025-04-07T14:02:50.59227+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":13,\"name\":\"윤경숙\",\"region\":null,\"status\":\"active\",\"shop_name\":\"아비에 대구\"}"
+  },
+  {
+    "original_id": 35,
+    "original_clerk_id": "user_2vTIqADxGQsQbZvWLpriun3Bmx0",
+    "email": "gnldls411@gmail.com",
+    "role": "kol",
+    "name": "심휘인",
+    "created_at": "2025-04-09T01:40:57.544733+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":31,\"name\":\"심휘인\",\"region\":null,\"status\":\"active\",\"shop_name\":\"휘엔에스테틱\"}"
+  },
+  {
+    "original_id": 34,
+    "original_clerk_id": "user_2vP5YIlChJC2W6Rdminlnc4Wkez",
+    "email": "cuttyeni85@gmail.com",
+    "role": "kol",
+    "name": "김정은",
+    "created_at": "2025-04-07T15:32:43.583518+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":30,\"name\":\"김정은\",\"region\":null,\"status\":\"active\",\"shop_name\":\"W 테라피\"}"
+  },
+  {
+    "original_id": 36,
+    "original_clerk_id": "user_2vqdkwpNCsTCQm3SBvXxGUgUYN9",
+    "email": "1004tlsyd@naver.com",
+    "role": "kol",
+    "name": "김신영",
+    "created_at": "2025-04-17T07:58:57.073414+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":32,\"name\":\"김신영\",\"region\":null,\"status\":\"active\",\"shop_name\":\"비나인에스테틱\"}"
+  },
+  {
+    "original_id": 6,
+    "original_clerk_id": "user_2ujmzjxZPAU1CXGHKylAewMPRDX",
+    "email": "reflance88@gmail.com",
+    "role": "admin",
+    "name": "관리자",
+    "created_at": "2025-03-23T23:04:01.824689+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": null
+  },
+  {
+    "original_id": 43,
+    "original_clerk_id": "temp_kimyujin",
+    "email": "kimyujin@temp.com",
+    "role": "kol",
+    "name": "김유진",
+    "created_at": "2025-05-12T17:39:37.027299+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":41,\"name\":\"김유진\",\"region\":null,\"status\":\"active\",\"shop_name\":\"맑음유에스테틱\"}"
+  },
+  {
+    "original_id": 44,
+    "original_clerk_id": "temp_choijiyoung",
+    "email": "choijiyoung@temp.com",
+    "role": "kol",
+    "name": "최지영",
+    "created_at": "2025-05-12T17:39:37.027299+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":42,\"name\":\"최지영\",\"region\":null,\"status\":\"active\",\"shop_name\":\"뷰티플 스킨&바디\"}"
+  },
+  {
+    "original_id": 45,
+    "original_clerk_id": "temp_leejungmi",
+    "email": "leejungmi@temp.com",
+    "role": "kol",
+    "name": "이정미",
+    "created_at": "2025-05-12T17:39:37.027299+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":43,\"name\":\"이정미\",\"region\":null,\"status\":\"active\",\"shop_name\":\"추가필요\"}"
+  },
+  {
+    "original_id": 50,
+    "original_clerk_id": "user_2vP5o8DZX7JuAdJNgrpDeK797ZE",
+    "email": "as03041000@gmail.com",
+    "role": "kol",
+    "name": "심경선",
+    "created_at": "2025-05-13T22:07:09.03343+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":48,\"name\":\"심경선\",\"region\":\"\",\"status\":\"pending\",\"shop_name\":\"피부미인 복제\"}"
+  },
+  {
+    "original_id": 49,
+    "original_clerk_id": "user_2xwhcYvn1UAqLRT6vfewkEF9DdR",
+    "email": "csj3232@gmail.com",
+    "role": "kol",
+    "name": "최선정",
+    "created_at": "2025-05-13T19:11:50.419982+00:00",
+    "backup_date": "2025-06-02T10:04:41.161Z",
+    "kol_info": "{\"id\":47,\"name\":\"최선정\",\"region\":\"\",\"status\":\"pending\",\"shop_name\":\"뷰티스토리\"}"
+  }
+]

@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/backend": "^1.34.0",
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/localizations": "^3.13.2",
     "@clerk/nextjs": "^6.20.1",
@@ -29,7 +30,7 @@
     "@radix-ui/react-toast": "^1.2.14",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.49.4",
+    "@supabase/supabase-js": "^2.49.8",
     "@tabler/icons-react": "^3.31.0",
     "@types/recharts": "^1.8.29",
     "chart.js": "^4.4.8",

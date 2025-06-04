@@ -1,0 +1,332 @@
+{
+  "timestamp": "2025-06-02T10:04:43.414Z",
+  "totalUsers": 36,
+  "successful": 36,
+  "failed": 0,
+  "results": [
+    {
+      "success": true,
+      "userId": 41,
+      "email": "yeojiyoon@temp.com",
+      "role": "kol",
+      "oldClerkId": "temp_yeojiyoon",
+      "newPendingId": "pending_migrated_1748858681161_41",
+      "kolId": 39
+    },
+    {
+      "success": true,
+      "userId": 42,
+      "email": "shineuijeong@temp.com",
+      "role": "kol",
+      "oldClerkId": "temp_shineuijeong",
+      "newPendingId": "pending_migrated_1748858681277_42",
+      "kolId": 40
+    },
+    {
+      "success": true,
+      "userId": 10,
+      "email": "melierskin@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5RFeayksmX7JYAW2T0aajgbR",
+      "newPendingId": "pending_migrated_1748858681362_10",
+      "kolId": 6
+    },
+    {
+      "success": true,
+      "userId": 11,
+      "email": "yourcos22@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5UUar5b0wUw8vXFGyuxClnJF",
+      "newPendingId": "pending_migrated_1748858681433_11",
+      "kolId": 7
+    },
+    {
+      "success": true,
+      "userId": 12,
+      "email": "curecore1@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5VRAtDp5ZgqH5klLW0PeZ7I8",
+      "newPendingId": "pending_migrated_1748858681523_12",
+      "kolId": 8
+    },
+    {
+      "success": true,
+      "userId": 13,
+      "email": "kyj716565@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5Wcl3XEwcAqRau4nDbYl7Eq4",
+      "newPendingId": "pending_migrated_1748858681584_13",
+      "kolId": 9
+    },
+    {
+      "success": true,
+      "userId": 14,
+      "email": "whgpwls031@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5XVWEmv8qkAYY8EvdjLGiiPa",
+      "newPendingId": "pending_migrated_1748858681653_14",
+      "kolId": 10
+    },
+    {
+      "success": true,
+      "userId": 15,
+      "email": "dybc005@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5ZDHBrRcRbNfbClVpIaz3W5s",
+      "newPendingId": "pending_migrated_1748858681705_15",
+      "kolId": 11
+    },
+    {
+      "success": true,
+      "userId": 16,
+      "email": "seoin.tree@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5a3BzN8hW6nPBlxhFBccxVRx",
+      "newPendingId": "pending_migrated_1748858681762_16",
+      "kolId": 12
+    },
+    {
+      "success": true,
+      "userId": 18,
+      "email": "kwonsuzy.83@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5bkSLiYOWdLIhPW0qE0p7zdx",
+      "newPendingId": "pending_migrated_1748858681824_18",
+      "kolId": 14
+    },
+    {
+      "success": true,
+      "userId": 19,
+      "email": "begin.pmu@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5cSs1R1SOTxIFCIniYqlyZCS",
+      "newPendingId": "pending_migrated_1748858681893_19",
+      "kolId": 15
+    },
+    {
+      "success": true,
+      "userId": 20,
+      "email": "jloveh12@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5dLNMPUsj4w9KfUvJGOZ60fJ",
+      "newPendingId": "pending_migrated_1748858681952_20",
+      "kolId": 16
+    },
+    {
+      "success": true,
+      "userId": 21,
+      "email": "kkuljamlab@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5eP4KvgObj3FP96aHY4O2Ly3",
+      "newPendingId": "pending_migrated_1748858682019_21",
+      "kolId": 17
+    },
+    {
+      "success": true,
+      "userId": 22,
+      "email": "makeupartistlek@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5jy90GWcDKpE20t7ie2dIlj9",
+      "newPendingId": "pending_migrated_1748858682084_22",
+      "kolId": 18
+    },
+    {
+      "success": true,
+      "userId": 23,
+      "email": "seonhee9335@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5l3OzehKDJzdAFA0kjly4TtD",
+      "newPendingId": "pending_migrated_1748858682150_23",
+      "kolId": 19
+    },
+    {
+      "success": true,
+      "userId": 24,
+      "email": "clean1474@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5liY1rOmqm2LKoLmyktZhdks",
+      "newPendingId": "pending_migrated_1748858682203_24",
+      "kolId": 20
+    },
+    {
+      "success": true,
+      "userId": 25,
+      "email": "hong840412@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5mSuY6KggUIxtsnftXj4cVaD",
+      "newPendingId": "pending_migrated_1748858682263_25",
+      "kolId": 21
+    },
+    {
+      "success": true,
+      "userId": 26,
+      "email": "yseowoo85@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5nJX9OsxTSiiKo7iBdAAvo56",
+      "newPendingId": "pending_migrated_1748858682324_26",
+      "kolId": 22
+    },
+    {
+      "success": true,
+      "userId": 27,
+      "email": "lsugaringwaxing@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5pCdE1dUemSlswPThrUvrUHu",
+      "newPendingId": "pending_migrated_1748858682385_27",
+      "kolId": 23
+    },
+    {
+      "success": true,
+      "userId": 28,
+      "email": "n93359939n0513@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5q3iLHBxq6ORxZp905yqRSoE",
+      "newPendingId": "pending_migrated_1748858682444_28",
+      "kolId": 24
+    },
+    {
+      "success": true,
+      "userId": 29,
+      "email": "aaa82222228@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5r3GQkF3WBo4ox5hpljn85Jy",
+      "newPendingId": "pending_migrated_1748858682500_29",
+      "kolId": 25
+    },
+    {
+      "success": true,
+      "userId": 30,
+      "email": "ckzkswls@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5rseqFYUVOL9Cb7gXdY0TvBP",
+      "newPendingId": "pending_migrated_1748858682556_30",
+      "kolId": 26
+    },
+    {
+      "success": true,
+      "userId": 31,
+      "email": "yun.mentor@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5TO7PFxjpxPPwa1BqGgHtvfW",
+      "newPendingId": "pending_migrated_1748858682608_31",
+      "kolId": 27
+    },
+    {
+      "success": true,
+      "userId": 32,
+      "email": "zardu80@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5QDtyoDfmZ9JnbFy468n5Ldg",
+      "newPendingId": "pending_migrated_1748858682667_32",
+      "kolId": 28
+    },
+    {
+      "success": true,
+      "userId": 33,
+      "email": "wke1982@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5SCZVT95G89Nsp65EKEBS8ps",
+      "newPendingId": "pending_migrated_1748858682732_33",
+      "kolId": 29
+    },
+    {
+      "success": true,
+      "userId": 7,
+      "email": "a582850072@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2uhvxm79jiTyujlCXfpHDVUuVFB",
+      "newPendingId": "pending_migrated_1748858682784_7",
+      "kolId": null
+    },
+    {
+      "success": true,
+      "userId": 17,
+      "email": "avie801002@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vTIg2GAU1zVs51M3NXQfg7VDFe",
+      "newPendingId": "pending_migrated_1748858682819_17",
+      "kolId": 13
+    },
+    {
+      "success": true,
+      "userId": 35,
+      "email": "gnldls411@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vTIqADxGQsQbZvWLpriun3Bmx0",
+      "newPendingId": "pending_migrated_1748858682881_35",
+      "kolId": 31
+    },
+    {
+      "success": true,
+      "userId": 34,
+      "email": "cuttyeni85@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5YIlChJC2W6Rdminlnc4Wkez",
+      "newPendingId": "pending_migrated_1748858682935_34",
+      "kolId": 30
+    },
+    {
+      "success": true,
+      "userId": 36,
+      "email": "1004tlsyd@naver.com",
+      "role": "kol",
+      "oldClerkId": "user_2vqdkwpNCsTCQm3SBvXxGUgUYN9",
+      "newPendingId": "pending_migrated_1748858682996_36",
+      "kolId": 32
+    },
+    {
+      "success": true,
+      "userId": 6,
+      "email": "reflance88@gmail.com",
+      "role": "admin",
+      "oldClerkId": "user_2ujmzjxZPAU1CXGHKylAewMPRDX",
+      "newPendingId": "pending_migrated_1748858683055_6",
+      "kolId": null
+    },
+    {
+      "success": true,
+      "userId": 43,
+      "email": "kimyujin@temp.com",
+      "role": "kol",
+      "oldClerkId": "temp_kimyujin",
+      "newPendingId": "pending_migrated_1748858683085_43",
+      "kolId": 41
+    },
+    {
+      "success": true,
+      "userId": 44,
+      "email": "choijiyoung@temp.com",
+      "role": "kol",
+      "oldClerkId": "temp_choijiyoung",
+      "newPendingId": "pending_migrated_1748858683154_44",
+      "kolId": 42
+    },
+    {
+      "success": true,
+      "userId": 45,
+      "email": "leejungmi@temp.com",
+      "role": "kol",
+      "oldClerkId": "temp_leejungmi",
+      "newPendingId": "pending_migrated_1748858683220_45",
+      "kolId": 43
+    },
+    {
+      "success": true,
+      "userId": 50,
+      "email": "as03041000@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2vP5o8DZX7JuAdJNgrpDeK797ZE",
+      "newPendingId": "pending_migrated_1748858683283_50",
+      "kolId": 48
+    },
+    {
+      "success": true,
+      "userId": 49,
+      "email": "csj3232@gmail.com",
+      "role": "kol",
+      "oldClerkId": "user_2xwhcYvn1UAqLRT6vfewkEF9DdR",
+      "newPendingId": "pending_migrated_1748858683347_49",
+      "kolId": 47
+    }
+  ]
+}
