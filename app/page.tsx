@@ -1,33 +1,10 @@
 'use client';
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
-import Image from "next/image";
 import { CardContainer, CardBody, CardItem } from "@/components/ui/aceternity/3d-card";
-import { TextRevealCard, TextRevealCardTitle, TextRevealCardDescription } from "@/components/ui/aceternity/text-reveal-card";
 import Aurora from "@/components/ui/Aurora";
 
 export default function Home() {
-  const router = useRouter();
-  const { isLoaded, isSignedIn, user } = useUser();
-  
-  // 사용자가 이미 로그인되어 있으면 역할에 따라 리다이렉트
-  useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      // publicMetadata나 privateMetadata에서 사용자 역할 가져오기
-      const userRole = user.publicMetadata?.role as string || "kol";
-      
-      if (userRole === "admin") {
-        router.push("/admin-dashboard/main");
-      } else if (userRole === "kol") {
-        router.push("/kol-new");
-      } else {
-        // 기본 리다이렉션
-        router.push("/kol-new");
-      }
-    }
-  }, [isLoaded, isSignedIn, user, router]);
+  // 임시 점검 중 - 모든 리다이렉션 비활성화
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
@@ -42,7 +19,7 @@ export default function Home() {
       {/* 메인 컨텐츠 */}
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
         <CardContainer className="inter-var">
-          <CardBody className="relative group/card dark:hover:shadow-2xl dark:hover:shadow-aurora-violet/[0.1] dark:bg-white/[0.08] dark:border-black/[0.8] border-black/[0.8] w-[85vw] sm:w-[55vw] md:w-[32rem] h-[25rem] rounded-3xl border backdrop-blur-sm flex flex-col items-center justify-center">
+          <CardBody className="relative group/card dark:hover:shadow-2xl dark:hover:shadow-aurora-violet/[0.1] dark:bg-white/[0.08] dark:border-black/[0.8] border-black/[0.8] w-[85vw] sm:w-[55vw] md:w-[32rem] h-[30rem] rounded-3xl border backdrop-blur-sm flex flex-col items-center justify-center">
             {/* 헤딩 텍스트 */}
             <CardItem
               translateZ={80}
@@ -51,22 +28,36 @@ export default function Home() {
               BIOFOX
             </CardItem>
             
-            {/* 서브 텍스트 */}
+            {/* 점검 메시지 */}
             <CardItem
               translateZ={60}
-              className="mt-4 text-center text-lg text-white/70 max-w-xs"
+              className="mt-6 text-center text-xl font-semibold text-yellow-400"
             >
-              KOL CRM System 
+              🔧 임시 점검 중 🔧
             </CardItem>
 
-            {/* 로그인 버튼 */}
+            <CardItem
+              translateZ={60}
+              className="mt-4 text-center text-lg text-white/80 max-w-sm leading-relaxed"
+            >
+              앱 업그레이드로 인해<br/>
+              현재 서비스를 일시 중단합니다.
+            </CardItem>
+
+            <CardItem
+              translateZ={60}
+              className="mt-4 text-center text-base text-white/60 max-w-sm"
+            >
+              빠른 시일 내에 정상화하겠습니다.<br/>
+              이용에 불편을 드려 죄송합니다.
+            </CardItem>
+
+            {/* 비활성화된 버튼 */}
             <CardItem
               translateZ={120}
-              as="button"
-              className="mt-10 px-8 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white/90 hover:text-white text-base font-medium backdrop-blur-md border border-white/20 shadow-lg hover:shadow-aurora-violet/30 hover:scale-105 transition-all duration-300"
-              onClick={() => router.push('/signin')}
+              className="mt-8 px-8 py-4 rounded-2xl bg-gray-600/30 text-gray-400 text-base font-medium backdrop-blur-md border border-gray-500/30 cursor-not-allowed"
             >
-              Log in →
+              서비스 점검 중
             </CardItem>
           </CardBody>
         </CardContainer>
