@@ -137,6 +137,9 @@ export default function CustomerClinicalUploadPage() {
   const [consentViewModal, setConsentViewModal] = useState<{ isOpen: boolean; imageUrl?: string }>({ isOpen: false });
   const [hasUnsavedNewCustomer, setHasUnsavedNewCustomer] = useState(false);
   const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
+  
+  // IME 상태 관리 (한글 입력 문제 해결)
+  const [isComposing, setIsComposing] = useState(false);
   const mainContentRef = useRef<HTMLElement>(null);
 
   // 사용자 역할 확인
@@ -680,9 +683,23 @@ export default function CustomerClinicalUploadPage() {
     }
   };
 
-  // 기본 고객정보 업데이트 핸들러 (이름, 나이, 성별)
+  // 기본 고객정보 업데이트 핸들러 (이름, 나이, 성별) - IME 처리 개선
   const handleBasicCustomerInfoUpdate = async (caseId: string, customerInfo: Partial<Pick<CustomerInfo, 'name' | 'age' | 'gender'>>) => {
     try {
+      // IME 입력 중이면 로컬 상태만 업데이트
+      if (isComposing && customerInfo.name !== undefined) {
+        setCases(prev => prev.map(case_ => 
+          case_.id === caseId 
+            ? { 
+                ...case_, 
+                customerName: customerInfo.name || case_.customerName,
+                customerInfo: { ...case_.customerInfo, ...customerInfo } 
+              }
+            : case_
+        ));
+        return;
+      }
+
       // 새 고객이 아닌 경우에만 실제 API 호출
       if (!isNewCustomer(caseId)) {
         const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
@@ -712,7 +729,15 @@ export default function CustomerClinicalUploadPage() {
           ? { 
               ...case_, 
               customerName: customerInfo.name || case_.customerName,
-              customerInfo: { ...case_.customerInfo, ...customerInfo } 
+              customerInfo: { ...case_.customerInfo, ...customerInfo },
+              roundCustomerInfo: {
+                ...case_.roundCustomerInfo,
+                [currentRounds[caseId] || 1]: {
+                  ...case_.roundCustomerInfo[currentRounds[caseId] || 1],
+                  age: customerInfo.age !== undefined ? customerInfo.age : case_.roundCustomerInfo[currentRounds[caseId] || 1]?.age,
+                  gender: customerInfo.gender !== undefined ? customerInfo.gender : case_.roundCustomerInfo[currentRounds[caseId] || 1]?.gender,
+                }
+              }
             }
           : case_
       ));
@@ -724,9 +749,31 @@ export default function CustomerClinicalUploadPage() {
     }
   };
 
-  // 회차별 고객정보 업데이트 핸들러 (시술유형, 제품, 피부타입, 메모)
+  // 회차별 고객정보 업데이트 핸들러 (시술유형, 제품, 피부타입, 메모) - IME 처리 개선
   const handleRoundCustomerInfoUpdate = async (caseId: string, roundDay: number, roundInfo: Partial<RoundCustomerInfo>) => {
     try {
+      // IME 입력 중이면 로컬 상태만 업데이트
+      if (isComposing && roundInfo.memo !== undefined) {
+        setCases(prev => prev.map(case_ => 
+          case_.id === caseId 
+            ? { 
+                ...case_, 
+                roundCustomerInfo: {
+                  ...case_.roundCustomerInfo,
+                  [roundDay]: { 
+                    treatmentType: '',
+                    memo: '',
+                    date: '',
+                    ...case_.roundCustomerInfo[roundDay],
+                    ...roundInfo 
+                  }
+                }
+              }
+            : case_
+        ));
+        return;
+      }
+
       // 새 고객이 아닌 경우에만 실제 API 호출
       if (!isNewCustomer(caseId)) {
         const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
@@ -1540,6 +1587,11 @@ export default function CustomerClinicalUploadPage() {
                                 id={`name-${case_.id}`}
                                 value={case_.customerInfo.name}
                                 onChange={(e) => handleBasicCustomerInfoUpdate(case_.id, { name: e.target.value })}
+                                onCompositionStart={() => setIsComposing(true)}
+                                onCompositionEnd={(e) => {
+                                  setIsComposing(false);
+                                  handleBasicCustomerInfoUpdate(case_.id, { name: e.currentTarget.value });
+                                }}
                                 placeholder="고객 이름"
                                 className="w-20 text-sm h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                               />
@@ -1829,6 +1881,11 @@ export default function CustomerClinicalUploadPage() {
                           onChange={(e) => 
                             handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: e.target.value })
                           }
+                          onCompositionStart={() => setIsComposing(true)}
+                          onCompositionEnd={(e) => {
+                            setIsComposing(false);
+                            handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: e.currentTarget.value });
+                          }}
                           placeholder="해당 회차 관련 특이사항을 입력하세요..."
                           className="w-full min-h-[80px] border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                         />
