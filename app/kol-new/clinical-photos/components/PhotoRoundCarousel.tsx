@@ -350,39 +350,45 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                           disabled={uploading}
                         >
                           {slot.angle === 'front' && (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
-                                <img 
-                                  src="/images/front-guide.svg" 
-                                  alt="정면 가이드라인" 
-                                  className="w-full h-full object-contain opacity-80" 
-                                  style={{ maxWidth: '100%', maxHeight: '100%' }}
-                                />
-                              </div>
+                            <div className="flex items-center justify-center h-full">
+                              <div 
+                                className="h-16 w-12 opacity-80"
+                                style={{
+                                  backgroundImage: 'url("/images/front-guide.svg")',
+                                  backgroundSize: 'contain',
+                                  backgroundPosition: 'center',
+                                  backgroundRepeat: 'no-repeat'
+                                }}
+                                aria-label="정면 가이드라인"
+                              ></div>
                             </div>
                           )}
                           {slot.angle === 'left' && (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
-                                <img 
-                                  src="/images/left-guide.svg" 
-                                  alt="좌측 가이드라인" 
-                                  className="w-full h-full object-contain opacity-80" 
-                                  style={{ maxWidth: '100%', maxHeight: '100%' }}
-                                />
-                              </div>
+                            <div className="flex items-center justify-center h-full">
+                              <div 
+                                className="h-16 w-12 opacity-80"
+                                style={{
+                                  backgroundImage: 'url("/images/left-guide.svg")',
+                                  backgroundSize: 'contain',
+                                  backgroundPosition: 'center',
+                                  backgroundRepeat: 'no-repeat'
+                                }}
+                                aria-label="좌측 가이드라인"
+                              ></div>
                             </div>
                           )}
                           {slot.angle === 'right' && (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
-                                <img 
-                                  src="/images/right-guide.svg" 
-                                  alt="우측 가이드라인" 
-                                  className="w-full h-full object-contain opacity-80" 
-                                  style={{ maxWidth: '100%', maxHeight: '100%' }}
-                                />
-                              </div>
+                            <div className="flex items-center justify-center h-full">
+                              <div 
+                                className="h-16 w-12 opacity-80"
+                                style={{
+                                  backgroundImage: 'url("/images/right-guide.svg")',
+                                  backgroundSize: 'contain',
+                                  backgroundPosition: 'center',
+                                  backgroundRepeat: 'no-repeat'
+                                }}
+                                aria-label="우측 가이드라인"
+                              ></div>
                             </div>
                           )}
                         </button>
