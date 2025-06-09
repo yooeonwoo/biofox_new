@@ -345,35 +345,44 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                         </div>
                       ) : (
                         <button
-                          className="w-full h-full flex flex-col items-center justify-center transition-colors cursor-pointer bg-soksok-light-blue/10 hover:bg-soksok-light-blue/20 disabled:opacity-50"
+                          className="w-full h-full flex flex-col items-center justify-center transition-colors cursor-pointer bg-white hover:bg-soksok-light-blue/10 disabled:opacity-50"
                           onClick={() => handleUploadClick(slot.roundDay, slot.angle)}
                           disabled={uploading}
                         >
                           {slot.angle === 'front' && (
-                            <div className="w-full h-full relative">
-                              <img 
-                                src="/images/front-guide.png" 
-                                alt="정면 가이드라인" 
-                                className="w-full h-full object-cover opacity-60" 
-                              />
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
+                                <img 
+                                  src="/images/front-guide.png" 
+                                  alt="정면 가이드라인" 
+                                  className="w-full h-full object-contain opacity-80" 
+                                  style={{ maxWidth: '100%', maxHeight: '100%' }}
+                                />
+                              </div>
                             </div>
                           )}
                           {slot.angle === 'left' && (
-                            <div className="w-full h-full relative">
-                              <img 
-                                src="/images/left-guide.png" 
-                                alt="좌측 가이드라인" 
-                                className="w-full h-full object-cover opacity-60" 
-                              />
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
+                                <img 
+                                  src="/images/left-guide.png" 
+                                  alt="좌측 가이드라인" 
+                                  className="w-full h-full object-contain opacity-80" 
+                                  style={{ maxWidth: '100%', maxHeight: '100%' }}
+                                />
+                              </div>
                             </div>
                           )}
                           {slot.angle === 'right' && (
-                            <div className="w-full h-full relative">
-                              <img 
-                                src="/images/right-guide.png" 
-                                alt="우측 가이드라인" 
-                                className="w-full h-full object-cover opacity-60" 
-                              />
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
+                                <img 
+                                  src="/images/right-guide.png" 
+                                  alt="우측 가이드라인" 
+                                  className="w-full h-full object-contain opacity-80" 
+                                  style={{ maxWidth: '100%', maxHeight: '100%' }}
+                                />
+                              </div>
                             </div>
                           )}
                         </button>
