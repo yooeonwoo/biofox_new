@@ -330,85 +330,25 @@ export default function CustomerClinicalUploadPage() {
     loadCases();
   }, [isLoaded, isSignedIn, isKol]);
 
-  // Intersection Observer를 사용한 카드 가시성 감지 및 숫자 표시
+  // 간단한 스크롤 기반 애니메이션
   useEffect(() => {
-    const timeoutRefs = new Map<string, NodeJS.Timeout>();
+    let scrollTimeout: NodeJS.Timeout;
     
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const caseId = entry.target.getAttribute('data-case-id');
-          if (caseId) {
-            // 카드 가시성 상태 업데이트
-            setVisibleCards(prev => {
-              const newSet = new Set(prev);
-              if (entry.isIntersecting) {
-                newSet.add(caseId);
-              } else {
-                newSet.delete(caseId);
-              }
-              return newSet;
-            });
+    const handleScroll = () => {
+      // 스크롤 중일 때만 숫자 표시
+      setNumberVisibleCards(new Set(cases.map(c => c.id)));
+      
+      // 스크롤이 멈추면 숫자 숨기기
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        setNumberVisibleCards(new Set());
+      }, 1000);
+    };
 
-            if (entry.isIntersecting) {
-              // intersection ratio가 충분히 높을 때만 숫자 표시
-              if (entry.intersectionRatio >= 0.3) {
-                // 기존 타이머가 있다면 클리어
-                const existingTimeout = timeoutRefs.get(caseId);
-                if (existingTimeout) {
-                  clearTimeout(existingTimeout);
-                }
-                
-                // 숫자 표시 시작
-                setNumberVisibleCards(prev => {
-                  const newSet = new Set(prev);
-                  newSet.add(caseId);
-                  return newSet;
-                });
-                
-                // 1.5초 후 숫자 숨기기
-                const newTimeout = setTimeout(() => {
-                  setNumberVisibleCards(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(caseId);
-                    return newSet;
-                  });
-                  timeoutRefs.delete(caseId);
-                }, 1500);
-                
-                timeoutRefs.set(caseId, newTimeout);
-              }
-              
-            } else {
-              // 뷰포트에서 벗어나면 숫자 즉시 숨기기
-              setNumberVisibleCards(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(caseId);
-                return newSet;
-              });
-              
-              // 관련 타이머 클리어
-              const existingTimeout = timeoutRefs.get(caseId);
-              if (existingTimeout) {
-                clearTimeout(existingTimeout);
-                timeoutRefs.delete(caseId);
-              }
-            }
-          }
-        });
-      },
-      {
-        threshold: 0.3,
-        rootMargin: '-30% 0px -30% 0px'
-      }
-    );
-
-    const cardElements = document.querySelectorAll('[data-case-id]');
-    cardElements.forEach(card => observer.observe(card));
-
+    window.addEventListener('scroll', handleScroll);
     return () => {
-      observer.disconnect();
-      timeoutRefs.forEach(timeout => clearTimeout(timeout));
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
     };
   }, [cases]);
 
@@ -554,11 +494,16 @@ export default function CustomerClinicalUploadPage() {
     try {
       // 새 고객이 아닌 경우에만 실제 API 호출
       if (!isNewCustomer(caseId)) {
-        const { updateCase } = await import('@/lib/clinical-photos-api');
-        await updateCase(parseInt(caseId), { 
-          consentImageUrl: undefined,
-          consentReceived: false 
+        // 동의서 파일 삭제 API 호출
+        const response = await fetch(`/api/kol-new/clinical-photos/consent/${caseId}`, {
+          method: 'DELETE',
+          credentials: 'include'
         });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || '동의서 삭제에 실패했습니다.');
+        }
       }
       
       // 로컬 상태 업데이트
@@ -569,9 +514,10 @@ export default function CustomerClinicalUploadPage() {
       ));
       
       console.log('동의서가 성공적으로 삭제되었습니다.');
+      alert('동의서가 성공적으로 삭제되었습니다.');
     } catch (error) {
       console.error('동의서 삭제 실패:', error);
-      alert('동의서 삭제에 실패했습니다. 다시 시도해주세요.');
+      alert(`동의서 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
     }
   };
 
@@ -934,21 +880,11 @@ export default function CustomerClinicalUploadPage() {
     setCurrentRounds(prev => ({ ...prev, [newCase.id]: 1 }));
     setHasUnsavedNewCustomer(true);
     
-    // 새 카드의 숫자도 표시
-    setNumberVisibleCards(prev => {
-      const newSet = new Set(prev);
-      newSet.add(newCase.id);
-      return newSet;
-    });
-    
-    // 1.5초 후 숫자 숨기기
-    const hideNumberTimeout = setTimeout(() => {
-      setNumberVisibleCards(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(newCase.id);
-        return newSet;
-      });
-    }, 1500);
+    // 새 카드는 잠시 숫자 표시
+    setNumberVisibleCards(new Set([newCase.id]));
+    setTimeout(() => {
+      setNumberVisibleCards(new Set());
+    }, 2000);
     
     // 부드러운 스크롤 애니메이션으로 새 카드로 이동
     setTimeout(() => {
@@ -1584,39 +1520,7 @@ export default function CustomerClinicalUploadPage() {
                       </div>
                       {/* 블록 3: 홈케어 제품 */}
                       <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium text-blue-700">홈케어 제품</Label>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              // 현재 선택된 제품들로 저장
-                              const updates = {
-                                cureBooster: case_.cureBooster || false,
-                                cureMask: case_.cureMask || false,
-                                premiumMask: case_.premiumMask || false,
-                                allInOneSerum: case_.allInOneSerum || false
-                              };
-                              await updateCaseCheckboxes(case_.id, updates);
-                              // 저장 성공 피드백
-                              const button = document.querySelector(`#save-products-${case_.id}`) as HTMLElement;
-                              if (button) {
-                                const originalText = button.textContent;
-                                button.textContent = '저장됨';
-                                button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                                setTimeout(() => {
-                                  button.textContent = originalText;
-                                  button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
-                                }, 1500);
-                              }
-                            }}
-                            id={`save-products-${case_.id}`}
-                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
-                          >
-                            <Save className="h-3 w-3 mr-1" />
-                            저장
-                          </Button>
-                        </div>
+                        <Label className="text-sm font-medium text-blue-700">홈케어 제품</Label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-2 gap-y-2">
                           {SYSTEM_OPTIONS.products.map((product) => {
                             const currentRound = currentRounds[case_.id] || 1;
@@ -1664,17 +1568,27 @@ export default function CustomerClinicalUploadPage() {
                                 <Checkbox
                                   id={`product-${case_.id}-${currentRound}-${product.value}`}
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => {
-                                    // 백엔드 boolean 필드 직접 업데이트
-                                    const updates = { [fieldName]: checked };
-                                    updateCaseCheckboxes(case_.id, updates);
+                                  onCheckedChange={async (checked) => {
+                                    // 즉시 로컬 상태 업데이트
+                                    setCases(prev => prev.map(case_ => 
+                                      case_.id === case_.id 
+                                        ? { ...case_, [fieldName]: checked }
+                                        : case_
+                                    ));
                                     
-                                    // 기존 products 배열도 함께 업데이트 (기존 기능 유지)
-                                    const currentProducts = currentRoundInfo.products || [];
-                                    const newProducts = checked
-                                      ? [...currentProducts, product.value]
-                                      : currentProducts.filter(p => p !== product.value);
-                                    handleRoundCustomerInfoUpdate(case_.id, currentRound, { products: newProducts });
+                                    // 백그라운드에서 저장
+                                    try {
+                                      const updates = { [fieldName]: checked };
+                                      await updateCaseCheckboxes(case_.id, updates);
+                                    } catch (error) {
+                                      console.error('자동 저장 실패:', error);
+                                      // 실패 시 상태 되돌리기
+                                      setCases(prev => prev.map(case_ => 
+                                        case_.id === case_.id 
+                                          ? { ...case_, [fieldName]: !checked }
+                                          : case_
+                                      ));
+                                    }
                                   }}
                                   className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
                                 />
@@ -1687,41 +1601,7 @@ export default function CustomerClinicalUploadPage() {
                       
                       {/* 블록 4: 고객 피부타입 */}
                       <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium text-blue-700">고객 피부타입</Label>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              // 현재 선택된 피부타입들로 저장
-                              const updates = {
-                                skinRedSensitive: case_.skinRedSensitive || false,
-                                skinPigment: case_.skinPigment || false,
-                                skinPore: case_.skinPore || false,
-                                skinTrouble: case_.skinTrouble || false,
-                                skinWrinkle: case_.skinWrinkle || false,
-                                skinEtc: case_.skinEtc || false
-                              };
-                              await updateCaseCheckboxes(case_.id, updates);
-                              // 저장 성공 피드백
-                              const button = document.querySelector(`#save-skintypes-${case_.id}`) as HTMLElement;
-                              if (button) {
-                                const originalText = button.textContent;
-                                button.textContent = '저장됨';
-                                button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                                setTimeout(() => {
-                                  button.textContent = originalText;
-                                  button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
-                                }, 1500);
-                              }
-                            }}
-                            id={`save-skintypes-${case_.id}`}
-                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
-                          >
-                            <Save className="h-3 w-3 mr-1" />
-                            저장
-                          </Button>
-                        </div>
+                        <Label className="text-sm font-medium text-blue-700">고객 피부타입</Label>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2 gap-y-2">
                           {SYSTEM_OPTIONS.skinTypes.map((skinType) => {
                             const currentRound = currentRounds[case_.id] || 1;
@@ -1778,17 +1658,27 @@ export default function CustomerClinicalUploadPage() {
                                 <Checkbox
                                   id={`skin-${case_.id}-${currentRound}-${skinType.value}`}
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => {
-                                    // 백엔드 boolean 필드 직접 업데이트
-                                    const updates = { [fieldName]: checked };
-                                    updateCaseCheckboxes(case_.id, updates);
+                                  onCheckedChange={async (checked) => {
+                                    // 즉시 로컬 상태 업데이트
+                                    setCases(prev => prev.map(case_ => 
+                                      case_.id === case_.id 
+                                        ? { ...case_, [fieldName]: checked }
+                                        : case_
+                                    ));
                                     
-                                    // 기존 skinTypes 배열도 함께 업데이트 (기존 기능 유지)
-                                    const currentSkinTypes = currentRoundInfo.skinTypes || [];
-                                    const newSkinTypes = checked
-                                      ? [...currentSkinTypes, skinType.value]
-                                      : currentSkinTypes.filter(s => s !== skinType.value);
-                                    handleRoundCustomerInfoUpdate(case_.id, currentRound, { skinTypes: newSkinTypes });
+                                    // 백그라운드에서 저장
+                                    try {
+                                      const updates = { [fieldName]: checked };
+                                      await updateCaseCheckboxes(case_.id, updates);
+                                    } catch (error) {
+                                      console.error('자동 저장 실패:', error);
+                                      // 실패 시 상태 되돌리기
+                                      setCases(prev => prev.map(case_ => 
+                                        case_.id === case_.id 
+                                          ? { ...case_, [fieldName]: !checked }
+                                          : case_
+                                      ));
+                                    }
                                   }}
                                   className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
                                 />

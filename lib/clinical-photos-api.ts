@@ -126,10 +126,13 @@ export async function fetchCases(status?: string): Promise<ClinicalCase[]> {
     const targetKolId = kolId === 0 ? 48 : kolId;
     console.log('임상사진: 최종 사용하는 KOL ID', targetKolId);
     
-    // Supabase 쿼리 실행
+    // Supabase 쿼리 실행 (동의서 파일 정보 포함)
     const { data, error } = await supabaseClient
       .from('clinical_cases')
-      .select('*')
+      .select(`
+        *,
+        clinical_consent_files(file_url)
+      `)
       .eq('kol_id', targetKolId)
       .order('created_at', { ascending: false });
     
@@ -175,7 +178,7 @@ export async function fetchCases(status?: string): Promise<ClinicalCase[]> {
       createdAt: c.created_at,
       updatedAt: c.updated_at,
       totalPhotos: photoCountsMap[c.id] || 0,
-      consentImageUrl: c.consent_image_url,
+      consentImageUrl: c.clinical_consent_files?.[0]?.file_url || undefined,
       
       // 플레이어 제품 선택 필드
       cureBooster: c.cure_booster || false,

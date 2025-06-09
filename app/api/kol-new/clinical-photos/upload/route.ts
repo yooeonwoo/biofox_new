@@ -192,34 +192,93 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 동의서인 경우 케이스 정보 업데이트
+    // 동의서인 경우 동의서 파일 테이블에 저장하고 케이스 상태 업데이트
     if (type === "consent") {
-      console.log("Updating consent for case:", caseId, "with URL:", publicUrl);
+      console.log("Saving consent file for case:", caseId, "with URL:", publicUrl);
       
-      const { data: updateData, error: dbError } = await supabase
-        .from("clinical_cases")
-        .update({
-          consent_image_url: publicUrl,
-          consent_received: true
+      // 기존 동의서 파일이 있으면 삭제
+      const { data: existingFiles, error: fetchError } = await supabase
+        .from("clinical_consent_files")
+        .select("*")
+        .eq("case_id", parseInt(caseId));
+      
+      if (fetchError) {
+        console.error("Failed to fetch existing consent files:", fetchError);
+      }
+      
+      // 기존 파일들 삭제 (Storage와 DB 모두)
+      if (existingFiles && existingFiles.length > 0) {
+        for (const file of existingFiles) {
+          try {
+            // Storage에서 파일 삭제
+            const url = new URL(file.file_url);
+            const pathParts = url.pathname.split("/");
+            const bucketIndex = pathParts.indexOf("clinical-photos");
+            if (bucketIndex !== -1) {
+              const filePath = pathParts.slice(bucketIndex + 1).join("/");
+              await supabase.storage.from("clinical-photos").remove([filePath]);
+            }
+          } catch (deleteError) {
+            console.error("Failed to delete old consent file from storage:", deleteError);
+          }
+        }
+        
+        // DB에서 기존 레코드 삭제
+        await supabase
+          .from("clinical_consent_files")
+          .delete()
+          .eq("case_id", parseInt(caseId));
+      }
+      
+      // 새 동의서 파일 정보 저장
+      const { data: consentData, error: consentError } = await supabase
+        .from("clinical_consent_files")
+        .insert({
+          case_id: parseInt(caseId),
+          file_url: publicUrl
         })
-        .eq("id", parseInt(caseId))
         .select();
 
-      if (dbError) {
-        console.error("Consent DB update error:", {
-          error: dbError,
+      if (consentError) {
+        console.error("Consent file DB insert error:", {
+          error: consentError,
           caseId: caseId,
           publicUrl: publicUrl
         });
         // 업로드된 파일 삭제
         await supabase.storage.from("clinical-photos").remove([fileName]);
         return NextResponse.json(
-          { error: `Failed to update consent information: ${dbError.message}` },
+          { error: `Failed to save consent file: ${consentError.message}` },
           { status: 500 }
         );
       }
       
-      console.log("Consent update successful:", updateData);
+      // 케이스의 동의 상태 업데이트
+      const { data: caseUpdateData, error: caseUpdateError } = await supabase
+        .from("clinical_cases")
+        .update({
+          consent_received: true
+        })
+        .eq("id", parseInt(caseId))
+        .select();
+
+      if (caseUpdateError) {
+        console.error("Case consent status update error:", caseUpdateError);
+        // 동의서 파일 레코드 삭제
+        await supabase
+          .from("clinical_consent_files")
+          .delete()
+          .eq("case_id", parseInt(caseId));
+        // 업로드된 파일 삭제
+        await supabase.storage.from("clinical-photos").remove([fileName]);
+        return NextResponse.json(
+          { error: `Failed to update case consent status: ${caseUpdateError.message}` },
+          { status: 500 }
+        );
+      }
+      
+      console.log("Consent file saved successfully:", consentData);
+      console.log("Case consent status updated:", caseUpdateData);
     }
 
     return NextResponse.json({
