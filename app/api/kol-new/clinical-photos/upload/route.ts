@@ -194,24 +194,32 @@ export async function POST(request: NextRequest) {
 
     // 동의서인 경우 케이스 정보 업데이트
     if (type === "consent") {
-      const { error: dbError } = await supabase
+      console.log("Updating consent for case:", caseId, "with URL:", publicUrl);
+      
+      const { data: updateData, error: dbError } = await supabase
         .from("clinical_cases")
         .update({
           consent_image_url: publicUrl,
-          consent_received: true,
-          updated_at: new Date().toISOString(),
+          consent_received: true
         })
-        .eq("id", parseInt(caseId));
+        .eq("id", parseInt(caseId))
+        .select();
 
       if (dbError) {
-        console.error("Consent DB update error:", dbError);
+        console.error("Consent DB update error:", {
+          error: dbError,
+          caseId: caseId,
+          publicUrl: publicUrl
+        });
         // 업로드된 파일 삭제
         await supabase.storage.from("clinical-photos").remove([fileName]);
         return NextResponse.json(
-          { error: "Failed to update consent information" },
+          { error: `Failed to update consent information: ${dbError.message}` },
           { status: 500 }
         );
       }
+      
+      console.log("Consent update successful:", updateData);
     }
 
     return NextResponse.json({

@@ -351,30 +351,33 @@ export default function CustomerClinicalUploadPage() {
             });
 
             if (entry.isIntersecting) {
-              // 기존 타이머가 있다면 클리어
-              const existingTimeout = timeoutRefs.get(caseId);
-              if (existingTimeout) {
-                clearTimeout(existingTimeout);
-              }
-              
-              // 숫자 표시 시작
-              setNumberVisibleCards(prev => {
-                const newSet = new Set(prev);
-                newSet.add(caseId);
-                return newSet;
-              });
-              
-              // 1.5초 후 숫자 숨기기
-              const newTimeout = setTimeout(() => {
+              // intersection ratio가 충분히 높을 때만 숫자 표시
+              if (entry.intersectionRatio >= 0.3) {
+                // 기존 타이머가 있다면 클리어
+                const existingTimeout = timeoutRefs.get(caseId);
+                if (existingTimeout) {
+                  clearTimeout(existingTimeout);
+                }
+                
+                // 숫자 표시 시작
                 setNumberVisibleCards(prev => {
                   const newSet = new Set(prev);
-                  newSet.delete(caseId);
+                  newSet.add(caseId);
                   return newSet;
                 });
-                timeoutRefs.delete(caseId);
-              }, 1500);
-              
-              timeoutRefs.set(caseId, newTimeout);
+                
+                // 1.5초 후 숫자 숨기기
+                const newTimeout = setTimeout(() => {
+                  setNumberVisibleCards(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(caseId);
+                    return newSet;
+                  });
+                  timeoutRefs.delete(caseId);
+                }, 1500);
+                
+                timeoutRefs.set(caseId, newTimeout);
+              }
               
             } else {
               // 뷰포트에서 벗어나면 숫자 즉시 숨기기
@@ -395,8 +398,8 @@ export default function CustomerClinicalUploadPage() {
         });
       },
       {
-        threshold: 0.5,
-        rootMargin: '-20% 0px -20% 0px'
+        threshold: 0.3,
+        rootMargin: '-30% 0px -30% 0px'
       }
     );
 
@@ -782,9 +785,12 @@ export default function CustomerClinicalUploadPage() {
           : case_
       ));
       
-      // 본래 API 호출을 통해 서버에 업데이트
-      // API에서는 caseId를 number로 기대하기 때문에 변환
-      await updateCase(parseInt(caseId), updates);
+      // 새 고객이 아닌 경우에만 실제 API 호출
+      if (!isNewCustomer(caseId)) {
+        // 본래 API 호출을 통해 서버에 업데이트
+        const { updateCase } = await import('@/lib/clinical-photos-api');
+        await updateCase(parseInt(caseId), updates);
+      }
       
       console.log('체크박스 정보가 저장되었습니다');
 
