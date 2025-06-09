@@ -178,7 +178,7 @@ export async function fetchCases(status?: string): Promise<ClinicalCase[]> {
       createdAt: c.created_at,
       updatedAt: c.updated_at,
       totalPhotos: photoCountsMap[c.id] || 0,
-      consentImageUrl: c.clinical_consent_files?.[0]?.file_url || undefined,
+      consentImageUrl: c.consent_image_url || c.clinical_consent_files?.[0]?.file_url || undefined,
       
       // 플레이어 제품 선택 필드
       cureBooster: c.cure_booster || false,
@@ -594,6 +594,90 @@ export async function uploadConsentImage(caseId: number, file: File): Promise<st
   } catch (error) {
     console.error('Consent image upload error:', error);
     toast.error(`동의서 업로드에 실패했습니다: ${error.message || error}`);
+    throw error;
+  }
+}
+
+// 회차별 고객 정보 저장/업데이트
+export async function saveRoundCustomerInfo(caseId: number, roundNumber: number, roundInfo: {
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  treatmentType?: string;
+  roundDate?: string;
+  products?: string[];
+  skinTypes?: string[];
+  memo?: string;
+}): Promise<any> {
+  try {
+    // 기존 데이터 확인
+    const { data: existingData, error: fetchError } = await supabaseClient
+      .from('round_customer_info')
+      .select('*')
+      .eq('case_id', caseId)
+      .eq('round_number', roundNumber)
+      .single();
+    
+    const roundData = {
+      case_id: caseId,
+      round_number: roundNumber,
+      age: roundInfo.age,
+      gender: roundInfo.gender,
+      treatment_type: roundInfo.treatmentType,
+      round_date: roundInfo.roundDate,
+      products: roundInfo.products ? JSON.stringify(roundInfo.products) : null,
+      skin_types: roundInfo.skinTypes ? JSON.stringify(roundInfo.skinTypes) : null,
+      memo: roundInfo.memo,
+    };
+
+    // undefined 값 제거
+    Object.keys(roundData).forEach(key => {
+      if (roundData[key] === undefined) {
+        delete roundData[key];
+      }
+    });
+
+    if (existingData) {
+      // 업데이트
+      const { data, error } = await supabaseClient
+        .from('round_customer_info')
+        .update(roundData)
+        .eq('case_id', caseId)
+        .eq('round_number', roundNumber)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } else {
+      // 새로 생성
+      const { data, error } = await supabaseClient
+        .from('round_customer_info')
+        .insert(roundData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  } catch (error) {
+    console.error('Error saving round customer info:', error);
+    throw error;
+  }
+}
+
+// 회차별 고객 정보 조회
+export async function fetchRoundCustomerInfo(caseId: number): Promise<any[]> {
+  try {
+    const { data, error } = await supabaseClient
+      .from('round_customer_info')
+      .select('*')
+      .eq('case_id', caseId)
+      .order('round_number', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching round customer info:', error);
     throw error;
   }
 }

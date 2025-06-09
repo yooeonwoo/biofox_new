@@ -66,6 +66,8 @@ interface CustomerInfo {
 
 // 회차별 고객 정보 타입
 interface RoundCustomerInfo {
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
   treatmentType?: string;
   products: string[];
   skinTypes: string[];
@@ -273,6 +275,39 @@ export default function CustomerClinicalUploadPage() {
           } catch (error) {
             console.error(`Failed to load photos for case ${case_.id}:`, error);
           }
+
+          // 회차별 고객 정보 로드
+          let roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+          try {
+            const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+            const roundData = await fetchRoundCustomerInfo(case_.id);
+            roundData.forEach(round => {
+              roundCustomerInfo[round.round_number] = {
+                age: round.age,
+                gender: round.gender,
+                treatmentType: round.treatment_type || '',
+                products: round.products ? JSON.parse(round.products) : [],
+                skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
+                memo: round.memo || '',
+                date: round.round_date || ''
+              };
+            });
+          } catch (error) {
+            console.error(`Failed to load round info for case ${case_.id}:`, error);
+          }
+
+          // 기본 회차 정보가 없으면 생성
+          if (!roundCustomerInfo[1]) {
+            roundCustomerInfo[1] = {
+              age: undefined,
+              gender: undefined,
+              treatmentType: '',
+              products: productTypes,
+              skinTypes: skinTypeData,
+              memo: case_.treatmentPlan || '',
+              date: case_.createdAt.split('T')[0]
+            };
+          }
           
           // 변환된 케이스 데이터 반환
           return {
@@ -285,19 +320,13 @@ export default function CustomerClinicalUploadPage() {
             photos: photos,
             customerInfo: {
               name: case_.customerName,
+              age: roundCustomerInfo[1]?.age,
+              gender: roundCustomerInfo[1]?.gender,
               products: productTypes,
               skinTypes: skinTypeData,
               memo: case_.treatmentPlan || ''
             },
-            roundCustomerInfo: {
-              1: {
-                treatmentType: '',
-                products: productTypes,
-                skinTypes: skinTypeData,
-                memo: case_.treatmentPlan || '',
-                date: case_.createdAt.split('T')[0]
-              }
-            },
+            roundCustomerInfo: roundCustomerInfo,
             // 본래 API의 boolean 필드를 그대로 설정
             cureBooster: case_.cureBooster || false,
             cureMask: case_.cureMask || false,
@@ -329,25 +358,39 @@ export default function CustomerClinicalUploadPage() {
     loadCases();
   }, [isLoaded, isSignedIn, isKol]);
 
-  // 간단한 스크롤 기반 애니메이션
+  // 스크롤 기반 숫자 애니메이션 (스크롤할 때만 표시)
   useEffect(() => {
     let scrollTimeout: NodeJS.Timeout;
+    let throttleTimeout: NodeJS.Timeout;
+    let isScrolling = false;
     
     const handleScroll = () => {
-      // 스크롤 중일 때만 숫자 표시
-      setNumberVisibleCards(new Set(cases.map(c => c.id)));
+      // 스크롤 시작 시에만 숫자 표시 (throttling으로 성능 향상)
+      if (!isScrolling && !throttleTimeout) {
+        isScrolling = true;
+        setNumberVisibleCards(new Set(cases.map(c => c.id)));
+        
+        // throttling: 100ms 동안 추가 실행 방지
+        throttleTimeout = setTimeout(() => {
+          throttleTimeout = null;
+        }, 100);
+      }
       
-      // 스크롤이 멈추면 숫자 숨기기
+      // 스크롤이 멈추면 숫자 숨기기 (디바운싱)
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
         setNumberVisibleCards(new Set());
-      }, 1000);
+        isScrolling = false;
+      }, 600); // 0.6초 후 숫자 숨김
     };
 
-    window.addEventListener('scroll', handleScroll);
+    // 스크롤 이벤트만 감지 (passive 옵션으로 성능 향상)
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
     return () => {
       window.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
+      clearTimeout(throttleTimeout);
     };
   }, [cases]);
 
@@ -629,7 +672,7 @@ export default function CustomerClinicalUploadPage() {
     try {
       // 새 고객이 아닌 경우에만 실제 API 호출
       if (!isNewCustomer(caseId)) {
-        const { updateCase } = await import('@/lib/clinical-photos-api');
+        const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
         const updateData: any = {};
         
         if (customerInfo.name) {
@@ -638,6 +681,15 @@ export default function CustomerClinicalUploadPage() {
         
         if (Object.keys(updateData).length > 0) {
           await updateCase(parseInt(caseId), updateData);
+        }
+
+        // 나이, 성별이 있으면 round_customer_info에 저장
+        if (customerInfo.age !== undefined || customerInfo.gender !== undefined) {
+          const currentRound = currentRounds[caseId] || 1;
+          await saveRoundCustomerInfo(parseInt(caseId), currentRound, {
+            age: customerInfo.age,
+            gender: customerInfo.gender,
+          });
         }
       }
       
@@ -664,7 +716,7 @@ export default function CustomerClinicalUploadPage() {
     try {
       // 새 고객이 아닌 경우에만 실제 API 호출
       if (!isNewCustomer(caseId)) {
-        const { updateCase } = await import('@/lib/clinical-photos-api');
+        const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
         const updateData: any = {};
         
         // 메모 정보만 treatmentPlan으로 업데이트 (다른 필드는 체크박스로 처리)
@@ -675,6 +727,13 @@ export default function CustomerClinicalUploadPage() {
         if (Object.keys(updateData).length > 0) {
           await updateCase(parseInt(caseId), updateData);
         }
+
+        // round_customer_info 테이블에 회차별 정보 저장
+        await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
+          treatmentType: roundInfo.treatmentType,
+          roundDate: roundInfo.date,
+          memo: roundInfo.memo,
+        });
       }
       
       // 로컬 상태 업데이트
@@ -696,9 +755,7 @@ export default function CustomerClinicalUploadPage() {
           : case_
       ));
       
-      if (roundInfo.memo !== undefined) {
-        console.log('회차별 메모 정보가 업데이트되었습니다.');
-      }
+      console.log('회차별 고객 정보가 업데이트되었습니다.');
     } catch (error) {
       console.error('회차별 고객 정보 업데이트 실패:', error);
       // 조용히 실패 처리 (사용자 경험 방해하지 않도록)
@@ -802,6 +859,39 @@ export default function CustomerClinicalUploadPage() {
         } catch (error) {
           console.error(`Failed to load photos for case ${case_.id}:`, error);
         }
+
+        // 회차별 고객 정보 로드
+        let roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+        try {
+          const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+          const roundData = await fetchRoundCustomerInfo(case_.id);
+          roundData.forEach(round => {
+            roundCustomerInfo[round.round_number] = {
+              age: round.age,
+              gender: round.gender,
+              treatmentType: round.treatment_type || '',
+              products: round.products ? JSON.parse(round.products) : [],
+              skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
+              memo: round.memo || '',
+              date: round.round_date || ''
+            };
+          });
+        } catch (error) {
+          console.error(`Failed to load round info for case ${case_.id}:`, error);
+        }
+
+        // 기본 회차 정보가 없으면 생성
+        if (!roundCustomerInfo[1]) {
+          roundCustomerInfo[1] = {
+            age: undefined,
+            gender: undefined,
+            treatmentType: '',
+            products: productTypes,
+            skinTypes: skinTypeData,
+            memo: case_.treatmentPlan || '',
+            date: case_.createdAt.split('T')[0]
+          };
+        }
         
         return {
           id: case_.id.toString(),
@@ -813,19 +903,13 @@ export default function CustomerClinicalUploadPage() {
           photos: photos,
           customerInfo: {
             name: case_.customerName,
+            age: roundCustomerInfo[1]?.age,
+            gender: roundCustomerInfo[1]?.gender,
             products: productTypes,
             skinTypes: skinTypeData,
             memo: case_.treatmentPlan || ''
           },
-          roundCustomerInfo: {
-            1: {
-              treatmentType: '',
-              products: productTypes,
-              skinTypes: skinTypeData,
-              memo: case_.treatmentPlan || '',
-              date: case_.createdAt.split('T')[0]
-            }
-          },
+          roundCustomerInfo: roundCustomerInfo,
           cureBooster: case_.cureBooster || false,
           cureMask: case_.cureMask || false,
           premiumMask: case_.premiumMask || false,
@@ -866,6 +950,8 @@ export default function CustomerClinicalUploadPage() {
       },
       roundCustomerInfo: {
         1: {
+          age: undefined,
+          gender: undefined,
           treatmentType: '',
           products: [],
           skinTypes: [],
@@ -878,12 +964,6 @@ export default function CustomerClinicalUploadPage() {
     setCases(prev => [newCase, ...prev]);
     setCurrentRounds(prev => ({ ...prev, [newCase.id]: 1 }));
     setHasUnsavedNewCustomer(true);
-    
-    // 새 카드는 잠시 숫자 표시
-    setNumberVisibleCards(new Set([newCase.id]));
-    setTimeout(() => {
-      setNumberVisibleCards(new Set());
-    }, 2000);
     
     // 부드러운 스크롤 애니메이션으로 새 카드로 이동
     setTimeout(() => {
@@ -1183,15 +1263,15 @@ export default function CustomerClinicalUploadPage() {
                               y: numberVisibleCards.has(case_.id) ? 0 : 30
                             }}
                             transition={{ 
-                              duration: 0.5, 
+                              duration: 0.4, 
                               ease: "easeOut",
                               opacity: { 
-                                duration: numberVisibleCards.has(case_.id) ? 0.3 : 0.6,
+                                duration: numberVisibleCards.has(case_.id) ? 0.2 : 0.4,
                                 ease: numberVisibleCards.has(case_.id) ? "easeOut" : "easeIn"
                               },
-                              scale: { duration: 0.4 },
-                              rotate: { duration: 0.5 },
-                              y: { duration: 0.4 }
+                              scale: { duration: 0.3 },
+                              rotate: { duration: 0.4 },
+                              y: { duration: 0.3 }
                             }}
                           >
                             <motion.span 
@@ -1202,7 +1282,7 @@ export default function CustomerClinicalUploadPage() {
                                   : "rgba(209, 213, 219, 0.1)" // gray-300/10 - 더 연하게
                               }}
                               transition={{ 
-                                duration: numberVisibleCards.has(case_.id) ? 0.3 : 0.6,
+                                duration: numberVisibleCards.has(case_.id) ? 0.2 : 0.4,
                                 ease: numberVisibleCards.has(case_.id) ? "easeOut" : "easeIn"
                               }}
                             >

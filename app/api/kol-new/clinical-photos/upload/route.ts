@@ -253,11 +253,12 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // 케이스의 동의 상태 업데이트
+      // 케이스의 동의 상태 및 이미지 URL 업데이트
       const { data: caseUpdateData, error: caseUpdateError } = await supabase
         .from("clinical_cases")
         .update({
-          consent_received: true
+          consent_received: true,
+          consent_image_url: publicUrl
         })
         .eq("id", parseInt(caseId))
         .select();

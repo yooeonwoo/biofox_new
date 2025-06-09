@@ -83,10 +83,13 @@ export async function DELETE(
       );
     }
 
-    // 케이스의 동의 상태를 false로 업데이트
+    // 케이스의 동의 상태를 false로 업데이트하고 이미지 URL 제거
     const { error: caseUpdateError } = await supabase
       .from("clinical_cases")
-      .update({ consent_received: false })
+      .update({ 
+        consent_received: false,
+        consent_image_url: null 
+      })
       .eq("id", parseInt(caseId));
 
     if (caseUpdateError) {
