@@ -1,11 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
+import { db } from '@/lib/db';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// KOL ID를 가져오는 함수
+async function getKolIdForUser(userId: string): Promise<number> {
+  try {
+    const result = await db.query(
+      `SELECT k.id FROM kols k 
+       JOIN users u ON u.id = k.user_id 
+       WHERE u.clerk_id = $1`,
+      [userId]
+    );
+    
+    if (result.rows.length === 0) {
+      throw new Error('KOL 정보를 찾을 수 없습니다.');
+    }
+    
+    return result.rows[0].id;
+  } catch (error) {
+    console.error('Error fetching KOL ID:', error);
+    throw new Error('KOL ID 조회에 실패했습니다.');
+  }
+}
 
 // POST: 이미지 파일 업로드
 export async function POST(request: NextRequest) {
@@ -90,10 +112,14 @@ export async function POST(request: NextRequest) {
 
     // 사진인 경우 clinical_photos 테이블에 메타데이터 저장
     if (type === "photo") {
+      // KOL ID 가져오기
+      const kolId = await getKolIdForUser(userId);
+      
       const { error: dbError } = await supabase
         .from("clinical_photos")
         .insert({
           case_id: parseInt(caseId),
+          kol_id: kolId,
           round_number: parseInt(roundNumber),
           angle: angle,
           file_url: publicUrl,
