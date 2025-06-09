@@ -1141,8 +1141,7 @@ export default function CustomerClinicalUploadPage() {
         caseName: `${newCustomerCase.customerInfo.name} 임상케이스`,
         concernArea: '',
         treatmentPlan: newCustomerCase.customerInfo.memo || '',
-        consentReceived: newCustomerCase.consentReceived,
-        customerMemo: newCustomerCase.customerInfo.memo || ''
+        consentReceived: newCustomerCase.consentReceived
       });
       
       if (createdCase) {

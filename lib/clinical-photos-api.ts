@@ -271,10 +271,6 @@ export async function createCase(caseData: {
         treatment_plan: caseData.treatmentPlan,
         consent_received: caseData.consentReceived || false,
         consent_date: caseData.consentDate,
-        customer_phone: caseData.customerPhone,
-        customer_email: caseData.customerEmail,
-        customer_birth_date: caseData.customerBirthDate,
-        customer_memo: caseData.customerMemo,
         status: 'active',
       })
       .select()
