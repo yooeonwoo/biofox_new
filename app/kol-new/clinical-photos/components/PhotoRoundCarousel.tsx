@@ -353,7 +353,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                             <div className="w-full h-full flex items-center justify-center">
                               <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
                                 <img 
-                                  src="/images/front-guide.png" 
+                                  src="/images/front-guide.svg" 
                                   alt="정면 가이드라인" 
                                   className="w-full h-full object-contain opacity-80" 
                                   style={{ maxWidth: '100%', maxHeight: '100%' }}
@@ -365,7 +365,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                             <div className="w-full h-full flex items-center justify-center">
                               <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
                                 <img 
-                                  src="/images/left-guide.png" 
+                                  src="/images/left-guide.svg" 
                                   alt="좌측 가이드라인" 
                                   className="w-full h-full object-contain opacity-80" 
                                   style={{ maxWidth: '100%', maxHeight: '100%' }}
@@ -377,7 +377,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                             <div className="w-full h-full flex items-center justify-center">
                               <div className="relative" style={{ width: '80px', height: '100px', margin: '0 auto' }}>
                                 <img 
-                                  src="/images/right-guide.png" 
+                                  src="/images/right-guide.svg" 
                                   alt="우측 가이드라인" 
                                   className="w-full h-full object-contain opacity-80" 
                                   style={{ maxWidth: '100%', maxHeight: '100%' }}
