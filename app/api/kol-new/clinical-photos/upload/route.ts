@@ -130,14 +130,46 @@ export async function POST(request: NextRequest) {
       .from("clinical-photos")
       .getPublicUrl(fileName);
 
-    // 사진인 경우 clinical_photos 테이블에 메타데이터 저장
+    // 사진인 경우 clinical_photos 테이블에 메타데이터 저장 (upsert 사용)
     if (type === "photo") {
       // KOL ID 가져오기
       const kolId = await getKolIdForUser(userId);
       
+      // 기존 사진이 있는지 확인하고 삭제
+      const { data: existingPhotos, error: fetchError } = await supabase
+        .from("clinical_photos")
+        .select("file_url")
+        .eq("case_id", parseInt(caseId))
+        .eq("round_number", parseInt(roundNumber))
+        .eq("angle", angle);
+      
+      if (fetchError) {
+        console.error("Existing photo fetch error:", fetchError);
+      }
+      
+      // 기존 사진이 있으면 Storage에서 삭제
+      if (existingPhotos && existingPhotos.length > 0) {
+        for (const photo of existingPhotos) {
+          try {
+            // URL에서 파일 경로 추출
+            const url = new URL(photo.file_url);
+            const pathParts = url.pathname.split("/");
+            const bucketIndex = pathParts.indexOf("clinical-photos");
+            if (bucketIndex !== -1) {
+              const filePath = pathParts.slice(bucketIndex + 1).join("/");
+              await supabase.storage.from("clinical-photos").remove([filePath]);
+            }
+          } catch (deleteError) {
+            console.error("Old file deletion error:", deleteError);
+            // 삭제 실패해도 계속 진행
+          }
+        }
+      }
+      
+      // upsert로 데이터 저장 (기존 레코드 업데이트 또는 새로 삽입)
       const { error: dbError } = await supabase
         .from("clinical_photos")
-        .insert({
+        .upsert({
           case_id: parseInt(caseId),
           kol_id: kolId,
           round_number: parseInt(roundNumber),
@@ -145,10 +177,12 @@ export async function POST(request: NextRequest) {
           file_url: publicUrl,
           file_size: file.size,
           mime_type: file.type,
+        }, {
+          onConflict: "case_id,round_number,angle"
         });
 
       if (dbError) {
-        console.error("Photo DB insert error:", dbError);
+        console.error("Photo DB upsert error:", dbError);
         // 업로드된 파일 삭제
         await supabase.storage.from("clinical-photos").remove([fileName]);
         return NextResponse.json(
