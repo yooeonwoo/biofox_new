@@ -415,37 +415,52 @@ export async function fetchPhotos(caseId: number): Promise<PhotoSlot[]> {
   }
 }
 
-// 이미지 파일 업로드
+// 파일명 안전화 함수
+function sanitizeFileName(fileName: string): string {
+  // 파일 확장자 추출
+  const lastDotIndex = fileName.lastIndexOf('.');
+  const extension = lastDotIndex > -1 ? fileName.substring(lastDotIndex) : '';
+  const nameWithoutExt = lastDotIndex > -1 ? fileName.substring(0, lastDotIndex) : fileName;
+  
+  // 안전한 파일명으로 변환 (알파벳, 숫자, 하이픈, 언더스코어만 허용)
+  const safeName = nameWithoutExt
+    .replace(/[^\w\-_]/g, '_')  // 특수문자를 언더스코어로 변경
+    .replace(/_{2,}/g, '_')     // 연속된 언더스코어를 하나로 변경
+    .substring(0, 100);        // 최대 100자로 제한
+  
+  return `${safeName}${extension}`;
+}
+
+// 이미지 파일 업로드 (서버 API 사용)
 export async function uploadImage(file: File, caseId: number, type: 'photo' | 'consent' = 'photo'): Promise<UploadResponse> {
   try {
-    const kolId = await getCurrentKolId();
-    const fileName = `${kolId}/${caseId}/${type}/${uuidv4()}-${file.name}`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caseId', caseId.toString());
+    formData.append('type', type);
     
-    // Supabase Storage에 파일 업로드
-    const { data, error } = await supabaseClient
-      .storage
-      .from('clinical-photos')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
+    const response = await fetch('/api/kol-new/clinical-photos/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
     
-    if (error) throw error;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `업로드 실패 (${response.status})`);
+    }
     
-    // 업로드된 파일의 공개 URL 가져오기
-    const { data: urlData } = supabaseClient
-      .storage
-      .from('clinical-photos')
-      .getPublicUrl(data.path);
+    const result = await response.json();
     
     return {
-      url: urlData.publicUrl,
-      fileName: data.path,
-      fileSize: file.size,
-      mimeType: file.type,
+      url: result.url,
+      fileName: result.fileName,
+      fileSize: result.fileSize,
+      mimeType: result.mimeType,
     };
   } catch (error) {
     console.error('Error uploading image:', error);
+    toast.error(`이미지 업로드에 실패했습니다: ${error.message || error}`);
     throw new Error('이미지 업로드에 실패했습니다.');
   }
 }
@@ -523,22 +538,31 @@ export async function deletePhoto(caseId: number, roundNumber: number, angle: st
   }
 }
 
-// 사진 업로드 (파일 업로드 + 메타데이터 저장)
+// 사진 업로드 (API 서버를 통해 업로드 + 메타데이터 저장)
 export async function uploadPhoto(caseId: number, roundNumber: number, angle: string, file: File): Promise<void> {
   try {
-    // 1. 이미지 파일 업로드
-    const uploadResult = await uploadImage(file, caseId, 'photo');
-
-    // 2. 사진 메타데이터 저장
-    await savePhoto(caseId, {
-      roundNumber,
-      angle,
-      fileUrl: uploadResult.url,
-      fileSize: uploadResult.fileSize,
-      mimeType: uploadResult.mimeType,
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caseId', caseId.toString());
+    formData.append('type', 'photo');
+    formData.append('roundNumber', roundNumber.toString());
+    formData.append('angle', angle);
+    
+    const response = await fetch('/api/kol-new/clinical-photos/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
     });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `사진 업로드 실패 (${response.status})`);
+    }
+    
+    // 업로드 성공 - API에서 이미 메타데이터 저장까지 완료됨
   } catch (error) {
     console.error('Photo upload error:', error);
+    toast.error(`사진 업로드에 실패했습니다: ${error.message || error}`);
     throw error;
   }
 }
@@ -546,15 +570,27 @@ export async function uploadPhoto(caseId: number, roundNumber: number, angle: st
 // 동의서 이미지 업로드 및 케이스 업데이트
 export async function uploadConsentImage(caseId: number, file: File): Promise<string> {
   try {
-    // 1. 이미지 파일 업로드
-    const uploadResult = await uploadImage(file, caseId, 'consent');
-
-    // 2. 케이스 정보 업데이트
-    await updateCase(caseId, { consentImageUrl: uploadResult.url, consentReceived: true });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caseId', caseId.toString());
+    formData.append('type', 'consent');
     
-    return uploadResult.url;
+    const response = await fetch('/api/kol-new/clinical-photos/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `동의서 업로드 실패 (${response.status})`);
+    }
+    
+    const result = await response.json();
+    return result.url;
   } catch (error) {
     console.error('Consent image upload error:', error);
+    toast.error(`동의서 업로드에 실패했습니다: ${error.message || error}`);
     throw error;
   }
 }

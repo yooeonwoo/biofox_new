@@ -19,10 +19,19 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     const caseId = formData.get("caseId") as string;
     const type = formData.get("type") as string; // 'photo' or 'consent'
+    const roundNumber = formData.get("roundNumber") as string;
+    const angle = formData.get("angle") as string;
 
     if (!file || !caseId) {
       return NextResponse.json(
         { error: "File and caseId are required" },
+        { status: 400 }
+      );
+    }
+
+    if (type === "photo" && (!roundNumber || !angle)) {
+      return NextResponse.json(
+        { error: "roundNumber and angle are required for photo uploads" },
         { status: 400 }
       );
     }
@@ -45,10 +54,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 파일명 생성
+    // 안전한 파일명 생성 (한글 파일명 문제 해결)
     const timestamp = Date.now();
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${userId}/${caseId}/${type}/${timestamp}.${fileExt}`;
+    const fileExt = file.name.split(".").pop() || 'jpg';
+    
+    // 원본 파일명에서 확장자를 제외한 부분을 안전하게 변환
+    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || 'image';
+    const safeName = baseName
+      .replace(/[^\w\-_]/g, '_')  // 특수문자를 언더스코어로 변경
+      .replace(/_{2,}/g, '_')     // 연속된 언더스코어를 하나로 변경
+      .substring(0, 50);          // 최대 50자로 제한
+    
+    const fileName = `${userId}/${caseId}/${type}/${timestamp}_${safeName}.${fileExt}`;
 
     // Supabase Storage에 업로드
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -71,21 +88,47 @@ export async function POST(request: NextRequest) {
       .from("clinical-photos")
       .getPublicUrl(fileName);
 
-    // 동의서 파일인 경우 DB에 저장
-    if (type === "consent") {
+    // 사진인 경우 clinical_photos 테이블에 메타데이터 저장
+    if (type === "photo") {
       const { error: dbError } = await supabase
-        .from("clinical_consent_files")
+        .from("clinical_photos")
         .insert({
           case_id: parseInt(caseId),
+          round_number: parseInt(roundNumber),
+          angle: angle,
           file_url: publicUrl,
+          file_size: file.size,
+          mime_type: file.type,
         });
 
       if (dbError) {
-        console.error("DB insert error:", dbError);
+        console.error("Photo DB insert error:", dbError);
         // 업로드된 파일 삭제
         await supabase.storage.from("clinical-photos").remove([fileName]);
         return NextResponse.json(
-          { error: "Failed to save file information" },
+          { error: "Failed to save photo metadata" },
+          { status: 500 }
+        );
+      }
+    }
+
+    // 동의서인 경우 케이스 정보 업데이트
+    if (type === "consent") {
+      const { error: dbError } = await supabase
+        .from("clinical_cases")
+        .update({
+          consent_image_url: publicUrl,
+          consent_received: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", parseInt(caseId));
+
+      if (dbError) {
+        console.error("Consent DB update error:", dbError);
+        // 업로드된 파일 삭제
+        await supabase.storage.from("clinical-photos").remove([fileName]);
+        return NextResponse.json(
+          { error: "Failed to update consent information" },
           { status: 500 }
         );
       }
