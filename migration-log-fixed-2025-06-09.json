@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-06-09T02:36:56.458Z",
+  "totalUsers": 3,
+  "successful": 3,
+  "failed": 0,
+  "results": [
+    {
+      "success": true,
+      "userId": 50,
+      "email": "as03041000@gmail.com",
+      "oldClerkId": "user_2vP5o8DZX7JuAdJNgrpDeK797ZE",
+      "newClerkId": "user_2yFiE5CLFtroKTdI5Nf7R1NkT9f",
+      "tempPassword": "TempPass1749436605269!ytnpauqo8"
+    },
+    {
+      "success": true,
+      "userId": 49,
+      "email": "csj3232@gmail.com",
+      "oldClerkId": "user_2vP5RFeayksmX7JYAW2T0aajgbR",
+      "newClerkId": "user_2yFiEOq1sr5y2z4cxLpkXOuZ31l",
+      "tempPassword": "TempPass1749436609531!0misfzk3p"
+    },
+    {
+      "success": true,
+      "userId": 41,
+      "email": "yeojiyoon@temp.com",
+      "oldClerkId": "user_2vTIg2GAU1zVs51M3NXQfg7VDFe",
+      "newClerkId": "user_2yFiEt2K0InoiEikBSUa7dwLOJs",
+      "tempPassword": "TempPass1749436613010!8p654q994"
+    }
+  ]
+}

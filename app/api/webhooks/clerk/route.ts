@@ -136,7 +136,7 @@ export async function POST(req: Request) {
         
         // Clerk에서 사용자 삭제 (가입 차단)
         try {
-          const { deleteUser: clerkDeleteUser } = await import("../../../lib/clerk/admin");
+          const { deleteUser: clerkDeleteUser } = await import("@/lib/clerk/admin");
           await clerkDeleteUser(clerkId);
           console.log(`✅ 초대되지 않은 사용자 Clerk에서 삭제 완료: ${clerkId}`);
         } catch (deleteError) {
