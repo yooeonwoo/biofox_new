@@ -7,6 +7,7 @@ import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { ArrowLeft, Camera, Plus, Calendar, User, Scissors, Eye, Trash2, Edit, Save } from "lucide-react";
+import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -142,6 +143,7 @@ export default function CustomerClinicalUploadPage() {
   const [isComposing, setIsComposing] = useState(false);
   const [inputDebounceTimers, setInputDebounceTimers] = useState<{[key: string]: NodeJS.Timeout}>({});
   const mainContentRef = useRef<HTMLElement>(null);
+  const casesRef = useRef<ClinicalCase[]>([]);
 
   // debounce 함수 (영어/숫자/특수문자 입력 문제 해결)
   const debouncedUpdate = (key: string, updateFn: () => void, delay: number = 500) => {
@@ -396,11 +398,12 @@ export default function CustomerClinicalUploadPage() {
       if (!isScrolling && !throttleTimeout) {
         isScrolling = true;
         console.log('숫자 표시 시작'); // 디버깅용
-        // cases 상태를 직접 참조하지 않고 함수형 업데이트 사용
-        setCases(currentCases => {
+        
+        // 현재 cases 상태를 ref로 접근하여 애니메이션 표시
+        const currentCases = casesRef.current;
+        if (currentCases && currentCases.length > 0) {
           setNumberVisibleCards(new Set(currentCases.map(c => c.id)));
-          return currentCases; // 상태 변경하지 않음
-        });
+        }
         
         // throttling: 100ms 동안 추가 실행 방지
         throttleTimeout = setTimeout(() => {
@@ -438,6 +441,11 @@ export default function CustomerClinicalUploadPage() {
     }
   }, [cases.length]); // cases.length만 의존성으로 사용
 
+  // cases 상태를 ref에 동기화 (스크롤 애니메이션에서 사용)
+  useEffect(() => {
+    casesRef.current = cases;
+  }, [cases]);
+
   // 컴포넌트 언마운트 시 디바운스 타이머 정리
   useEffect(() => {
     return () => {
@@ -473,6 +481,16 @@ export default function CustomerClinicalUploadPage() {
   // 동의 상태 변경 핸들러
   const handleConsentChange = async (caseId: string, consentReceived: boolean) => {
     try {
+      // 동의서가 업로드되어 있는데 미동의로 변경하려는 경우 알림 표시
+      const currentCase = cases.find(case_ => case_.id === caseId);
+      if (!consentReceived && currentCase?.consentImageUrl) {
+        toast.warning('동의서를 먼저 삭제한 후 미동의로 변경해주세요', {
+          description: '업로드된 동의서가 있습니다',
+          duration: 3000,
+        });
+        return; // 변경하지 않고 종료
+      }
+      
       // 새 고객이 아닌 경우에만 실제 API 호출
       if (!isNewCustomer(caseId)) {
         const { updateCase } = await import('@/lib/clinical-photos-api');
@@ -500,7 +518,7 @@ export default function CustomerClinicalUploadPage() {
       console.log(`동의 상태가 ${consentReceived ? '동의' : '미동의'}로 변경되었습니다.`);
     } catch (error) {
       console.error('동의 상태 변경 실패:', error);
-      alert('동의 상태 변경에 실패했습니다. 다시 시도해주세요.');
+      toast.error('동의 상태 변경에 실패했습니다. 다시 시도해주세요.');
       // 오류 발생 시 상태 되돌리기
       refreshCases();
     }
@@ -609,10 +627,10 @@ export default function CustomerClinicalUploadPage() {
       ));
       
       console.log('동의서가 성공적으로 삭제되었습니다.');
-      alert('동의서가 성공적으로 삭제되었습니다.');
+      toast.success('동의서가 성공적으로 삭제되었습니다.');
     } catch (error) {
       console.error('동의서 삭제 실패:', error);
-      alert(`동의서 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
+      toast.error(`동의서 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
     }
   };
 
