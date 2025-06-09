@@ -138,9 +138,31 @@ export default function CustomerClinicalUploadPage() {
   const [hasUnsavedNewCustomer, setHasUnsavedNewCustomer] = useState(false);
   const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
   
-  // IME 상태 관리 (한글 입력 문제 해결)
+  // IME 상태 관리 (한글 입력 문제 해결) 및 debounce
   const [isComposing, setIsComposing] = useState(false);
+  const [inputDebounceTimers, setInputDebounceTimers] = useState<{[key: string]: NodeJS.Timeout}>({});
   const mainContentRef = useRef<HTMLElement>(null);
+
+  // debounce 함수 (영어/숫자/특수문자 입력 문제 해결)
+  const debouncedUpdate = (key: string, updateFn: () => void, delay: number = 500) => {
+    // 기존 타이머 클리어
+    if (inputDebounceTimers[key]) {
+      clearTimeout(inputDebounceTimers[key]);
+    }
+    
+    // 새 타이머 설정
+    const newTimer = setTimeout(() => {
+      updateFn();
+      // 타이머 정리
+      setInputDebounceTimers(prev => {
+        const newTimers = { ...prev };
+        delete newTimers[key];
+        return newTimers;
+      });
+    }, delay);
+    
+    setInputDebounceTimers(prev => ({ ...prev, [key]: newTimer }));
+  };
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -361,7 +383,7 @@ export default function CustomerClinicalUploadPage() {
     loadCases();
   }, [isLoaded, isSignedIn, isKol]);
 
-  // 스크롤 기반 숫자 애니메이션 (스크롤할 때만 표시)
+  // 스크롤 기반 숫자 애니메이션 (스크롤할 때만 표시) - cases 의존성 제거로 입력 시 애니메이션 방지
   useEffect(() => {
     let scrollTimeout: NodeJS.Timeout | null = null;
     let throttleTimeout: NodeJS.Timeout | null = null;
@@ -373,8 +395,12 @@ export default function CustomerClinicalUploadPage() {
       // 스크롤 시작 시에만 숫자 표시 (throttling으로 성능 향상)
       if (!isScrolling && !throttleTimeout) {
         isScrolling = true;
-        console.log('숫자 표시 시작', cases.length); // 디버깅용
-        setNumberVisibleCards(new Set(cases.map(c => c.id)));
+        console.log('숫자 표시 시작'); // 디버깅용
+        // cases 상태를 직접 참조하지 않고 함수형 업데이트 사용
+        setCases(currentCases => {
+          setNumberVisibleCards(new Set(currentCases.map(c => c.id)));
+          return currentCases; // 상태 변경하지 않음
+        });
         
         // throttling: 100ms 동안 추가 실행 방지
         throttleTimeout = setTimeout(() => {
@@ -391,24 +417,35 @@ export default function CustomerClinicalUploadPage() {
       }, 600); // 0.6초 후 숫자 숨김
     };
 
-    // 케이스가 있을 때만 이벤트 리스너 등록
-    if (cases.length > 0) {
-      console.log('스크롤 이벤트 리스너 등록됨', cases.length); // 디버깅용
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      
-      // 초기 테스트를 위해 즉시 숫자 표시 (2초 후 숨김)
-      setNumberVisibleCards(new Set(cases.map(c => c.id)));
-      setTimeout(() => {
-        setNumberVisibleCards(new Set());
-      }, 2000);
-    }
+    // 스크롤 이벤트 리스너 등록 (항상 등록)
+    window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
       if (scrollTimeout) clearTimeout(scrollTimeout);
       if (throttleTimeout) clearTimeout(throttleTimeout);
     };
-  }, [cases]);
+  }, []); // 의존성 배열을 빈 배열로 변경
+
+  // 초기 애니메이션 테스트 (케이스 로드 후 한 번만 실행)
+  useEffect(() => {
+    if (cases.length > 0) {
+      console.log('초기 애니메이션 테스트 시작', cases.length);
+      setNumberVisibleCards(new Set(cases.map(c => c.id)));
+      setTimeout(() => {
+        setNumberVisibleCards(new Set());
+      }, 2000);
+    }
+  }, [cases.length]); // cases.length만 의존성으로 사용
+
+  // 컴포넌트 언마운트 시 디바운스 타이머 정리
+  useEffect(() => {
+    return () => {
+      Object.values(inputDebounceTimers).forEach(timer => {
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, []);
 
   // 케이스 상태 변경 핸들러
   const handleCaseStatusChange = async (caseId: string, status: 'active' | 'completed') => {
@@ -1878,12 +1915,40 @@ export default function CustomerClinicalUploadPage() {
                         <Textarea
                           id={`memo-${case_.id}`}
                           value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || ''}
-                          onChange={(e) => 
-                            handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: e.target.value })
-                          }
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            
+                            // 즉시 로컬 상태 업데이트 (UI 반응성을 위해)
+                            setCases(prev => prev.map(case_ => 
+                              case_.id === case_.id 
+                                ? { 
+                                    ...case_, 
+                                    roundCustomerInfo: {
+                                      ...case_.roundCustomerInfo,
+                                      [currentRounds[case_.id] || 1]: { 
+                                        treatmentType: '',
+                                        memo: '',
+                                        date: '',
+                                        ...case_.roundCustomerInfo[currentRounds[case_.id] || 1],
+                                        memo: newValue
+                                      }
+                                    }
+                                  }
+                                : case_
+                            ));
+
+                            // IME 입력 중이 아닐 때는 debounce 사용 (영어/숫자/특수문자)
+                            if (!isComposing) {
+                              const debounceKey = `memo-${case_.id}-${currentRounds[case_.id] || 1}`;
+                              debouncedUpdate(debounceKey, () => {
+                                handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: newValue });
+                              }, 800); // 800ms 디바운스
+                            }
+                          }}
                           onCompositionStart={() => setIsComposing(true)}
                           onCompositionEnd={(e) => {
                             setIsComposing(false);
+                            // 한글 입력 완료 시 즉시 저장
                             handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: e.currentTarget.value });
                           }}
                           placeholder="해당 회차 관련 특이사항을 입력하세요..."
