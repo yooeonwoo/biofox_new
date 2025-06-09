@@ -112,160 +112,204 @@ export async function POST(req: Request) {
       const userEmail = data.email_addresses[0].email_address;
       const userName = (data.first_name && data.last_name) 
         ? `${data.first_name} ${data.last_name}`
-        : data.first_name || '';
+        : data.first_name || userEmail.split('@')[0];
       
-      console.log(`사용자 ${type === 'user.created' ? '생성' : '업데이트'}: ID=${clerkId}, 이메일=${userEmail}, 이름=${userName || 'N/A'}`);
+      console.log(`사용자 ${type === 'user.created' ? '생성' : '업데이트'}: ID=${clerkId}, 이메일=${userEmail}, 이름=${userName}`);
       
-      // 초대된 사용자만 회원가입 허용 - 이메일로 pending 사용자 검색
-      console.log(`초대 여부 확인: ${userEmail}`);
-      const { data: invitedUser, error: emailError } = await supabase
-        .from('users')
-        .select('id, email, role, clerk_id, name')
-        .eq('email', userEmail)
-        .maybeSingle();
-      
-      if (emailError) {
-        console.error(`초대 사용자 검색 오류(${userEmail}):`, emailError);
-        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      // Clerk Allowlist에서 이 이메일이 허용되는지 확인
+      console.log(`🔍 Allowlist 확인 시작: ${userEmail}`);
+      let isInAllowlist = false;
+      try {
+        console.log('🔍 Allowlist API 호출 중...');
+        const { data: allowlistData } = await clerkApi.makeRequest('/allowlist_identifiers');
+        console.log(`🔍 Allowlist 데이터 수신됨: ${allowlistData.length}개 항목`);
+        isInAllowlist = allowlistData.some((item: any) => item.identifier === userEmail);
+        console.log(`🔍 Allowlist 확인 결과: ${isInAllowlist ? '✅ 허용됨' : '❌ 허용되지 않음'}`);
+        
+        // 디버깅: 유사한 이메일 찾기
+        const similarEmails = allowlistData
+          .filter((item: any) => item.identifier.includes(userEmail.split('@')[0]))
+          .map((item: any) => item.identifier);
+        if (similarEmails.length > 0) {
+          console.log('🔍 유사한 이메일들:', similarEmails);
+        }
+        
+      } catch (allowlistError) {
+        console.error('❌ Allowlist 확인 실패:', allowlistError);
+        console.error('❌ Allowlist 오류 상세:', allowlistError.message);
+        // Allowlist 확인에 실패하면 기본적으로 거부
+        isInAllowlist = false;
       }
       
-      // 초대되지 않은 사용자는 가입 거부
-      if (!invitedUser) {
-        console.log(`🚫 초대되지 않은 이메일로 가입 시도: ${userEmail}`);
+      // Allowlist에 없는 사용자는 가입 거부
+      if (!isInAllowlist) {
+        console.log(`🚫 Allowlist에 없는 이메일로 가입 시도: ${userEmail}`);
         console.log(`🚫 Clerk ID: ${clerkId} - 이 사용자는 삭제됩니다.`);
         
         // Clerk에서 사용자 삭제 (가입 차단)
         try {
-          const { deleteUser: clerkDeleteUser } = await import("@/lib/clerk/admin");
-          await clerkDeleteUser(clerkId);
-          console.log(`✅ 초대되지 않은 사용자 Clerk에서 삭제 완료: ${clerkId}`);
+          await clerkApi.deleteUser(clerkId);
+          console.log(`✅ Allowlist에 없는 사용자 Clerk에서 삭제 완료: ${clerkId}`);
         } catch (deleteError) {
           console.error(`❌ Clerk 사용자 삭제 실패: ${clerkId}`, deleteError);
-          
-          // 삭제 실패 시 더 강력한 방법 시도
-          try {
-            console.log(`🔄 Clerk API 직접 호출로 재시도: ${clerkId}`);
-            const response = await fetch(`https://api.clerk.dev/v1/users/${clerkId}`, {
-              method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
-                'Content-Type': 'application/json',
-              },
-            });
-            
-            if (response.ok) {
-              console.log(`✅ Clerk API 직접 호출로 삭제 성공: ${clerkId}`);
-            } else {
-              console.error(`❌ Clerk API 직접 호출도 실패: ${response.status} ${response.statusText}`);
-            }
-          } catch (directApiError) {
-            console.error(`❌ Clerk API 직접 호출 오류:`, directApiError);
-          }
         }
         
         return NextResponse.json({ 
-          error: 'Not invited',
-          message: '초대되지 않은 이메일입니다. 관리자에게 문의하세요.',
+          error: 'Not allowed',
+          message: '허용되지 않은 이메일입니다. 관리자에게 문의하세요.',
           clerkId: clerkId,
           email: userEmail,
           action: 'deleted'
         }, { status: 403 });
       }
       
-      console.log(`초대된 사용자 발견: ID=${invitedUser.id}, 현재 Clerk ID=${invitedUser.clerk_id}`);
+      // Supabase에서 기존 사용자 확인
+      console.log(`💾 Supabase에서 기존 사용자 확인: ${userEmail}`);
+      const { data: existingUser, error: userSearchError } = await supabase
+        .from('users')
+        .select('id, email, role, clerk_id, name')
+        .eq('email', userEmail)
+        .maybeSingle();
       
-      // pending 상태가 아니면 이미 가입된 사용자
-      if (!invitedUser.clerk_id.startsWith('pending_')) {
-        console.log(`이미 가입된 사용자: ID=${invitedUser.id}, Clerk ID=${invitedUser.clerk_id}`);
+      if (userSearchError) {
+        console.error(`❌ 사용자 검색 오류(${userEmail}):`, userSearchError);
+        console.error(`❌ 사용자 검색 오류 상세:`, userSearchError.message);
+        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      }
+      
+      console.log(`💾 기존 사용자 검색 결과:`, existingUser ? `발견 (ID: ${existingUser.id})` : '없음');
+      
+      let userId, userRole;
+      
+      if (existingUser) {
+        // 기존 사용자 업데이트
+        console.log(`기존 사용자 발견: ID=${existingUser.id}, 기존 Clerk ID=${existingUser.clerk_id}`);
         
-        // 기존 사용자 정보 업데이트 (이름 등)
         const { error: updateError } = await supabase
           .from('users')
           .update({ 
-            name: userName || invitedUser.name || userEmail.split('@')[0]
+            clerk_id: clerkId,
+            name: userName,
+            updated_at: new Date().toISOString()
           })
-          .eq('id', invitedUser.id);
+          .eq('id', existingUser.id);
         
         if (updateError) {
-          console.error(`기존 사용자 정보 업데이트 실패(ID=${invitedUser.id}):`, updateError);
+          console.error(`기존 사용자 업데이트 실패(ID=${existingUser.id}):`, updateError);
+          return NextResponse.json({ error: updateError.message }, { status: 500 });
         }
         
-        // Clerk 메타데이터 업데이트
+        userId = existingUser.id;
+        userRole = existingUser.role;
+        console.log(`✅ 기존 사용자 업데이트 완료: ID=${userId}, Role=${userRole}`);
+        
+      } else {
+        // 새 사용자 생성 (Allowlist에 있지만 DB에는 없는 경우)
+        console.log(`🆕 새 사용자 생성 시작: ${userEmail}`);
+        
+        // 기본 역할을 kol로 설정 (필요시 변경 가능)
+        const defaultRole = 'kol';
+        console.log(`🆕 기본 역할 설정: ${defaultRole}`);
+        
+        const userInsertData = {
+          clerk_id: clerkId,
+          email: userEmail,
+          name: userName,
+          role: defaultRole,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        console.log(`🆕 삽입할 데이터:`, userInsertData);
+        
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert(userInsertData)
+          .select('id, role')
+          .single();
+        
+        if (insertError) {
+          console.error(`❌ 새 사용자 생성 실패(${userEmail}):`, insertError);
+          console.error(`❌ 새 사용자 생성 오류 상세:`, insertError.message);
+          console.error(`❌ 삽입 시도한 데이터:`, userInsertData);
+          return NextResponse.json({ error: insertError.message }, { status: 500 });
+        }
+        
+        userId = newUser.id;
+        userRole = newUser.role;
+        console.log(`✅ 새 사용자 생성 완료: ID=${userId}, Role=${userRole}`);
+      }
+      
+      // KOL 역할인 경우 KOL 테이블에도 추가/업데이트
+      if (userRole === 'kol') {
+        const { data: existingKol } = await supabase
+          .from('kols')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+        
+        if (!existingKol) {
+          // KOL 테이블에 새 항목 생성
+          const { error: kolInsertError } = await supabase
+            .from('kols')
+            .insert({
+              user_id: userId,
+              name: userName,
+              shop_name: `${userName}의 샵`, // 기본 샵 이름
+              status: 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+          
+          if (kolInsertError) {
+            console.error(`KOL 데이터 생성 실패(user_id=${userId}):`, kolInsertError);
+          } else {
+            console.log(`✅ KOL 데이터 생성 완료: user_id=${userId}`);
+          }
+        } else {
+          // 기존 KOL 상태를 active로 업데이트
+          const { error: kolUpdateError } = await supabase
+            .from('kols')
+            .update({ 
+              status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', userId);
+          
+          if (kolUpdateError) {
+            console.error(`KOL 상태 업데이트 실패(user_id=${userId}):`, kolUpdateError);
+          } else {
+            console.log(`✅ KOL 상태 업데이트 완료: user_id=${userId}`);
+          }
+        }
+      }
+      
+      // Clerk 메타데이터 업데이트 (user.created 이벤트에서만)
+      if (type === 'user.created') {
         try {
           await clerkApi.updateUserMetadata(clerkId, {
             public_metadata: {
-              role: invitedUser.role,
-              userId: invitedUser.id,
-              updated_at: new Date().toISOString()
+              role: userRole,
+              userId: userId,
+              activated_at: new Date().toISOString()
             }
           });
           
-          console.log(`기존 사용자 Clerk 메타데이터 업데이트: ID=${clerkId}`);
+          console.log(`✅ Clerk 메타데이터 설정 완료: ID=${clerkId}, Role=${userRole}, UserId=${userId}`);
         } catch (apiError) {
-          console.error('Clerk API 오류:', apiError);
+          console.error('❌ Clerk API 오류:', apiError);
         }
-        
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Existing user updated',
-          userId: invitedUser.id,
-          role: invitedUser.role
-        });
-      }
-      
-      // pending 사용자를 실제 가입으로 전환
-      console.log(`Pending 사용자를 가입으로 전환: ID=${invitedUser.id}`);
-      
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          clerk_id: clerkId,
-          name: userName || invitedUser.name || userEmail.split('@')[0]
-        })
-        .eq('id', invitedUser.id);
-      
-      if (updateError) {
-        console.error(`Pending 사용자 업데이트 실패(ID=${invitedUser.id}):`, updateError);
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
-      }
-      
-      console.log(`Pending 사용자 업데이트 성공: ID=${invitedUser.id}, Clerk ID=${clerkId}`);
-      
-      // KOL 역할인 경우 KOL 상태도 active로 변경
-      if (invitedUser.role === 'kol') {
-        const { error: kolUpdateError } = await supabase
-          .from('kols')
-          .update({ status: 'active' })
-          .eq('user_id', invitedUser.id);
-        
-        if (kolUpdateError) {
-          console.error(`KOL 상태 업데이트 실패(user_id=${invitedUser.id}):`, kolUpdateError);
-        } else {
-          console.log(`KOL 상태를 active로 변경: user_id=${invitedUser.id}`);
-        }
-      }
-      
-      // Clerk 메타데이터 업데이트
-      try {
-        await clerkApi.updateUserMetadata(clerkId, {
-          public_metadata: {
-            role: invitedUser.role,
-            userId: invitedUser.id,
-            activated_at: new Date().toISOString()
-          }
-        });
-        
-        console.log(`새 가입 사용자 Clerk 메타데이터 설정 완료: ID=${clerkId}, Role=${invitedUser.role}`);
-      } catch (apiError) {
-        console.error('Clerk API 오류:', apiError);
+      } else {
+        console.log(`ℹ️ user.updated 이벤트이므로 메타데이터 업데이트 생략: ID=${clerkId}`);
       }
       
       return NextResponse.json({ 
         success: true, 
-        message: 'Invited user successfully activated',
-        userId: invitedUser.id,
-        role: invitedUser.role
+        message: `User successfully ${existingUser ? 'updated' : 'created'}`,
+        userId: userId,
+        role: userRole,
+        action: existingUser ? 'updated' : 'created'
       });
+      
     } catch (error) {
       console.error('웹훅 처리 오류:', error);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

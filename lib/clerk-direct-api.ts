@@ -143,7 +143,40 @@ export async function getUserRole(userId: string) {
   return user?.public_metadata?.role || null;
 }
 
+/**
+ * Allowlist 식별자 목록 조회
+ */
+export async function getAllowlistIdentifiers() {
+  return makeRequest('/allowlist_identifiers');
+}
+
+/**
+ * Allowlist에 식별자 추가
+ * @param identifier 이메일 주소 또는 도메인
+ * @param notify 초대 이메일 발송 여부
+ */
+export async function createAllowlistIdentifier(identifier: string, notify: boolean = false) {
+  return makeRequest('/allowlist_identifiers', {
+    method: 'POST',
+    body: JSON.stringify({
+      identifier,
+      notify
+    }),
+  });
+}
+
+/**
+ * Allowlist에서 식별자 제거
+ * @param allowlistId Allowlist 항목 ID
+ */
+export async function deleteAllowlistIdentifier(allowlistId: string) {
+  return makeRequest(`/allowlist_identifiers/${allowlistId}`, {
+    method: 'DELETE',
+  });
+}
+
 export default {
+  makeRequest,
   getUserList,
   getUser,
   createUser,
@@ -153,4 +186,7 @@ export default {
   getActiveSessions,
   verifyToken,
   getUserRole,
-}; 
+  getAllowlistIdentifiers,
+  createAllowlistIdentifier,
+  deleteAllowlistIdentifier,
+};
