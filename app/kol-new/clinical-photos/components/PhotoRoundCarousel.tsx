@@ -5,9 +5,9 @@ import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 // 가이드 이미지 경로를 문자열로 정의
-const frontGuideImage = '/images/front-guide.svg';
-const leftGuideImage = '/images/left-guide.svg';
-const rightGuideImage = '/images/right-guide.svg';
+const frontGuideImage = '/images/front-guide.png';
+const leftGuideImage = '/images/left-guide.png';
+const rightGuideImage = '/images/right-guide.png';
 
 interface PhotoSlot {
   id: string;
