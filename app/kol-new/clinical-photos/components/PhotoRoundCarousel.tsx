@@ -4,10 +4,10 @@ import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
-// 가이드 이미지 경로를 문자열로 정의
-const frontGuideImage = '/images/front-guide.png';
-const leftGuideImage = '/images/left-guide.png';
-const rightGuideImage = '/images/right-guide.png';
+// 가이드 이미지 경로를 웹 호스팅 링크로 정의
+const frontGuideImage = 'https://i.ibb.co/8gmSndQC/front-guide.png';
+const leftGuideImage = 'https://i.ibb.co/gFtvyBqk/left-guide.png';
+const rightGuideImage = 'https://i.ibb.co/KcM7kDQg/right-guide.png';
 
 interface PhotoSlot {
   id: string;
