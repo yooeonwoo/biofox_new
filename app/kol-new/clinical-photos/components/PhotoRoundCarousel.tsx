@@ -4,9 +4,10 @@ import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
-import frontGuideImage from '/public/images/front-guide.svg';
-import leftGuideImage from '/public/images/left-guide.svg';
-import rightGuideImage from '/public/images/right-guide.svg';
+// 가이드 이미지 경로를 문자열로 정의
+const frontGuideImage = '/images/front-guide.svg';
+const leftGuideImage = '/images/left-guide.svg';
+const rightGuideImage = '/images/right-guide.svg';
 
 interface PhotoSlot {
   id: string;
