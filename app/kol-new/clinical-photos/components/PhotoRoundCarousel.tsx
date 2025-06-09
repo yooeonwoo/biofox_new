@@ -28,7 +28,7 @@ interface PhotoRoundCarouselProps {
   onPhotosRefresh?: () => void;
 }
 
-const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
+const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
   caseId,
   photos,
   onPhotoUpload,
@@ -438,6 +438,19 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
       )}
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // photos 배열의 실제 내용이 같으면 리렌더링하지 않음
+  return (
+    prevProps.caseId === nextProps.caseId &&
+    prevProps.isCompleted === nextProps.isCompleted &&
+    prevProps.photos.length === nextProps.photos.length &&
+    prevProps.photos.every((photo, index) => {
+      const nextPhoto = nextProps.photos[index];
+      return photo.id === nextPhoto?.id && 
+             photo.uploaded === nextPhoto?.uploaded &&
+             photo.imageUrl === nextPhoto?.imageUrl;
+    })
+  );
+});
 
 export default PhotoRoundCarousel;
