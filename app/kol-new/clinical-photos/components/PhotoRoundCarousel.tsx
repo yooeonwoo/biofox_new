@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 interface PhotoSlot {
   id: string;
@@ -349,18 +350,42 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                           disabled={uploading}
                         >
                           {slot.angle === 'front' && (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <img src="/images/front-guide.png" alt="정면 가이드라인" className="w-full h-full object-cover opacity-60" />
+                            <div className="w-full h-full relative">
+                              <Image 
+                                src="/images/front-guide.png" 
+                                alt="정면 가이드라인" 
+                                fill
+                                className="object-cover opacity-60" 
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                priority
+                                unoptimized
+                              />
                             </div>
                           )}
                           {slot.angle === 'left' && (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <img src="/images/left-guide.png" alt="좌측 가이드라인" className="w-full h-full object-cover opacity-60" />
+                            <div className="w-full h-full relative">
+                              <Image 
+                                src="/images/left-guide.png" 
+                                alt="좌측 가이드라인" 
+                                fill
+                                className="object-cover opacity-60" 
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                priority
+                                unoptimized
+                              />
                             </div>
                           )}
                           {slot.angle === 'right' && (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <img src="/images/right-guide.png" alt="우측 가이드라인" className="w-full h-full object-cover opacity-60" />
+                            <div className="w-full h-full relative">
+                              <Image 
+                                src="/images/right-guide.png" 
+                                alt="우측 가이드라인" 
+                                fill
+                                className="object-cover opacity-60" 
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                priority
+                                unoptimized
+                              />
                             </div>
                           )}
                         </button>
@@ -381,8 +406,16 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                   onClick={() => handleUploadClick(visibleSlots[3].roundDay, visibleSlots[3].angle)}
                   disabled={uploading}
                 >
-                  <div className="w-full h-full flex items-center justify-center">
-                    <img src="/images/front-guide.png" alt="정면 가이드라인" className="w-full h-full object-cover opacity-60" />
+                  <div className="w-full h-full relative">
+                    <Image 
+                      src="/images/front-guide.png" 
+                      alt="정면 가이드라인" 
+                      fill
+                      className="object-cover opacity-60" 
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority
+                      unoptimized
+                    />
                   </div>
                 </button>
               </div>
