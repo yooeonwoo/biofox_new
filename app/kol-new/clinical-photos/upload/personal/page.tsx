@@ -213,6 +213,22 @@ export default function PersonalClinicalUploadPage() {
           if (personalCase.skinWrinkle) skinTypeData.push('wrinkles_elasticity');
           if (personalCase.skinEtc) skinTypeData.push('other');
           
+          // 사진 데이터 로드
+          let photos: PhotoSlot[] = [];
+          try {
+            const { fetchPhotos } = await import('@/lib/clinical-photos-api');
+            const photoData = await fetchPhotos(personalCase.id);
+            photos = photoData.map(p => ({
+              id: p.id,
+              roundDay: p.roundDay,
+              angle: p.angle as 'front' | 'left' | 'right',
+              imageUrl: p.imageUrl,
+              uploaded: true
+            }));
+          } catch (error) {
+            console.error(`Failed to load photos for case ${personalCase.id}:`, error);
+          }
+          
           // API 응답 데이터를 컴포넌트 형식에 맞게 변환
           const transformedCase: ClinicalCase = {
             id: personalCase.id.toString(),
@@ -221,7 +237,7 @@ export default function PersonalClinicalUploadPage() {
             createdAt: personalCase.createdAt.split('T')[0],
             consentReceived: personalCase.consentReceived,
             consentImageUrl: personalCase.consentImageUrl,
-            photos: [], // 사진은 별도로 로드해야 함
+            photos: photos,
             customerInfo: {
               name: '본인',
               products: productTypes,
@@ -282,36 +298,75 @@ export default function PersonalClinicalUploadPage() {
     console.log('Photo upload:', { caseId, roundDay, angle });
     
     if (file) {
-      // 파일이 직접 제공된 경우 (PhotoRoundCarousel에서 호출)
-      // 임시로 URL.createObjectURL 사용 (실제로는 서버에 업로드)
-      const imageUrl = URL.createObjectURL(file);
+      try {
+        // 실제 케이스의 경우 Supabase에 업로드
+        const { uploadPhoto } = await import('@/lib/clinical-photos-api');
+        await uploadPhoto(parseInt(caseId), roundDay, angle, file);
+        
+        // 업로드 후 사진 목록 다시 로드
+        const { fetchPhotos } = await import('@/lib/clinical-photos-api');
+        const photos = await fetchPhotos(parseInt(caseId));
+        
+        // 업로드된 사진의 URL 찾기
+        const uploadedPhoto = photos.find(p => p.roundDay === roundDay && p.angle === angle);
+        const imageUrl = uploadedPhoto?.imageUrl || URL.createObjectURL(file);
+        
+        // 해당 케이스의 사진 업데이트
+        setCases(prev => prev.map(case_ => {
+          if (case_.id === caseId) {
+            // 기존 사진 찾기
+            const existingPhotoIndex = case_.photos.findIndex(
+              p => p.roundDay === roundDay && p.angle === angle
+            );
+            
+            const newPhoto = {
+              id: `${caseId}-${roundDay}-${angle}`,
+              roundDay: roundDay,
+              angle: angle as 'front' | 'left' | 'right',
+              imageUrl: imageUrl,
+              uploaded: true
+            };
+            
+            let updatedPhotos;
+            if (existingPhotoIndex >= 0) {
+              // 기존 사진 교체
+              updatedPhotos = [...case_.photos];
+              updatedPhotos[existingPhotoIndex] = newPhoto;
+            } else {
+              // 새 사진 추가
+              updatedPhotos = [...case_.photos, newPhoto];
+            }
+            
+            return {
+              ...case_,
+              photos: updatedPhotos
+            };
+          }
+          return case_;
+        }));
+        
+        console.log('사진이 성공적으로 업로드되었습니다.');
+      } catch (error) {
+        console.error('사진 업로드 실패:', error);
+        alert('사진 업로드에 실패했습니다. 다시 시도해주세요.');
+        throw error;
+      }
+    }
+  };
+
+  // 사진 삭제 핸들러
+  const handlePhotoDelete = async (caseId: string, roundDay: number, angle: string): Promise<void> => {
+    try {
+      // 실제 삭제 API 호출
+      const { deletePhoto } = await import('@/lib/clinical-photos-api');
+      await deletePhoto(parseInt(caseId), roundDay, angle);
       
-      // 해당 케이스의 사진 업데이트
+      // 로컬 상태 업데이트
       setCases(prev => prev.map(case_ => {
         if (case_.id === caseId) {
-          // 기존 사진 찾기
-          const existingPhotoIndex = case_.photos.findIndex(
-            p => p.roundDay === roundDay && p.angle === angle
+          const updatedPhotos = case_.photos.filter(
+            p => !(p.roundDay === roundDay && p.angle === angle)
           );
-          
-          const newPhoto = {
-            id: `${caseId}-${roundDay}-${angle}`,
-            roundDay: roundDay,
-            angle: angle as 'front' | 'left' | 'right',
-            imageUrl: imageUrl,
-            uploaded: true
-          };
-          
-          let updatedPhotos;
-          if (existingPhotoIndex >= 0) {
-            // 기존 사진 교체
-            updatedPhotos = [...case_.photos];
-            updatedPhotos[existingPhotoIndex] = newPhoto;
-          } else {
-            // 새 사진 추가
-            updatedPhotos = [...case_.photos, newPhoto];
-          }
-          
           return {
             ...case_,
             photos: updatedPhotos
@@ -320,28 +375,12 @@ export default function PersonalClinicalUploadPage() {
         return case_;
       }));
       
-      // Promise 반환 (실제 API 호출로 대체 가능)
-      return Promise.resolve();
+      console.log('사진이 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('사진 삭제 실패:', error);
+      alert('사진 삭제에 실패했습니다. 다시 시도해주세요.');
+      throw error;
     }
-  };
-
-  // 사진 삭제 핸들러
-  const handlePhotoDelete = async (caseId: string, roundDay: number, angle: string): Promise<void> => {
-    setCases(prev => prev.map(case_ => {
-      if (case_.id === caseId) {
-        const updatedPhotos = case_.photos.filter(
-          p => !(p.roundDay === roundDay && p.angle === angle)
-        );
-        return {
-          ...case_,
-          photos: updatedPhotos
-        };
-      }
-      return case_;
-    }));
-    
-    // Promise 반환 (실제 API 호출로 대체 가능)
-    return Promise.resolve();
   };
 
   // 기본 고객정보 업데이트 핸들러 (이름, 나이, 성별)
@@ -428,13 +467,91 @@ export default function PersonalClinicalUploadPage() {
   };
 
   // 케이스 데이터 새로고침
-  const refreshCases = () => {
-    // 실제 환경에서는 API 호출로 데이터를 새로 불러옵니다
-    // 목 데이터 환경에서는 현재 상태를 그대로 유지
-    console.log('케이스 데이터 새로고침');
-    
-    // 추후 이 부분을 API 호출로 대체
-    // setCases([...API 호출 결과]);
+  const refreshCases = async () => {
+    try {
+      // 실제 API 호출로 데이터를 새로 불러오기
+      const { fetchCases } = await import('@/lib/clinical-photos');
+      const casesData = await fetchCases();
+      
+      // 본인 케이스만 찾기
+      const personalCase = casesData.find(case_ => case_.customerName === '본인') || casesData[0];
+      
+      if (personalCase) {
+        // 제품 데이터 처리
+        const productTypes = [];
+        if (personalCase.cureBooster) productTypes.push('cure_booster');
+        if (personalCase.cureMask) productTypes.push('cure_mask');
+        if (personalCase.premiumMask) productTypes.push('premium_mask');
+        if (personalCase.allInOneSerum) productTypes.push('allinone_serum');
+        
+        // 피부타입 데이터 처리
+        const skinTypeData = [];
+        if (personalCase.skinRedSensitive) skinTypeData.push('red_sensitive');
+        if (personalCase.skinPigment) skinTypeData.push('pigmentation');
+        if (personalCase.skinPore) skinTypeData.push('pores_enlarged');
+        if (personalCase.skinTrouble) skinTypeData.push('acne_trouble');
+        if (personalCase.skinWrinkle) skinTypeData.push('wrinkles_elasticity');
+        if (personalCase.skinEtc) skinTypeData.push('other');
+        
+        // 사진 데이터 로드
+        let photos: PhotoSlot[] = [];
+        try {
+          const { fetchPhotos } = await import('@/lib/clinical-photos-api');
+          const photoData = await fetchPhotos(personalCase.id);
+          photos = photoData.map(p => ({
+            id: p.id,
+            roundDay: p.roundDay,
+            angle: p.angle as 'front' | 'left' | 'right',
+            imageUrl: p.imageUrl,
+            uploaded: true
+          }));
+        } catch (error) {
+          console.error(`Failed to load photos for case ${personalCase.id}:`, error);
+        }
+        
+        const transformedCase: ClinicalCase = {
+          id: personalCase.id.toString(),
+          customerName: '본인',
+          status: personalCase.status === 'archived' ? 'active' : (personalCase.status as CaseStatus),
+          createdAt: personalCase.createdAt.split('T')[0],
+          consentReceived: personalCase.consentReceived,
+          consentImageUrl: personalCase.consentImageUrl,
+          photos: photos,
+          customerInfo: {
+            name: '본인',
+            products: productTypes,
+            skinTypes: skinTypeData,
+            memo: personalCase.treatmentPlan || ''
+          },
+          roundCustomerInfo: {
+            1: {
+              treatmentType: '',
+              products: productTypes,
+              skinTypes: skinTypeData,
+              memo: personalCase.treatmentPlan || '',
+              date: personalCase.createdAt.split('T')[0]
+            }
+          },
+          cureBooster: personalCase.cureBooster || false,
+          cureMask: personalCase.cureMask || false,
+          premiumMask: personalCase.premiumMask || false,
+          allInOneSerum: personalCase.allInOneSerum || false,
+          skinRedSensitive: personalCase.skinRedSensitive || false,
+          skinPigment: personalCase.skinPigment || false,
+          skinPore: personalCase.skinPore || false,
+          skinTrouble: personalCase.skinTrouble || false,
+          skinWrinkle: personalCase.skinWrinkle || false,
+          skinEtc: personalCase.skinEtc || false
+        };
+        
+        setCases([transformedCase]);
+        console.log('케이스 데이터 새로고침 완료');
+      } else {
+        setCases([]);
+      }
+    } catch (error) {
+      console.error('케이스 데이터 새로고침 실패:', error);
+    }
   };
 
 

@@ -35,6 +35,7 @@ export default function ClinicalPhotosUploadPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState<{ kol?: KolInfo } | null>(null);
+  const [existingCases, setExistingCases] = useState<any[]>([]);
   
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -82,6 +83,19 @@ export default function ClinicalPhotosUploadPage() {
       };
       
       fetchDashboardData();
+      
+      // 기존 케이스 로드
+      const fetchExistingCases = async () => {
+        try {
+          const { fetchCases } = await import('@/lib/clinical-photos');
+          const cases = await fetchCases();
+          setExistingCases(cases.slice(0, 5)); // 최초 5개만 표시
+        } catch (error) {
+          console.error('기존 케이스 로드 실패:', error);
+        }
+      };
+      
+      fetchExistingCases();
     }
   }, [isLoaded, isSignedIn, isKol]);
 
@@ -111,6 +125,71 @@ export default function ClinicalPhotosUploadPage() {
       consentDate: checked ? new Date().toISOString().split('T')[0] : ''
     }));
   };
+
+  // 케이스 생성 핸들러
+  const handleCreateCase = async () => {
+    try {
+      const { createCase } = await import('@/lib/clinical-photos-api');
+      const caseData = {
+        customerName: formData.customerName,
+        caseName: formData.caseName,
+        consentReceived: formData.consentReceived,
+        consentDate: formData.consentDate || undefined,
+        treatmentPlan: '',
+        concernArea: ''
+      };
+      
+      const createdCase = await createCase(caseData);
+      
+      if (createdCase) {
+        alert('케이스가 성공적으로 생성되었습니다!');
+        // 폼 초기화
+        setFormData({
+          customerName: '',
+          caseName: '',
+          consentReceived: false,
+          consentDate: ''
+        });
+        // 상세 페이지로 이동
+        router.push('/kol-new/clinical-photos/upload/customer');
+      }
+    } catch (error) {
+      console.error('케이스 생성 실패:', error);
+      alert('케이스 생성에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  // 임시저장 핸들러
+  const handleSaveDraft = () => {
+    if (typeof window !== 'undefined') {
+      const draftData = {
+        ...formData,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem('clinical_case_draft', JSON.stringify(draftData));
+      alert('임시저장되었습니다.');
+    }
+  };
+
+  // 임시저장 데이터 로드
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedDraft = localStorage.getItem('clinical_case_draft');
+      if (savedDraft) {
+        try {
+          const draftData = JSON.parse(savedDraft);
+          setFormData({
+            customerName: draftData.customerName || '',
+            caseName: draftData.caseName || '',
+            consentReceived: draftData.consentReceived || false,
+            consentDate: draftData.consentDate || ''
+          });
+        } catch (error) {
+          console.error('임시저장 데이터 로드 실패:', error);
+        }
+      }
+    }
+  }, []);
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
   if (!isLoaded || isKol === null || loading) {
@@ -283,12 +362,14 @@ export default function ClinicalPhotosUploadPage() {
                     variant="outline" 
                     className="flex-1"
                     disabled={!formData.customerName || !formData.caseName}
+                    onClick={handleSaveDraft}
                   >
                     임시저장
                   </Button>
                   <Button 
                     className="flex-1"
                     disabled={!formData.customerName || !formData.caseName}
+                    onClick={handleCreateCase}
                   >
                     케이스 생성
                   </Button>
@@ -303,11 +384,47 @@ export default function ClinicalPhotosUploadPage() {
                 <CardDescription>기존에 등록된 케이스들을 확인하고 추가 사진을 업로드할 수 있습니다</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Camera className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">등록된 케이스가 없습니다</h3>
-                  <p className="text-gray-500 mb-4">위 폼을 사용해서 첫 번째 케이스를 등록해보세요</p>
-                </div>
+                {existingCases.length > 0 ? (
+                  <div className="space-y-3">
+                    {existingCases.map((case_) => (
+                      <div key={case_.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{case_.customerName}</h4>
+                          <p className="text-sm text-gray-500">{case_.caseName || '시술명 없음'}</p>
+                          <p className="text-xs text-gray-400">생성일: {new Date(case_.createdAt).toLocaleDateString('ko-KR')}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            case_.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {case_.status === 'completed' ? '완료' : '진행중'}
+                          </span>
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href="/kol-new/clinical-photos/upload/customer">
+                              사진 업로드
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {existingCases.length >= 5 && (
+                      <div className="text-center pt-3">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href="/kol-new/clinical-photos">
+                            전체 케이스 보기
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Camera className="h-12 w-12 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">등록된 케이스가 없습니다</h3>
+                    <p className="text-gray-500 mb-4">위 폼을 사용해서 첫 번째 케이스를 등록해보세요</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

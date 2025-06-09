@@ -242,7 +242,7 @@ export default function CustomerClinicalUploadPage() {
         const casesData = await fetchCases();
         
         // API 응답 데이터를 컴포넌트 형식에 맞게 변환
-        const transformedCases: ClinicalCase[] = casesData.map(case_ => {
+        const transformedCases: ClinicalCase[] = await Promise.all(casesData.map(async case_ => {
           // 체크박스 관련 제품 데이터 처리
           const productTypes = [];
           if (case_.cureBooster) productTypes.push('cure_booster');
@@ -259,6 +259,22 @@ export default function CustomerClinicalUploadPage() {
           if (case_.skinWrinkle) skinTypeData.push('wrinkles_elasticity');
           if (case_.skinEtc) skinTypeData.push('other');
           
+          // 사진 데이터 로드
+          let photos: PhotoSlot[] = [];
+          try {
+            const { fetchPhotos } = await import('@/lib/clinical-photos-api');
+            const photoData = await fetchPhotos(case_.id);
+            photos = photoData.map(p => ({
+              id: p.id,
+              roundDay: p.roundDay,
+              angle: p.angle as 'front' | 'left' | 'right',
+              imageUrl: p.imageUrl,
+              uploaded: true
+            }));
+          } catch (error) {
+            console.error(`Failed to load photos for case ${case_.id}:`, error);
+          }
+          
           // 변환된 케이스 데이터 반환
           return {
             id: case_.id.toString(),
@@ -267,7 +283,7 @@ export default function CustomerClinicalUploadPage() {
             createdAt: case_.createdAt.split('T')[0],
             consentReceived: case_.consentReceived,
             consentImageUrl: case_.consentImageUrl,
-            photos: [], // 사진은 별도로 로드해야 함
+            photos: photos,
             customerInfo: {
               name: case_.customerName,
               products: productTypes,
@@ -295,7 +311,7 @@ export default function CustomerClinicalUploadPage() {
             skinWrinkle: case_.skinWrinkle || false,
             skinEtc: case_.skinEtc || false
           };
-        });
+        }));
         
         setCases(transformedCases);
         
@@ -394,53 +410,129 @@ export default function CustomerClinicalUploadPage() {
   }, [cases]);
 
   // 케이스 상태 변경 핸들러
-  const handleCaseStatusChange = (caseId: string, status: 'active' | 'completed') => {
-    setCases(prev => prev.map(case_ => 
-      case_.id === caseId ? { ...case_, status } : case_
-    ));
+  const handleCaseStatusChange = async (caseId: string, status: 'active' | 'completed') => {
+    try {
+      // 새 고객이 아닌 경우에만 실제 API 호출
+      if (!isNewCustomer(caseId)) {
+        const { updateCase } = await import('@/lib/clinical-photos-api');
+        await updateCase(parseInt(caseId), { status });
+      }
+      
+      // 로컬 상태 업데이트
+      setCases(prev => prev.map(case_ => 
+        case_.id === caseId ? { ...case_, status } : case_
+      ));
+      
+      console.log(`케이스 상태가 ${status}로 변경되었습니다.`);
+    } catch (error) {
+      console.error('케이스 상태 변경 실패:', error);
+      alert('케이스 상태 변경에 실패했습니다. 다시 시도해주세요.');
+      // 오류 발생 시 상태 되돌리기
+      refreshCases();
+    }
   };
 
   // 동의 상태 변경 핸들러
-  const handleConsentChange = (caseId: string, consentReceived: boolean) => {
-    setCases(prev => prev.map(case_ => 
-      case_.id === caseId 
-        ? { 
-            ...case_, 
-            consentReceived,
-            consentImageUrl: consentReceived ? case_.consentImageUrl : undefined 
-          }
-        : case_
-    ));
+  const handleConsentChange = async (caseId: string, consentReceived: boolean) => {
+    try {
+      // 새 고객이 아닌 경우에만 실제 API 호출
+      if (!isNewCustomer(caseId)) {
+        const { updateCase } = await import('@/lib/clinical-photos-api');
+        const updateData: any = { consentReceived };
+        
+        // 동의 취소 시 동의서 이미지도 제거
+        if (!consentReceived) {
+          updateData.consentImageUrl = undefined;
+        }
+        
+        await updateCase(parseInt(caseId), updateData);
+      }
+      
+      // 로컬 상태 업데이트
+      setCases(prev => prev.map(case_ => 
+        case_.id === caseId 
+          ? { 
+              ...case_, 
+              consentReceived,
+              consentImageUrl: consentReceived ? case_.consentImageUrl : undefined 
+            }
+          : case_
+      ));
+      
+      console.log(`동의 상태가 ${consentReceived ? '동의' : '미동의'}로 변경되었습니다.`);
+    } catch (error) {
+      console.error('동의 상태 변경 실패:', error);
+      alert('동의 상태 변경에 실패했습니다. 다시 시도해주세요.');
+      // 오류 발생 시 상태 되돌리기
+      refreshCases();
+    }
   };
 
   // 동의서 업로드 핸들러
   const handleConsentUpload = (caseId: string) => {
-    // TODO: 실제 파일 업로드 로직 구현
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        // 임시로 URL.createObjectURL 사용
-        const imageUrl = URL.createObjectURL(file);
-        setCases(prev => prev.map(case_ => 
-          case_.id === caseId 
-            ? { ...case_, consentImageUrl: imageUrl }
-            : case_
-        ));
+        try {
+          // 새 고객인 경우 임시 처리
+          if (isNewCustomer(caseId)) {
+            const imageUrl = URL.createObjectURL(file);
+            setCases(prev => prev.map(case_ => 
+              case_.id === caseId 
+                ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
+                : case_
+            ));
+            return;
+          }
+          
+          // 실제 케이스의 경우 Supabase에 업로드
+          const { uploadConsentImage } = await import('@/lib/clinical-photos-api');
+          const imageUrl = await uploadConsentImage(parseInt(caseId), file);
+          
+          // 로컬 상태 업데이트
+          setCases(prev => prev.map(case_ => 
+            case_.id === caseId 
+              ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
+              : case_
+          ));
+          
+          console.log('동의서가 성공적으로 업로드되었습니다.');
+        } catch (error) {
+          console.error('동의서 업로드 실패:', error);
+          alert('동의서 업로드에 실패했습니다. 다시 시도해주세요.');
+        }
       }
     };
     input.click();
   };
 
   // 동의서 삭제 핸들러
-  const handleConsentDelete = (caseId: string) => {
-    setCases(prev => prev.map(case_ => 
-      case_.id === caseId 
-        ? { ...case_, consentImageUrl: undefined }
-        : case_
-    ));
+  const handleConsentDelete = async (caseId: string) => {
+    try {
+      // 새 고객이 아닌 경우에만 실제 API 호출
+      if (!isNewCustomer(caseId)) {
+        const { updateCase } = await import('@/lib/clinical-photos-api');
+        await updateCase(parseInt(caseId), { 
+          consentImageUrl: undefined,
+          consentReceived: false 
+        });
+      }
+      
+      // 로컬 상태 업데이트
+      setCases(prev => prev.map(case_ => 
+        case_.id === caseId 
+          ? { ...case_, consentImageUrl: undefined, consentReceived: false }
+          : case_
+      ));
+      
+      console.log('동의서가 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('동의서 삭제 실패:', error);
+      alert('동의서 삭제에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   // 동의서 보기 핸들러
@@ -453,36 +545,84 @@ export default function CustomerClinicalUploadPage() {
     console.log('Photo upload:', { caseId, roundDay, angle });
     
     if (file) {
-      // 파일이 직접 제공된 경우 (PhotoRoundCarousel에서 호출)
-      // 임시로 URL.createObjectURL 사용 (실제로는 서버에 업로드)
-      const imageUrl = URL.createObjectURL(file);
+      try {
+        let imageUrl: string;
+        
+        // 새 고객인 경우 임시 처리
+        if (isNewCustomer(caseId)) {
+          imageUrl = URL.createObjectURL(file);
+        } else {
+          // 실제 케이스의 경우 Supabase에 업로드
+          const { uploadPhoto } = await import('@/lib/clinical-photos-api');
+          await uploadPhoto(parseInt(caseId), roundDay, angle, file);
+          
+          // 업로드 후 사진 목록 다시 로드
+          const { fetchPhotos } = await import('@/lib/clinical-photos-api');
+          const photos = await fetchPhotos(parseInt(caseId));
+          
+          // 업로드된 사진의 URL 찾기
+          const uploadedPhoto = photos.find(p => p.roundDay === roundDay && p.angle === angle);
+          imageUrl = uploadedPhoto?.imageUrl || URL.createObjectURL(file);
+        }
       
-      // 해당 케이스의 사진 업데이트
+        // 해당 케이스의 사진 업데이트
+        setCases(prev => prev.map(case_ => {
+          if (case_.id === caseId) {
+            // 기존 사진 찾기
+            const existingPhotoIndex = case_.photos.findIndex(
+              p => p.roundDay === roundDay && p.angle === angle
+            );
+            
+            const newPhoto = {
+              id: `${caseId}-${roundDay}-${angle}`,
+              roundDay: roundDay,
+              angle: angle as 'front' | 'left' | 'right',
+              imageUrl: imageUrl,
+              uploaded: true
+            };
+            
+            let updatedPhotos;
+            if (existingPhotoIndex >= 0) {
+              // 기존 사진 교체
+              updatedPhotos = [...case_.photos];
+              updatedPhotos[existingPhotoIndex] = newPhoto;
+            } else {
+              // 새 사진 추가
+              updatedPhotos = [...case_.photos, newPhoto];
+            }
+            
+            return {
+              ...case_,
+              photos: updatedPhotos
+            };
+          }
+          return case_;
+        }));
+        
+        console.log('사진이 성공적으로 업로드되었습니다.');
+      } catch (error) {
+        console.error('사진 업로드 실패:', error);
+        alert('사진 업로드에 실패했습니다. 다시 시도해주세요.');
+        throw error;
+      }
+    }
+  };
+
+  // 사진 삭제 핸들러
+  const handlePhotoDelete = async (caseId: string, roundDay: number, angle: string): Promise<void> => {
+    try {
+      // 새 고객이 아닌 경우에만 실제 삭제 API 호출
+      if (!isNewCustomer(caseId)) {
+        const { deletePhoto } = await import('@/lib/clinical-photos-api');
+        await deletePhoto(parseInt(caseId), roundDay, angle);
+      }
+      
+      // 로컬 상태 업데이트
       setCases(prev => prev.map(case_ => {
         if (case_.id === caseId) {
-          // 기존 사진 찾기
-          const existingPhotoIndex = case_.photos.findIndex(
-            p => p.roundDay === roundDay && p.angle === angle
+          const updatedPhotos = case_.photos.filter(
+            p => !(p.roundDay === roundDay && p.angle === angle)
           );
-          
-          const newPhoto = {
-            id: `${caseId}-${roundDay}-${angle}`,
-            roundDay: roundDay,
-            angle: angle as 'front' | 'left' | 'right',
-            imageUrl: imageUrl,
-            uploaded: true
-          };
-          
-          let updatedPhotos;
-          if (existingPhotoIndex >= 0) {
-            // 기존 사진 교체
-            updatedPhotos = [...case_.photos];
-            updatedPhotos[existingPhotoIndex] = newPhoto;
-          } else {
-            // 새 사진 추가
-            updatedPhotos = [...case_.photos, newPhoto];
-          }
-          
           return {
             ...case_,
             photos: updatedPhotos
@@ -491,62 +631,93 @@ export default function CustomerClinicalUploadPage() {
         return case_;
       }));
       
-      // Promise 반환 (실제 API 호출로 대체 가능)
-      return Promise.resolve();
+      console.log('사진이 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('사진 삭제 실패:', error);
+      alert('사진 삭제에 실패했습니다. 다시 시도해주세요.');
+      throw error;
     }
   };
 
-  // 사진 삭제 핸들러
-  const handlePhotoDelete = async (caseId: string, roundDay: number, angle: string): Promise<void> => {
-    setCases(prev => prev.map(case_ => {
-      if (case_.id === caseId) {
-        const updatedPhotos = case_.photos.filter(
-          p => !(p.roundDay === roundDay && p.angle === angle)
-        );
-        return {
-          ...case_,
-          photos: updatedPhotos
-        };
-      }
-      return case_;
-    }));
-    
-    // Promise 반환 (실제 API 호출로 대체 가능)
-    return Promise.resolve();
-  };
-
   // 기본 고객정보 업데이트 핸들러 (이름, 나이, 성별)
-  const handleBasicCustomerInfoUpdate = (caseId: string, customerInfo: Partial<Pick<CustomerInfo, 'name' | 'age' | 'gender'>>) => {
-    setCases(prev => prev.map(case_ => 
-      case_.id === caseId 
-        ? { 
-            ...case_, 
-            customerName: customerInfo.name || case_.customerName,
-            customerInfo: { ...case_.customerInfo, ...customerInfo } 
-          }
-        : case_
-    ));
+  const handleBasicCustomerInfoUpdate = async (caseId: string, customerInfo: Partial<Pick<CustomerInfo, 'name' | 'age' | 'gender'>>) => {
+    try {
+      // 새 고객이 아닌 경우에만 실제 API 호출
+      if (!isNewCustomer(caseId)) {
+        const { updateCase } = await import('@/lib/clinical-photos-api');
+        const updateData: any = {};
+        
+        if (customerInfo.name) {
+          updateData.customerName = customerInfo.name;
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          await updateCase(parseInt(caseId), updateData);
+        }
+      }
+      
+      // 로컬 상태 업데이트
+      setCases(prev => prev.map(case_ => 
+        case_.id === caseId 
+          ? { 
+              ...case_, 
+              customerName: customerInfo.name || case_.customerName,
+              customerInfo: { ...case_.customerInfo, ...customerInfo } 
+            }
+          : case_
+      ));
+      
+      console.log('기본 고객 정보가 업데이트되었습니다.');
+    } catch (error) {
+      console.error('기본 고객 정보 업데이트 실패:', error);
+      // 조용히 실패 처리 (사용자 경험 방해하지 않도록)
+    }
   };
 
   // 회차별 고객정보 업데이트 핸들러 (시술유형, 제품, 피부타입, 메모)
-  const handleRoundCustomerInfoUpdate = (caseId: string, roundDay: number, roundInfo: Partial<RoundCustomerInfo>) => {
-    setCases(prev => prev.map(case_ => 
-      case_.id === caseId 
-        ? { 
-            ...case_, 
-            roundCustomerInfo: {
-              ...case_.roundCustomerInfo,
-              [roundDay]: { 
-                treatmentType: '',
-                memo: '',
-                date: '',
-                ...case_.roundCustomerInfo[roundDay],
-                ...roundInfo 
+  const handleRoundCustomerInfoUpdate = async (caseId: string, roundDay: number, roundInfo: Partial<RoundCustomerInfo>) => {
+    try {
+      // 새 고객이 아닌 경우에만 실제 API 호출
+      if (!isNewCustomer(caseId)) {
+        const { updateCase } = await import('@/lib/clinical-photos-api');
+        const updateData: any = {};
+        
+        // 메모 정보만 treatmentPlan으로 업데이트 (다른 필드는 체크박스로 처리)
+        if (roundInfo.memo !== undefined) {
+          updateData.treatmentPlan = roundInfo.memo;
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          await updateCase(parseInt(caseId), updateData);
+        }
+      }
+      
+      // 로컬 상태 업데이트
+      setCases(prev => prev.map(case_ => 
+        case_.id === caseId 
+          ? { 
+              ...case_, 
+              roundCustomerInfo: {
+                ...case_.roundCustomerInfo,
+                [roundDay]: { 
+                  treatmentType: '',
+                  memo: '',
+                  date: '',
+                  ...case_.roundCustomerInfo[roundDay],
+                  ...roundInfo 
+                }
               }
             }
-          }
-        : case_
-    ));
+          : case_
+      ));
+      
+      if (roundInfo.memo !== undefined) {
+        console.log('회차별 메모 정보가 업데이트되었습니다.');
+      }
+    } catch (error) {
+      console.error('회차별 고객 정보 업데이트 실패:', error);
+      // 조용히 실패 처리 (사용자 경험 방해하지 않도록)
+    }
   };
   
   // 본래 API와 연동하는 체크박스 업데이트 함수
@@ -604,13 +775,87 @@ export default function CustomerClinicalUploadPage() {
   };
 
   // 케이스 데이터 새로고침
-  const refreshCases = () => {
-    // 실제 환경에서는 API 호출로 데이터를 새로 불러옵니다
-    // 목 데이터 환경에서는 현재 상태를 그대로 유지
-    console.log('케이스 데이터 새로고침');
-    
-    // 추후 이 부분을 API 호출로 대체
-    // setCases([...API 호출 결과]);
+  const refreshCases = async () => {
+    try {
+      // 실제 API 호출로 데이터를 새로 불러오기
+      const { fetchCases } = await import('@/lib/clinical-photos');
+      const casesData = await fetchCases();
+      
+      // 데이터 변환 로직 재사용
+      const transformedCases: ClinicalCase[] = await Promise.all(casesData.map(async case_ => {
+        // 제품 데이터 처리
+        const productTypes = [];
+        if (case_.cureBooster) productTypes.push('cure_booster');
+        if (case_.cureMask) productTypes.push('cure_mask');
+        if (case_.premiumMask) productTypes.push('premium_mask');
+        if (case_.allInOneSerum) productTypes.push('allinone_serum');
+        
+        // 피부타입 데이터 처리
+        const skinTypeData = [];
+        if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
+        if (case_.skinPigment) skinTypeData.push('pigmentation');
+        if (case_.skinPore) skinTypeData.push('pores_enlarged');
+        if (case_.skinTrouble) skinTypeData.push('acne_trouble');
+        if (case_.skinWrinkle) skinTypeData.push('wrinkles_elasticity');
+        if (case_.skinEtc) skinTypeData.push('other');
+        
+        // 사진 데이터 로드
+        let photos: PhotoSlot[] = [];
+        try {
+          const { fetchPhotos } = await import('@/lib/clinical-photos-api');
+          const photoData = await fetchPhotos(case_.id);
+          photos = photoData.map(p => ({
+            id: p.id,
+            roundDay: p.roundDay,
+            angle: p.angle as 'front' | 'left' | 'right',
+            imageUrl: p.imageUrl,
+            uploaded: true
+          }));
+        } catch (error) {
+          console.error(`Failed to load photos for case ${case_.id}:`, error);
+        }
+        
+        return {
+          id: case_.id.toString(),
+          customerName: case_.customerName,
+          status: case_.status === 'cancelled' || case_.status === 'archived' ? 'active' : (case_.status as any),
+          createdAt: case_.createdAt.split('T')[0],
+          consentReceived: case_.consentReceived,
+          consentImageUrl: case_.consentImageUrl,
+          photos: photos,
+          customerInfo: {
+            name: case_.customerName,
+            products: productTypes,
+            skinTypes: skinTypeData,
+            memo: case_.treatmentPlan || ''
+          },
+          roundCustomerInfo: {
+            1: {
+              treatmentType: '',
+              products: productTypes,
+              skinTypes: skinTypeData,
+              memo: case_.treatmentPlan || '',
+              date: case_.createdAt.split('T')[0]
+            }
+          },
+          cureBooster: case_.cureBooster || false,
+          cureMask: case_.cureMask || false,
+          premiumMask: case_.premiumMask || false,
+          allInOneSerum: case_.allInOneSerum || false,
+          skinRedSensitive: case_.skinRedSensitive || false,
+          skinPigment: case_.skinPigment || false,
+          skinPore: case_.skinPore || false,
+          skinTrouble: case_.skinTrouble || false,
+          skinWrinkle: case_.skinWrinkle || false,
+          skinEtc: case_.skinEtc || false
+        };
+      }));
+      
+      setCases(transformedCases);
+      console.log('케이스 데이터 새로고침 완료');
+    } catch (error) {
+      console.error('케이스 데이터 새로고침 실패:', error);
+    }
   };
 
   // 새 고객 추가 핸들러
@@ -708,17 +953,71 @@ export default function CustomerClinicalUploadPage() {
   };
 
   // 새 고객 저장 핸들러
-  const handleSaveNewCustomer = (caseId: string) => {
-    setCases(prev => prev.map(case_ => 
-      case_.id === caseId 
-        ? { ...case_, id: `case-${Date.now()}` } // ID를 정식 케이스 ID로 변경
-        : case_
-    ));
-    setHasUnsavedNewCustomer(false);
-    
-    // localStorage에서 임시저장 데이터 제거
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('unsavedNewCustomer');
+  const handleSaveNewCustomer = async (caseId: string) => {
+    try {
+      const newCustomerCase = cases.find(case_ => case_.id === caseId);
+      if (!newCustomerCase || !newCustomerCase.customerInfo.name.trim()) {
+        alert('고객 이름을 입력해주세요.');
+        return;
+      }
+      
+      // Supabase에 새 케이스 생성
+      const { createCase } = await import('@/lib/clinical-photos-api');
+      const createdCase = await createCase({
+        customerName: newCustomerCase.customerInfo.name,
+        caseName: `${newCustomerCase.customerInfo.name} 임상케이스`,
+        concernArea: '',
+        treatmentPlan: newCustomerCase.customerInfo.memo || '',
+        consentReceived: newCustomerCase.consentReceived,
+        customerMemo: newCustomerCase.customerInfo.memo || ''
+      });
+      
+      if (createdCase) {
+        // 체크박스 데이터 업데이트
+        const checkboxUpdates: any = {
+          cureBooster: newCustomerCase.cureBooster,
+          cureMask: newCustomerCase.cureMask,
+          premiumMask: newCustomerCase.premiumMask,
+          allInOneSerum: newCustomerCase.allInOneSerum,
+          skinRedSensitive: newCustomerCase.skinRedSensitive,
+          skinPigment: newCustomerCase.skinPigment,
+          skinPore: newCustomerCase.skinPore,
+          skinTrouble: newCustomerCase.skinTrouble,
+          skinWrinkle: newCustomerCase.skinWrinkle,
+          skinEtc: newCustomerCase.skinEtc
+        };
+        
+        // undefined 제거
+        Object.keys(checkboxUpdates).forEach(key => {
+          if (checkboxUpdates[key] === undefined) {
+            delete checkboxUpdates[key];
+          }
+        });
+        
+        if (Object.keys(checkboxUpdates).length > 0) {
+          const { updateCase } = await import('@/lib/clinical-photos-api');
+          await updateCase(createdCase.id, checkboxUpdates);
+        }
+        
+        // 로컬 상태 업데이트
+        setCases(prev => prev.map(case_ => 
+          case_.id === caseId 
+            ? { ...case_, id: createdCase.id.toString() }
+            : case_
+        ));
+        
+        setHasUnsavedNewCustomer(false);
+        
+        // localStorage에서 임시저장 데이터 제거
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('unsavedNewCustomer');
+        }
+        
+        console.log('새 고객이 성공적으로 저장되었습니다.');
+      }
+    } catch (error) {
+      console.error('새 고객 저장 실패:', error);
+      alert('새 고객 저장에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
