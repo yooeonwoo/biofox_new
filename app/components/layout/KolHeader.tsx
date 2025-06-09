@@ -67,7 +67,10 @@ export default function KolHeader({
                   <AvatarImage src={userImage} />
                   <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
-                <span className="hidden text-xs md:text-sm md:inline-block">{shopName || "로딩 중..."}</span>
+                <div className="hidden flex-col items-start md:flex">
+                  <span className="text-xs md:text-sm font-medium">{shopName || "로딩 중..."}</span>
+                  <span className="text-xs text-gray-500">{userName || "로딩 중..."}</span>
+                </div>
                 <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
             </DropdownMenuTrigger>

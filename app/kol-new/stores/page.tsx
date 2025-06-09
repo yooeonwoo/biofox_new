@@ -47,17 +47,13 @@ import {
   DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu";
 import {
-  PieChart, 
-  Pie, 
-  Cell, 
   ResponsiveContainer, 
-  Tooltip, 
-  Legend,
   BarChart,
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid
+  CartesianGrid,
+  Tooltip
 } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -84,12 +80,6 @@ interface ShopData {
   };
 }
 
-interface ProductRatioData {
-  productId: number;
-  productName: string;
-  totalSalesAmount: number;
-  salesRatio: string;
-}
 
 // 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
@@ -119,7 +109,6 @@ export default function StoresPage() {
   const [isKol, setIsKol] = useState<boolean | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [shopsData, setShopsData] = useState<ShopData[]>([]);
-  const [productRatioData, setProductRatioData] = useState<ProductRatioData[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [kolInfo, setKolInfo] = useState<{ name: string; shopName: string } | null>(null);
@@ -132,13 +121,6 @@ export default function StoresPage() {
   // 선택된 상점의 상세 정보를 저장할 상태 추가
   const [selectedShop, setSelectedShop] = useState<ShopData | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  // 상품 판매 비율 상태 추가
-  const [selectedShopProductRatio, setSelectedShopProductRatio] = useState<{
-    productId: number;
-    productName: string;
-    totalSalesAmount: number;
-    salesRatio: string;
-  }[]>([]);
   const [isLoadingShopDetail, setIsLoadingShopDetail] = useState(false);
 
   // 필터링된 전문점 데이터 (API 응답 포맷에 맞춰 수정)
@@ -150,14 +132,6 @@ export default function StoresPage() {
   const filteredShops = shopsData; // 모든 샵 표시
   console.log(`필터링 후 전문점 수: ${filteredShops.length}`);
 
-  // 파이 차트 데이터 준비
-  const pieChartColors = ['#8884d8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c', '#d0ed57', '#ffc658'];
-  const pieChartData = productRatioData.map((item, index) => ({
-    name: item.productName,
-    value: item.totalSalesAmount,
-    ratio: parseFloat(item.salesRatio),
-    fill: pieChartColors[index % pieChartColors.length]
-  }));
 
   // 당월 매출 기준 바 차트 데이터 (제한 없이 전체 데이터)
   const currentMonthBarData = filteredShops
@@ -292,11 +266,6 @@ export default function StoresPage() {
             });
           }
 
-          // 제품 비율 데이터 로드 (API 형태에 따라 조정 필요)
-          const productRatioResponse = await fetch('/api/kol-new/product-ratio');
-          if (!productRatioResponse.ok) throw new Error('제품 비율 데이터를 불러오는데 실패했습니다.');
-          const productRatioResult = await productRatioResponse.json();
-          setProductRatioData(productRatioResult);
 
           setLoading(false);
         } catch (err: unknown) {
@@ -376,19 +345,6 @@ export default function StoresPage() {
     );
   }
 
-  // 커스텀 툴팁 컴포넌트
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border border-gray-200 shadow-md rounded-md">
-          <p className="font-semibold">{payload[0]?.name}</p>
-          <p>비율: {(payload[0]?.payload.ratio * 100).toFixed(1)}%</p>
-          <p>매출: {formatToManUnit(payload[0]?.value)}</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   // 테이블 행 배경색 결정 함수
   const getRowColorClass = (rank: number, sales: number, index: number) => {
@@ -408,20 +364,6 @@ export default function StoresPage() {
   const handleShopClick = async (shop: ShopData) => {
     setSelectedShop(shop);
     setIsDetailModalOpen(true);
-    setIsLoadingShopDetail(true);
-    
-    try {
-      // 선택된 상점의 제품별 판매 비율 가져오기
-      const response = await fetch(`/api/kol-new/shop-product-ratio/${shop.id}`);
-      if (!response.ok) throw new Error('상점 제품 비율 데이터를 불러오는데 실패했습니다.');
-      const shopProductRatioData = await response.json();
-      setSelectedShopProductRatio(shopProductRatioData);
-    } catch (error) {
-      console.error('상점 상세 데이터 로드 에러:', error);
-      setSelectedShopProductRatio([]);
-    } finally {
-      setIsLoadingShopDetail(false);
-    }
   };
 
   // 상점 상세 정보 모달 컴포넌트
@@ -432,13 +374,6 @@ export default function StoresPage() {
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     
-    // 모달 차트용 데이터
-    const modalPieChartData = selectedShopProductRatio.map((item, index) => ({
-      name: item.productName,
-      value: item.totalSalesAmount,
-      ratio: parseFloat(item.salesRatio),
-      fill: pieChartColors[index % pieChartColors.length]
-    }));
 
     return (
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
@@ -453,41 +388,6 @@ export default function StoresPage() {
           {/* 상점 정보 요약 */}
           <div className="py-4">
             <div className="mb-4 grid grid-cols-1 gap-4">
-              <div className="border rounded-md p-4 bg-purple-50">
-                <div className="text-sm text-gray-600 mb-1">제품별 매출 비율</div>
-                <div className="h-[200px]">
-                  {isLoadingShopDetail ? (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                    </div>
-                  ) : modalPieChartData.length === 0 ? (
-                    <div className="flex h-full items-center justify-center text-muted-foreground">
-                      제품별 매출 데이터가 없습니다.
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={modalPieChartData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={70}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {modalPieChartData.map((entry, index) => (
-                            <Cell key={`modal-cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend layout="vertical" verticalAlign="middle" align="right" />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-              </div>
-              
               <div className="border rounded-md p-4 bg-blue-50">
                 <h3 className="font-medium mb-4">당월 매출 및 수당</h3>
                 <div className="space-y-4">
@@ -538,52 +438,9 @@ export default function StoresPage() {
             </div>
 
             {/* 차트 영역 */}
-            <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-              {/* 제품 종류별 매출 비율 */}
-              <Card className="lg:col-span-1">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm sm:text-base md:text-lg whitespace-normal">
-                    <span className="hidden sm:inline">제품 종류별 매출 비율</span>
-                    <span className="sm:hidden">제품 비율</span>
-                  </CardTitle>
-                  <CardDescription className="whitespace-normal text-xs sm:text-sm">
-                    <span className="hidden sm:inline">당월 전체 매출 기준 판매 제품 비율</span>
-                    <span className="sm:hidden">당월 판매 비율</span>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[350px] flex items-center justify-center">
-                    {pieChartData.length === 0 ? (
-                      <div className="flex h-full items-center justify-center text-muted-foreground">
-                        제품별 매출 데이터가 없습니다.
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={pieChartData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={120}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {pieChartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend layout="horizontal" verticalAlign="bottom" align="center" />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
+            <div className="mb-6 grid grid-cols-1 gap-4">
               {/* 전문점별 순위 */}
-              <Card className="lg:col-span-2">
+              <Card>
                 <CardHeader className="pb-2">
                   <div className="flex flex-row items-center justify-between flex-wrap gap-2">
                     <div>

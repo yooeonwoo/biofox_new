@@ -751,15 +751,6 @@ export default function EntitiesPage() {
         throw new Error(`수수료 데이터 삭제 중 오류 발생: ${commissionsKolDeleteError.message}`);
       }
 
-      // 3.7 product_sales_ratios 테이블에서 관련 데이터 삭제
-      const { error: productSalesRatiosDeleteError } = await supabase
-        .from('product_sales_ratios')
-        .delete()
-        .eq('kol_id', deleteItemId);
-        
-      if (productSalesRatiosDeleteError) {
-        throw new Error(`제품 매출 비율 삭제 중 오류 발생: ${productSalesRatiosDeleteError.message}`);
-      }
 
       // kol_dashboard_metrics 테이블에서 관련 데이터 삭제
       const { error: kolMetricsDeleteError } = await supabase
@@ -1027,15 +1018,6 @@ export default function EntitiesPage() {
         throw new Error(`전문점 제품 매출 삭제 중 오류 발생: ${shopProductSalesDeleteError.message}`);
       }
 
-      // 6. product_sales_ratios 테이블에서 해당 shop_id를 가진 레코드들 삭제
-      const { error: productSalesRatiosDeleteError } = await supabase
-        .from('product_sales_ratios')
-        .delete()
-        .eq('shop_id', deleteItemId);
-      
-      if (productSalesRatiosDeleteError) {
-        throw new Error(`제품 매출 비율 삭제 중 오류 발생: ${productSalesRatiosDeleteError.message}`);
-      }
 
       // 3. 전문점 삭제
       const { error } = await supabase

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Camera, Plus } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { toast } from 'sonner';
 
 interface PhotoSlot {
   id: string;
@@ -10,15 +11,17 @@ interface PhotoSlot {
   angle: 'front' | 'left' | 'right';
   imageUrl?: string;
   uploaded: boolean;
+  photoId?: number;
 }
 
 interface PhotoRoundCarouselProps {
   caseId: string;
   photos: PhotoSlot[];
-  onPhotoUpload: (roundDay: number, angle: string) => void;
-  onPhotoDelete?: (roundDay: number, angle: string) => void; // 사진 삭제 콜백
-  isCompleted?: boolean; // 케이스 완료 상태
-  onRoundChange?: (roundDay: number) => void; // 회차 변경 콜백
+  onPhotoUpload: (roundDay: number, angle: string, file: File) => Promise<void>;
+  onPhotoDelete?: (roundDay: number, angle: string) => Promise<void>;
+  isCompleted?: boolean;
+  onRoundChange?: (roundDay: number) => void;
+  onPhotosRefresh?: () => void;
 }
 
 const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
@@ -27,9 +30,13 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
   onPhotoUpload,
   onPhotoDelete,
   isCompleted = false,
-  onRoundChange
+  onRoundChange,
+  onPhotosRefresh
 }) => {
   const [currentRound, setCurrentRound] = useState(1);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadTarget, setUploadTarget] = useState<{ roundDay: number; angle: string } | null>(null);
 
   // 회차별로 사진 그룹화 및 동적 회차 생성
   const photosByRound = React.useMemo(() => {
@@ -68,7 +75,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
     });
 
     return rounds;
-  }, [photos, caseId, currentRound]);
+  }, [photos, caseId, currentRound, isCompleted]);
 
   const roundDays = Object.keys(photosByRound).map(Number).sort((a, b) => a - b);
 
@@ -85,6 +92,64 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
   // 회차 이름 변환
   const getRoundName = (round: number) => {
     return `${round}회차`;
+  };
+
+  // 파일 선택 핸들러
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !uploadTarget) return;
+
+    // 파일 유효성 검사
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('JPEG, PNG, WebP 형식의 이미지만 업로드 가능합니다.');
+      return;
+    }
+
+    // 파일 크기 제한 (10MB)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('파일 크기는 10MB 이하여야 합니다.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await onPhotoUpload(uploadTarget.roundDay, uploadTarget.angle, file);
+      toast.success('사진이 업로드되었습니다.');
+      onPhotosRefresh?.();
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('사진 업로드에 실패했습니다.');
+    } finally {
+      setUploading(false);
+      setUploadTarget(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // 업로드 버튼 클릭 핸들러
+  const handleUploadClick = (roundDay: number, angle: string) => {
+    setUploadTarget({ roundDay, angle });
+    fileInputRef.current?.click();
+  };
+
+  // 삭제 핸들러
+  const handleDelete = async (roundDay: number, angle: string) => {
+    if (!onPhotoDelete) return;
+    
+    if (confirm('정말로 이 사진을 삭제하시겠습니까?')) {
+      try {
+        await onPhotoDelete(roundDay, angle);
+        toast.success('사진이 삭제되었습니다.');
+        onPhotosRefresh?.();
+      } catch (error) {
+        console.error('Delete error:', error);
+        toast.error('사진 삭제에 실패했습니다.');
+      }
+    }
   };
 
   // 현재 보이는 4개 슬롯: 현재 회차 3개 + 다음 회차 정면 1개
@@ -118,7 +183,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
     }
     
     return slots;
-  }, [currentRound, photosByRound]);
+  }, [currentRound, photosByRound, isCompleted]);
 
   // 완료된 회차 계산 (정면, 좌측, 우측 모두 업로드된 회차)
   const getCompletedRounds = () => {
@@ -183,6 +248,16 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
 
   return (
     <div className="border-2 border-gray-200 rounded-lg p-2 bg-gray-50/50">
+      {/* 숨겨진 파일 입력 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/jpg,image/webp"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={uploading}
+      />
+
       {/* 회차 제목들 */}
       <div className="flex justify-between mb-2">
         <div className="flex-1 text-center">
@@ -208,6 +283,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
             size="sm"
             className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-biofox-blue-violet hover:bg-biofox-blue-violet/80 text-white shadow-xl border-2 border-biofox-blue-violet/30 hover:border-biofox-blue-violet/50 transition-all duration-200 hover:scale-110 h-8 w-8 p-0"
             onClick={goToPrevRound}
+            disabled={uploading}
           >
             <ChevronLeft className="h-4 w-4 font-bold" />
           </Button>
@@ -218,9 +294,8 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
           {/* 현재 회차 3개 슬롯 영역 (하나로 묶음) */}
           <div className="col-span-3 border-2 border-gray-300 rounded-lg p-1 bg-white">
             <div className="grid grid-cols-3 gap-1 h-full">
-              {visibleSlots.slice(0, 3).map((slot, index) => {
+              {visibleSlots.slice(0, 3).map((slot) => {
                 const isNext = nextSlot?.id === slot.id;
-                const isEmpty = !slot.uploaded && !slot.imageUrl;
                 const isEmptySlot = slot.roundDay === 0; // 빈 슬롯
                 
                 return (
@@ -249,16 +324,18 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                             <button
                               className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-xs"
-                              onClick={() => onPhotoUpload(slot.roundDay, slot.angle)}
+                              onClick={() => handleUploadClick(slot.roundDay, slot.angle)}
                               title="사진 교체"
+                              disabled={uploading}
                             >
                               ✏️
                             </button>
                             {onPhotoDelete && (
                               <button
                                 className="p-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-xs"
-                                onClick={() => onPhotoDelete(slot.roundDay, slot.angle)}
+                                onClick={() => handleDelete(slot.roundDay, slot.angle)}
                                 title="사진 삭제"
+                                disabled={uploading}
                               >
                                 🗑️
                               </button>
@@ -267,22 +344,23 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                         </div>
                       ) : (
                         <button
-                          className="w-full h-full flex flex-col items-center justify-center transition-colors cursor-pointer bg-soksok-light-blue/10 hover:bg-soksok-light-blue/20"
-                          onClick={() => onPhotoUpload(slot.roundDay, slot.angle)}
+                          className="w-full h-full flex flex-col items-center justify-center transition-colors cursor-pointer bg-soksok-light-blue/10 hover:bg-soksok-light-blue/20 disabled:opacity-50"
+                          onClick={() => handleUploadClick(slot.roundDay, slot.angle)}
+                          disabled={uploading}
                         >
                           {slot.angle === 'front' && (
-                            <div className="w-full h-full flex items-center justify-center p-3">
-                              <img src="/images/3.png" alt="정면 가이드라인" className="w-full h-full object-contain opacity-60" />
+                            <div className="w-full h-full flex items-center justify-center">
+                              <img src="/images/front-guide.png" alt="정면 가이드라인" className="w-full h-full object-cover opacity-60" />
                             </div>
                           )}
                           {slot.angle === 'left' && (
-                            <div className="w-full h-full flex items-center justify-center p-3">
-                              <img src="/images/제목 없음 (로고) (1).png" alt="좌측 가이드라인" className="w-full h-full object-contain opacity-60" />
+                            <div className="w-full h-full flex items-center justify-center">
+                              <img src="/images/left-guide.png" alt="좌측 가이드라인" className="w-full h-full object-cover opacity-60" />
                             </div>
                           )}
                           {slot.angle === 'right' && (
-                            <div className="w-full h-full flex items-center justify-center p-3">
-                              <img src="/images/제목 없음 (로고).png" alt="우측 가이드라인" className="w-full h-full object-contain opacity-60" />
+                            <div className="w-full h-full flex items-center justify-center">
+                              <img src="/images/right-guide.png" alt="우측 가이드라인" className="w-full h-full object-cover opacity-60" />
                             </div>
                           )}
                         </button>
@@ -299,11 +377,12 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
             <div className="h-full">
               <div className="w-full h-full border-2 rounded-lg overflow-hidden border-soksok-light-blue/40 bg-soksok-light-blue/10">
                 <button
-                  className="w-full h-full flex flex-col items-center justify-center transition-colors cursor-pointer bg-soksok-light-blue/10 hover:bg-soksok-light-blue/20"
-                  onClick={() => onPhotoUpload(visibleSlots[3].roundDay, visibleSlots[3].angle)}
+                  className="w-full h-full flex flex-col items-center justify-center transition-colors cursor-pointer bg-soksok-light-blue/10 hover:bg-soksok-light-blue/20 disabled:opacity-50"
+                  onClick={() => handleUploadClick(visibleSlots[3].roundDay, visibleSlots[3].angle)}
+                  disabled={uploading}
                 >
-                  <div className="w-full h-full flex items-center justify-center p-3">
-                    <img src="/images/3.png" alt="정면 가이드라인" className="w-full h-full object-contain opacity-60" />
+                  <div className="w-full h-full flex items-center justify-center">
+                    <img src="/images/front-guide.png" alt="정면 가이드라인" className="w-full h-full object-cover opacity-60" />
                   </div>
                 </button>
               </div>
@@ -321,11 +400,22 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
             size="sm"
             className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-biofox-blue-violet hover:bg-biofox-blue-violet/80 text-white shadow-xl border-2 border-biofox-blue-violet/30 hover:border-biofox-blue-violet/50 transition-all duration-200 hover:scale-110 h-8 w-8 p-0"
             onClick={goToNextRound}
+            disabled={uploading}
           >
             <ChevronRight className="h-4 w-4 font-bold" />
           </Button>
         )}
       </div>
+
+      {/* 업로드 중 표시 */}
+      {uploading && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg z-20">
+          <div className="flex items-center gap-2">
+            <Upload className="h-5 w-5 animate-pulse" />
+            <span className="text-sm">업로드 중...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

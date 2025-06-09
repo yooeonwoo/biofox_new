@@ -1,11 +1,10 @@
 'use client';
 
+import Link from "next/link";
 import { CardContainer, CardBody, CardItem } from "@/components/ui/aceternity/3d-card";
 import Aurora from "@/components/ui/Aurora";
 
 export default function Home() {
-  // 임시 점검 중 - 모든 리다이렉션 비활성화
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       {/* Aurora 배경 효과 */}
@@ -27,37 +26,18 @@ export default function Home() {
             >
               BIOFOX
             </CardItem>
-            
-            {/* 점검 메시지 */}
-            <CardItem
-              translateZ={60}
-              className="mt-6 text-center text-xl font-semibold text-yellow-400"
-            >
-              🔧 임시 점검 중 🔧
-            </CardItem>
 
-            <CardItem
-              translateZ={60}
-              className="mt-4 text-center text-lg text-white/80 max-w-sm leading-relaxed"
-            >
-              앱 업그레이드로 인해<br/>
-              현재 서비스를 일시 중단합니다.
-            </CardItem>
-
-            <CardItem
-              translateZ={60}
-              className="mt-4 text-center text-base text-white/60 max-w-sm"
-            >
-              빠른 시일 내에 정상화하겠습니다.<br/>
-              이용에 불편을 드려 죄송합니다.
-            </CardItem>
-
-            {/* 비활성화된 버튼 */}
+            {/* 로그인 버튼 */}
             <CardItem
               translateZ={120}
-              className="mt-8 px-8 py-4 rounded-2xl bg-gray-600/30 text-gray-400 text-base font-medium backdrop-blur-md border border-gray-500/30 cursor-not-allowed"
+              className="mt-8"
             >
-              서비스 점검 중
+              <Link 
+                href="/signin"
+                className="px-8 py-4 rounded-2xl bg-white/10 text-white text-base font-medium backdrop-blur-md border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-300 ease-out"
+              >
+                로그인
+              </Link>
             </CardItem>
           </CardBody>
         </CardContainer>

@@ -94,12 +94,13 @@ export async function GET() {
       );
     }
 
-    let { data: kolData, error: kolError } = await supabase
+    // KOL 정보 조회 - 여러 건이 있을 수 있으므로 order by와 limit 사용하여 가장 최신 항목 반환
+    let { data: kolDataArray, error: kolError } = await supabase
       .from('kols')
       .select('id')
       .eq('user_id', userData.id)
-      .single();
-
+      .order('created_at', { ascending: false }); // 가장 최근에 생성된 것 우선
+    
     if (kolError) {
       console.error(`KOL 정보 조회 오류(user_id=${userData.id}):`, kolError);
       return NextResponse.json(
@@ -108,13 +109,17 @@ export async function GET() {
       );
     }
 
-    if (!kolData) {
+    if (!kolDataArray || kolDataArray.length === 0) {
       console.error(`KOL 정보 없음(user_id=${userData.id})`);
       return NextResponse.json(
         { error: 'KOL 정보를 찾을 수 없습니다. 관리자에게 문의하세요.' },
         { status: 404 }
       );
     }
+    
+    // 여러 KOL 데이터가 있는 경우 첫 번째(가장 최근) 항목 사용
+    const kolData = kolDataArray[0];
+    console.log(`여러 KOL 중 선택됨: ID=${kolData.id}, 총 ${kolDataArray.length}개의 KOL 데이터 존재`);
 
     console.log(`KOL 조회 성공: ID=${kolData.id}`);
 
@@ -296,12 +301,13 @@ export async function POST(request: Request) {
       );
     }
 
-    let { data: kolData, error: kolError } = await supabase
+    // KOL 정보 조회 - 여러 건이 있을 수 있으므로 order by와 limit 사용하여 가장 최신 항목 반환
+    let { data: kolDataArray, error: kolError } = await supabase
       .from('kols')
       .select('id')
       .eq('user_id', userData.id)
-      .single();
-
+      .order('created_at', { ascending: false }); // 가장 최근에 생성된 것 우선
+    
     if (kolError) {
       console.error(`KOL 정보 조회 오류(user_id=${userData.id}):`, kolError);
       return NextResponse.json(
@@ -310,13 +316,17 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!kolData) {
+    if (!kolDataArray || kolDataArray.length === 0) {
       console.error(`KOL 정보 없음(user_id=${userData.id})`);
       return NextResponse.json(
         { error: 'KOL 정보를 찾을 수 없습니다. 관리자에게 문의하세요.' },
         { status: 404 }
       );
     }
+    
+    // 여러 KOL 데이터가 있는 경우 첫 번째(가장 최근) 항목 사용
+    const kolData = kolDataArray[0];
+    console.log(`여러 KOL 중 선택됨: ID=${kolData.id}, 총 ${kolDataArray.length}개의 KOL 데이터 존재`);
 
     // 전문점 ID가 유효한지 확인 (선택 사항인 경우 스킵)
     if (body.shop_id !== null) {
@@ -390,4 +400,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

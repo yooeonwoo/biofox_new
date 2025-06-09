@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Store, BarChart3, LogOut, Bell, FileText, ShoppingBag } from "lucide-react";
+import { Home, Store, BarChart3, LogOut, Bell, FileText, ShoppingBag, Camera } from "lucide-react";
 import { Separator } from "../../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { Button } from "../../../components/ui/button";
@@ -61,6 +61,14 @@ export default function KolMobileMenu({
         >
           <FileText className="h-4 w-4" />
           <span>영업 일지</span>
+        </Link>
+        <Link 
+          href="/kol-new/clinical-photos" 
+          onClick={() => setMobileMenuOpen(false)}
+          className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
+        >
+          <Camera className="h-4 w-4" />
+          <span>임상사진</span>
         </Link>
         <a 
           href="https://biofoxpro.co.kr/" 
