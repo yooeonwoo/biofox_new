@@ -468,14 +468,39 @@ export default function CustomerClinicalUploadPage() {
     }
   };
 
+  // 동의서 업로드 상태 관리
+  const [consentUploading, setConsentUploading] = useState<{ [caseId: string]: boolean }>({});
+
   // 동의서 업로드 핸들러
   const handleConsentUpload = (caseId: string) => {
+    // 이미 업로드 중이면 무시
+    if (consentUploading[caseId]) {
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
+        // 파일 유효성 검사
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+          alert('JPEG, PNG, WebP 형식의 이미지만 업로드 가능합니다.');
+          return;
+        }
+
+        // 파일 크기 제한 (10MB)
+        const maxSize = 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+          alert('파일 크기는 10MB 이하여야 합니다.');
+          return;
+        }
+
+        // 업로드 시작
+        setConsentUploading(prev => ({ ...prev, [caseId]: true }));
+
         try {
           // 새 고객인 경우 임시 처리
           if (isNewCustomer(caseId)) {
@@ -485,6 +510,7 @@ export default function CustomerClinicalUploadPage() {
                 ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
                 : case_
             ));
+            console.log('동의서가 임시로 저장되었습니다. 고객 정보를 저장하면 실제 업로드됩니다.');
             return;
           }
           
@@ -500,9 +526,20 @@ export default function CustomerClinicalUploadPage() {
           ));
           
           console.log('동의서가 성공적으로 업로드되었습니다.');
+          alert('동의서가 성공적으로 업로드되었습니다.');
         } catch (error) {
           console.error('동의서 업로드 실패:', error);
-          alert('동의서 업로드에 실패했습니다. 다시 시도해주세요.');
+          alert(`동의서 업로드에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
+          
+          // 에러 발생 시 동의 상태 되돌리기
+          setCases(prev => prev.map(case_ => 
+            case_.id === caseId 
+              ? { ...case_, consentReceived: false, consentImageUrl: undefined }
+              : case_
+          ));
+        } finally {
+          // 업로드 완료
+          setConsentUploading(prev => ({ ...prev, [caseId]: false }));
         }
       }
     };
@@ -973,6 +1010,29 @@ export default function CustomerClinicalUploadPage() {
       });
       
       if (createdCase) {
+        // 동의서 이미지가 있는 경우 실제 업로드
+        if (newCustomerCase.consentImageUrl && newCustomerCase.consentImageUrl.startsWith('blob:')) {
+          try {
+            // blob URL에서 File 객체 복원
+            const response = await fetch(newCustomerCase.consentImageUrl);
+            const blob = await response.blob();
+            const file = new File([blob], 'consent.jpg', { type: 'image/jpeg' });
+            
+            const { uploadConsentImage } = await import('@/lib/clinical-photos-api');
+            const actualImageUrl = await uploadConsentImage(createdCase.id, file);
+            
+            // 케이스 정보에 실제 이미지 URL 업데이트
+            setCases(prev => prev.map(case_ => 
+              case_.id === caseId 
+                ? { ...case_, consentImageUrl: actualImageUrl }
+                : case_
+            ));
+          } catch (error) {
+            console.error('동의서 업로드 실패:', error);
+            alert('동의서 업로드에 실패했습니다. 나중에 다시 업로드해주세요.');
+          }
+        }
+
         // 체크박스 데이터 업데이트
         const checkboxUpdates: any = {
           cureBooster: newCustomerCase.cureBooster,
@@ -1317,10 +1377,20 @@ export default function CustomerClinicalUploadPage() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleConsentUpload(case_.id)}
+                                      disabled={consentUploading[case_.id]}
                                       className="flex items-center gap-1"
                                     >
-                                      <Edit className="h-3 w-3" />
-                                      수정
+                                      {consentUploading[case_.id] ? (
+                                        <>
+                                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
+                                          업로드 중...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Edit className="h-3 w-3" />
+                                          수정
+                                        </>
+                                      )}
                                     </Button>
                                     <Button
                                       variant="destructive"
@@ -1340,14 +1410,26 @@ export default function CustomerClinicalUploadPage() {
                           ) : (
                             <div className="flex items-center gap-2">
                               <button 
-                                className="text-xs text-biofox-blue-violet bg-soksok-light-blue px-2 py-1 rounded-full hover:bg-soksok-light-blue/80 transition-colors flex items-center gap-1"
+                                className="text-xs text-biofox-blue-violet bg-soksok-light-blue px-2 py-1 rounded-full hover:bg-soksok-light-blue/80 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={() => handleConsentUpload(case_.id)}
+                                disabled={consentUploading[case_.id]}
                               >
-                                📎 동의서 업로드
+                                {consentUploading[case_.id] ? (
+                                  <>
+                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
+                                    업로드 중...
+                                  </>
+                                ) : (
+                                  <>
+                                    📎 동의서 업로드
+                                  </>
+                                )}
                               </button>
-                              <span className="text-xs text-orange-600">
-                                ⚠️ 업로드 필요
-                              </span>
+                              {!consentUploading[case_.id] && (
+                                <span className="text-xs text-orange-600">
+                                  ⚠️ 업로드 필요
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
