@@ -148,31 +148,43 @@ export async function POST(req: Request) {
         isInAllowlist = false;
       }
       
-      // Allowlist에 없는 사용자는 가입 거부
+      // Allowlist에 없는 사용자는 가입 거부 (새 가입자만)
       if (!isInAllowlist) {
-        console.log(`🚫 Allowlist에 없는 이메일로 가입 시도: ${userEmail}`);
-        console.log(`🚫 Clerk ID: ${clerkId} - 이 사용자는 삭제됩니다.`);
-        
-        // Clerk에서 사용자 삭제 (가입 차단)
-        try {
-          await clerkApi.deleteUser(clerkId);
-          console.log(`✅ Allowlist에 없는 사용자 Clerk에서 삭제 완료: ${clerkId}`);
-        } catch (deleteError: any) {
-          // 이미 삭제된 사용자인 경우 오류 무시
-          if (deleteError.message?.includes('not found') || deleteError.message?.includes('404')) {
-            console.log(`ℹ️ 이미 삭제된 사용자: ${clerkId}`);
-          } else {
-            console.error(`❌ Clerk 사용자 삭제 실패: ${clerkId}`, deleteError);
+        if (type === 'user.created') {
+          console.log(`🚫 Allowlist에 없는 이메일로 가입 시도: ${userEmail}`);
+          console.log(`🚫 Clerk ID: ${clerkId} - 이 사용자는 삭제됩니다.`);
+          
+          // Clerk에서 사용자 삭제 (가입 차단)
+          try {
+            await clerkApi.deleteUser(clerkId);
+            console.log(`✅ Allowlist에 없는 사용자 Clerk에서 삭제 완료: ${clerkId}`);
+          } catch (deleteError: any) {
+            // 이미 삭제된 사용자인 경우 오류 무시
+            if (deleteError.message?.includes('not found') || deleteError.message?.includes('404')) {
+              console.log(`ℹ️ 이미 삭제된 사용자: ${clerkId}`);
+            } else {
+              console.error(`❌ Clerk 사용자 삭제 실패: ${clerkId}`, deleteError);
+            }
           }
+          
+          return NextResponse.json({ 
+            error: 'Not allowed',
+            message: '허용되지 않은 이메일입니다. 관리자에게 문의하세요.',
+            clerkId: clerkId,
+            email: userEmail,
+            action: 'deleted'
+          }, { status: 403 });
+        } else {
+          // 기존 사용자(user.updated)는 삭제하지 않고 그냥 처리 중단
+          console.log(`ℹ️ 기존 사용자 ${userEmail}은 Allowlist에 없지만 삭제하지 않음 (user.updated)`);
+          return NextResponse.json({ 
+            success: true,
+            message: 'Existing user not in allowlist but not deleted',
+            clerkId: clerkId,
+            email: userEmail,
+            action: 'ignored'
+          });
         }
-        
-        return NextResponse.json({ 
-          error: 'Not allowed',
-          message: '허용되지 않은 이메일입니다. 관리자에게 문의하세요.',
-          clerkId: clerkId,
-          email: userEmail,
-          action: 'deleted'
-        }, { status: 403 });
       }
       
       // Supabase에서 기존 사용자 확인
