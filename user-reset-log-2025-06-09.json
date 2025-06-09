@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-06-09T03:54:57.367Z",
+  "totalUsers": 1,
+  "successful": 1,
+  "failed": 0,
+  "results": [
+    {
+      "success": true,
+      "userId": 49,
+      "email": "csj3232@gmail.com",
+      "oldClerkId": "user_2vP5o8DZX7JuAdJNgrpDeK797ZE",
+      "newClerkId": "pending_1749441297263_kq3gsbxik"
+    }
+  ]
+}

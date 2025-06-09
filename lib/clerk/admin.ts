@@ -75,6 +75,24 @@ export async function updateUserRole(userId: string, role: string) {
 }
 
 /**
+ * 사용자 정보를 업데이트합니다 (이름, 이메일 등)
+ * @param userId 사용자 ID
+ * @param updateData 업데이트할 데이터
+ * @returns 업데이트된 사용자 정보
+ */
+export async function updateUser(userId: string, updateData: any) {
+  try {
+    console.log("Clerk Admin: 사용자 정보 업데이트 시작", { userId, updateData });
+    const user = await clerkApi.updateUser(userId, updateData);
+    console.log("Clerk Admin: 사용자 정보 업데이트 완료");
+    return user;
+  } catch (error) {
+    console.error("Clerk Admin: 사용자 정보 업데이트 실패:", error);
+    throw error;
+  }
+}
+
+/**
  * 사용자를 삭제합니다
  * @param userId 사용자 ID
  * @returns 삭제 결과

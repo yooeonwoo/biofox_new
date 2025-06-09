@@ -1,0 +1,260 @@
+{
+  "timestamp": "2025-06-09T03:36:57.679Z",
+  "totalUsers": 36,
+  "successful": 36,
+  "failed": 0,
+  "alreadyExists": 1,
+  "newlyAdded": 35,
+  "results": [
+    {
+      "success": true,
+      "email": "yeojiyoon@temp.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpNqHWbbUlLhm6IbacQiWRKT2",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "shineuijeong@temp.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpO6nZpkHmMrbZVvIHQnosFaQ",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "as03041000@gmail.com",
+      "status": "already_exists"
+    },
+    {
+      "success": true,
+      "email": "csj3232@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpOZ9tzYLmBq9mjbjBYDE4iVe",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "seonhee9335@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpOl9BYh2GXonCNmDoF4fN4ia",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "melierskin@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpP0v5BnFKUbhBvuaWoq3arqd",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "yourcos22@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpPNtuU57xcnykll3sqD85WuN",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "curecore1@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpPckdKxaRY5LPCGpcPsZSJYq",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "kyj716565@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpPuIzm6pqAtx17j0pmind6ax",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "whgpwls031@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpQCDAY6PkE1I21OVc5Yn6ziS",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "dybc005@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpQXuIEwlkfQqoDshk4Eyaabu",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "seoin.tree@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpQkB7BqkHCHkfZdMiVJb5f5o",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "kwonsuzy.83@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpQyYXvM7nuTj1jYebm5Oh953",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "begin.pmu@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpRGgc9IQ3syWuGaABUOzPKuJ",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "jloveh12@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpRgpJdJnscUTGcCUJrCLBkK3",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "kkuljamlab@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpRtwxQBtf0HykvFukmajsbcf",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "makeupartistlek@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpSDdqq4nKoCAidcEsK3kXlLA",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "clean1474@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpSQTokPVpzXS1zsPjRGfLt0U",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "hong840412@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpSjkNuXAMNWrHR3bGu5jMxbn",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "yseowoo85@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpT5ALlFO53SJcgCnC2nSUKN5",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "lsugaringwaxing@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpTGWViTQ4Nc5r2jJiHJ0reYr",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "n93359939n0513@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpTXxiUZ0z65q8O55WgC50KpM",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "aaa82222228@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpTxrZcPq2iM5Edd5BNT7XuQl",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "ckzkswls@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpUA1cIJBSrusV3k1Azq5nsgz",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "yun.mentor@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpUOfETpgf6AqVNwfDznvHcOM",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "zardu80@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpUnOE2OiNv1dQopSShbVvfLc",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "wke1982@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpV61w1SxOxCX9Tul85r0HsKm",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "a582850072@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpVHsOOqCuUCqDBtoEmq5sokp",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "avie801002@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpVboqI1lAoXOIM1moLQkitLo",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "gnldls411@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpVs7XuRfJ677Llyg1H8cLxhl",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "cuttyeni85@gmail.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpWAL4SVy6lYHaLE5rXZbKyF3",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "1004tlsyd@naver.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpWRnXPAofoX94AP7SYMv1yFT",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "reflance88@gmail.com",
+      "role": "admin",
+      "allowlistId": "alid_2yFpWePduKDABXtMaw0FYoWsK5y",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "kimyujin@temp.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpX4330pmFD0uG34QqAXKvNe8",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "choijiyoung@temp.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpXMhiOKh7nIWDrkkCPbisU6C",
+      "status": "added"
+    },
+    {
+      "success": true,
+      "email": "leejungmi@temp.com",
+      "role": "kol",
+      "allowlistId": "alid_2yFpXYNoU5LUyt0wCNni8Ec0deP",
+      "status": "added"
+    }
+  ]
+}

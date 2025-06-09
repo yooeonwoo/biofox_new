@@ -83,6 +83,24 @@ export async function createUser(userData: {
 }
 
 /**
+ * 사용자 정보를 업데이트합니다
+ * @param userId 사용자 ID
+ * @param userData 업데이트할 사용자 데이터
+ */
+export async function updateUser(userId: string, userData: {
+  first_name?: string;
+  last_name?: string;
+  email_address?: string[];
+  public_metadata?: Record<string, any>;
+  private_metadata?: Record<string, any>;
+}) {
+  return makeRequest(`/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(userData),
+  });
+}
+
+/**
  * 사용자 메타데이터를 업데이트합니다
  * @param userId 사용자 ID
  * @param metadata 메타데이터
