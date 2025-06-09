@@ -134,7 +134,6 @@ export default function CustomerClinicalUploadPage() {
   const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
   const [consentViewModal, setConsentViewModal] = useState<{ isOpen: boolean; imageUrl?: string }>({ isOpen: false });
   const [hasUnsavedNewCustomer, setHasUnsavedNewCustomer] = useState(false);
-  const [visibleCards, setVisibleCards] = useState<Set<string>>(new Set());
   const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
   const mainContentRef = useRef<HTMLElement>(null);
 
@@ -1136,9 +1135,9 @@ export default function CustomerClinicalUploadPage() {
                           rotateX: 15
                         }}
                         animate={{ 
-                          opacity: visibleCards.has(case_.id) ? 1 : 0.7,
+                          opacity: 1,
                           y: 0, 
-                          scale: visibleCards.has(case_.id) ? 1 : 0.95,
+                          scale: 1,
                           rotateX: 0
                         }}
                         exit={{ 
@@ -1162,10 +1161,6 @@ export default function CustomerClinicalUploadPage() {
                         <Card 
                           data-case-id={case_.id}
                           className={`relative overflow-hidden border transition-all duration-200 shadow-sm hover:shadow-md rounded-xl ${
-                            visibleCards.has(case_.id) 
-                              ? 'shadow-md' 
-                              : 'shadow-sm'
-                          } ${
                             case_.status === 'completed' 
                               ? 'bg-gradient-to-r from-biofox-lavender/5 to-biofox-lavender/10 border-biofox-lavender/30' 
                               : 'bg-white hover:bg-gray-50/50 border-gray-100'
@@ -1404,17 +1399,34 @@ export default function CustomerClinicalUploadPage() {
                             size="sm"
                             variant="outline"
                             onClick={async () => {
-                              await handleBasicCustomerInfoUpdate(case_.id, case_.customerInfo);
-                              // 저장 성공 피드백
-                              const button = document.querySelector(`#save-customer-info-${case_.id}`) as HTMLElement;
-                              if (button) {
-                                const originalText = button.textContent;
-                                button.textContent = '저장됨';
-                                button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                                setTimeout(() => {
-                                  button.textContent = originalText;
-                                  button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
-                                }, 1500);
+                              try {
+                                // 현재 입력된 값들을 가져와서 저장
+                                const nameInput = document.querySelector(`#name-${case_.id}`) as HTMLInputElement;
+                                const ageInput = document.querySelector(`#age-${case_.id}`) as HTMLInputElement;
+                                const genderSelect = document.querySelector(`[data-gender-select="${case_.id}"]`) as HTMLElement;
+                                
+                                const updateData = {
+                                  name: nameInput?.value || case_.customerInfo.name,
+                                  age: ageInput?.value ? parseInt(ageInput.value) : case_.customerInfo.age,
+                                  gender: case_.customerInfo.gender
+                                };
+                                
+                                await handleBasicCustomerInfoUpdate(case_.id, updateData);
+                                
+                                // 저장 성공 피드백
+                                const button = document.querySelector(`#save-customer-info-${case_.id}`) as HTMLElement;
+                                if (button) {
+                                  const originalText = button.textContent;
+                                  button.textContent = '저장됨';
+                                  button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                  setTimeout(() => {
+                                    button.textContent = originalText;
+                                    button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                                  }, 1500);
+                                }
+                              } catch (error) {
+                                console.error('고객 정보 저장 실패:', error);
+                                alert('고객 정보 저장에 실패했습니다.');
                               }
                             }}
                             id={`save-customer-info-${case_.id}`}
