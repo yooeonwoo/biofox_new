@@ -58,7 +58,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
     const maxExistingRound = Math.max(...Array.from(existingRounds));
     const maxRoundToShow = isCompleted 
       ? maxExistingRound 
-      : Math.max(maxExistingRound + 3, currentRound + 5);
+      : maxExistingRound + 10; // 기존 회차에서 10회차 더 생성
     
     for (let round = 1; round <= maxRoundToShow; round++) {
       rounds[round] = [
@@ -79,7 +79,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
     });
 
     return rounds;
-  }, [photos, caseId, currentRound, isCompleted]);
+  }, [photos, caseId, isCompleted]); // currentRound를 의존성에서 제거
 
   const roundDays = Object.keys(photosByRound).map(Number).sort((a, b) => a - b);
 
@@ -353,29 +353,29 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                           disabled={uploading}
                         >
                           {slot.angle === 'front' && (
-                            <div className="flex items-center justify-center h-full">
+                            <div className="w-full h-full">
                               <img 
                                 src={frontGuideImage}
                                 alt="정면 가이드라인"
-                                className="h-16 w-12 opacity-80 object-contain"
+                                className="w-full h-full opacity-80 object-cover"
                               />
                             </div>
                           )}
                           {slot.angle === 'left' && (
-                            <div className="flex items-center justify-center h-full">
+                            <div className="w-full h-full">
                               <img 
                                 src={leftGuideImage}
                                 alt="좌측 가이드라인"
-                                className="h-16 w-12 opacity-80 object-contain"
+                                className="w-full h-full opacity-80 object-cover"
                               />
                             </div>
                           )}
                           {slot.angle === 'right' && (
-                            <div className="flex items-center justify-center h-full">
+                            <div className="w-full h-full">
                               <img 
                                 src={rightGuideImage}
                                 alt="우측 가이드라인"
-                                className="h-16 w-12 opacity-80 object-contain"
+                                className="w-full h-full opacity-80 object-cover"
                               />
                             </div>
                           )}
@@ -397,11 +397,11 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                   onClick={() => handleUploadClick(visibleSlots[3].roundDay, visibleSlots[3].angle)}
                   disabled={uploading}
                 >
-                  <div className="flex items-center justify-center h-full">
+                  <div className="w-full h-full">
                     <img 
                       src={frontGuideImage}
                       alt="정면 가이드라인" 
-                      className="h-16 w-12 opacity-60 object-contain"
+                      className="w-full h-full opacity-60 object-cover"
                     />
                   </div>
                 </button>

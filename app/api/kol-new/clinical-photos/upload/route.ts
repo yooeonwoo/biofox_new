@@ -1,28 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
-import { db } from '@/lib/db';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// KOL ID를 가져오는 함수
-async function getKolIdForUser(userId: string): Promise<number> {
+// KOL ID를 가져오는 함수 (Supabase 클라이언트 사용)
+async function getKolIdForUser(clerkUserId: string): Promise<number> {
   try {
-    const result = await db.query(
-      `SELECT k.id FROM kols k 
-       JOIN users u ON u.id = k.user_id 
-       WHERE u.clerk_id = $1`,
-      [userId]
-    );
+    // 먼저 users 테이블에서 사용자 ID 찾기
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('clerk_id', clerkUserId)
+      .single();
     
-    if (result.rows.length === 0) {
+    if (userError) {
+      console.error('User query error:', userError);
+      throw userError;
+    }
+    
+    if (!userData) {
+      throw new Error('사용자 정보를 찾을 수 없습니다.');
+    }
+    
+    // 그 다음 kols 테이블에서 KOL ID 찾기
+    const { data: kolData, error: kolError } = await supabase
+      .from('kols')
+      .select('id')
+      .eq('user_id', userData.id)
+      .single();
+    
+    if (kolError) {
+      console.error('KOL query error:', kolError);
+      throw kolError;
+    }
+    
+    if (!kolData) {
       throw new Error('KOL 정보를 찾을 수 없습니다.');
     }
     
-    return result.rows[0].id;
+    return kolData.id;
   } catch (error) {
     console.error('Error fetching KOL ID:', error);
     throw new Error('KOL ID 조회에 실패했습니다.');
