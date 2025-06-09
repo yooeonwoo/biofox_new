@@ -360,14 +360,17 @@ export default function CustomerClinicalUploadPage() {
 
   // 스크롤 기반 숫자 애니메이션 (스크롤할 때만 표시)
   useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout;
-    let throttleTimeout: NodeJS.Timeout;
+    let scrollTimeout: NodeJS.Timeout | null = null;
+    let throttleTimeout: NodeJS.Timeout | null = null;
     let isScrolling = false;
     
     const handleScroll = () => {
+      console.log('스크롤 이벤트 감지됨'); // 디버깅용
+      
       // 스크롤 시작 시에만 숫자 표시 (throttling으로 성능 향상)
       if (!isScrolling && !throttleTimeout) {
         isScrolling = true;
+        console.log('숫자 표시 시작', cases.length); // 디버깅용
         setNumberVisibleCards(new Set(cases.map(c => c.id)));
         
         // throttling: 100ms 동안 추가 실행 방지
@@ -377,20 +380,30 @@ export default function CustomerClinicalUploadPage() {
       }
       
       // 스크롤이 멈추면 숫자 숨기기 (디바운싱)
-      clearTimeout(scrollTimeout);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
+        console.log('숫자 숨김'); // 디버깅용
         setNumberVisibleCards(new Set());
         isScrolling = false;
       }, 600); // 0.6초 후 숫자 숨김
     };
 
-    // 스크롤 이벤트만 감지 (passive 옵션으로 성능 향상)
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    // 케이스가 있을 때만 이벤트 리스너 등록
+    if (cases.length > 0) {
+      console.log('스크롤 이벤트 리스너 등록됨', cases.length); // 디버깅용
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      
+      // 초기 테스트를 위해 즉시 숫자 표시 (2초 후 숨김)
+      setNumberVisibleCards(new Set(cases.map(c => c.id)));
+      setTimeout(() => {
+        setNumberVisibleCards(new Set());
+      }, 2000);
+    }
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
-      clearTimeout(throttleTimeout);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      if (throttleTimeout) clearTimeout(throttleTimeout);
     };
   }, [cases]);
 

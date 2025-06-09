@@ -307,6 +307,8 @@ export async function createCase(caseData: {
 // 케이스 업데이트
 export async function updateCase(caseId: number, caseData: Partial<ClinicalCase>): Promise<ClinicalCase | null> {
   try {
+    console.log('updateCase 호출됨:', { caseId, caseData }); // 디버깅용
+    
     // Supabase 필드명에 맞게 변환 (인덱스 시그니처 추가)
     const supabaseData: { 
       [key: string]: string | boolean | undefined 
@@ -342,6 +344,8 @@ export async function updateCase(caseId: number, caseData: Partial<ClinicalCase>
       }
     });
     
+    console.log('Supabase 업데이트 데이터:', supabaseData); // 디버깅용
+    
     const { data, error } = await supabaseClient
       .from('clinical_cases')
       .update(supabaseData)
@@ -349,7 +353,10 @@ export async function updateCase(caseId: number, caseData: Partial<ClinicalCase>
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase 업데이트 에러:', error); // 디버깅용
+      throw error;
+    }
     
     // 데이터 형식 변환
     return {
