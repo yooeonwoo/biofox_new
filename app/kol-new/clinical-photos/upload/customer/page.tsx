@@ -364,7 +364,7 @@ export default function CustomerClinicalUploadPage() {
                 return newSet;
               });
               
-              // 1초 후 숫자 숨기기
+              // 1.5초 후 숫자 숨기기
               const newTimeout = setTimeout(() => {
                 setNumberVisibleCards(prev => {
                   const newSet = new Set(prev);
@@ -372,7 +372,7 @@ export default function CustomerClinicalUploadPage() {
                   return newSet;
                 });
                 timeoutRefs.delete(caseId);
-              }, 1000);
+              }, 1500);
               
               timeoutRefs.set(caseId, newTimeout);
               
@@ -395,8 +395,8 @@ export default function CustomerClinicalUploadPage() {
         });
       },
       {
-        threshold: 0.3,
-        rootMargin: '-10% 0px -10% 0px'
+        threshold: 0.5,
+        rootMargin: '-20% 0px -20% 0px'
       }
     );
 
@@ -898,14 +898,14 @@ export default function CustomerClinicalUploadPage() {
       return newSet;
     });
     
-    // 3초 후 숫자 숨기기
+    // 1.5초 후 숫자 숨기기
     const hideNumberTimeout = setTimeout(() => {
       setNumberVisibleCards(prev => {
         const newSet = new Set(prev);
         newSet.delete(newCase.id);
         return newSet;
       });
-    }, 3000);
+    }, 1500);
     
     // 부드러운 스크롤 애니메이션으로 새 카드로 이동
     setTimeout(() => {
@@ -1369,11 +1369,36 @@ export default function CustomerClinicalUploadPage() {
                       
                       {/* 블록 2: 고객 정보 */}
                       <div className="space-y-3 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-blue-700">고객 정보</h3>
-                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40">
-                            {currentRounds[case_.id] || 1}회차
-                          </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-blue-700">고객 정보</h3>
+                            <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40">
+                              {currentRounds[case_.id] || 1}회차
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              await handleBasicCustomerInfoUpdate(case_.id, case_.customerInfo);
+                              // 저장 성공 피드백
+                              const button = document.querySelector(`#save-customer-info-${case_.id}`) as HTMLElement;
+                              if (button) {
+                                const originalText = button.textContent;
+                                button.textContent = '저장됨';
+                                button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                setTimeout(() => {
+                                  button.textContent = originalText;
+                                  button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                                }, 1500);
+                              }
+                            }}
+                            id={`save-customer-info-${case_.id}`}
+                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            저장
+                          </Button>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
@@ -1471,7 +1496,39 @@ export default function CustomerClinicalUploadPage() {
                       </div>
                       {/* 블록 3: 홈케어 제품 */}
                       <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <Label className="text-sm font-medium text-blue-700">홈케어 제품</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium text-blue-700">홈케어 제품</Label>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              // 현재 선택된 제품들로 저장
+                              const updates = {
+                                cureBooster: case_.cureBooster || false,
+                                cureMask: case_.cureMask || false,
+                                premiumMask: case_.premiumMask || false,
+                                allInOneSerum: case_.allInOneSerum || false
+                              };
+                              await updateCaseCheckboxes(case_.id, updates);
+                              // 저장 성공 피드백
+                              const button = document.querySelector(`#save-products-${case_.id}`) as HTMLElement;
+                              if (button) {
+                                const originalText = button.textContent;
+                                button.textContent = '저장됨';
+                                button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                setTimeout(() => {
+                                  button.textContent = originalText;
+                                  button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                                }, 1500);
+                              }
+                            }}
+                            id={`save-products-${case_.id}`}
+                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            저장
+                          </Button>
+                        </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-2 gap-y-2">
                           {SYSTEM_OPTIONS.products.map((product) => {
                             const currentRound = currentRounds[case_.id] || 1;
@@ -1542,7 +1599,41 @@ export default function CustomerClinicalUploadPage() {
                       
                       {/* 블록 4: 고객 피부타입 */}
                       <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <Label className="text-sm font-medium text-blue-700">고객 피부타입</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium text-blue-700">고객 피부타입</Label>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              // 현재 선택된 피부타입들로 저장
+                              const updates = {
+                                skinRedSensitive: case_.skinRedSensitive || false,
+                                skinPigment: case_.skinPigment || false,
+                                skinPore: case_.skinPore || false,
+                                skinTrouble: case_.skinTrouble || false,
+                                skinWrinkle: case_.skinWrinkle || false,
+                                skinEtc: case_.skinEtc || false
+                              };
+                              await updateCaseCheckboxes(case_.id, updates);
+                              // 저장 성공 피드백
+                              const button = document.querySelector(`#save-skintypes-${case_.id}`) as HTMLElement;
+                              if (button) {
+                                const originalText = button.textContent;
+                                button.textContent = '저장됨';
+                                button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                setTimeout(() => {
+                                  button.textContent = originalText;
+                                  button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                                }, 1500);
+                              }
+                            }}
+                            id={`save-skintypes-${case_.id}`}
+                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            저장
+                          </Button>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2 gap-y-2">
                           {SYSTEM_OPTIONS.skinTypes.map((skinType) => {
                             const currentRound = currentRounds[case_.id] || 1;
@@ -1622,7 +1713,33 @@ export default function CustomerClinicalUploadPage() {
                       
                       {/* 블록 5: 특이사항 */}
                       <div className="space-y-2 border-2 border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                        <Label htmlFor={`memo-${case_.id}`} className="text-sm font-medium text-gray-700">특이사항</Label>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`memo-${case_.id}`} className="text-sm font-medium text-gray-700">특이사항</Label>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              const currentMemo = case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || '';
+                              await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: currentMemo });
+                              // 저장 성공 피드백
+                              const button = document.querySelector(`#save-memo-${case_.id}`) as HTMLElement;
+                              if (button) {
+                                const originalText = button.textContent;
+                                button.textContent = '저장됨';
+                                button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                setTimeout(() => {
+                                  button.textContent = originalText;
+                                  button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                                }, 1500);
+                              }
+                            }}
+                            id={`save-memo-${case_.id}`}
+                            className="text-xs px-3 py-1 h-7 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            저장
+                          </Button>
+                        </div>
                         <Textarea
                           id={`memo-${case_.id}`}
                           value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || ''}
