@@ -4,7 +4,9 @@ import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
-import Image from 'next/image';
+import frontGuideImage from '/public/images/front-guide.svg';
+import leftGuideImage from '/public/images/left-guide.svg';
+import rightGuideImage from '/public/images/right-guide.svg';
 
 interface PhotoSlot {
   id: string;
@@ -351,44 +353,29 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                         >
                           {slot.angle === 'front' && (
                             <div className="flex items-center justify-center h-full">
-                              <div 
-                                className="h-16 w-12 opacity-80"
-                                style={{
-                                  backgroundImage: 'url("/images/front-guide.svg")',
-                                  backgroundSize: 'contain',
-                                  backgroundPosition: 'center',
-                                  backgroundRepeat: 'no-repeat'
-                                }}
-                                aria-label="정면 가이드라인"
-                              ></div>
+                              <img 
+                                src={frontGuideImage}
+                                alt="정면 가이드라인"
+                                className="h-16 w-12 opacity-80 object-contain"
+                              />
                             </div>
                           )}
                           {slot.angle === 'left' && (
                             <div className="flex items-center justify-center h-full">
-                              <div 
-                                className="h-16 w-12 opacity-80"
-                                style={{
-                                  backgroundImage: 'url("/images/left-guide.svg")',
-                                  backgroundSize: 'contain',
-                                  backgroundPosition: 'center',
-                                  backgroundRepeat: 'no-repeat'
-                                }}
-                                aria-label="좌측 가이드라인"
-                              ></div>
+                              <img 
+                                src={leftGuideImage}
+                                alt="좌측 가이드라인"
+                                className="h-16 w-12 opacity-80 object-contain"
+                              />
                             </div>
                           )}
                           {slot.angle === 'right' && (
                             <div className="flex items-center justify-center h-full">
-                              <div 
-                                className="h-16 w-12 opacity-80"
-                                style={{
-                                  backgroundImage: 'url("/images/right-guide.svg")',
-                                  backgroundSize: 'contain',
-                                  backgroundPosition: 'center',
-                                  backgroundRepeat: 'no-repeat'
-                                }}
-                                aria-label="우측 가이드라인"
-                              ></div>
+                              <img 
+                                src={rightGuideImage}
+                                alt="우측 가이드라인"
+                                className="h-16 w-12 opacity-80 object-contain"
+                              />
                             </div>
                           )}
                         </button>
@@ -409,15 +396,11 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                   onClick={() => handleUploadClick(visibleSlots[3].roundDay, visibleSlots[3].angle)}
                   disabled={uploading}
                 >
-                  <div className="w-full h-full relative">
-                    <Image 
-                      src="/images/front-guide.png" 
+                  <div className="flex items-center justify-center h-full">
+                    <img 
+                      src={frontGuideImage}
                       alt="정면 가이드라인" 
-                      fill
-                      className="object-cover opacity-60" 
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      priority
-                      unoptimized
+                      className="h-16 w-12 opacity-60 object-contain"
                     />
                   </div>
                 </button>
