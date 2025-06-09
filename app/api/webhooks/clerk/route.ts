@@ -121,17 +121,24 @@ export async function POST(req: Request) {
       let isInAllowlist = false;
       try {
         console.log('🔍 Allowlist API 호출 중...');
-        const { data: allowlistData } = await clerkApi.makeRequest('/allowlist_identifiers');
-        console.log(`🔍 Allowlist 데이터 수신됨: ${allowlistData.length}개 항목`);
-        isInAllowlist = allowlistData.some((item: any) => item.identifier === userEmail);
-        console.log(`🔍 Allowlist 확인 결과: ${isInAllowlist ? '✅ 허용됨' : '❌ 허용되지 않음'}`);
+        const allowlistResponse = await clerkApi.makeRequest('/allowlist_identifiers');
+        const allowlistData = allowlistResponse?.data || allowlistResponse || [];
         
-        // 디버깅: 유사한 이메일 찾기
-        const similarEmails = allowlistData
-          .filter((item: any) => item.identifier.includes(userEmail.split('@')[0]))
-          .map((item: any) => item.identifier);
-        if (similarEmails.length > 0) {
-          console.log('🔍 유사한 이메일들:', similarEmails);
+        if (!Array.isArray(allowlistData)) {
+          console.error('❌ Allowlist 응답이 배열이 아님:', typeof allowlistData);
+          isInAllowlist = false;
+        } else {
+          console.log(`🔍 Allowlist 데이터 수신됨: ${allowlistData.length}개 항목`);
+          isInAllowlist = allowlistData.some((item: any) => item.identifier === userEmail);
+          console.log(`🔍 Allowlist 확인 결과: ${isInAllowlist ? '✅ 허용됨' : '❌ 허용되지 않음'}`);
+          
+          // 디버깅: 유사한 이메일 찾기
+          const similarEmails = allowlistData
+            .filter((item: any) => item.identifier && item.identifier.includes(userEmail.split('@')[0]))
+            .map((item: any) => item.identifier);
+          if (similarEmails.length > 0) {
+            console.log('🔍 유사한 이메일들:', similarEmails);
+          }
         }
         
       } catch (allowlistError) {
@@ -150,8 +157,13 @@ export async function POST(req: Request) {
         try {
           await clerkApi.deleteUser(clerkId);
           console.log(`✅ Allowlist에 없는 사용자 Clerk에서 삭제 완료: ${clerkId}`);
-        } catch (deleteError) {
-          console.error(`❌ Clerk 사용자 삭제 실패: ${clerkId}`, deleteError);
+        } catch (deleteError: any) {
+          // 이미 삭제된 사용자인 경우 오류 무시
+          if (deleteError.message?.includes('not found') || deleteError.message?.includes('404')) {
+            console.log(`ℹ️ 이미 삭제된 사용자: ${clerkId}`);
+          } else {
+            console.error(`❌ Clerk 사용자 삭제 실패: ${clerkId}`, deleteError);
+          }
         }
         
         return NextResponse.json({ 
