@@ -545,7 +545,7 @@ export async function deletePhoto(caseId: number, roundNumber: number, angle: st
 }
 
 // 사진 업로드 (API 서버를 통해 업로드 + 메타데이터 저장)
-export async function uploadPhoto(caseId: number, roundNumber: number, angle: string, file: File): Promise<void> {
+export async function uploadPhoto(caseId: number, roundNumber: number, angle: string, file: File): Promise<string> {
   try {
     console.log('uploadPhoto called with:', { caseId, roundNumber, angle, fileName: file.name, fileSize: file.size });
     
@@ -576,6 +576,7 @@ export async function uploadPhoto(caseId: number, roundNumber: number, angle: st
     console.log('Upload successful:', result);
     
     // 업로드 성공 - API에서 이미 메타데이터 저장까지 완료됨
+    return result.url;
   } catch (error) {
     console.error('Photo upload error:', error);
     toast.error(`사진 업로드에 실패했습니다: ${error.message || error}`);

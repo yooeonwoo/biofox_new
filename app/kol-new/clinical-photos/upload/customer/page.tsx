@@ -653,15 +653,8 @@ export default function CustomerClinicalUploadPage() {
         } else {
           // 실제 케이스의 경우 Supabase에 업로드
           const { uploadPhoto } = await import('@/lib/clinical-photos-api');
-          await uploadPhoto(parseInt(caseId), roundDay, angle, file);
-          
-          // 업로드 후 사진 목록 다시 로드
-          const { fetchPhotos } = await import('@/lib/clinical-photos-api');
-          const photos = await fetchPhotos(parseInt(caseId));
-          
-          // 업로드된 사진의 URL 찾기
-          const uploadedPhoto = photos.find(p => p.roundDay === roundDay && p.angle === angle);
-          imageUrl = uploadedPhoto?.imageUrl || URL.createObjectURL(file);
+          imageUrl = await uploadPhoto(parseInt(caseId), roundDay, angle, file);
+          console.log('Received imageUrl from upload:', imageUrl);
         }
       
         // 해당 케이스의 사진 업데이트

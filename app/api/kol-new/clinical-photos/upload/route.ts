@@ -318,6 +318,13 @@ export async function POST(request: NextRequest) {
       console.log("Case consent status updated:", caseUpdateData);
     }
 
+    console.log("Returning response:", {
+      url: publicUrl,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
+    });
+
     return NextResponse.json({
       url: publicUrl,
       fileName: file.name,
