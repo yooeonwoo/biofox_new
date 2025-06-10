@@ -571,18 +571,43 @@ export default function CustomerClinicalUploadPage() {
           }
           
           // 실제 케이스의 경우 Supabase에 업로드
-          const { uploadConsentImage } = await import('@/lib/clinical-photos-api');
+          const { uploadConsentImage, fetchCase } = await import('@/lib/clinical-photos-api');
           const imageUrl = await uploadConsentImage(parseInt(caseId), file);
           
-          // 로컬 상태 업데이트
-          setCases(prev => prev.map(case_ => 
-            case_.id === caseId 
-              ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
-              : case_
-          ));
+          // 업로드 성공 후 해당 케이스 정보를 데이터베이스에서 다시 불러오기
+          try {
+            const updatedCase = await fetchCase(parseInt(caseId));
+            if (updatedCase) {
+              setCases(prev => prev.map(case_ => 
+                case_.id === caseId 
+                  ? { 
+                      ...case_, 
+                      consentImageUrl: updatedCase.consentImageUrl, 
+                      consentReceived: updatedCase.consentReceived 
+                    }
+                  : case_
+              ));
+              console.log('동의서 정보를 데이터베이스에서 새로고침했습니다.');
+            } else {
+              // 케이스 조회 실패 시 기존 방식으로 업데이트
+              setCases(prev => prev.map(case_ => 
+                case_.id === caseId 
+                  ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
+                  : case_
+              ));
+            }
+          } catch (refreshError) {
+            console.error('동의서 정보 새로고침 실패:', refreshError);
+            // 새로고침 실패 시 기존 방식으로 로컬 업데이트
+            setCases(prev => prev.map(case_ => 
+              case_.id === caseId 
+                ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
+                : case_
+            ));
+          }
           
           console.log('동의서가 성공적으로 업로드되었습니다.');
-          alert('동의서가 성공적으로 업로드되었습니다.');
+          toast.success('동의서가 성공적으로 업로드되었습니다.');
         } catch (error) {
           console.error('동의서 업로드 실패:', error);
           alert(`동의서 업로드에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
@@ -617,14 +642,47 @@ export default function CustomerClinicalUploadPage() {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || '동의서 삭제에 실패했습니다.');
         }
+        
+        // 삭제 성공 후 해당 케이스 정보를 데이터베이스에서 다시 불러오기
+        try {
+          const { fetchCase } = await import('@/lib/clinical-photos-api');
+          const updatedCase = await fetchCase(parseInt(caseId));
+          if (updatedCase) {
+            setCases(prev => prev.map(case_ => 
+              case_.id === caseId 
+                ? { 
+                    ...case_, 
+                    consentImageUrl: updatedCase.consentImageUrl, 
+                    consentReceived: updatedCase.consentReceived 
+                  }
+                : case_
+            ));
+            console.log('동의서 정보를 데이터베이스에서 새로고침했습니다.');
+          } else {
+            // 케이스 조회 실패 시 기존 방식으로 업데이트
+            setCases(prev => prev.map(case_ => 
+              case_.id === caseId 
+                ? { ...case_, consentImageUrl: undefined, consentReceived: false }
+                : case_
+            ));
+          }
+        } catch (refreshError) {
+          console.error('동의서 정보 새로고침 실패:', refreshError);
+          // 새로고침 실패 시 기존 방식으로 로컬 업데이트
+          setCases(prev => prev.map(case_ => 
+            case_.id === caseId 
+              ? { ...case_, consentImageUrl: undefined, consentReceived: false }
+              : case_
+          ));
+        }
+      } else {
+        // 새 고객의 경우 로컬 상태만 업데이트
+        setCases(prev => prev.map(case_ => 
+          case_.id === caseId 
+            ? { ...case_, consentImageUrl: undefined, consentReceived: false }
+            : case_
+        ));
       }
-      
-      // 로컬 상태 업데이트
-      setCases(prev => prev.map(case_ => 
-        case_.id === caseId 
-          ? { ...case_, consentImageUrl: undefined, consentReceived: false }
-          : case_
-      ));
       
       console.log('동의서가 성공적으로 삭제되었습니다.');
       toast.success('동의서가 성공적으로 삭제되었습니다.');
@@ -650,48 +708,99 @@ export default function CustomerClinicalUploadPage() {
         // 새 고객인 경우 임시 처리
         if (isNewCustomer(caseId)) {
           imageUrl = URL.createObjectURL(file);
+          
+          // 해당 케이스의 사진 업데이트 (새 고객)
+          setCases(prev => prev.map(case_ => {
+            if (case_.id === caseId) {
+              // 기존 사진 찾기
+              const existingPhotoIndex = case_.photos.findIndex(
+                p => p.roundDay === roundDay && p.angle === angle
+              );
+              
+              const newPhoto = {
+                id: `${caseId}-${roundDay}-${angle}`,
+                roundDay: roundDay,
+                angle: angle as 'front' | 'left' | 'right',
+                imageUrl: imageUrl,
+                uploaded: true
+              };
+              
+              let updatedPhotos;
+              if (existingPhotoIndex >= 0) {
+                // 기존 사진 교체
+                updatedPhotos = [...case_.photos];
+                updatedPhotos[existingPhotoIndex] = newPhoto;
+              } else {
+                // 새 사진 추가
+                updatedPhotos = [...case_.photos, newPhoto];
+              }
+              
+              return {
+                ...case_,
+                photos: updatedPhotos
+              };
+            }
+            return case_;
+          }));
         } else {
           // 실제 케이스의 경우 Supabase에 업로드
-          const { uploadPhoto } = await import('@/lib/clinical-photos-api');
+          const { uploadPhoto, fetchPhotos } = await import('@/lib/clinical-photos-api');
           imageUrl = await uploadPhoto(parseInt(caseId), roundDay, angle, file);
           console.log('Received imageUrl from upload:', imageUrl);
-        }
-      
-        // 해당 케이스의 사진 업데이트
-        setCases(prev => prev.map(case_ => {
-          if (case_.id === caseId) {
-            // 기존 사진 찾기
-            const existingPhotoIndex = case_.photos.findIndex(
-              p => p.roundDay === roundDay && p.angle === angle
-            );
-            
-            const newPhoto = {
-              id: `${caseId}-${roundDay}-${angle}`,
-              roundDay: roundDay,
-              angle: angle as 'front' | 'left' | 'right',
-              imageUrl: imageUrl,
+          
+          // 업로드 성공 후 해당 케이스의 사진 목록을 데이터베이스에서 다시 불러오기
+          try {
+            const updatedPhotos = await fetchPhotos(parseInt(caseId));
+            const photoSlots = updatedPhotos.map(p => ({
+              id: p.id,
+              roundDay: p.roundDay,
+              angle: p.angle as 'front' | 'left' | 'right',
+              imageUrl: p.imageUrl,
               uploaded: true
-            };
+            }));
             
-            let updatedPhotos;
-            if (existingPhotoIndex >= 0) {
-              // 기존 사진 교체
-              updatedPhotos = [...case_.photos];
-              updatedPhotos[existingPhotoIndex] = newPhoto;
-            } else {
-              // 새 사진 추가
-              updatedPhotos = [...case_.photos, newPhoto];
-            }
+            // 해당 케이스의 사진만 업데이트
+            setCases(prev => prev.map(case_ => 
+              case_.id === caseId 
+                ? { ...case_, photos: photoSlots }
+                : case_
+            ));
             
-            return {
-              ...case_,
-              photos: updatedPhotos
-            };
+            console.log('사진 목록을 데이터베이스에서 새로고침했습니다.');
+          } catch (refreshError) {
+            console.error('사진 목록 새로고침 실패:', refreshError);
+            // 새로고침 실패 시 기존 방식으로 로컬 업데이트
+            setCases(prev => prev.map(case_ => {
+              if (case_.id === caseId) {
+                const existingPhotoIndex = case_.photos.findIndex(
+                  p => p.roundDay === roundDay && p.angle === angle
+                );
+                
+                const newPhoto = {
+                  id: `${caseId}-${roundDay}-${angle}`,
+                  roundDay: roundDay,
+                  angle: angle as 'front' | 'left' | 'right',
+                  imageUrl: imageUrl,
+                  uploaded: true
+                };
+                
+                let updatedPhotos;
+                if (existingPhotoIndex >= 0) {
+                  updatedPhotos = [...case_.photos];
+                  updatedPhotos[existingPhotoIndex] = newPhoto;
+                } else {
+                  updatedPhotos = [...case_.photos, newPhoto];
+                }
+                
+                return { ...case_, photos: updatedPhotos };
+              }
+              return case_;
+            }));
           }
-          return case_;
-        }));
+        }
         
         console.log('사진이 성공적으로 업로드되었습니다.');
+        toast.success('사진이 성공적으로 업로드되었습니다.');
       } catch (error) {
         console.error('사진 업로드 실패:', error);
         const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
@@ -715,28 +824,62 @@ export default function CustomerClinicalUploadPage() {
     try {
       // 새 고객이 아닌 경우에만 실제 삭제 API 호출
       if (!isNewCustomer(caseId)) {
-        const { deletePhoto } = await import('@/lib/clinical-photos-api');
+        const { deletePhoto, fetchPhotos } = await import('@/lib/clinical-photos-api');
         await deletePhoto(parseInt(caseId), roundDay, angle);
+        
+        // 삭제 성공 후 해당 케이스의 사진 목록을 데이터베이스에서 다시 불러오기
+        try {
+          const updatedPhotos = await fetchPhotos(parseInt(caseId));
+          const photoSlots = updatedPhotos.map(p => ({
+            id: p.id,
+            roundDay: p.roundDay,
+            angle: p.angle as 'front' | 'left' | 'right',
+            imageUrl: p.imageUrl,
+            uploaded: true
+          }));
+          
+          // 해당 케이스의 사진만 업데이트
+          setCases(prev => prev.map(case_ => 
+            case_.id === caseId 
+              ? { ...case_, photos: photoSlots }
+              : case_
+          ));
+          
+          console.log('사진 목록을 데이터베이스에서 새로고침했습니다.');
+        } catch (refreshError) {
+          console.error('사진 목록 새로고침 실패:', refreshError);
+          // 새로고침 실패 시 기존 방식으로 로컬 업데이트
+          setCases(prev => prev.map(case_ => {
+            if (case_.id === caseId) {
+              const updatedPhotos = case_.photos.filter(
+                p => !(p.roundDay === roundDay && p.angle === angle)
+              );
+              return { ...case_, photos: updatedPhotos };
+            }
+            return case_;
+          }));
+        }
+      } else {
+        // 새 고객의 경우 로컬 상태만 업데이트
+        setCases(prev => prev.map(case_ => {
+          if (case_.id === caseId) {
+            const updatedPhotos = case_.photos.filter(
+              p => !(p.roundDay === roundDay && p.angle === angle)
+            );
+            return {
+              ...case_,
+              photos: updatedPhotos
+            };
+          }
+          return case_;
+        }));
       }
       
-      // 로컬 상태 업데이트
-      setCases(prev => prev.map(case_ => {
-        if (case_.id === caseId) {
-          const updatedPhotos = case_.photos.filter(
-            p => !(p.roundDay === roundDay && p.angle === angle)
-          );
-          return {
-            ...case_,
-            photos: updatedPhotos
-          };
-        }
-        return case_;
-      }));
-      
       console.log('사진이 성공적으로 삭제되었습니다.');
+      toast.success('사진이 성공적으로 삭제되었습니다.');
     } catch (error) {
       console.error('사진 삭제 실패:', error);
-      alert('사진 삭제에 실패했습니다. 다시 시도해주세요.');
+      toast.error('사진 삭제에 실패했습니다. 다시 시도해주세요.');
       throw error;
     }
   };
@@ -1219,26 +1362,66 @@ export default function CustomerClinicalUploadPage() {
     }
   };
 
-  // 새 고객 삭제 핸들러
-  const handleDeleteNewCustomer = (caseId: string) => {
-    console.log('Deleting new customer:', caseId);
-    setCases(prev => {
-      const filtered = prev.filter(case_ => case_.id !== caseId);
-      console.log('Cases after delete:', filtered.map(c => c.id));
-      return filtered;
-    });
-    setCurrentRounds(prev => {
-      const newRounds = { ...prev };
-      delete newRounds[caseId];
-      return newRounds;
-    });
-    setHasUnsavedNewCustomer(false);
-    
-    // localStorage에서 임시저장 데이터 제거
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('unsavedNewCustomer');
-      console.log('localStorage cleared');
+  // 케이스 삭제 핸들러 (새 고객 + 실제 케이스)
+  const handleDeleteCase = async (caseId: string) => {
+    try {
+      // 삭제 확인
+      const confirmed = window.confirm('정말로 이 케이스를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.');
+      if (!confirmed) return;
+
+      // 새 고객인 경우
+      if (isNewCustomer(caseId)) {
+        console.log('Deleting new customer:', caseId);
+        setCases(prev => {
+          const filtered = prev.filter(case_ => case_.id !== caseId);
+          console.log('Cases after delete:', filtered.map(c => c.id));
+          return filtered;
+        });
+        setCurrentRounds(prev => {
+          const newRounds = { ...prev };
+          delete newRounds[caseId];
+          return newRounds;
+        });
+        setHasUnsavedNewCustomer(false);
+        
+        // localStorage에서 임시저장 데이터 제거
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('unsavedNewCustomer');
+          console.log('localStorage cleared');
+        }
+        
+        toast.success('새 고객이 삭제되었습니다.');
+        return;
+      }
+
+      // 실제 케이스인 경우 API 호출로 삭제
+      const { deleteCase } = await import('@/lib/clinical-photos-api');
+      const success = await deleteCase(parseInt(caseId));
+      
+      if (success) {
+        // 로컬 상태에서 제거
+        setCases(prev => prev.filter(case_ => case_.id !== caseId));
+        setCurrentRounds(prev => {
+          const newRounds = { ...prev };
+          delete newRounds[caseId];
+          return newRounds;
+        });
+        
+        console.log('케이스가 성공적으로 삭제되었습니다.');
+        toast.success('케이스가 성공적으로 삭제되었습니다.');
+      } else {
+        throw new Error('케이스 삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('케이스 삭제 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      toast.error(`케이스 삭제 실패: ${errorMessage}`);
     }
+  };
+
+  // 새 고객 삭제 핸들러 (하위 호환성을 위해 유지)
+  const handleDeleteNewCustomer = (caseId: string) => {
+    handleDeleteCase(caseId);
   };
 
   // 새 고객 케이스인지 확인하는 함수
@@ -1475,10 +1658,21 @@ export default function CustomerClinicalUploadPage() {
                               </Button>
                             </div>
                           ) : (
-                            <CaseStatusTabs
-                              status={case_.status}
-                              onStatusChange={(status) => handleCaseStatusChange(case_.id, status)}
-                            />
+                            <div className="flex gap-1">
+                              <CaseStatusTabs
+                                status={case_.status}
+                                onStatusChange={(status) => handleCaseStatusChange(case_.id, status)}
+                              />
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteCase(case_.id)}
+                                className="flex items-center gap-1 hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                삭제
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
