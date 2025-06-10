@@ -33,7 +33,7 @@ export async function GET() {
       shopsData,
       activitiesData
     ] = await Promise.all([
-      // 전문점 데이터 (매출 정보 포함) - 레거시 호환성 체크
+      // 전문점 데이터 (매출 정보 포함) - 모든 전문점 포함 (매출 없는 전문점도 표시)
       supabase
         .from('shops')
         .select(`
@@ -44,7 +44,8 @@ export async function GET() {
           status,
           created_at,
           is_owner_kol,
-          shop_sales_metrics!inner (
+          is_self_shop,
+          shop_sales_metrics (
             total_sales,
             product_sales,
             device_sales,
@@ -52,7 +53,7 @@ export async function GET() {
           )
         `)
         .eq('kol_id', kolData.id)
-        .or(`shop_sales_metrics.year_month.eq.${currentMonth},shop_sales_metrics.year_month.eq.${currentMonthCompact}`),
+        .eq('is_self_shop', false), // 본인 샵 제외
       
       // 영업 일지 데이터
       supabase
@@ -166,22 +167,41 @@ export async function GET() {
     const totalShops = dashboardMetrics?.total_shops_count || 0;
     const activeOrderingShops = dashboardMetrics?.active_shops_count || 0;
 
-    // 전문점 데이터 가공
-    const formattedShops = (shopsData.data || []).map((shop: any) => ({
-      id: shop.id,
-      ownerName: shop.owner_name,
-      shop_name: shop.shop_name || shop.owner_name,
-      region: shop.region,
-      status: shop.status,
-      createdAt: shop.created_at,
-      is_owner_kol: shop.is_owner_kol,
-      sales: {
-        total: shop.shop_sales_metrics?.[0]?.total_sales || 0,
-        product: shop.shop_sales_metrics?.[0]?.product_sales || 0,
-        device: shop.shop_sales_metrics?.[0]?.device_sales || 0,
-        hasOrdered: (shop.shop_sales_metrics?.[0]?.total_sales || 0) > 0
+    // 전문점 데이터 가공 - 우선순위 로직으로 현재 월 매출 데이터 선택
+    const formattedShops = (shopsData.data || []).map((shop: any) => {
+      // 현재 월 매출 데이터 찾기 - 표준 형식 우선, 레거시 형식 호환
+      let currentMonthSales = null;
+      
+      if (shop.shop_sales_metrics && shop.shop_sales_metrics.length > 0) {
+        // 1단계: 표준 형식(YYYY-MM) 우선 검색
+        currentMonthSales = shop.shop_sales_metrics.find((metric: any) => 
+          metric.year_month === currentMonth
+        );
+        
+        // 2단계: 레거시 형식(YYYYMM) 검색 (표준 형식이 없는 경우)
+        if (!currentMonthSales) {
+          currentMonthSales = shop.shop_sales_metrics.find((metric: any) => 
+            metric.year_month === currentMonthCompact
+          );
+        }
       }
-    }));
+      
+      return {
+        id: shop.id,
+        ownerName: shop.owner_name,
+        shop_name: shop.shop_name || shop.owner_name,
+        region: shop.region,
+        status: shop.status,
+        createdAt: shop.created_at,
+        is_owner_kol: shop.is_owner_kol,
+        sales: {
+          total: currentMonthSales?.total_sales || 0,
+          product: currentMonthSales?.product_sales || 0,
+          device: currentMonthSales?.device_sales || 0,
+          hasOrdered: (currentMonthSales?.total_sales || 0) > 0
+        }
+      };
+    });
 
     // 영업 일지 데이터 가공
     const formattedActivities = (activitiesData.data || []).map((act: any) => ({
