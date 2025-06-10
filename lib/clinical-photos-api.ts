@@ -547,6 +547,8 @@ export async function deletePhoto(caseId: number, roundNumber: number, angle: st
 // 사진 업로드 (API 서버를 통해 업로드 + 메타데이터 저장)
 export async function uploadPhoto(caseId: number, roundNumber: number, angle: string, file: File): Promise<void> {
   try {
+    console.log('uploadPhoto called with:', { caseId, roundNumber, angle, fileName: file.name, fileSize: file.size });
+    
     const formData = new FormData();
     formData.append('file', file);
     formData.append('caseId', caseId.toString());
@@ -554,16 +556,24 @@ export async function uploadPhoto(caseId: number, roundNumber: number, angle: st
     formData.append('roundNumber', roundNumber.toString());
     formData.append('angle', angle);
     
+    console.log('Sending request to /api/kol-new/clinical-photos/upload');
+    
     const response = await fetch('/api/kol-new/clinical-photos/upload', {
       method: 'POST',
       credentials: 'include',
       body: formData,
     });
     
+    console.log('Response status:', response.status);
+    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error('Upload failed with error:', errorData);
       throw new Error(errorData.error || `사진 업로드 실패 (${response.status})`);
     }
+    
+    const result = await response.json();
+    console.log('Upload successful:', result);
     
     // 업로드 성공 - API에서 이미 메타데이터 저장까지 완료됨
   } catch (error) {

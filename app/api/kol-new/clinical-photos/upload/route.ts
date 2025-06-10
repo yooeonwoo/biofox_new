@@ -52,10 +52,15 @@ async function getKolIdForUser(clerkUserId: string): Promise<number> {
 // POST: 이미지 파일 업로드
 export async function POST(request: NextRequest) {
   try {
+    console.log("Upload API called");
+    
     const { userId } = await auth();
     if (!userId) {
+      console.log("Unauthorized - no userId");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    
+    console.log("User ID:", userId);
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -64,7 +69,18 @@ export async function POST(request: NextRequest) {
     const roundNumber = formData.get("roundNumber") as string;
     const angle = formData.get("angle") as string;
 
+    console.log("Upload params:", {
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      caseId,
+      type,
+      roundNumber,
+      angle
+    });
+
     if (!file || !caseId) {
+      console.log("Missing required fields");
       return NextResponse.json(
         { error: "File and caseId are required" },
         { status: 400 }
@@ -109,21 +125,41 @@ export async function POST(request: NextRequest) {
     
     const fileName = `${userId}/${caseId}/${type}/${timestamp}_${safeName}.${fileExt}`;
 
+    // 파일을 ArrayBuffer로 변환
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    console.log("Uploading to Supabase Storage...", {
+      fileName,
+      bufferSize: buffer.length,
+      bucketName: "clinical-photos"
+    });
+
     // Supabase Storage에 업로드
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("clinical-photos")
-      .upload(fileName, file, {
+      .upload(fileName, buffer, {
         cacheControl: "3600",
         upsert: false,
+        contentType: file.type,
       });
 
     if (uploadError) {
-      console.error("Upload error:", uploadError);
+      console.error("Upload error details:", {
+        error: uploadError,
+        message: uploadError.message,
+        statusCode: uploadError.status,
+        fileName,
+        fileSize: file.size,
+        fileType: file.type
+      });
       return NextResponse.json(
-        { error: "Failed to upload file" },
+        { error: `Storage upload failed: ${uploadError.message}` },
         { status: 500 }
       );
     }
+    
+    console.log("Upload successful:", uploadData);
 
     // 파일 URL 생성
     const { data: { publicUrl } } = supabase.storage

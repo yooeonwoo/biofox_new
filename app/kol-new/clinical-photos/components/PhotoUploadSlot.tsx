@@ -57,15 +57,78 @@ const PhotoUploadSlot: React.FC<PhotoUploadSlotProps> = ({
     return `${day}일차`;
   };
 
+  // 이미지 리사이징 함수
+  const resizeImage = (file: File, maxWidth: number = 1920, maxHeight: number = 1920): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+          
+          // 비율 유지하면서 크기 조정
+          if (width > height) {
+            if (width > maxWidth) {
+              height = height * (maxWidth / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = width * (maxHeight / height);
+              height = maxHeight;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const resizedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(resizedFile);
+            } else {
+              reject(new Error('이미지 변환에 실패했습니다.'));
+            }
+          }, 'image/jpeg', 0.85); // 85% 품질로 압축
+        };
+        img.onerror = () => reject(new Error('이미지 로드에 실패했습니다.'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('파일 읽기에 실패했습니다.'));
+      reader.readAsDataURL(file);
+    });
+  };
+
   // 파일 선택 핸들러
-  const handleFileSelect = (files: FileList | null) => {
+  const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     
     const file = files[0];
-    if (file.type.startsWith('image/')) {
-      onUpload(file);
-    } else {
+    if (!file.type.startsWith('image/')) {
       alert('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+    
+    try {
+      // 파일 크기가 5MB 이상이면 리사이징
+      if (file.size > 5 * 1024 * 1024) {
+        console.log('Large file detected, resizing...', file.size);
+        const resizedFile = await resizeImage(file);
+        console.log('File resized:', resizedFile.size);
+        onUpload(resizedFile);
+      } else {
+        onUpload(file);
+      }
+    } catch (error) {
+      console.error('File processing error:', error);
+      alert('이미지 처리 중 오류가 발생했습니다.');
     }
   };
 
@@ -97,12 +160,12 @@ const PhotoUploadSlot: React.FC<PhotoUploadSlotProps> = ({
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     
     const files = e.dataTransfer.files;
-    handleFileSelect(files);
+    await handleFileSelect(files);
   };
 
   return (
@@ -201,8 +264,9 @@ const PhotoUploadSlot: React.FC<PhotoUploadSlotProps> = ({
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        capture="environment"
         className="hidden"
-        onChange={(e) => handleFileSelect(e.target.files)}
+        onChange={async (e) => await handleFileSelect(e.target.files)}
       />
     </div>
   );
