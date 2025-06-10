@@ -493,40 +493,7 @@ export default function PersonalClinicalUploadPage() {
     }
   };
 
-  // 🚀 본인 정보 저장 함수 (날짜, 관리유형, 특이사항)
-  const savePersonalInfo = async (caseId: string) => {
-    try {
-      const currentRound = currentRounds[caseId] || 1;
-      const case_ = cases.find(c => c.id === caseId);
-      
-      if (!case_) {
-        throw new Error('케이스를 찾을 수 없습니다.');
-      }
 
-      const roundInfo = case_.roundCustomerInfo[currentRound];
-      
-      if (!roundInfo) {
-        throw new Error('회차 정보를 찾을 수 없습니다.');
-      }
-
-      // 저장할 데이터 준비
-      const updateData = {
-        treatmentPlan: roundInfo.memo || '', // 특이사항을 treatmentPlan에 저장
-        // 날짜와 관리유형은 추가 필드로 저장 (API 스키마에 따라 조정 필요)
-        ...(roundInfo.date && { treatmentDate: roundInfo.date }),
-        ...(roundInfo.treatmentType && { treatmentType: roundInfo.treatmentType })
-      };
-
-      // API 호출하여 서버에 저장
-      await updateCase(parseInt(caseId), updateData);
-      
-      console.log('본인 정보가 성공적으로 저장되었습니다.');
-      
-    } catch (error) {
-      console.error('본인 정보 저장 실패:', error);
-      throw error; // toast는 호출하는 곳에서 처리
-    }
-  };
   
   // 본래 API와 연동하는 체크박스 업데이트 함수
   const updateCaseCheckboxes = async (caseId: string, updates: Partial<{
@@ -847,24 +814,7 @@ export default function PersonalClinicalUploadPage() {
                             </Select>
                           </div>
 
-                          {/* 🚀 본인 정보 저장 버튼 */}
-                          <div className="pt-2">
-                            <Button
-                              onClick={async () => {
-                                try {
-                                  await savePersonalInfo(case_.id);
-                                  toast.success('본인 정보가 저장되었습니다!');
-                                } catch (error) {
-                                  toast.error('저장에 실패했습니다.');
-                                }
-                              }}
-                              className="w-full h-8 text-xs bg-biofox-blue-violet hover:bg-biofox-blue-violet/90 text-white"
-                              size="sm"
-                            >
-                              <Save className="mr-1 h-3 w-3" />
-                              본인 정보 저장
-                            </Button>
-                          </div>
+
                         </div>
                       </div>
                       {/* 블록 3: 홈케어 제품 */}
@@ -919,10 +869,10 @@ export default function PersonalClinicalUploadPage() {
                                   checked={isSelected}
                                   onCheckedChange={async (checked) => {
                                     // 즉시 로컬 상태 업데이트 (옵티미스틱 UI)
-                                    setCases(prev => prev.map(case_ => 
-                                      case_.id === case_.id 
-                                        ? { ...case_, [fieldName]: checked }
-                                        : case_
+                                    setCases(prev => prev.map(caseItem => 
+                                      caseItem.id === case_.id 
+                                        ? { ...caseItem, [fieldName]: checked }
+                                        : caseItem
                                     ));
                                     
                                     // 백그라운드에서 저장
@@ -939,10 +889,10 @@ export default function PersonalClinicalUploadPage() {
                                     } catch (error) {
                                       console.error('자동 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
-                                      setCases(prev => prev.map(case_ => 
-                                        case_.id === case_.id 
-                                          ? { ...case_, [fieldName]: !checked }
-                                          : case_
+                                      setCases(prev => prev.map(caseItem => 
+                                        caseItem.id === case_.id 
+                                          ? { ...caseItem, [fieldName]: !checked }
+                                          : caseItem
                                       ));
                                       toast.error('저장에 실패했습니다.');
                                     }
@@ -1017,10 +967,10 @@ export default function PersonalClinicalUploadPage() {
                                   checked={isSelected}
                                   onCheckedChange={async (checked) => {
                                     // 즉시 로컬 상태 업데이트 (옵티미스틱 UI)
-                                    setCases(prev => prev.map(case_ => 
-                                      case_.id === case_.id 
-                                        ? { ...case_, [fieldName]: checked }
-                                        : case_
+                                    setCases(prev => prev.map(caseItem => 
+                                      caseItem.id === case_.id 
+                                        ? { ...caseItem, [fieldName]: checked }
+                                        : caseItem
                                     ));
                                     
                                     // 백그라운드에서 저장
@@ -1037,10 +987,10 @@ export default function PersonalClinicalUploadPage() {
                                     } catch (error) {
                                       console.error('자동 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
-                                      setCases(prev => prev.map(case_ => 
-                                        case_.id === case_.id 
-                                          ? { ...case_, [fieldName]: !checked }
-                                          : case_
+                                      setCases(prev => prev.map(caseItem => 
+                                        caseItem.id === case_.id 
+                                          ? { ...caseItem, [fieldName]: !checked }
+                                          : caseItem
                                       ));
                                       toast.error('저장에 실패했습니다.');
                                     }
@@ -1083,22 +1033,21 @@ export default function PersonalClinicalUploadPage() {
                             const newValue = e.target.value;
                             
                             // 즉시 로컬 상태 업데이트 (UI 반응성을 위해)
-                            setCases(prev => prev.map(case_ => 
-                              case_.id === case_.id 
+                            setCases(prev => prev.map(caseItem => 
+                              caseItem.id === case_.id 
                                 ? { 
-                                    ...case_, 
+                                    ...caseItem, 
                                     roundCustomerInfo: {
-                                      ...case_.roundCustomerInfo,
+                                      ...caseItem.roundCustomerInfo,
                                       [currentRounds[case_.id] || 1]: { 
                                         treatmentType: '',
-                                        memo: '',
                                         date: '',
-                                        ...case_.roundCustomerInfo[currentRounds[case_.id] || 1],
+                                        ...caseItem.roundCustomerInfo[currentRounds[case_.id] || 1],
                                         memo: newValue
                                       }
                                     }
                                   }
-                                : case_
+                                : caseItem
                             ));
 
                             // IME 입력 중이 아닐 때는 debounce 사용 (영어/숫자/특수문자)
@@ -1118,22 +1067,7 @@ export default function PersonalClinicalUploadPage() {
                           placeholder="해당 회차 관련 특이사항을 입력하세요..."
                           className="w-full min-h-[80px] border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                         />
-                        
-                        {/* 🚀 전체 정보 저장 버튼 */}
-                        <Button
-                          onClick={async () => {
-                            try {
-                              await savePersonalInfo(case_.id);
-                              toast.success('전체 정보가 저장되었습니다!');
-                            } catch (error) {
-                              toast.error('저장에 실패했습니다.');
-                            }
-                          }}
-                          className="w-full h-9 text-sm bg-biofox-blue-violet hover:bg-biofox-blue-violet/90 text-white"
-                        >
-                          <Save className="mr-2 h-4 w-4" />
-                          전체 정보 저장
-                        </Button>
+
                       </div>
                           </CardContent>
                     </div>
