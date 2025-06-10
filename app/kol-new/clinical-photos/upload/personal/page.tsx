@@ -224,10 +224,86 @@ export default function PersonalClinicalUploadPage() {
         const { fetchCases } = await import('@/lib/clinical-photos');
         const casesData = await fetchCases();
         
-        // 본인 케이스만 찾기 (본인 이름이나 특정 표시가 있는 케이스)
-        const personalCase = casesData.find(case_ => case_.customerName === '본인') || casesData[0];
+        console.log('전체 케이스 데이터:', casesData.map(c => ({ id: c.id, customerName: c.customerName })));
         
-        if (personalCase) {
+        // 본인 케이스만 정확히 찾기 (대소문자 무시, 공백 제거)
+        const personalCase = casesData.find(case_ => 
+          case_.customerName?.trim().toLowerCase() === '본인' ||
+          case_.customerName?.trim() === '본인' ||
+          case_.customerName?.includes('본인')
+        );
+        
+        console.log('찾은 본인 케이스:', personalCase);
+        
+        // 본인 케이스가 없으면 생성
+        if (!personalCase) {
+          console.log('본인 케이스가 없어서 생성합니다.');
+          
+          try {
+            const { createCase } = await import('@/lib/clinical-photos-api');
+            const newPersonalCase = await createCase({
+              customerName: '본인',
+              caseName: '본인 임상 케이스',
+              concernArea: '본인 케어',
+              treatmentPlan: '[본인] 개인 관리 계획',
+              consentReceived: false,
+            });
+            
+            if (newPersonalCase) {
+              console.log('본인 케이스 생성 완료:', newPersonalCase);
+              
+              // 생성된 케이스를 기반으로 변환
+              const transformedCase: ClinicalCase = {
+                id: newPersonalCase.id.toString(),
+                customerName: '본인',
+                status: 'active',
+                createdAt: newPersonalCase.createdAt.split('T')[0],
+                consentReceived: false,
+                consentImageUrl: undefined,
+                photos: [],
+                customerInfo: {
+                  name: '본인',
+                  products: [],
+                  skinTypes: [],
+                  memo: ''
+                },
+                roundCustomerInfo: {
+                  1: {
+                    treatmentType: '',
+                    products: [],
+                    skinTypes: [],
+                    memo: '',
+                    date: newPersonalCase.createdAt.split('T')[0]
+                  }
+                },
+                cureBooster: false,
+                cureMask: false,
+                premiumMask: false,
+                allInOneSerum: false,
+                skinRedSensitive: false,
+                skinPigment: false,
+                skinPore: false,
+                skinTrouble: false,
+                skinWrinkle: false,
+                skinEtc: false
+              };
+              
+              setCases([transformedCase]);
+              setCurrentRounds({ [transformedCase.id]: 1 });
+              
+              toast.success('본인 임상 케이스가 생성되었습니다.');
+            } else {
+              throw new Error('케이스 생성에 실패했습니다.');
+            }
+          } catch (createError) {
+            console.error('본인 케이스 생성 실패:', createError);
+            toast.error('본인 케이스 생성에 실패했습니다.');
+            setCases([]);
+          }
+        } else {
+          // 본인 케이스가 존재하는 경우
+          console.log('기존 본인 케이스를 로드합니다:', personalCase.id);
+          
           // 체크박스 관련 제품 데이터 처리
           const productTypes = [];
           if (personalCase.cureBooster) productTypes.push('cure_booster');
@@ -301,12 +377,10 @@ export default function PersonalClinicalUploadPage() {
           
           // 초기 현재 회차 설정
           setCurrentRounds({ [transformedCase.id]: 1 });
-        } else {
-          // 케이스가 없으면 빈 배열
-          setCases([]);
         }
       } catch (error) {
         console.error('Failed to load cases:', error);
+        toast.error('케이스 로드에 실패했습니다.');
         setCases([]); // 에러 시 빈 배열
       }
     };
@@ -591,16 +665,36 @@ export default function PersonalClinicalUploadPage() {
         return;
       }
 
+      // 본인 케이스임을 명확히 하기 위해 customerName 확인
+      const targetCase = cases.find(case_ => case_.id === caseId);
+      if (!targetCase) {
+        console.warn('케이스를 찾을 수 없습니다:', caseId);
+        return;
+      }
+      
+      // 본인 케이스인지 더 엄격하게 검증
+      const isPersonalCase = targetCase.customerName?.trim().toLowerCase() === '본인' ||
+                           targetCase.customerName?.trim() === '본인' ||
+                           targetCase.customerName?.includes('본인');
+      
+      if (!isPersonalCase) {
+        console.warn('본인 케이스가 아닙니다:', {
+          caseId,
+          customerName: targetCase.customerName,
+          expectedName: '본인'
+        });
+        toast.error('본인 케이스만 수정할 수 있습니다.');
+        return;
+      }
+      
+      console.log('본인 케이스 검증 완료:', {
+        caseId,
+        customerName: targetCase.customerName
+      });
+
       // 실제 API 호출로 서버에 저장
       const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
       const updateData: any = {};
-      
-      // 본인 케이스임을 명확히 하기 위해 customerName 확인
-      const currentCase = cases.find(case_ => case_.id === caseId);
-      if (!currentCase || currentCase.customerName !== '본인') {
-        console.warn('본인 케이스가 아닙니다:', currentCase?.customerName);
-        return;
-      }
       
       // 메모 정보를 treatmentPlan으로 업데이트 (본인 케이스 전용)
       if (roundInfo.memo !== undefined) {
@@ -703,8 +797,16 @@ export default function PersonalClinicalUploadPage() {
       const { fetchCases } = await import('@/lib/clinical-photos');
       const casesData = await fetchCases();
       
-      // 본인 케이스만 찾기
-      const personalCase = casesData.find(case_ => case_.customerName === '본인') || casesData[0];
+      console.log('새로고침 - 전체 케이스 데이터:', casesData.map(c => ({ id: c.id, customerName: c.customerName })));
+      
+      // 본인 케이스만 정확히 찾기
+      const personalCase = casesData.find(case_ => 
+        case_.customerName?.trim().toLowerCase() === '본인' ||
+        case_.customerName?.trim() === '본인' ||
+        case_.customerName?.includes('본인')
+      );
+      
+      console.log('새로고침 - 찾은 본인 케이스:', personalCase);
       
       if (personalCase) {
         // 제품 데이터 처리
@@ -777,10 +879,12 @@ export default function PersonalClinicalUploadPage() {
         setCases([transformedCase]);
         console.log('케이스 데이터 새로고침 완료');
       } else {
+        console.log('새로고침 시 본인 케이스를 찾을 수 없습니다.');
         setCases([]);
       }
     } catch (error) {
       console.error('케이스 데이터 새로고침 실패:', error);
+      toast.error('케이스 새로고침에 실패했습니다.');
     }
   };
 
@@ -992,11 +1096,56 @@ export default function PersonalClinicalUploadPage() {
                       
                       {/* 블록 2: 고객 정보 */}
                       <div className="space-y-3 border-2 border-biofox-blue-violet/20 rounded-lg p-4 bg-biofox-blue-violet/5">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-biofox-blue-violet">본인 정보</h3>
-                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-biofox-blue-violet/20">
-                            {currentRounds[case_.id] || 1}회차
-                          </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-biofox-blue-violet">본인 정보</h3>
+                            <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-biofox-blue-violet/20">
+                              {currentRounds[case_.id] || 1}회차
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                console.log('본인 정보 저장 버튼 클릭됨'); // 디버깅용
+                                
+                                // 현재 입력된 값들을 가져와서 저장
+                                const dateInput = document.querySelector(`#date-${case_.id}`) as HTMLInputElement;
+                                
+                                const updateData = {
+                                  date: dateInput?.value || case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.date,
+                                  treatmentType: case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.treatmentType
+                                };
+                                
+                                console.log('저장할 데이터:', updateData); // 디버깅용
+                                
+                                await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, updateData);
+                                
+                                // 저장 성공 피드백
+                                const button = document.querySelector(`#save-personal-info-${case_.id}`) as HTMLElement;
+                                if (button) {
+                                  const originalText = button.textContent;
+                                  button.textContent = '저장됨';
+                                  button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                  setTimeout(() => {
+                                    button.textContent = originalText;
+                                    button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                                  }, 1500);
+                                }
+                                toast.success('본인 정보가 저장되었습니다!');
+                                console.log('본인 정보 저장 완료'); // 디버깅용
+                              } catch (error) {
+                                console.error('본인 정보 저장 실패:', error);
+                                toast.error('본인 정보 저장에 실패했습니다.');
+                              }
+                            }}
+                            id={`save-personal-info-${case_.id}`}
+                            className="text-xs px-3 py-1 h-7 border-biofox-blue-violet/30 hover:bg-biofox-blue-violet/10 hover:border-biofox-blue-violet/50 transition-all duration-200 cursor-pointer"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            저장
+                          </Button>
                         </div>
                         
                         <div className="space-y-3">
