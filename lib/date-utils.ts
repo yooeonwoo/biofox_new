@@ -1,5 +1,6 @@
 /**
  * 날짜 관련 유틸리티 함수
+ * 전체 시스템에서 year_month는 "YYYY-MM" 형식으로 통일
  */
 
 /**
@@ -12,11 +13,12 @@ export function getCurrentDate(): string {
 }
 
 /**
- * 현재 월을 YYYYMM 형식으로 반환 (데이터베이스 형식)
+ * 현재 월을 YYYY-MM 형식으로 반환 (표준 형식)
+ * 전체 시스템에서 이 형식을 사용
  */
 export function getCurrentYearMonth(): string {
   const currentDate = getCurrentDate();
-  return currentDate.substring(0, 7).replace('-', ''); // "2025-05" -> "202505"
+  return currentDate.substring(0, 7); // "2025-05"
 }
 
 /**
@@ -34,11 +36,12 @@ export function getPreviousMonth(dateStr: string): string {
 }
 
 /**
- * 주어진 날짜의 전월을 YYYYMM 형식으로 반환 (데이터베이스 형식)
+ * 주어진 날짜의 전월을 YYYY-MM 형식으로 반환
  * @param dateStr YYYY-MM-DD 형식의 날짜 문자열
+ * @deprecated getPreviousMonth를 사용하세요
  */
 export function getPreviousYearMonth(dateStr: string): string {
-  return getPreviousMonth(dateStr).replace('-', '');
+  return getPreviousMonth(dateStr);
 }
 
 /**
@@ -85,4 +88,60 @@ export function getMonthsBetween(startDate: string, endDate: string): string[] {
 export function formatYearMonth(yearMonth: string): string {
   const [year, month] = yearMonth.split('-');
   return `${year}년 ${parseInt(month)}월`;
+}
+
+/**
+ * YYYY-MM 형식을 YYYYMM 형식으로 변환 (레거시 호환용)
+ * @param yearMonth YYYY-MM 형식 문자열
+ * @returns YYYYMM 형식 문자열
+ * @deprecated 가능한 YYYY-MM 형식을 직접 사용하세요
+ */
+export function toCompactYearMonth(yearMonth: string): string {
+  return yearMonth.replace('-', '');
+}
+
+/**
+ * YYYYMM 형식을 YYYY-MM 형식으로 변환 (레거시 호환용)
+ * @param compactYearMonth YYYYMM 형식 문자열
+ * @returns YYYY-MM 형식 문자열
+ */
+export function fromCompactYearMonth(compactYearMonth: string): string {
+  if (compactYearMonth.length !== 6) {
+    throw new Error('Invalid compact year month format. Expected YYYYMM');
+  }
+  return `${compactYearMonth.substring(0, 4)}-${compactYearMonth.substring(4, 6)}`;
+}
+
+/**
+ * 년월 형식 검증 함수
+ * @param yearMonth 검증할 년월 문자열
+ * @returns YYYY-MM 형식이면 true, 아니면 false
+ */
+export function isValidYearMonth(yearMonth: string): boolean {
+  const regex = /^\d{4}-\d{2}$/;
+  if (!regex.test(yearMonth)) return false;
+  
+  const [year, month] = yearMonth.split('-').map(Number);
+  return year >= 2020 && year <= 2030 && month >= 1 && month <= 12;
+}
+
+/**
+ * 년월 형식 정규화 함수 (YYYYMM → YYYY-MM 또는 YYYY-MM 유지)
+ * @param yearMonth YYYY-MM 또는 YYYYMM 형식 문자열
+ * @returns 정규화된 YYYY-MM 형식 문자열
+ */
+export function normalizeYearMonth(yearMonth: string): string {
+  if (!yearMonth) return '';
+  
+  // YYYY-MM 형식이면 그대로 반환
+  if (isValidYearMonth(yearMonth)) {
+    return yearMonth;
+  }
+  
+  // YYYYMM 형식이면 YYYY-MM으로 변환
+  if (yearMonth.length === 6 && /^\d{6}$/.test(yearMonth)) {
+    return fromCompactYearMonth(yearMonth);
+  }
+  
+  throw new Error(`Invalid year month format: ${yearMonth}. Expected YYYY-MM or YYYYMM`);
 } 

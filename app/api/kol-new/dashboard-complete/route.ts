@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getCurrentDate, getPreviousMonth } from '@/lib/date-utils';
+import { getCurrentDate, getPreviousMonth, getCurrentYearMonth } from '@/lib/date-utils';
 import { getAuthenticatedKol } from '@/lib/auth-cache';
 
 // 🚀 통합 대시보드 API - 모든 데이터를 한 번에 로드하여 성능 최적화
@@ -11,10 +11,22 @@ export async function GET() {
     // 🚀 캐시된 인증 확인 (중복 인증 로직 제거)
     const { user: userData, kol: kolData } = await getAuthenticatedKol();
 
-    // 현재 월과 이전 월 계산
+    // 현재 월과 이전 월 계산 - YYYY-MM 형식으로 통일
     const currentDate = getCurrentDate();
-    const currentMonth = currentDate.substring(0, 7);
-    const previousMonth = getPreviousMonth(currentDate);
+    const currentMonth = getCurrentYearMonth(); // "2025-05"
+    const previousMonth = getPreviousMonth(currentDate); // "2025-04"
+
+    // 레거시 호환성을 위한 YYYYMM 형식
+    const currentMonthCompact = currentMonth.replace('-', ''); // "202505"
+    const previousMonthCompact = previousMonth.replace('-', ''); // "202504"
+
+    console.log(`통합 대시보드 - 월 정보:`, {
+      currentMonth,
+      previousMonth,
+      currentMonthCompact,
+      previousMonthCompact,
+      kolId: kolData.id
+    });
 
     // 🚀 병렬로 모든 데이터 한 번에 조회
     const [
@@ -23,23 +35,23 @@ export async function GET() {
       shopsData,
       activitiesData
     ] = await Promise.all([
-      // 현재 월 대시보드 메트릭
+      // 현재 월 대시보드 메트릭 - 레거시 호환성 체크
       supabase
         .from('kol_dashboard_metrics')
         .select('*')
         .eq('kol_id', kolData.id)
-        .eq('year_month', currentMonth)
+        .or(`year_month.eq.${currentMonth},year_month.eq.${currentMonthCompact}`)
         .maybeSingle(),
       
-      // 이전 월 데이터
+      // 이전 월 데이터 - 레거시 호환성 체크
       supabase
         .from('kol_dashboard_metrics')
         .select('monthly_sales, monthly_commission')
         .eq('kol_id', kolData.id)
-        .eq('year_month', previousMonth)
+        .or(`year_month.eq.${previousMonth},year_month.eq.${previousMonthCompact}`)
         .maybeSingle(),
       
-      // 전문점 데이터 (매출 정보 포함)
+      // 전문점 데이터 (매출 정보 포함) - 레거시 호환성 체크
       supabase
         .from('shops')
         .select(`
@@ -58,7 +70,7 @@ export async function GET() {
           )
         `)
         .eq('kol_id', kolData.id)
-        .eq('shop_sales_metrics.year_month', currentMonth),
+        .or(`shop_sales_metrics.year_month.eq.${currentMonth},shop_sales_metrics.year_month.eq.${currentMonthCompact}`),
       
       // 영업 일지 데이터
       supabase

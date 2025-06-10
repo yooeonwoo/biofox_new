@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { auth } from '@clerk/nextjs/server';
-import { getCurrentDate, getPreviousMonth, getMonthsBetween } from '@/lib/date-utils';
+import { getCurrentDate, getPreviousMonth, getMonthsBetween, getCurrentYearMonth } from '@/lib/date-utils';
 
 // KOL 월별 매출 데이터 API 라우트
 export async function GET(request: NextRequest) {
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 현재 날짜와 이전 날짜 계산
+    // 현재 날짜와 이전 날짜 계산 - YYYY-MM 형식으로 통일
     const currentDate = getCurrentDate();
     const monthsAgo = new Date(currentDate);
     monthsAgo.setMonth(monthsAgo.getMonth() - (parseInt(months) - 1));
@@ -105,16 +105,19 @@ export async function GET(request: NextRequest) {
       kolId
     });
 
-    // KOL 월별 요약 데이터 조회 - 수당만 조회
-    // 하이픈 있는 형식: 2025-01, 2025-02
-    // 하이픈 없는 형식: 202501, 202502
-    const monthRangeWithoutHyphen = monthRange.map(month => month.replace('-', ''));
+    // KOL 월별 요약 데이터 조회 - 표준 YYYY-MM 형식 우선, 레거시 YYYYMM 형식 호환
+    const monthRangeCompact = monthRange.map(month => month.replace('-', ''));
+    
+    console.log('월별 수당 API - 검색 형식:', {
+      standardFormat: monthRange,
+      legacyFormat: monthRangeCompact
+    });
     
     const { data: summaryData, error: summaryError } = await supabase
       .from('kol_dashboard_metrics')
       .select('year_month, monthly_commission')
       .eq('kol_id', kolId)
-      .or(`year_month.in.(${monthRange.join(',')}),year_month.in.(${monthRangeWithoutHyphen.join(',')})`)
+      .or(`year_month.in.(${monthRange.join(',')}),year_month.in.(${monthRangeCompact.join(',')})`)
       .order('year_month', { ascending: true });
 
     if (summaryError) {
@@ -146,10 +149,10 @@ export async function GET(request: NextRequest) {
 
     // 결과 데이터 가공 - 모든 월에 대해 데이터가 있도록 보장
     const monthlyData = monthRange.map(yearMonth => {
-      // 하이픈 있는 형식과 없는 형식 모두 검색
-      const yearMonthWithoutHyphen = yearMonth.replace('-', '');
+      // 표준 형식과 레거시 형식 모두 검색
+      const yearMonthCompact = yearMonth.replace('-', '');
       const existingData = summaryData.find(item => 
-        item.year_month === yearMonth || item.year_month === yearMonthWithoutHyphen
+        item.year_month === yearMonth || item.year_month === yearMonthCompact
       );
       
       return {

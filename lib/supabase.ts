@@ -152,12 +152,6 @@ export const CACHE_SETTINGS = {
   CACHE_CONTROL_HEADER: 'public, max-age=300, s-maxage=300, stale-while-revalidate=60',
 };
 
-// 타임스탬프 형식의 현재 날짜를 YYYY-MM 형식으로 반환
-export function getCurrentYearMonth(): string {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
 // Supabase 쿼리 결과를 카멜케이스로 변환하는 유틸리티 함수
 export function snakeToCamel(obj: any): any {
   if (obj === null || obj === undefined || typeof obj !== 'object') {

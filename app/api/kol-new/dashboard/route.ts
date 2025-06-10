@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getCurrentYearMonth, getPreviousYearMonth, getCurrentDate } from '@/lib/date-utils';
+import { getCurrentYearMonth, getPreviousMonth, getCurrentDate } from '@/lib/date-utils';
 import { getAuthenticatedKol } from '@/lib/auth-cache';
 
 // KOL 대시보드 API 라우트 
@@ -11,10 +11,10 @@ export async function GET() {
     // 🚀 캐시된 인증 확인
     const { user: userData, kol: kolData } = await getAuthenticatedKol();
 
-    // 현재 월과 이전 월 계산 - YYYYMM 형식 (데이터베이스 형식과 일치)
+    // 현재 월과 이전 월 계산 - 모두 YYYY-MM 형식으로 통일
     const currentDate = getCurrentDate();
-    const currentMonth = getCurrentYearMonth(); // "202505"
-    const previousMonth = getPreviousYearMonth(currentDate); // "202504"
+    const currentMonth = getCurrentYearMonth(); // "2025-05"
+    const previousMonth = getPreviousMonth(currentDate); // "2025-04"
 
     console.log(`대시보드 API - 월 정보:`, {
       currentDate,
@@ -24,11 +24,14 @@ export async function GET() {
     });
 
     // KOL 월별 요약 정보 조회 (kol_dashboard_metrics 테이블만 사용)
+    // 레거시 호환성을 위해 두 형식 모두 체크
+    const currentMonthCompact = currentMonth.replace('-', ''); // "202505"
+    
     const { data: dashboardMetrics, error: dashboardError } = await supabase
       .from('kol_dashboard_metrics')
       .select('*')
       .eq('kol_id', kolData.id)
-      .eq('year_month', currentMonth)
+      .or(`year_month.eq.${currentMonth},year_month.eq.${currentMonthCompact}`)
       .maybeSingle();
 
     if (dashboardError) {
@@ -48,10 +51,10 @@ export async function GET() {
         
       const totalShops = shopsError ? 0 : count || 0;
       
-      // 새 메트릭 데이터 생성
+      // 새 메트릭 데이터 생성 - 표준 YYYY-MM 형식으로 저장
       const newMetricsData = {
         kol_id: kolData.id,
-        year_month: currentMonth, // YYYYMM 형식으로 저장 (예: "202505")
+        year_month: currentMonth, // "2025-05" 형식으로 저장
         monthly_sales: 0,
         monthly_commission: 0,
         active_shops_count: 0,
@@ -73,12 +76,14 @@ export async function GET() {
       }
     }
 
-    // 이전 월 데이터 조회
+    // 이전 월 데이터 조회 - 레거시 호환성을 위해 두 형식 모두 체크
+    const previousMonthCompact = previousMonth.replace('-', ''); // "202504"
+    
     const { data: previousMonthData, error: previousMonthError } = await supabase
       .from('kol_dashboard_metrics')
       .select('monthly_sales, monthly_commission')
       .eq('kol_id', kolData.id)
-      .eq('year_month', previousMonth)
+      .or(`year_month.eq.${previousMonth},year_month.eq.${previousMonthCompact}`)
       .maybeSingle();
 
     if (previousMonthError) {
@@ -90,7 +95,7 @@ export async function GET() {
     if (!previousMonthData) {
       console.log(`이전 월 데이터 없음, 새로 생성 시도 (kol_id=${kolData.id}, month=${previousMonth})`);
       
-      // 새 메트릭 데이터 생성
+      // 새 메트릭 데이터 생성 - 표준 YYYY-MM 형식으로 저장
       const newPrevMetricsData = {
         kol_id: kolData.id,
         year_month: previousMonth, // "2025-04" 형식으로 저장

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getCurrentYearMonth } from '@/lib/date-utils';
+import { getCurrentYearMonth, normalizeYearMonth } from '@/lib/date-utils';
 import { getAuthenticatedKol } from '@/lib/auth-cache';
 
 // 매출 데이터 타입 정의
@@ -75,8 +75,8 @@ export async function GET() {
     // 🚀 캐시된 인증 확인
     const { user: userData, kol: kolData } = await getAuthenticatedKol();
 
-    // 현재 월 계산 - YYYYMM 형식 (데이터베이스 형식과 일치)
-    const currentMonth = getCurrentYearMonth(); // "202505"
+    // 현재 월 계산 - YYYY-MM 형식으로 통일
+    const currentMonth = getCurrentYearMonth(); // "2025-05"
 
     console.log(`조회할 월 정보: ${currentMonth}, KOL ID: ${kolData.id}`);
     console.log(`전문점 조회 시작: KOL ID=${kolData.id}`);
@@ -113,13 +113,18 @@ export async function GET() {
     }
 
     // shop_sales_metrics 테이블에서 전문점별 월간 매출 데이터 조회
+    // 레거시 호환성을 위해 두 형식 모두 체크 (YYYY-MM, YYYYMM)
+    const currentMonthCompact = currentMonth.replace('-', ''); // "202505"
+    
+    console.log(`매출 데이터 조회: 표준 형식="${currentMonth}", 레거시 형식="${currentMonthCompact}"`);
+    
     const { data: salesData, error: salesError } = await supabase
       .from('shop_sales_metrics')
-      .select('shop_id, total_sales, product_sales, device_sales, commission')
-      .eq('year_month', currentMonth);
+      .select('shop_id, total_sales, product_sales, device_sales, commission, year_month')
+      .or(`year_month.eq.${currentMonth},year_month.eq.${currentMonthCompact}`);
 
     if (salesError) {
-      console.error(`매출 데이터 조회 오류(year_month=${currentMonth}):`, salesError);
+      console.error(`매출 데이터 조회 오류:`, salesError);
       return NextResponse.json(
         { error: '매출 데이터를 조회하는 중 오류가 발생했습니다.' },
         { status: 500 }
@@ -128,12 +133,14 @@ export async function GET() {
 
     console.log(`조회된 매출 데이터 수: ${salesData?.length || 0}`);
     
-    // 각 샵별 매출 데이터 로깅 (특히 믈리에스킨, 마음에점을찍다 확인)
+    // 각 샵별 매출 데이터 로깅 및 정규화
     console.log("샵별 매출 데이터:");
     if (salesData && salesData.length > 0) {
       console.log(salesData.map((sale: any) => ({
         shop_id: sale.shop_id,
         total_sales: sale.total_sales,
+        year_month: sale.year_month,
+        normalized_year_month: normalizeYearMonth(sale.year_month),
         hasOrdered: Boolean(sale.total_sales > 0)
       })));
     }
