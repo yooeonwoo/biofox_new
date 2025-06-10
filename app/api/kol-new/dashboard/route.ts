@@ -23,20 +23,46 @@ export async function GET() {
       kolId: kolData.id
     });
 
-    // KOL 월별 요약 정보 조회 (kol_dashboard_metrics 테이블만 사용)
-    // 레거시 호환성을 위해 두 형식 모두 체크
+    // 레거시 호환성을 위한 YYYYMM 형식
     const currentMonthCompact = currentMonth.replace('-', ''); // "202505"
+
+    // KOL 월별 요약 정보 조회 - 우선순위 로직으로 최신 데이터 보장
+    let dashboardMetrics = null;
     
-    const { data: dashboardMetrics, error: dashboardError } = await supabase
+    // 1단계: 표준 형식(YYYY-MM) 먼저 시도
+    const { data: standardCurrentData, error: standardCurrentError } = await supabase
       .from('kol_dashboard_metrics')
       .select('*')
       .eq('kol_id', kolData.id)
-      .or(`year_month.eq.${currentMonth},year_month.eq.${currentMonthCompact}`)
+      .eq('year_month', currentMonth)
       .maybeSingle();
 
-    if (dashboardError) {
-      console.error(`대시보드 메트릭 조회 오류(kol_id=${kolData.id}, month=${currentMonth}):`, dashboardError);
-      // 오류가 있어도 계속 진행 (기본값 사용)
+    if (standardCurrentError && standardCurrentError.code !== 'PGRST116') {
+      console.error('표준 형식 대시보드 메트릭 조회 오류:', standardCurrentError);
+    }
+
+    if (standardCurrentData) {
+      dashboardMetrics = standardCurrentData;
+      console.log(`표준 형식 데이터 사용: ${currentMonth} for KOL ${kolData.id}`);
+    } else {
+      // 2단계: 레거시 형식(YYYYMM) 시도
+      const { data: legacyCurrentData, error: legacyCurrentError } = await supabase
+        .from('kol_dashboard_metrics')
+        .select('*')
+        .eq('kol_id', kolData.id)
+        .eq('year_month', currentMonthCompact)
+        .maybeSingle();
+
+      if (legacyCurrentError && legacyCurrentError.code !== 'PGRST116') {
+        console.error('레거시 형식 대시보드 메트릭 조회 오류:', legacyCurrentError);
+      }
+
+      if (legacyCurrentData) {
+        dashboardMetrics = legacyCurrentData;
+        console.log(`레거시 형식 데이터 사용: ${currentMonthCompact} for KOL ${kolData.id}`);
+      } else {
+        console.log(`대시보드 메트릭 데이터 없음: ${currentMonth}/${currentMonthCompact} for KOL ${kolData.id}`);
+      }
     }
 
     // 현재 월 데이터가 없으면 새로 생성
@@ -76,45 +102,43 @@ export async function GET() {
       }
     }
 
-    // 이전 월 데이터 조회 - 레거시 호환성을 위해 두 형식 모두 체크
+    // 이전 월 데이터 조회 - 우선순위 로직으로 최신 데이터 보장
+    let previousMonthData = null;
     const previousMonthCompact = previousMonth.replace('-', ''); // "202504"
     
-    const { data: previousMonthData, error: previousMonthError } = await supabase
+    // 1단계: 표준 형식(YYYY-MM) 먼저 시도
+    const { data: standardPrevData, error: standardPrevError } = await supabase
       .from('kol_dashboard_metrics')
       .select('monthly_sales, monthly_commission')
       .eq('kol_id', kolData.id)
-      .or(`year_month.eq.${previousMonth},year_month.eq.${previousMonthCompact}`)
+      .eq('year_month', previousMonth)
       .maybeSingle();
 
-    if (previousMonthError) {
-      console.log(`이전 월 데이터 조회 오류(kol_id=${kolData.id}, month=${previousMonth}):`, previousMonthError);
-      // 오류가 있어도 계속 진행 (기본값 사용)
+    if (standardPrevError && standardPrevError.code !== 'PGRST116') {
+      console.error('표준 형식 이전 월 데이터 조회 오류:', standardPrevError);
     }
 
-    // 이전 월 데이터가 없으면 새로 생성
-    if (!previousMonthData) {
-      console.log(`이전 월 데이터 없음, 새로 생성 시도 (kol_id=${kolData.id}, month=${previousMonth})`);
-      
-      // 새 메트릭 데이터 생성 - 표준 YYYY-MM 형식으로 저장
-      const newPrevMetricsData = {
-        kol_id: kolData.id,
-        year_month: previousMonth, // "2025-04" 형식으로 저장
-        monthly_sales: 0,
-        monthly_commission: 0,
-        active_shops_count: 0,
-        total_shops_count: 0,
-        created_at: new Date(),
-        updated_at: new Date()
-      };
-      
-      const { error: insertPrevError } = await supabase
+    if (standardPrevData) {
+      previousMonthData = standardPrevData;
+      console.log(`표준 형식 이전 월 데이터 사용: ${previousMonth} for KOL ${kolData.id}`);
+    } else {
+      // 2단계: 레거시 형식(YYYYMM) 시도
+      const { data: legacyPrevData, error: legacyPrevError } = await supabase
         .from('kol_dashboard_metrics')
-        .insert(newPrevMetricsData);
-        
-      if (insertPrevError) {
-        console.error(`이전 월 메트릭 생성 실패(kol_id=${kolData.id}, month=${previousMonth}):`, insertPrevError);
+        .select('monthly_sales, monthly_commission')
+        .eq('kol_id', kolData.id)
+        .eq('year_month', previousMonthCompact)
+        .maybeSingle();
+
+      if (legacyPrevError && legacyPrevError.code !== 'PGRST116') {
+        console.error('레거시 형식 이전 월 데이터 조회 오류:', legacyPrevError);
+      }
+
+      if (legacyPrevData) {
+        previousMonthData = legacyPrevData;
+        console.log(`레거시 형식 이전 월 데이터 사용: ${previousMonthCompact} for KOL ${kolData.id}`);
       } else {
-        console.log(`이전 월 메트릭 생성 성공(kol_id=${kolData.id}, month=${previousMonth})`);
+        console.log(`이전 월 데이터 없음: ${previousMonth}/${previousMonthCompact} for KOL ${kolData.id}`);
       }
     }
 

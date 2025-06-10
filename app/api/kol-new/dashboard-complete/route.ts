@@ -30,27 +30,9 @@ export async function GET() {
 
     // 🚀 병렬로 모든 데이터 한 번에 조회
     const [
-      dashboardMetrics,
-      previousMonthData,
       shopsData,
       activitiesData
     ] = await Promise.all([
-      // 현재 월 대시보드 메트릭 - 레거시 호환성 체크
-      supabase
-        .from('kol_dashboard_metrics')
-        .select('*')
-        .eq('kol_id', kolData.id)
-        .or(`year_month.eq.${currentMonth},year_month.eq.${currentMonthCompact}`)
-        .maybeSingle(),
-      
-      // 이전 월 데이터 - 레거시 호환성 체크
-      supabase
-        .from('kol_dashboard_metrics')
-        .select('monthly_sales, monthly_commission')
-        .eq('kol_id', kolData.id)
-        .or(`year_month.eq.${previousMonth},year_month.eq.${previousMonthCompact}`)
-        .maybeSingle(),
-      
       // 전문점 데이터 (매출 정보 포함) - 레거시 호환성 체크
       supabase
         .from('shops')
@@ -89,27 +71,100 @@ export async function GET() {
         .limit(10)
     ]);
 
+    // 우선순위 로직으로 대시보드 메트릭 조회 - 표준 형식 우선
+    let dashboardMetrics = null;
+    
+    // 1단계: 표준 형식(YYYY-MM) 먼저 시도
+    const { data: standardCurrentData, error: standardCurrentError } = await supabase
+      .from('kol_dashboard_metrics')
+      .select('*')
+      .eq('kol_id', kolData.id)
+      .eq('year_month', currentMonth)
+      .maybeSingle();
+
+    if (standardCurrentError && standardCurrentError.code !== 'PGRST116') {
+      console.error('표준 형식 대시보드 메트릭 조회 오류:', standardCurrentError);
+    }
+
+    if (standardCurrentData) {
+      dashboardMetrics = standardCurrentData;
+      console.log(`표준 형식 데이터 사용: ${currentMonth} for KOL ${kolData.id}`);
+    } else {
+      // 2단계: 레거시 형식(YYYYMM) 시도
+      const { data: legacyCurrentData, error: legacyCurrentError } = await supabase
+        .from('kol_dashboard_metrics')
+        .select('*')
+        .eq('kol_id', kolData.id)
+        .eq('year_month', currentMonthCompact)
+        .maybeSingle();
+
+      if (legacyCurrentError && legacyCurrentError.code !== 'PGRST116') {
+        console.error('레거시 형식 대시보드 메트릭 조회 오류:', legacyCurrentError);
+      }
+
+      if (legacyCurrentData) {
+        dashboardMetrics = legacyCurrentData;
+        console.log(`레거시 형식 데이터 사용: ${currentMonthCompact} for KOL ${kolData.id}`);
+      } else {
+        console.log(`대시보드 메트릭 데이터 없음: ${currentMonth}/${currentMonthCompact} for KOL ${kolData.id}`);
+      }
+    }
+
+    // 우선순위 로직으로 이전 월 데이터 조회 - 표준 형식 우선
+    let previousMonthData = null;
+    
+    // 1단계: 표준 형식(YYYY-MM) 먼저 시도
+    const { data: standardPrevData, error: standardPrevError } = await supabase
+      .from('kol_dashboard_metrics')
+      .select('monthly_sales, monthly_commission')
+      .eq('kol_id', kolData.id)
+      .eq('year_month', previousMonth)
+      .maybeSingle();
+
+    if (standardPrevError && standardPrevError.code !== 'PGRST116') {
+      console.error('표준 형식 이전 월 데이터 조회 오류:', standardPrevError);
+    }
+
+    if (standardPrevData) {
+      previousMonthData = standardPrevData;
+      console.log(`표준 형식 이전 월 데이터 사용: ${previousMonth} for KOL ${kolData.id}`);
+    } else {
+      // 2단계: 레거시 형식(YYYYMM) 시도
+      const { data: legacyPrevData, error: legacyPrevError } = await supabase
+        .from('kol_dashboard_metrics')
+        .select('monthly_sales, monthly_commission')
+        .eq('kol_id', kolData.id)
+        .eq('year_month', previousMonthCompact)
+        .maybeSingle();
+
+      if (legacyPrevError && legacyPrevError.code !== 'PGRST116') {
+        console.error('레거시 형식 이전 월 데이터 조회 오류:', legacyPrevError);
+      }
+
+      if (legacyPrevData) {
+        previousMonthData = legacyPrevData;
+        console.log(`레거시 형식 이전 월 데이터 사용: ${previousMonthCompact} for KOL ${kolData.id}`);
+      } else {
+        console.log(`이전 월 데이터 없음: ${previousMonth}/${previousMonthCompact} for KOL ${kolData.id}`);
+      }
+    }
+
     // 오류 처리
-    if (dashboardMetrics.error) {
-      console.error('대시보드 메트릭 조회 오류:', dashboardMetrics.error);
-    }
-    if (previousMonthData.error) {
-      console.log('이전 월 데이터 조회 오류:', previousMonthData.error);
-    }
     if (shopsData.error) {
       console.error('전문점 데이터 조회 오류:', shopsData.error);
     }
+
     if (activitiesData.error) {
-      console.error('영업 일지 조회 오류:', activitiesData.error);
+      console.error('영업 일지 데이터 조회 오류:', activitiesData.error);
     }
 
     // 기본값 설정
-    const monthlySales = dashboardMetrics.data?.monthly_sales || 0;
-    const monthlyCommission = dashboardMetrics.data?.monthly_commission || 0;
-    const previousMonthSales = previousMonthData.data?.monthly_sales || 0;
-    const previousMonthCommission = previousMonthData.data?.monthly_commission || 0;
-    const totalShops = dashboardMetrics.data?.total_shops_count || 0;
-    const activeOrderingShops = dashboardMetrics.data?.active_shops_count || 0;
+    const monthlySales = dashboardMetrics?.monthly_sales || 0;
+    const monthlyCommission = dashboardMetrics?.monthly_commission || 0;
+    const previousMonthSales = previousMonthData?.monthly_sales || 0;
+    const previousMonthCommission = previousMonthData?.monthly_commission || 0;
+    const totalShops = dashboardMetrics?.total_shops_count || 0;
+    const activeOrderingShops = dashboardMetrics?.active_shops_count || 0;
 
     // 전문점 데이터 가공
     const formattedShops = (shopsData.data || []).map((shop: any) => ({

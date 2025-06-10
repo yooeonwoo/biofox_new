@@ -113,6 +113,7 @@ export async function GET(request: NextRequest) {
       legacyFormat: monthRangeCompact
     });
     
+    // 표준 형식과 레거시 형식 모두 조회하여 우선순위에 따라 처리
     const { data: summaryData, error: summaryError } = await supabase
       .from('kol_dashboard_metrics')
       .select('year_month, monthly_commission')
@@ -147,17 +148,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(emptyMonthlyData);
     }
 
-    // 결과 데이터 가공 - 모든 월에 대해 데이터가 있도록 보장
+    // 결과 데이터 가공 - 중복 데이터 처리 및 우선순위 적용
     const monthlyData = monthRange.map(yearMonth => {
-      // 표준 형식과 레거시 형식 모두 검색
+      // 표준 형식과 레거시 형식 모두 검색하여 우선순위 적용
       const yearMonthCompact = yearMonth.replace('-', '');
-      const existingData = summaryData.find(item => 
-        item.year_month === yearMonth || item.year_month === yearMonthCompact
-      );
+      
+      // 같은 월의 데이터가 여러 형식으로 있을 경우 표준 형식 우선
+      const standardData = summaryData.find(item => item.year_month === yearMonth);
+      const legacyData = summaryData.find(item => item.year_month === yearMonthCompact);
+      
+      let selectedData = null;
+      if (standardData) {
+        selectedData = standardData;
+        console.log(`월별 수당 - 표준 형식 사용: ${yearMonth}`);
+      } else if (legacyData) {
+        selectedData = legacyData;
+        console.log(`월별 수당 - 레거시 형식 사용: ${yearMonthCompact}`);
+      }
       
       return {
         month: yearMonth.substring(5) + '월', // 'MM월' 형식으로 변환
-        allowance: existingData?.monthly_commission || 0
+        allowance: selectedData?.monthly_commission || 0
       };
     });
 
