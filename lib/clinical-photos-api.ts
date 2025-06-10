@@ -78,7 +78,7 @@ async function getCurrentKolId(): Promise<number> {
     // 여러 KOL이 있을 경우 가장 최근에 생성된 것 사용
     console.log(`임상사진: ${kolsData.length}개의 KOL 중 ID=${kolsData[0].id} 선택됨`);
     return kolsData[0].id;
-  } catch (error) {
+  } catch (error: any) {
     console.error('KOL ID 가져오기 실패:', error);
     return 0;
   }
@@ -98,7 +98,7 @@ async function getUserEmail(): Promise<string> {
     }
     
     return '';
-  } catch (error) {
+  } catch (error: any) {
     console.error('사용자 이메일 가져오기 실패:', error);
     return '';
   }
@@ -194,7 +194,7 @@ export async function fetchCases(status?: string): Promise<ClinicalCase[]> {
       skinWrinkle: c.skin_wrinkle || false,
       skinEtc: c.skin_etc || false,
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching cases:', error);
     const kolId = await getCurrentKolId();
     if (!kolId) {
@@ -238,7 +238,7 @@ export async function fetchCase(caseId: number): Promise<ClinicalCase | null> {
       totalPhotos: data.clinical_photos[0].count,
       consentImageUrl: data.consent_image_url,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching case:', error);
     toast.error('케이스 정보를 불러오는데 실패했습니다.');
     return null;
@@ -293,7 +293,7 @@ export async function createCase(caseData: {
       updatedAt: data.updated_at,
       totalPhotos: 0,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating case:', error);
     toast.error('케이스 생성에 실패했습니다.');
     return null;
@@ -370,7 +370,7 @@ export async function updateCase(caseId: number, caseData: Partial<ClinicalCase>
       updatedAt: data.updated_at,
       consentImageUrl: data.consent_image_url,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating case:', error);
     toast.error('케이스 수정에 실패했습니다.');
     return null;
@@ -387,7 +387,7 @@ export async function deleteCase(caseId: number): Promise<boolean> {
     
     if (error) throw error;
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting case:', error);
     toast.error('케이스 삭제에 실패했습니다.');
     return false;
@@ -414,7 +414,7 @@ export async function fetchPhotos(caseId: number): Promise<PhotoSlot[]> {
       uploaded: true,
       photoId: p.id,
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching photos:', error);
     toast.error('사진 목록을 불러오는데 실패했습니다.');
     return [];
@@ -464,7 +464,7 @@ export async function uploadImage(file: File, caseId: number, type: 'photo' | 'c
       fileSize: result.fileSize,
       mimeType: result.mimeType,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading image:', error);
     toast.error(`이미지 업로드에 실패했습니다: ${error.message || error}`);
     throw new Error('이미지 업로드에 실패했습니다.');
@@ -497,7 +497,7 @@ export async function savePhoto(caseId: number, photoData: {
     
     if (error) throw error;
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving photo metadata:', error);
     throw new Error('사진 메타데이터 저장에 실패했습니다.');
   }
@@ -537,7 +537,7 @@ export async function deletePhoto(caseId: number, roundNumber: number, angle: st
       .eq('id', photoData.id);
     
     if (deleteError) throw deleteError;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting photo:', error);
     toast.error('사진 삭제에 실패했습니다.');
     throw error;
@@ -577,7 +577,7 @@ export async function uploadPhoto(caseId: number, roundNumber: number, angle: st
     
     // 업로드 성공 - API에서 이미 메타데이터 저장까지 완료됨
     return result.url;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Photo upload error:', error);
     toast.error(`사진 업로드에 실패했습니다: ${error.message || error}`);
     throw error;
@@ -605,7 +605,7 @@ export async function uploadConsentImage(caseId: number, file: File): Promise<st
     
     const result = await response.json();
     return result.url;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Consent image upload error:', error);
     toast.error(`동의서 업로드에 실패했습니다: ${error.message || error}`);
     throw error;
@@ -673,7 +673,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
       if (error) throw error;
       return data;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving round customer info:', error);
     throw error;
   }
@@ -690,7 +690,7 @@ export async function fetchRoundCustomerInfo(caseId: number): Promise<any[]> {
     
     if (error) throw error;
     return data || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching round customer info:', error);
     throw error;
   }
