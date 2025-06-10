@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { koKR } from "@clerk/localizations";
 import { Toaster } from "@/components/ui/toaster";
+import ReactQueryProvider from "@/components/providers/ReactQueryProvider";
 
 // 환경 변수 체크
 const hasClerkKeys = !!(
@@ -51,12 +52,14 @@ export default function RootLayout({
     return (
       <html lang="ko">
         <body className={`${inter.variable} ${notoSansKr.variable}`}>
-          <div className="p-4 bg-yellow-100 text-yellow-800 rounded-md mb-4">
-            <p>⚠️ 환경 변수가 설정되지 않았습니다. 인증 기능이 비활성화되었습니다.</p>
-            <p>Clerk과 Supabase 설정을 위해 .env 파일을 확인해주세요.</p>
-          </div>
-          {children}
-          <Toaster />
+          <ReactQueryProvider>
+            <div className="p-4 bg-yellow-100 text-yellow-800 rounded-md mb-4">
+              <p>⚠️ 환경 변수가 설정되지 않았습니다. 인증 기능이 비활성화되었습니다.</p>
+              <p>Clerk과 Supabase 설정을 위해 .env 파일을 확인해주세요.</p>
+            </div>
+            {children}
+            <Toaster />
+          </ReactQueryProvider>
         </body>
       </html>
     );
@@ -92,8 +95,10 @@ export default function RootLayout({
     >
       <html lang="ko">
         <body className={`${inter.variable} ${notoSansKr.variable}`}>
-          {children}
-          <Toaster />
+          <ReactQueryProvider>
+            {children}
+            <Toaster />
+          </ReactQueryProvider>
         </body>
       </html>
     </ClerkProvider>

@@ -33,6 +33,8 @@
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
     "@tabler/icons-react": "^3.31.0",
+    "@tanstack/react-query": "^5.80.6",
+    "@tanstack/react-query-devtools": "^5.80.6",
     "@types/recharts": "^1.8.29",
     "chart.js": "^4.4.8",
     "class-variance-authority": "^0.7.1",

@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { 
-  Search, 
   CoinsIcon,
   TrendingUp,
   TrendingDown,
@@ -13,113 +12,56 @@ import {
   Wallet,
   ArrowRight,
   ClipboardList,
-  FileText,
   AlertTriangle
 } from "lucide-react";
 import SalesChart from "../../components/sales-chart";
 import StoreRankingTable from "../../components/store-ranking-table";
-import UpcomingTasks from "../../components/upcoming-tasks";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import KolHeader from "../components/layout/KolHeader";
 import KolSidebar from "../components/layout/KolSidebar";
 import KolFooter from "../components/layout/KolFooter";
-import MetricCard from "../components/dashboard/MetricCard";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DialogTitle } from "@/components/ui/dialog";
 import KolMobileMenu from "../components/layout/KolMobileMenu";
 import { useDashboardData } from "@/hooks/useDashboardData";
 
+// 🚀 서버 데이터와 클라이언트 상태를 결합한 하이브리드 컴포넌트
+
+interface ClientDashboardProps {
+  initialData: any; // 서버에서 전달받은 초기 데이터
+}
+
 // 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
   if (value === 0) return "0원";
   
-  // 만 단위 계산
   const man = Math.floor(value / 10000);
   const rest = value % 10000;
   
   if (man > 0) {
-    // 만 단위가 있는 경우
     if (rest > 0) {
-      // 나머지가 있는 경우 (예: 510만 4740원)
       return `${man.toLocaleString()}만 ${rest}원`;
     }
-    // 나머지가 없는 경우 (예: 500만원)
     return `${man.toLocaleString()}만원`;
   } else {
-    // 만 단위가 없는 경우 (예: 9800원)
     return `${value.toLocaleString()}원`;
   }
 };
 
-// 대시보드 데이터 타입 정의
-interface DashboardData {
-  kol: {
-    id: number;
-    name: string;
-    shopName: string;
-  };
-  sales: {
-    currentMonth: number;
-    previousMonth: number;
-    growth: number;
-  };
-  allowance: {
-    currentMonth: number;
-    previousMonth: number;
-    growth: number;
-  };
-  shops: {
-    total: number;
-    ordering: number;
-    notOrdering: number;
-    lastAddedDate?: string;
-  };
-}
-
-// 전문점 데이터 타입 정의
-interface ShopData {
-  id: number;
-  ownerName: string;
-  shop_name: string;
-  region: string;
-  status: string;
-  createdAt: string;
-  is_owner_kol?: boolean;
-  sales: {
-    total: number;
-    product: number;
-    device: number;
-    hasOrdered: boolean;
-  };
-}
-
-// 태스크 데이터 타입 정의
-interface ActivityData {
-  id: number;
-  shopId?: number;
-  shopName?: string;
-  activityDate: string;
-  content: string;
-  createdAt: string;
-  timeAgo: string;
-  icon: React.ReactNode;
-}
-
-export default function KolNewPage() {
+export default function ClientDashboard({ initialData }: ClientDashboardProps) {
   const { isLoaded, isSignedIn, user } = useUser();
   const { signOut } = useClerk();
   const [isKol, setIsKol] = useState<boolean | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // 🚀 React Query를 사용한 데이터 페칭 및 캐싱
+  // 🚀 React Query 사용 - 서버 데이터가 있으면 초기값으로 사용
   const { 
     data: dashboardCompleteData, 
     isLoading: loading, 
     error, 
     refetch 
-  } = useDashboardData();
+  } = useDashboardData(initialData);
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -130,16 +72,16 @@ export default function KolNewPage() {
         setIsKol(userRole === "kol");
       } catch (err) {
         console.error('사용자 역할 확인 중 오류:', err);
-        // 기본값으로 KOL 설정
         setIsKol(true);
       }
     }
   }, [isLoaded, isSignedIn, user]);
 
-  // 🚀 React Query 데이터 가공
-  const dashboardData = dashboardCompleteData?.dashboard;
-  const shopsData = dashboardCompleteData?.shops?.shops || [];
-  const activityData = (dashboardCompleteData?.activities || []).map((act: any) => ({
+  // 🚀 서버 데이터와 클라이언트 데이터 결합
+  const finalData = dashboardCompleteData || initialData;
+  const dashboardData = finalData?.dashboard;
+  const shopsData = finalData?.shops?.shops || [];
+  const activityData = (finalData?.activities || []).map((act: any) => ({
     ...act,
     icon: act.shopId ? 
       <Store className="h-4 w-4 text-blue-500" /> : 
@@ -150,14 +92,12 @@ export default function KolNewPage() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      // 로그아웃 후 홈으로 리다이렉트 (선택적)
-      // window.location.href = '/';
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
   };
 
-  // 데이터 다시 로드 - React Query refetch 사용
+  // 데이터 다시 로드
   const handleRetry = () => {
     refetch();
   };
@@ -183,8 +123,8 @@ export default function KolNewPage() {
     return redirect('/');
   }
 
-  // 데이터 로딩 중인 경우
-  if (loading) {
+  // 서버 데이터도 없고 클라이언트 로딩 중인 경우
+  if (!initialData && loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -200,7 +140,7 @@ export default function KolNewPage() {
   }
 
   // 에러가 발생한 경우
-  if (error) {
+  if (!initialData && error) {
     const errorMessage = error instanceof Error ? error.message : '데이터를 불러오는데 실패했습니다.';
     
     return (
@@ -264,15 +204,21 @@ export default function KolNewPage() {
         <main className="flex-1 overflow-auto bg-muted/10 p-4 md:p-6">
           <div className="mx-auto max-w-7xl">
             <div className="mb-6">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{dashboardData?.kol?.shopName || "..."} - {dashboardData?.kol?.name || "..."} KOL</h1>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
+                {dashboardData?.kol?.shopName || "..."} - {dashboardData?.kol?.name || "..."} KOL
+                {initialData && (
+                  <span className="ml-2 text-sm text-green-600 bg-green-100 px-2 py-1 rounded">
+                    서버 렌더링
+                  </span>
+                )}
+              </h1>
             </div>
 
-            {/* 상단 메트릭 카드 영역 (2개 카드) */}
+            {/* 상단 메트릭 카드 영역 */}
             <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* 카드 1: 매출 & 수당 */}
               <Card>
                 <CardContent className="p-4">
-                  {/* 당월 매출 섹션 */}
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
                       <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 매출:</span>
@@ -287,18 +233,15 @@ export default function KolNewPage() {
                     </div>
                   </div>
                   
-                  {/* 빈 공간 추가하여 높이 맞추기 */}
                   <div className="mt-1 invisible h-[21px] sm:h-[24px]">
                     <div className="flex items-center text-[10px] sm:text-xs">
                       <span>&nbsp;</span>
                     </div>
                   </div>
                   
-                  {/* 구분선 스타일 강화 */}
                   <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
 
-                  {/* 당월 수당 섹션 */}
-                   <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between">
                     <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
                       <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 수당:</span>
                       <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
@@ -329,7 +272,6 @@ export default function KolNewPage() {
               {/* 카드 2: 현황 & 주문 */}
               <Card>
                 <CardContent className="p-4">
-                  {/* 전문점 현황 섹션 */}
                   <div className="flex items-center justify-between">
                      <div className="flex items-baseline gap-2">
                       <span className="text-sm sm:text-lg md:text-xl font-bold">전문점 현황:</span>
@@ -342,25 +284,11 @@ export default function KolNewPage() {
                     </div>
                   </div>
                   <div className="mt-1 text-[10px] sm:text-xs text-orange-500">
-                    {(() => {
-                      // 마지막 전문점 추가일 (가정: dashboardData에 lastShopAddedDate가 있음)
-                      const lastAddedDate = dashboardData?.shops?.lastAddedDate ? new Date(dashboardData.shops.lastAddedDate) : null;
-                      
-                      if (!lastAddedDate) return "최근 전문점 계약 정보가 없습니다.";
-                      
-                      // 오늘 날짜와의 차이 계산
-                      const today = new Date();
-                      const diffTime = Math.abs(today.getTime() - lastAddedDate.getTime());
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      
-                      return `${diffDays}일 동안 전문점 계약이 없었습니다.`;
-                    })()}
+                    최근 전문점 계약 정보를 확인 중입니다.
                   </div>
                   
-                  {/* 구분선 스타일 강화 */}
                   <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
 
-                  {/* 당월 주문 전문점 섹션 */}
                    <div className="flex items-center justify-between">
                      <div className="flex items-baseline gap-2">
                       <span className="text-sm sm:text-lg md:text-xl font-bold">당월 주문 전문점:</span>
@@ -398,13 +326,12 @@ export default function KolNewPage() {
                 </CardFooter>
               </Card>
               
-              {/* 내 영업 일지 카드 - 반응형 높이 */}
+              {/* 내 영업 일지 카드 */}
               <Card className="flex flex-col h-full">
                 <CardHeader className="pb-0">
                   <CardTitle className="text-sm sm:text-base md:text-lg">내 영업 일지</CardTitle>
                 </CardHeader>
                 
-                {/* 높이 자동 조절을 위한 flex 구조 적용 */}
                 <CardContent className="flex flex-1 flex-col">
                   {activityData.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center py-8">
@@ -412,7 +339,7 @@ export default function KolNewPage() {
                     </div>
                   ) : (
                     <div className="space-y-3 mt-2">
-                      {activityData.slice(0, 5).map((activity) => (
+                      {activityData.slice(0, 5).map((activity: any) => (
                         <div key={activity.id} className="flex items-start space-x-3 border-b border-gray-100 pb-2">
                           <div className="rounded-full bg-gray-100 p-1.5">
                             {activity.icon}
@@ -437,7 +364,6 @@ export default function KolNewPage() {
                   )}
                 </CardContent>
                 
-                {/* 푸터는 항상 하단에 고정 */}
                 <CardFooter className="mt-auto border-t px-6 py-3">
                   <div className="ml-auto">
                     <Button asChild variant="ghost" size="sm">
