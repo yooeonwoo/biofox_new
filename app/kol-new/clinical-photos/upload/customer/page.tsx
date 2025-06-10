@@ -145,6 +145,85 @@ export default function CustomerClinicalUploadPage() {
   const mainContentRef = useRef<HTMLElement>(null);
   const casesRef = useRef<ClinicalCase[]>([]);
 
+  // 🎯 사용자 상호작용 상태 추적 (Focus State + User Activity)
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const userActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 사용자 상호작용 감지 훅
+  useEffect(() => {
+    const interactiveElements = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
+    
+    const checkFocusState = () => {
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement && 
+        interactiveElements.includes(activeElement.tagName) &&
+        activeElement !== document.body;
+      
+      console.log('포커스 상태 변경:', { 
+        activeElement: activeElement?.tagName, 
+        isInputFocused,
+        id: activeElement?.id || 'no-id'
+      });
+      
+      setIsUserInteracting(isInputFocused);
+    };
+
+    // 사용자 활동 감지 (마우스, 키보드, 터치)
+    const handleUserActivity = (event: Event) => {
+      // 특정 이벤트 타입에 대해서만 상호작용으로 간주
+      const interactionEvents = ['mousedown', 'keydown', 'touchstart', 'input', 'change'];
+      if (!interactionEvents.includes(event.type)) return;
+
+      console.log('사용자 활동 감지:', event.type);
+      setIsUserInteracting(true);
+      
+      // 기존 타이머 클리어
+      if (userActivityTimeoutRef.current) {
+        clearTimeout(userActivityTimeoutRef.current);
+      }
+      
+      // 활동 후 500ms 경과 시 상호작용 상태 해제
+      userActivityTimeoutRef.current = setTimeout(() => {
+        // 여전히 포커스된 요소가 있는지 재확인
+        const activeElement = document.activeElement;
+        const isInputFocused = activeElement && 
+          interactiveElements.includes(activeElement.tagName) &&
+          activeElement !== document.body;
+          
+        if (!isInputFocused) {
+          console.log('사용자 활동 타임아웃 - 상호작용 상태 해제');
+          setIsUserInteracting(false);
+        }
+      }, 500);
+    };
+
+    // 이벤트 리스너 등록
+    document.addEventListener('focusin', checkFocusState);
+    document.addEventListener('focusout', checkFocusState);
+    document.addEventListener('mousedown', handleUserActivity);
+    document.addEventListener('keydown', handleUserActivity);
+    document.addEventListener('touchstart', handleUserActivity);
+    document.addEventListener('input', handleUserActivity);
+    document.addEventListener('change', handleUserActivity);
+
+    // 초기 포커스 상태 확인
+    checkFocusState();
+
+    return () => {
+      document.removeEventListener('focusin', checkFocusState);
+      document.removeEventListener('focusout', checkFocusState);
+      document.removeEventListener('mousedown', handleUserActivity);
+      document.removeEventListener('keydown', handleUserActivity);
+      document.removeEventListener('touchstart', handleUserActivity);
+      document.removeEventListener('input', handleUserActivity);
+      document.removeEventListener('change', handleUserActivity);
+      
+      if (userActivityTimeoutRef.current) {
+        clearTimeout(userActivityTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // debounce 함수 (영어/숫자/특수문자 입력 문제 해결)
   const debouncedUpdate = (key: string, updateFn: () => void, delay: number = 500) => {
     // 기존 타이머 클리어
@@ -393,19 +472,25 @@ export default function CustomerClinicalUploadPage() {
     loadCases();
   }, [isLoaded, isSignedIn, isKol]);
 
-  // 스크롤 기반 숫자 애니메이션 (스크롤할 때만 표시) - cases 의존성 제거로 입력 시 애니메이션 방지
+  // 🎯 스크롤 기반 숫자 애니메이션 (사용자 상호작용 중이 아닐 때만 표시)
   useEffect(() => {
     let scrollTimeout: NodeJS.Timeout | null = null;
     let throttleTimeout: NodeJS.Timeout | null = null;
     let isScrolling = false;
     
     const handleScroll = () => {
-      console.log('스크롤 이벤트 감지됨'); // 디버깅용
+      console.log('스크롤 이벤트 감지됨', { isUserInteracting }); // 디버깅용
+      
+      // 🚫 사용자 상호작용 중이면 애니메이션 비활성화
+      if (isUserInteracting) {
+        console.log('사용자 상호작용 중 - 스크롤 애니메이션 차단');
+        return;
+      }
       
       // 스크롤 시작 시에만 숫자 표시 (throttling으로 성능 향상)
       if (!isScrolling && !throttleTimeout) {
         isScrolling = true;
-        console.log('숫자 표시 시작'); // 디버깅용
+        console.log('📜 의도적 스크롤 감지 - 숫자 애니메이션 시작'); // 디버깅용
         
         // 현재 cases 상태를 ref로 접근하여 애니메이션 표시
         const currentCases = casesRef.current;
@@ -413,19 +498,19 @@ export default function CustomerClinicalUploadPage() {
           setNumberVisibleCards(new Set(currentCases.map(c => c.id)));
         }
         
-        // throttling: 100ms 동안 추가 실행 방지
+        // throttling: 150ms 동안 추가 실행 방지 (더 안정적인 감지)
         throttleTimeout = setTimeout(() => {
           throttleTimeout = null;
-        }, 100);
+        }, 150);
       }
       
       // 스크롤이 멈추면 숫자 숨기기 (디바운싱)
       if (scrollTimeout) clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
-        console.log('숫자 숨김'); // 디버깅용
+        console.log('📜 스크롤 멈춤 - 숫자 애니메이션 종료'); // 디버깅용
         setNumberVisibleCards(new Set());
         isScrolling = false;
-      }, 600); // 0.6초 후 숫자 숨김
+      }, 800); // 0.8초 후 숫자 숨김 (조금 더 길게)
     };
 
     // 스크롤 이벤트 리스너 등록 (항상 등록)
@@ -436,18 +521,33 @@ export default function CustomerClinicalUploadPage() {
       if (scrollTimeout) clearTimeout(scrollTimeout);
       if (throttleTimeout) clearTimeout(throttleTimeout);
     };
-  }, []); // 의존성 배열을 빈 배열로 변경
+  }, [isUserInteracting]); // isUserInteracting 의존성 추가
 
-  // 초기 애니메이션 테스트 (케이스 로드 후 한 번만 실행)
+  // 🎬 초기 애니메이션 테스트 (케이스 로드 후 한 번만 실행, 사용자 상호작용 중이 아닐 때만)
   useEffect(() => {
-    if (cases.length > 0) {
-      console.log('초기 애니메이션 테스트 시작', cases.length);
-      setNumberVisibleCards(new Set(cases.map(c => c.id)));
-      setTimeout(() => {
-        setNumberVisibleCards(new Set());
-      }, 2000);
+    if (cases.length > 0 && !isUserInteracting) {
+      console.log('💫 초기 애니메이션 테스트 시작', { casesLength: cases.length, isUserInteracting });
+      
+      // 약간의 지연 후 애니메이션 시작 (페이지 로드 완료 후)
+      const initialAnimationTimer = setTimeout(() => {
+        // 다시 한 번 사용자 상호작용 상태 확인
+        if (!isUserInteracting) {
+          setNumberVisibleCards(new Set(cases.map(c => c.id)));
+          
+          // 2초 후 숨김
+          setTimeout(() => {
+            setNumberVisibleCards(new Set());
+          }, 2000);
+        } else {
+          console.log('초기 애니메이션 차단 - 사용자 상호작용 중');
+        }
+      }, 1000); // 1초 지연
+      
+      return () => {
+        clearTimeout(initialAnimationTimer);
+      };
     }
-  }, [cases.length]); // cases.length만 의존성으로 사용
+  }, [cases.length, isUserInteracting]); // cases.length와 isUserInteracting 의존성 추가
 
   // cases 상태를 ref에 동기화 (스크롤 애니메이션에서 사용)
   useEffect(() => {
