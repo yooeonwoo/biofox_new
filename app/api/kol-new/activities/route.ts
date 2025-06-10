@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthenticatedKol } from '@/lib/auth-cache';
 
 // 전문점 정보 타입 정의
 interface ShopInfo {
@@ -28,100 +28,12 @@ interface CreateActivityRequest {
 // KOL 영업 일지 API 라우트
 export async function GET() {
   try {
-    // 인증 확인
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json(
-        { error: '인증되지 않은 요청입니다.' },
-        { status: 401 }
-      );
-    }
+    console.log('영업 일지 API 요청 시작');
 
-    console.log(`영업 일지 API 요청: Clerk ID=${userId}`);
+    // 🚀 캐시된 인증 확인
+    const { user: userData, kol: kolData } = await getAuthenticatedKol();
 
-    // KOL ID 조회 - 로그인한 사용자의 KOL ID 가져오기
-    let { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, email, name, role')
-      .eq('clerk_id', userId)
-      .single();
-
-    if (userError) {
-      console.error(`사용자 정보 조회 오류(clerk_id=${userId}):`, userError);
-      
-      // 이메일로 사용자 검색 시도 (대비책)
-      const { data: userByEmail, error: emailError } = await supabase
-        .rpc('find_user_by_clerk_metadata', { clerk_user_id: userId });
-        
-      if (emailError || !userByEmail) {
-        console.error('이메일로 사용자 검색 실패:', emailError);
-        return NextResponse.json(
-          { error: '사용자 정보를 찾을 수 없습니다. 관리자에게 문의하세요.' },
-          { status: 404 }
-        );
-      }
-      
-      // 이메일로 찾은 경우 사용자 정보 업데이트
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ clerk_id: userId })
-        .eq('id', userByEmail.id);
-        
-      if (updateError) {
-        console.error('사용자 정보 업데이트 실패:', updateError);
-      } else {
-        console.log(`사용자 정보 업데이트 성공: ID=${userByEmail.id}, Clerk ID=${userId}`);
-      }
-      
-      // 업데이트된 사용자 정보 사용
-      userData = userByEmail;
-    }
-
-    if (!userData) {
-      console.error(`사용자 정보 없음(clerk_id=${userId})`);
-      return NextResponse.json(
-        { error: '사용자 정보를 찾을 수 없습니다. 관리자에게 문의하세요.' },
-        { status: 404 }
-      );
-    }
-
-    // 사용자 역할 확인
-    if (userData.role !== 'kol') {
-      console.error(`비KOL 사용자 접근(userId=${userData.id}, role=${userData.role})`);
-      return NextResponse.json(
-        { error: 'KOL 역할이 아닙니다.' },
-        { status: 403 }
-      );
-    }
-
-    // KOL 정보 조회 - 여러 건이 있을 수 있으므로 order by와 limit 사용하여 가장 최신 항목 반환
-    let { data: kolDataArray, error: kolError } = await supabase
-      .from('kols')
-      .select('id')
-      .eq('user_id', userData.id)
-      .order('created_at', { ascending: false }); // 가장 최근에 생성된 것 우선
-    
-    if (kolError) {
-      console.error(`KOL 정보 조회 오류(user_id=${userData.id}):`, kolError);
-      return NextResponse.json(
-        { error: 'KOL 정보를 찾을 수 없습니다. 관리자에게 문의하세요.' },
-        { status: 404 }
-      );
-    }
-
-    if (!kolDataArray || kolDataArray.length === 0) {
-      console.error(`KOL 정보 없음(user_id=${userData.id})`);
-      return NextResponse.json(
-        { error: 'KOL 정보를 찾을 수 없습니다. 관리자에게 문의하세요.' },
-        { status: 404 }
-      );
-    }
-    
-    // 여러 KOL 데이터가 있는 경우 첫 번째(가장 최근) 항목 사용
-    const kolData = kolDataArray[0];
-    console.log(`여러 KOL 중 선택됨: ID=${kolData.id}, 총 ${kolDataArray.length}개의 KOL 데이터 존재`);
-
-    console.log(`KOL 조회 성공: ID=${kolData.id}`);
+    console.log(`영업 일지 조회 시작: KOL ID=${kolData.id}`);
 
     // 영업 일지 데이터 조회 (최근 활동부터 정렬)
     const { data: activities, error: activitiesError } = await supabase

@@ -143,21 +143,25 @@ export default function KolNewPage() {
           setError(null);
           setErrorDetails(null);
           
-          // 대시보드 데이터 로드
-          console.log('대시보드 데이터 로드 시작...');
-          const dashboardResponse = await fetch('/api/kol-new/dashboard');
+          console.log('통합 대시보드 API 호출 시작...');
           
-          if (!dashboardResponse.ok) {
-            const errorData = await dashboardResponse.json().catch(() => ({}));
-            const errorMessage = errorData.error || '대시보드 데이터를 불러오는데 실패했습니다.';
+          // 🚀 통합 API 호출로 최대 성능 최적화 (단일 요청으로 모든 데이터 로드)
+          const completeResponse = await fetch('/api/kol-new/dashboard-complete');
+          
+          if (!completeResponse.ok) {
+            const errorData = await completeResponse.json().catch(() => ({}));
+            const errorMessage = errorData.error || '데이터를 불러오는데 실패했습니다.';
             const details = errorData.details || '';
             
-            console.error('대시보드 API 에러:', errorMessage, details);
+            console.error('통합 대시보드 API 에러:', errorMessage, details);
             throw new Error(errorMessage, { cause: details });
           }
           
-          const dashboardResult = await dashboardResponse.json();
-          console.log('대시보드 데이터 로드 완료');
+          const completeResult = await completeResponse.json();
+          console.log('통합 대시보드 API 호출 완료');
+          
+          // 데이터 분해
+          const { dashboard: dashboardResult, shops: shopsResult, activities: activityResult } = completeResult;
           
           // 수정: 초기 로딩 시 ordering 값이 activeShopsCount와 일치하도록 확인
           if (dashboardResult.shops) {
@@ -165,15 +169,6 @@ export default function KolNewPage() {
           }
           
           setDashboardData(dashboardResult);
-
-          // 전문점 데이터 로드
-          const shopsResponse = await fetch('/api/kol-new/shops');
-          if (!shopsResponse.ok) {
-            const errorData = await shopsResponse.json().catch(() => ({}));
-            console.error('전문점 API 에러:', errorData.error);
-            throw new Error(errorData.error || '전문점 데이터를 불러오는데 실패했습니다.');
-          }
-          const shopsResult = await shopsResponse.json();
           console.log('전문점 데이터 구조:', shopsResult);
           
           // 전문점 데이터 가공 - shop_name 및 is_owner_kol 활용하고 매출은 만원 단위로 변환
@@ -254,36 +249,13 @@ export default function KolNewPage() {
             }
           }
 
-          // 영업 일지 데이터 로드
-          const activityResponse = await fetch('/api/kol-new/activities'); 
-          if (!activityResponse.ok) {
-            const errorData = await activityResponse.json().catch(() => ({}));
-            console.error('영업 일지 API 에러:', errorData.error);
-            throw new Error(errorData.error || '영업 일지 데이터를 불러오는데 실패했습니다.');
-          }
-          const activityResult = await activityResponse.json();
-          
-          // 영업 일지 데이터 포맷팅
-          const formattedActivities = activityResult.map((act: any) => {
-            // 날짜 포맷팅
-            const activityDate = new Date(act.activity_date);
-            const now = new Date();
-            const diffTime = Math.abs(now.getTime() - activityDate.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            return {
-              id: act.id,
-              shopId: act.shop_id,
-              shopName: act.shop_name, // API에서 전달받는 경우
-              activityDate: new Date(act.activity_date).toLocaleDateString('ko-KR'),
-              content: act.content,
-              createdAt: new Date(act.created_at).toLocaleDateString('ko-KR'),
-              timeAgo: diffDays === 0 ? '오늘' : `${diffDays}일 전`,
-              icon: act.shop_id ? 
-                <Store className="h-4 w-4 text-blue-500" /> : 
-                <ClipboardList className="h-4 w-4 text-purple-500" />
-            };
-          });
+          // 영업 일지 데이터 가공 (통합 API에서 이미 포맷팅됨)
+          const formattedActivities = activityResult.map((act: any) => ({
+            ...act,
+            icon: act.shopId ? 
+              <Store className="h-4 w-4 text-blue-500" /> : 
+              <ClipboardList className="h-4 w-4 text-purple-500" />
+          }));
           
           setActivityData(formattedActivities);
           setLoading(false);
