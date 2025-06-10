@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getAuthenticatedKol } from '@/lib/auth-cache';
+import { auth } from '@clerk/nextjs/server';
 
 // 전문점 정보 타입 정의
 interface ShopInfo {

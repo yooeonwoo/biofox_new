@@ -117,10 +117,10 @@ export async function GET() {
     const { data: salesData, error: salesError } = await supabase
       .from('shop_sales_metrics')
       .select('shop_id, total_sales, product_sales, device_sales, commission')
-      .eq('year_month', formattedMonth);
+      .eq('year_month', currentMonth);
 
     if (salesError) {
-      console.error(`매출 데이터 조회 오류(year_month=${formattedMonth}):`, salesError);
+      console.error(`매출 데이터 조회 오류(year_month=${currentMonth}):`, salesError);
       return NextResponse.json(
         { error: '매출 데이터를 조회하는 중 오류가 발생했습니다.' },
         { status: 500 }
