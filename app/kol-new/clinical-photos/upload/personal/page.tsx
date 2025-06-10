@@ -416,6 +416,42 @@ export default function PersonalClinicalUploadPage() {
         : case_
     ));
   };
+
+  // 🚀 본인 정보 저장 함수 (날짜, 관리유형, 특이사항)
+  const savePersonalInfo = async (caseId: string) => {
+    try {
+      const currentRound = currentRounds[caseId] || 1;
+      const case_ = cases.find(c => c.id === caseId);
+      
+      if (!case_) {
+        throw new Error('케이스를 찾을 수 없습니다.');
+      }
+
+      const roundInfo = case_.roundCustomerInfo[currentRound];
+      
+      if (!roundInfo) {
+        throw new Error('회차 정보를 찾을 수 없습니다.');
+      }
+
+      // 저장할 데이터 준비
+      const updateData = {
+        treatmentPlan: roundInfo.memo || '', // 특이사항을 treatmentPlan에 저장
+        // 날짜와 관리유형은 추가 필드로 저장 (API 스키마에 따라 조정 필요)
+        ...(roundInfo.date && { treatmentDate: roundInfo.date }),
+        ...(roundInfo.treatmentType && { treatmentType: roundInfo.treatmentType })
+      };
+
+      // API 호출하여 서버에 저장
+      await updateCase(parseInt(caseId), updateData);
+      
+      console.log('본인 정보가 성공적으로 저장되었습니다.');
+      alert('본인 정보가 저장되었습니다!');
+      
+    } catch (error) {
+      console.error('본인 정보 저장 실패:', error);
+      alert('정보 저장에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
   
   // 본래 API와 연동하는 체크박스 업데이트 함수
   const updateCaseCheckboxes = async (caseId: string, updates: Partial<{
@@ -647,10 +683,10 @@ export default function PersonalClinicalUploadPage() {
                       </div>
                       
                       {/* 블록 2: 고객 정보 */}
-                      <div className="space-y-3 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
+                      <div className="space-y-3 border-2 border-biofox-blue-violet/20 rounded-lg p-4 bg-biofox-blue-violet/5">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-blue-700">본인 정보</h3>
-                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40">
+                          <h3 className="text-sm font-medium text-biofox-blue-violet">본인 정보</h3>
+                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-biofox-blue-violet/20">
                             {currentRounds[case_.id] || 1}회차
                           </span>
                         </div>
@@ -691,11 +727,23 @@ export default function PersonalClinicalUploadPage() {
                               </SelectContent>
                             </Select>
                           </div>
+
+                          {/* 🚀 본인 정보 저장 버튼 */}
+                          <div className="pt-2">
+                            <Button
+                              onClick={() => savePersonalInfo(case_.id)}
+                              className="w-full h-8 text-xs bg-biofox-blue-violet hover:bg-biofox-blue-violet/90 text-white"
+                              size="sm"
+                            >
+                              <Save className="mr-1 h-3 w-3" />
+                              본인 정보 저장
+                            </Button>
+                          </div>
                         </div>
                       </div>
                       {/* 블록 3: 홈케어 제품 */}
-                      <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <Label className="text-sm font-medium text-blue-700">홈케어 제품</Label>
+                      <div className="space-y-2 border-2 border-biofox-blue-violet/20 rounded-lg p-4 bg-biofox-blue-violet/5">
+                        <Label className="text-sm font-medium text-biofox-blue-violet">홈케어 제품</Label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-2 gap-y-2">
                           {SYSTEM_OPTIONS.products.map((product) => {
                             const currentRound = currentRounds[case_.id] || 1;
@@ -733,7 +781,7 @@ export default function PersonalClinicalUploadPage() {
                               <label key={product.value} className={`
                                 flex items-center space-x-1 p-1.5 rounded-lg text-xs
                                 border border-transparent cursor-pointer
-                                hover:bg-soksok-light-blue/20
+                                hover:bg-biofox-blue-violet/10
                                 transition-all duration-150
                                 ${isSelected
                                   ? 'bg-biofox-blue-violet/10 border-biofox-blue-violet/30'
@@ -765,8 +813,8 @@ export default function PersonalClinicalUploadPage() {
                       </div>
                       
                       {/* 블록 4: 고객 피부타입 */}
-                      <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <Label className="text-sm font-medium text-blue-700">고객 피부타입</Label>
+                      <div className="space-y-2 border-2 border-biofox-blue-violet/20 rounded-lg p-4 bg-biofox-blue-violet/5">
+                        <Label className="text-sm font-medium text-biofox-blue-violet">고객 피부타입</Label>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2 gap-y-2">
                           {SYSTEM_OPTIONS.skinTypes.map((skinType) => {
                             const currentRound = currentRounds[case_.id] || 1;
@@ -813,7 +861,7 @@ export default function PersonalClinicalUploadPage() {
                               <label key={skinType.value} className={`
                                 flex items-center space-x-1 p-1.5 rounded-lg text-xs
                                 border border-transparent cursor-pointer
-                                hover:bg-soksok-light-blue/20
+                                hover:bg-biofox-blue-violet/10
                                 transition-all duration-150
                                 ${isSelected
                                   ? 'bg-biofox-blue-violet/10 border-biofox-blue-violet/30'
@@ -845,8 +893,8 @@ export default function PersonalClinicalUploadPage() {
                       </div>
                       
                       {/* 블록 5: 특이사항 */}
-                      <div className="space-y-2 border-2 border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                        <Label htmlFor={`memo-${case_.id}`} className="text-sm font-medium text-gray-700">특이사항</Label>
+                      <div className="space-y-3 border-2 border-biofox-blue-violet/20 rounded-lg p-4 bg-biofox-blue-violet/5">
+                        <Label htmlFor={`memo-${case_.id}`} className="text-sm font-medium text-biofox-blue-violet">특이사항</Label>
                         <Textarea
                           id={`memo-${case_.id}`}
                           value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || ''}
@@ -856,6 +904,15 @@ export default function PersonalClinicalUploadPage() {
                           placeholder="해당 회차 관련 특이사항을 입력하세요..."
                           className="w-full min-h-[80px] border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                         />
+                        
+                        {/* 🚀 전체 정보 저장 버튼 */}
+                        <Button
+                          onClick={() => savePersonalInfo(case_.id)}
+                          className="w-full h-9 text-sm bg-biofox-blue-violet hover:bg-biofox-blue-violet/90 text-white"
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          전체 정보 저장
+                        </Button>
                       </div>
                           </CardContent>
                     </div>
