@@ -1942,7 +1942,12 @@ export default function CustomerClinicalUploadPage() {
                       </div>
                       {/* 블록 3: 홈케어 제품 */}
                       <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <Label className="text-sm font-medium text-blue-700">홈케어 제품</Label>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm font-medium text-blue-700">홈케어 제품</Label>
+                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40">
+                            {currentRounds[case_.id] || 1}회차
+                          </span>
+                        </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-2 gap-y-2">
                           {SYSTEM_OPTIONS.products.map((product) => {
                             const currentRound = currentRounds[case_.id] || 1;
@@ -1953,28 +1958,9 @@ export default function CustomerClinicalUploadPage() {
                               memo: '', 
                               date: '' 
                             };
-                            // 제품 데이터를 직접 boolean 필드로 매핑
-                            let isSelected = false;
-                            let fieldName = '';
                             
-                            switch(product.value) {
-                              case 'cure_booster':
-                                isSelected = case_.cureBooster || false;
-                                fieldName = 'cureBooster';
-                                break;
-                              case 'cure_mask':
-                                isSelected = case_.cureMask || false;
-                                fieldName = 'cureMask';
-                                break;
-                              case 'premium_mask':
-                                isSelected = case_.premiumMask || false;
-                                fieldName = 'premiumMask';
-                                break;
-                              case 'allinone_serum':
-                                isSelected = case_.allInOneSerum || false;
-                                fieldName = 'allInOneSerum';
-                                break;
-                            }
+                            // 현재 회차의 제품 데이터에서 선택 상태 확인
+                            const isSelected = currentRoundInfo.products.includes(product.value);
                             
                             return (
                               <label key={product.value} className={`
@@ -1991,24 +1977,52 @@ export default function CustomerClinicalUploadPage() {
                                   id={`product-${case_.id}-${currentRound}-${product.value}`}
                                   checked={isSelected}
                                   onCheckedChange={async (checked) => {
+                                    // 현재 회차의 제품 목록 업데이트
+                                    const updatedProducts = checked
+                                      ? [...currentRoundInfo.products, product.value]
+                                      : currentRoundInfo.products.filter(p => p !== product.value);
+                                    
                                     // 즉시 로컬 상태 업데이트
-                                    setCases(prev => prev.map(case_ => 
-                                      case_.id === case_.id 
-                                        ? { ...case_, [fieldName]: checked }
-                                        : case_
+                                    setCases(prev => prev.map(c => 
+                                      c.id === case_.id 
+                                        ? { 
+                                            ...c, 
+                                            roundCustomerInfo: {
+                                              ...c.roundCustomerInfo,
+                                              [currentRound]: {
+                                                ...currentRoundInfo,
+                                                products: updatedProducts
+                                              }
+                                            }
+                                          }
+                                        : c
                                     ));
                                     
                                     // 백그라운드에서 저장
                                     try {
-                                      const updates = { [fieldName]: checked };
-                                      await updateCaseCheckboxes(case_.id, updates);
+                                      await handleRoundCustomerInfoUpdate(case_.id, currentRound, { 
+                                        products: updatedProducts 
+                                      });
                                     } catch (error) {
-                                      console.error('자동 저장 실패:', error);
+                                      console.error('제품 선택 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
-                                      setCases(prev => prev.map(case_ => 
-                                        case_.id === case_.id 
-                                          ? { ...case_, [fieldName]: !checked }
-                                          : case_
+                                      const revertedProducts = checked
+                                        ? currentRoundInfo.products.filter(p => p !== product.value)
+                                        : [...currentRoundInfo.products, product.value];
+                                      
+                                      setCases(prev => prev.map(c => 
+                                        c.id === case_.id 
+                                          ? { 
+                                              ...c, 
+                                              roundCustomerInfo: {
+                                                ...c.roundCustomerInfo,
+                                                [currentRound]: {
+                                                  ...currentRoundInfo,
+                                                  products: revertedProducts
+                                                }
+                                              }
+                                            }
+                                          : c
                                       ));
                                     }
                                   }}
@@ -2023,7 +2037,12 @@ export default function CustomerClinicalUploadPage() {
                       
                       {/* 블록 4: 고객 피부타입 */}
                       <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
-                        <Label className="text-sm font-medium text-blue-700">고객 피부타입</Label>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm font-medium text-blue-700">고객 피부타입</Label>
+                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40">
+                            {currentRounds[case_.id] || 1}회차
+                          </span>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2 gap-y-2">
                           {SYSTEM_OPTIONS.skinTypes.map((skinType) => {
                             const currentRound = currentRounds[case_.id] || 1;
@@ -2035,36 +2054,8 @@ export default function CustomerClinicalUploadPage() {
                               date: '' 
                             };
                             
-                            // 피부타입 데이터를 직접 boolean 필드로 매핑
-                            let isSelected = false;
-                            let fieldName = '';
-                            
-                            switch(skinType.value) {
-                              case 'red_sensitive':
-                                isSelected = case_.skinRedSensitive || false;
-                                fieldName = 'skinRedSensitive';
-                                break;
-                              case 'pigmentation':
-                                isSelected = case_.skinPigment || false;
-                                fieldName = 'skinPigment';
-                                break;
-                              case 'pores_enlarged':
-                                isSelected = case_.skinPore || false;
-                                fieldName = 'skinPore';
-                                break;
-                              case 'acne_trouble':
-                                isSelected = case_.skinTrouble || false;
-                                fieldName = 'skinTrouble';
-                                break;
-                              case 'wrinkles_elasticity':
-                                isSelected = case_.skinWrinkle || false;
-                                fieldName = 'skinWrinkle';
-                                break;
-                              case 'other':
-                                isSelected = case_.skinEtc || false;
-                                fieldName = 'skinEtc';
-                                break;
-                            }
+                            // 현재 회차의 피부타입 데이터에서 선택 상태 확인
+                            const isSelected = currentRoundInfo.skinTypes.includes(skinType.value);
                             
                             return (
                               <label key={skinType.value} className={`
@@ -2081,24 +2072,52 @@ export default function CustomerClinicalUploadPage() {
                                   id={`skin-${case_.id}-${currentRound}-${skinType.value}`}
                                   checked={isSelected}
                                   onCheckedChange={async (checked) => {
+                                    // 현재 회차의 피부타입 목록 업데이트
+                                    const updatedSkinTypes = checked
+                                      ? [...currentRoundInfo.skinTypes, skinType.value]
+                                      : currentRoundInfo.skinTypes.filter(s => s !== skinType.value);
+                                    
                                     // 즉시 로컬 상태 업데이트
-                                    setCases(prev => prev.map(case_ => 
-                                      case_.id === case_.id 
-                                        ? { ...case_, [fieldName]: checked }
-                                        : case_
+                                    setCases(prev => prev.map(c => 
+                                      c.id === case_.id 
+                                        ? { 
+                                            ...c, 
+                                            roundCustomerInfo: {
+                                              ...c.roundCustomerInfo,
+                                              [currentRound]: {
+                                                ...currentRoundInfo,
+                                                skinTypes: updatedSkinTypes
+                                              }
+                                            }
+                                          }
+                                        : c
                                     ));
                                     
                                     // 백그라운드에서 저장
                                     try {
-                                      const updates = { [fieldName]: checked };
-                                      await updateCaseCheckboxes(case_.id, updates);
+                                      await handleRoundCustomerInfoUpdate(case_.id, currentRound, { 
+                                        skinTypes: updatedSkinTypes 
+                                      });
                                     } catch (error) {
-                                      console.error('자동 저장 실패:', error);
+                                      console.error('피부타입 선택 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
-                                      setCases(prev => prev.map(case_ => 
-                                        case_.id === case_.id 
-                                          ? { ...case_, [fieldName]: !checked }
-                                          : case_
+                                      const revertedSkinTypes = checked
+                                        ? currentRoundInfo.skinTypes.filter(s => s !== skinType.value)
+                                        : [...currentRoundInfo.skinTypes, skinType.value];
+                                      
+                                      setCases(prev => prev.map(c => 
+                                        c.id === case_.id 
+                                          ? { 
+                                              ...c, 
+                                              roundCustomerInfo: {
+                                                ...c.roundCustomerInfo,
+                                                [currentRound]: {
+                                                  ...currentRoundInfo,
+                                                  skinTypes: revertedSkinTypes
+                                                }
+                                              }
+                                            }
+                                          : c
                                       ));
                                     }
                                   }}
