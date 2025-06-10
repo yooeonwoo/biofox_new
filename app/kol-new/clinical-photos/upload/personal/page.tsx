@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { fetchCases, updateCase } from '@/lib/clinical-photos-api';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
-import { ArrowLeft, Camera, Save } from "lucide-react";
+import { ArrowLeft, Camera, Save, Edit, Trash2, Eye } from "lucide-react";
 import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +14,12 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import KolHeader from "../../../../components/layout/KolHeader";
 import KolSidebar from "../../../../components/layout/KolSidebar";
 import KolFooter from "../../../../components/layout/KolFooter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { DialogTitle as SheetDialogTitle } from "@/components/ui/dialog";
 import KolMobileMenu from "../../../../components/layout/KolMobileMenu";
 import PhotoRoundCarousel from "../../components/PhotoRoundCarousel";
 import CaseStatusTabs from "../../components/CaseStatusTabs";
@@ -132,6 +133,10 @@ export default function PersonalClinicalUploadPage() {
   const [cases, setCases] = useState<ClinicalCase[]>([]);
   const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
   const mainContentRef = useRef<HTMLElement>(null);
+  
+  // 동의서 관련 상태
+  const [consentViewModal, setConsentViewModal] = useState<{ isOpen: boolean; imageUrl?: string }>({ isOpen: false });
+  const [consentUploading, setConsentUploading] = useState<{ [caseId: string]: boolean }>({});
   
   // IME 상태 관리 (한글 입력 문제 해결) 및 debounce
   const [isComposing, setIsComposing] = useState(false);
@@ -268,14 +273,14 @@ export default function PersonalClinicalUploadPage() {
               name: '본인',
               products: productTypes,
               skinTypes: skinTypeData,
-              memo: personalCase.treatmentPlan || ''
+              memo: personalCase.treatmentPlan ? personalCase.treatmentPlan.replace(/^\[본인\]\s*/, '') : ''
             },
             roundCustomerInfo: {
               1: {
                 treatmentType: '',
                 products: productTypes,
                 skinTypes: skinTypeData,
-                memo: personalCase.treatmentPlan || '',
+                memo: personalCase.treatmentPlan ? personalCase.treatmentPlan.replace(/^\[본인\]\s*/, '') : '',
                 date: personalCase.createdAt.split('T')[0]
               }
             },
@@ -317,7 +322,146 @@ export default function PersonalClinicalUploadPage() {
     ));
   };
 
+  // 동의 상태 변경 핸들러
+  const handleConsentChange = async (caseId: string, consentReceived: boolean) => {
+    try {
+      // 동의서가 업로드되어 있는데 미동의로 변경하려는 경우 알림 표시
+      const currentCase = cases.find(case_ => case_.id === caseId);
+      if (!consentReceived && currentCase?.consentImageUrl) {
+        toast.warning('동의서를 먼저 삭제한 후 미동의로 변경해주세요', {
+          description: '업로드된 동의서가 있습니다',
+          duration: 3000,
+        });
+        return; // 변경하지 않고 종료
+      }
+      
+      // 실제 API 호출
+      const { updateCase } = await import('@/lib/clinical-photos-api');
+      const updateData: any = { consentReceived };
+      
+      // 동의 취소 시 동의서 이미지도 제거
+      if (!consentReceived) {
+        updateData.consentImageUrl = undefined;
+      }
+      
+      await updateCase(parseInt(caseId), updateData);
+      
+      // 로컬 상태 업데이트
+      setCases(prev => prev.map(case_ => 
+        case_.id === caseId 
+          ? { 
+              ...case_, 
+              consentReceived,
+              consentImageUrl: consentReceived ? case_.consentImageUrl : undefined 
+            }
+          : case_
+      ));
+      
+      console.log(`동의 상태가 ${consentReceived ? '동의' : '미동의'}로 변경되었습니다.`);
+    } catch (error) {
+      console.error('동의 상태 변경 실패:', error);
+      toast.error('동의 상태 변경에 실패했습니다. 다시 시도해주세요.');
+      // 오류 발생 시 상태 되돌리기
+      refreshCases();
+    }
+  };
 
+  // 동의서 업로드 핸들러
+  const handleConsentUpload = (caseId: string) => {
+    // 이미 업로드 중이면 무시
+    if (consentUploading[caseId]) {
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        // 파일 유효성 검사
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+          toast.error('JPEG, PNG, WebP 형식의 이미지만 업로드 가능합니다.');
+          return;
+        }
+
+        // 파일 크기 제한 (10MB)
+        const maxSize = 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+          toast.error('파일 크기는 10MB 이하여야 합니다.');
+          return;
+        }
+
+        // 업로드 시작
+        setConsentUploading(prev => ({ ...prev, [caseId]: true }));
+
+        try {
+          // 실제 케이스의 경우 Supabase에 업로드
+          const { uploadConsentImage } = await import('@/lib/clinical-photos-api');
+          const imageUrl = await uploadConsentImage(parseInt(caseId), file);
+          
+          // 로컬 상태 업데이트
+          setCases(prev => prev.map(case_ => 
+            case_.id === caseId 
+              ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
+              : case_
+          ));
+          
+          console.log('동의서가 성공적으로 업로드되었습니다.');
+          toast.success('동의서가 성공적으로 업로드되었습니다.');
+        } catch (error) {
+          console.error('동의서 업로드 실패:', error);
+          toast.error(`동의서 업로드에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+          
+          // 에러 발생 시 동의 상태 되돌리기
+          setCases(prev => prev.map(case_ => 
+            case_.id === caseId 
+              ? { ...case_, consentReceived: false, consentImageUrl: undefined }
+              : case_
+          ));
+        } finally {
+          // 업로드 완료
+          setConsentUploading(prev => ({ ...prev, [caseId]: false }));
+        }
+      }
+    };
+    input.click();
+  };
+
+  // 동의서 삭제 핸들러
+  const handleConsentDelete = async (caseId: string) => {
+    try {
+      // 동의서 파일 삭제 API 호출
+      const response = await fetch(`/api/kol-new/clinical-photos/consent/${caseId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || '동의서 삭제에 실패했습니다.');
+      }
+      
+      // 로컬 상태 업데이트
+      setCases(prev => prev.map(case_ => 
+        case_.id === caseId 
+          ? { ...case_, consentImageUrl: undefined, consentReceived: false }
+          : case_
+      ));
+      
+      console.log('동의서가 성공적으로 삭제되었습니다.');
+      toast.success('동의서가 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('동의서 삭제 실패:', error);
+      toast.error(`동의서 삭제에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+    }
+  };
+
+  // 동의서 보기 핸들러
+  const handleConsentView = (imageUrl: string) => {
+    setConsentViewModal({ isOpen: true, imageUrl });
+  };
 
   // 사진 업로드 핸들러
   const handlePhotoUpload = async (caseId: string, roundDay: number, angle: string, file?: File): Promise<void> => {
@@ -451,20 +595,28 @@ export default function PersonalClinicalUploadPage() {
       const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
       const updateData: any = {};
       
-      // 메모 정보만 treatmentPlan으로 업데이트
+      // 본인 케이스임을 명확히 하기 위해 customerName 확인
+      const currentCase = cases.find(case_ => case_.id === caseId);
+      if (!currentCase || currentCase.customerName !== '본인') {
+        console.warn('본인 케이스가 아닙니다:', currentCase?.customerName);
+        return;
+      }
+      
+      // 메모 정보를 treatmentPlan으로 업데이트 (본인 케이스 전용)
       if (roundInfo.memo !== undefined) {
-        updateData.treatmentPlan = roundInfo.memo;
+        // 본인 케이스의 메모는 "[본인] " 접두사를 붙여서 구분
+        updateData.treatmentPlan = `[본인] ${roundInfo.memo}`;
       }
       
       if (Object.keys(updateData).length > 0) {
         await updateCase(parseInt(caseId), updateData);
       }
 
-      // round_customer_info 테이블에 회차별 정보 저장
+      // round_customer_info 테이블에 회차별 정보 저장 (본인 케이스 전용)
       await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
         treatmentType: roundInfo.treatmentType,
         roundDate: roundInfo.date,
-        memo: roundInfo.memo,
+        memo: roundInfo.memo ? `[본인] ${roundInfo.memo}` : roundInfo.memo, // 본인 케이스 구분자 추가
       });
       
       // 로컬 상태 업데이트
@@ -599,14 +751,14 @@ export default function PersonalClinicalUploadPage() {
             name: '본인',
             products: productTypes,
             skinTypes: skinTypeData,
-            memo: personalCase.treatmentPlan || ''
+            memo: personalCase.treatmentPlan ? personalCase.treatmentPlan.replace(/^\[본인\]\s*/, '') : ''
           },
           roundCustomerInfo: {
             1: {
               treatmentType: '',
               products: productTypes,
               skinTypes: skinTypeData,
-              memo: personalCase.treatmentPlan || '',
+              memo: personalCase.treatmentPlan ? personalCase.treatmentPlan.replace(/^\[본인\]\s*/, '') : '',
               date: personalCase.createdAt.split('T')[0]
             }
           },
@@ -695,10 +847,38 @@ export default function PersonalClinicalUploadPage() {
                   >
                     <div>
                     <CardHeader className="pb-4 bg-gray-50/30 rounded-t-xl">
-                      {/* 첫 번째 줄: 본인 임상사진 + 진행중/완료 */}
+                      {/* 첫 번째 줄: 본인 임상사진 + 동의/미동의 + 진행중/완료 */}
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <span className="text-lg font-medium text-gray-800 truncate">본인 임상사진</span>
+                          {/* 완료 상태인데 동의서가 없으면 경고 */}
+                          {case_.status === 'completed' && case_.consentReceived && !case_.consentImageUrl && (
+                            <span className="text-orange-500 flex-shrink-0">⚠️</span>
+                          )}
+                        </div>
+                        
+                        {/* 동의/미동의 탭 */}
+                        <div className="flex bg-gray-100/70 p-1 rounded-lg flex-shrink-0">
+                          <button
+                            className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
+                              case_.consentReceived 
+                                ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                            onClick={() => handleConsentChange(case_.id, true)}
+                          >
+                            동의
+                          </button>
+                          <button
+                            className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
+                              !case_.consentReceived 
+                                ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                            onClick={() => handleConsentChange(case_.id, false)}
+                          >
+                            미동의
+                          </button>
                         </div>
 
                         {/* 진행중/완료 탭 */}
@@ -709,6 +889,92 @@ export default function PersonalClinicalUploadPage() {
                           />
                         </div>
                       </div>
+
+                      {/* 두 번째 줄: 동의서 상태 메타정보 */}
+                      {case_.consentReceived && (
+                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
+                          {case_.consentImageUrl ? (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <button className="text-xs text-purple-700 bg-biofox-lavender/20 px-2 py-1 rounded-full hover:bg-biofox-lavender/30 transition-colors flex items-center gap-1">
+                                  📎 동의서 업로드됨
+                                </button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-sm">
+                                <DialogHeader>
+                                  <DialogTitle>동의서 보기</DialogTitle>
+                                  <DialogDescription>
+                                    본인 동의서
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <img
+                                    src={case_.consentImageUrl}
+                                    alt="동의서"
+                                    className="w-full h-auto max-h-96 object-contain rounded-lg border"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleConsentUpload(case_.id)}
+                                      disabled={consentUploading[case_.id]}
+                                      className="flex items-center gap-1"
+                                    >
+                                      {consentUploading[case_.id] ? (
+                                        <>
+                                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
+                                          업로드 중...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Edit className="h-3 w-3" />
+                                          수정
+                                        </>
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => {
+                                        handleConsentDelete(case_.id);
+                                      }}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                      삭제
+                                    </Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <button 
+                                className="text-xs text-biofox-blue-violet bg-soksok-light-blue px-2 py-1 rounded-full hover:bg-soksok-light-blue/80 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={() => handleConsentUpload(case_.id)}
+                                disabled={consentUploading[case_.id]}
+                              >
+                                {consentUploading[case_.id] ? (
+                                  <>
+                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
+                                    업로드 중...
+                                  </>
+                                ) : (
+                                  <>
+                                    📎 동의서 업로드
+                                  </>
+                                )}
+                              </button>
+                              {!consentUploading[case_.id] && (
+                                <span className="text-xs text-orange-600">
+                                  ⚠️ 업로드 필요
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </CardHeader>
                     <CardContent className="space-y-6">
                       {/* 블록 1: 임상사진 업로드 */}
@@ -801,7 +1067,10 @@ export default function PersonalClinicalUploadPage() {
                                 }
                               }}
                             >
-                              <SelectTrigger className="flex-1 text-sm h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200">
+                              <SelectTrigger 
+                                data-treatment-select={case_.id}
+                                className="flex-1 text-sm h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
+                              >
                                 <SelectValue placeholder="관리 유형 선택" />
                               </SelectTrigger>
                               <SelectContent className="bg-white">
@@ -1013,14 +1282,34 @@ export default function PersonalClinicalUploadPage() {
                             variant="outline"
                             onClick={async () => {
                               try {
+                                console.log('특이사항 저장 버튼 클릭됨'); // 디버깅용
+                                
                                 const currentMemo = case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || '';
+                                console.log('저장할 메모:', currentMemo); // 디버깅용
+                                
                                 await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: currentMemo });
+                                
+                                // 저장 성공 피드백
+                                const button = document.querySelector(`#save-memo-${case_.id}`) as HTMLElement;
+                                if (button) {
+                                  const originalText = button.textContent;
+                                  button.textContent = '저장됨';
+                                  button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                  setTimeout(() => {
+                                    button.textContent = originalText;
+                                    button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                                  }, 1500);
+                                }
+                                
                                 toast.success('특이사항이 저장되었습니다!');
+                                console.log('특이사항 저장 완료'); // 디버깅용
                               } catch (error) {
-                                toast.error('저장에 실패했습니다.');
+                                console.error('특이사항 저장 실패:', error);
+                                toast.error('특이사항 저장에 실패했습니다.');
                               }
                             }}
-                            className="text-xs px-3 py-1 h-7 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                            id={`save-memo-${case_.id}`}
+                            className="text-xs px-3 py-1 h-7 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer"
                           >
                             <Save className="h-3 w-3 mr-1" />
                             저장
@@ -1101,7 +1390,7 @@ export default function PersonalClinicalUploadPage() {
           </div>
         </SheetTrigger>
         <SheetContent side="left" className="w-[250px] sm:w-[300px]">
-          <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
+          <SheetDialogTitle className="sr-only">모바일 메뉴</SheetDialogTitle>
           <KolMobileMenu 
             userName={user?.firstName || dashboardData?.kol?.name || "KOL"}
             shopName={dashboardData?.kol?.shopName || "임상사진 업로드"}

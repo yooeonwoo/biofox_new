@@ -1597,16 +1597,19 @@ export default function CustomerClinicalUploadPage() {
                             variant="outline"
                             onClick={async () => {
                               try {
+                                console.log('고객 정보 저장 버튼 클릭됨'); // 디버깅용
+                                
                                 // 현재 입력된 값들을 가져와서 저장
                                 const nameInput = document.querySelector(`#name-${case_.id}`) as HTMLInputElement;
                                 const ageInput = document.querySelector(`#age-${case_.id}`) as HTMLInputElement;
-                                const genderSelect = document.querySelector(`[data-gender-select="${case_.id}"]`) as HTMLElement;
                                 
                                 const updateData = {
                                   name: nameInput?.value || case_.customerInfo.name,
                                   age: ageInput?.value ? parseInt(ageInput.value) : case_.customerInfo.age,
                                   gender: case_.customerInfo.gender
                                 };
+                                
+                                console.log('저장할 데이터:', updateData); // 디버깅용
                                 
                                 await handleBasicCustomerInfoUpdate(case_.id, updateData);
                                 
@@ -1621,13 +1624,16 @@ export default function CustomerClinicalUploadPage() {
                                     button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
                                   }, 1500);
                                 }
+                                
+                                toast.success('고객 정보가 저장되었습니다!');
+                                console.log('고객 정보 저장 완료'); // 디버깅용
                               } catch (error) {
                                 console.error('고객 정보 저장 실패:', error);
-                                alert('고객 정보 저장에 실패했습니다.');
+                                toast.error('고객 정보 저장에 실패했습니다.');
                               }
                             }}
                             id={`save-customer-info-${case_.id}`}
-                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 cursor-pointer"
                           >
                             <Save className="h-3 w-3 mr-1" />
                             저장
@@ -1911,22 +1917,35 @@ export default function CustomerClinicalUploadPage() {
                             size="sm"
                             variant="outline"
                             onClick={async () => {
-                              const currentMemo = case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || '';
-                              await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: currentMemo });
-                              // 저장 성공 피드백
-                              const button = document.querySelector(`#save-memo-${case_.id}`) as HTMLElement;
-                              if (button) {
-                                const originalText = button.textContent;
-                                button.textContent = '저장됨';
-                                button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                                setTimeout(() => {
-                                  button.textContent = originalText;
-                                  button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
-                                }, 1500);
+                              try {
+                                console.log('특이사항 저장 버튼 클릭됨'); // 디버깅용
+                                
+                                const currentMemo = case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || '';
+                                console.log('저장할 메모:', currentMemo); // 디버깅용
+                                
+                                await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: currentMemo });
+                                
+                                // 저장 성공 피드백
+                                const button = document.querySelector(`#save-memo-${case_.id}`) as HTMLElement;
+                                if (button) {
+                                  const originalText = button.textContent;
+                                  button.textContent = '저장됨';
+                                  button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                                  setTimeout(() => {
+                                    button.textContent = originalText;
+                                    button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                                  }, 1500);
+                                }
+                                
+                                toast.success('특이사항이 저장되었습니다!');
+                                console.log('특이사항 저장 완료'); // 디버깅용
+                              } catch (error) {
+                                console.error('특이사항 저장 실패:', error);
+                                toast.error('특이사항 저장에 실패했습니다.');
                               }
                             }}
                             id={`save-memo-${case_.id}`}
-                            className="text-xs px-3 py-1 h-7 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                            className="text-xs px-3 py-1 h-7 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer"
                           >
                             <Save className="h-3 w-3 mr-1" />
                             저장

@@ -12,6 +12,14 @@ export function getCurrentDate(): string {
 }
 
 /**
+ * 현재 월을 YYYYMM 형식으로 반환 (데이터베이스 형식)
+ */
+export function getCurrentYearMonth(): string {
+  const currentDate = getCurrentDate();
+  return currentDate.substring(0, 7).replace('-', ''); // "2025-05" -> "202505"
+}
+
+/**
  * 주어진 날짜의 전월을 YYYY-MM 형식으로 반환
  * @param dateStr YYYY-MM-DD 형식의 날짜 문자열
  */
@@ -23,6 +31,14 @@ export function getPreviousMonth(dateStr: string): string {
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   
   return `${year}-${month}`;
+}
+
+/**
+ * 주어진 날짜의 전월을 YYYYMM 형식으로 반환 (데이터베이스 형식)
+ * @param dateStr YYYY-MM-DD 형식의 날짜 문자열
+ */
+export function getPreviousYearMonth(dateStr: string): string {
+  return getPreviousMonth(dateStr).replace('-', '');
 }
 
 /**

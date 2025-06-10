@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getCurrentDate } from '@/lib/date-utils';
+import { getCurrentYearMonth } from '@/lib/date-utils';
 import { getAuthenticatedKol } from '@/lib/auth-cache';
 
 // 매출 데이터 타입 정의
@@ -75,9 +75,8 @@ export async function GET() {
     // 🚀 캐시된 인증 확인
     const { user: userData, kol: kolData } = await getAuthenticatedKol();
 
-    // 현재 월 계산
-    const currentDate = getCurrentDate();
-    const currentMonth = currentDate.substring(0, 7);
+    // 현재 월 계산 - YYYYMM 형식 (데이터베이스 형식과 일치)
+    const currentMonth = getCurrentYearMonth(); // "202505"
 
     console.log(`조회할 월 정보: ${currentMonth}, KOL ID: ${kolData.id}`);
     console.log(`전문점 조회 시작: KOL ID=${kolData.id}`);

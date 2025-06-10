@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getCurrentDate, getPreviousMonth } from '@/lib/date-utils';
+import { getCurrentYearMonth, getPreviousYearMonth, getCurrentDate } from '@/lib/date-utils';
 import { getAuthenticatedKol } from '@/lib/auth-cache';
 
 // KOL 대시보드 API 라우트 
@@ -11,10 +11,10 @@ export async function GET() {
     // 🚀 캐시된 인증 확인
     const { user: userData, kol: kolData } = await getAuthenticatedKol();
 
-    // 현재 월과 이전 월 계산
+    // 현재 월과 이전 월 계산 - YYYYMM 형식 (데이터베이스 형식과 일치)
     const currentDate = getCurrentDate();
-    const currentMonth = currentDate.substring(0, 7);
-    const previousMonth = getPreviousMonth(currentDate);
+    const currentMonth = getCurrentYearMonth(); // "202505"
+    const previousMonth = getPreviousYearMonth(currentDate); // "202504"
 
     console.log(`대시보드 API - 월 정보:`, {
       currentDate,
@@ -51,7 +51,7 @@ export async function GET() {
       // 새 메트릭 데이터 생성
       const newMetricsData = {
         kol_id: kolData.id,
-        year_month: currentMonth, // "2025-05" 형식으로 저장
+        year_month: currentMonth, // YYYYMM 형식으로 저장 (예: "202505")
         monthly_sales: 0,
         monthly_commission: 0,
         active_shops_count: 0,
