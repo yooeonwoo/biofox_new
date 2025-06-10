@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation';
 import { fetchCases, updateCase } from '@/lib/clinical-photos-api';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
-import { ArrowLeft, Camera } from "lucide-react";
+import { ArrowLeft, Camera, Save } from "lucide-react";
+import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -131,6 +132,31 @@ export default function PersonalClinicalUploadPage() {
   const [cases, setCases] = useState<ClinicalCase[]>([]);
   const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
   const mainContentRef = useRef<HTMLElement>(null);
+  
+  // IME 상태 관리 (한글 입력 문제 해결) 및 debounce
+  const [isComposing, setIsComposing] = useState(false);
+  const [inputDebounceTimers, setInputDebounceTimers] = useState<{[key: string]: NodeJS.Timeout}>({});
+
+  // debounce 함수 (영어/숫자/특수문자 입력 문제 해결)
+  const debouncedUpdate = (key: string, updateFn: () => void, delay: number = 500) => {
+    // 기존 타이머 클리어
+    if (inputDebounceTimers[key]) {
+      clearTimeout(inputDebounceTimers[key]);
+    }
+    
+    // 새 타이머 설정
+    const newTimer = setTimeout(() => {
+      updateFn();
+      // 타이머 정리
+      setInputDebounceTimers(prev => {
+        const newTimers = { ...prev };
+        delete newTimers[key];
+        return newTimers;
+      });
+    }, delay);
+    
+    setInputDebounceTimers(prev => ({ ...prev, [key]: newTimer }));
+  };
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -396,25 +422,75 @@ export default function PersonalClinicalUploadPage() {
     ));
   };
 
-  // 회차별 고객정보 업데이트 핸들러 (시술유형, 제품, 피부타입, 메모)
-  const handleRoundCustomerInfoUpdate = (caseId: string, roundDay: number, roundInfo: Partial<RoundCustomerInfo>) => {
-    setCases(prev => prev.map(case_ => 
-      case_.id === caseId 
-        ? { 
-            ...case_, 
-            roundCustomerInfo: {
-              ...case_.roundCustomerInfo,
-              [roundDay]: { 
-                treatmentType: '',
-                memo: '',
-                date: '',
-                ...case_.roundCustomerInfo[roundDay],
-                ...roundInfo 
+  // 회차별 고객정보 업데이트 핸들러 (시술유형, 제품, 피부타입, 메모) - IME 처리 개선
+  const handleRoundCustomerInfoUpdate = async (caseId: string, roundDay: number, roundInfo: Partial<RoundCustomerInfo>) => {
+    try {
+      // IME 입력 중이면 로컬 상태만 업데이트
+      if (isComposing && roundInfo.memo !== undefined) {
+        setCases(prev => prev.map(case_ => 
+          case_.id === caseId 
+            ? { 
+                ...case_, 
+                roundCustomerInfo: {
+                  ...case_.roundCustomerInfo,
+                  [roundDay]: { 
+                    treatmentType: '',
+                    memo: '',
+                    date: '',
+                    ...case_.roundCustomerInfo[roundDay],
+                    ...roundInfo 
+                  }
+                }
+              }
+            : case_
+        ));
+        return;
+      }
+
+      // 실제 API 호출로 서버에 저장
+      const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+      const updateData: any = {};
+      
+      // 메모 정보만 treatmentPlan으로 업데이트
+      if (roundInfo.memo !== undefined) {
+        updateData.treatmentPlan = roundInfo.memo;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        await updateCase(parseInt(caseId), updateData);
+      }
+
+      // round_customer_info 테이블에 회차별 정보 저장
+      await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
+        treatmentType: roundInfo.treatmentType,
+        roundDate: roundInfo.date,
+        memo: roundInfo.memo,
+      });
+      
+      // 로컬 상태 업데이트
+      setCases(prev => prev.map(case_ => 
+        case_.id === caseId 
+          ? { 
+              ...case_, 
+              roundCustomerInfo: {
+                ...case_.roundCustomerInfo,
+                [roundDay]: { 
+                  treatmentType: '',
+                  memo: '',
+                  date: '',
+                  ...case_.roundCustomerInfo[roundDay],
+                  ...roundInfo 
+                }
               }
             }
-          }
-        : case_
-    ));
+          : case_
+      ));
+      
+      console.log('회차별 본인 정보가 업데이트되었습니다.');
+    } catch (error) {
+      console.error('회차별 본인 정보 업데이트 실패:', error);
+      toast.error('정보 저장에 실패했습니다.');
+    }
   };
 
   // 🚀 본인 정보 저장 함수 (날짜, 관리유형, 특이사항)
@@ -445,11 +521,10 @@ export default function PersonalClinicalUploadPage() {
       await updateCase(parseInt(caseId), updateData);
       
       console.log('본인 정보가 성공적으로 저장되었습니다.');
-      alert('본인 정보가 저장되었습니다!');
       
     } catch (error) {
       console.error('본인 정보 저장 실패:', error);
-      alert('정보 저장에 실패했습니다. 다시 시도해주세요.');
+      throw error; // toast는 호출하는 곳에서 처리
     }
   };
   
@@ -699,9 +774,32 @@ export default function PersonalClinicalUploadPage() {
                               id={`date-${case_.id}`}
                               type="date"
                               value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.date || ''}
-                              onChange={(e) => 
-                                handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { date: e.target.value })
-                              }
+                              onChange={async (e) => {
+                                const newValue = e.target.value;
+                                
+                                // 즉시 로컬 상태 업데이트
+                                setCases(prev => prev.map(case_ => 
+                                  case_.id === case_.id 
+                                    ? { 
+                                        ...case_, 
+                                        roundCustomerInfo: {
+                                          ...case_.roundCustomerInfo,
+                                          [currentRounds[case_.id] || 1]: { 
+                                            ...case_.roundCustomerInfo[currentRounds[case_.id] || 1],
+                                            date: newValue
+                                          }
+                                        }
+                                      }
+                                    : case_
+                                ));
+                                
+                                // 자동 저장
+                                try {
+                                  await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { date: newValue });
+                                } catch (error) {
+                                  console.error('날짜 자동 저장 실패:', error);
+                                }
+                              }}
                               className="flex-1 text-xs h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                             />
                           </div>
@@ -711,9 +809,30 @@ export default function PersonalClinicalUploadPage() {
                             <Label className="text-xs font-medium w-14 shrink-0 text-gray-600">관리유형</Label>
                             <Select
                               value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.treatmentType || ''}
-                              onValueChange={(value) => 
-                                handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { treatmentType: value })
-                              }
+                              onValueChange={async (value) => {
+                                // 즉시 로컬 상태 업데이트
+                                setCases(prev => prev.map(case_ => 
+                                  case_.id === case_.id 
+                                    ? { 
+                                        ...case_, 
+                                        roundCustomerInfo: {
+                                          ...case_.roundCustomerInfo,
+                                          [currentRounds[case_.id] || 1]: { 
+                                            ...case_.roundCustomerInfo[currentRounds[case_.id] || 1],
+                                            treatmentType: value
+                                          }
+                                        }
+                                      }
+                                    : case_
+                                ));
+                                
+                                // 자동 저장
+                                try {
+                                  await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { treatmentType: value });
+                                } catch (error) {
+                                  console.error('관리유형 자동 저장 실패:', error);
+                                }
+                              }}
                             >
                               <SelectTrigger className="flex-1 text-sm h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200">
                                 <SelectValue placeholder="관리 유형 선택" />
@@ -731,7 +850,14 @@ export default function PersonalClinicalUploadPage() {
                           {/* 🚀 본인 정보 저장 버튼 */}
                           <div className="pt-2">
                             <Button
-                              onClick={() => savePersonalInfo(case_.id)}
+                              onClick={async () => {
+                                try {
+                                  await savePersonalInfo(case_.id);
+                                  toast.success('본인 정보가 저장되었습니다!');
+                                } catch (error) {
+                                  toast.error('저장에 실패했습니다.');
+                                }
+                              }}
                               className="w-full h-8 text-xs bg-biofox-blue-violet hover:bg-biofox-blue-violet/90 text-white"
                               size="sm"
                             >
@@ -791,17 +917,35 @@ export default function PersonalClinicalUploadPage() {
                                 <Checkbox
                                   id={`product-${case_.id}-${currentRound}-${product.value}`}
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => {
-                                    // 백엔드 boolean 필드 직접 업데이트
-                                    const updates = { [fieldName]: checked };
-                                    updateCaseCheckboxes(case_.id, updates);
+                                  onCheckedChange={async (checked) => {
+                                    // 즉시 로컬 상태 업데이트 (옵티미스틱 UI)
+                                    setCases(prev => prev.map(case_ => 
+                                      case_.id === case_.id 
+                                        ? { ...case_, [fieldName]: checked }
+                                        : case_
+                                    ));
                                     
-                                    // 기존 products 배열도 함께 업데이트 (기존 기능 유지)
-                                    const currentProducts = currentRoundInfo.products || [];
-                                    const newProducts = checked
-                                      ? [...currentProducts, product.value]
-                                      : currentProducts.filter(p => p !== product.value);
-                                    handleRoundCustomerInfoUpdate(case_.id, currentRound, { products: newProducts });
+                                    // 백그라운드에서 저장
+                                    try {
+                                      const updates = { [fieldName]: checked };
+                                      await updateCaseCheckboxes(case_.id, updates);
+                                      
+                                      // 기존 products 배열도 함께 업데이트 (기존 기능 유지)
+                                      const currentProducts = currentRoundInfo.products || [];
+                                      const newProducts = checked
+                                        ? [...currentProducts, product.value]
+                                        : currentProducts.filter(p => p !== product.value);
+                                      await handleRoundCustomerInfoUpdate(case_.id, currentRound, { products: newProducts });
+                                    } catch (error) {
+                                      console.error('자동 저장 실패:', error);
+                                      // 실패 시 상태 되돌리기
+                                      setCases(prev => prev.map(case_ => 
+                                        case_.id === case_.id 
+                                          ? { ...case_, [fieldName]: !checked }
+                                          : case_
+                                      ));
+                                      toast.error('저장에 실패했습니다.');
+                                    }
                                   }}
                                   className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
                                 />
@@ -871,17 +1015,35 @@ export default function PersonalClinicalUploadPage() {
                                 <Checkbox
                                   id={`skin-${case_.id}-${currentRound}-${skinType.value}`}
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => {
-                                    // 백엔드 boolean 필드 직접 업데이트
-                                    const updates = { [fieldName]: checked };
-                                    updateCaseCheckboxes(case_.id, updates);
+                                  onCheckedChange={async (checked) => {
+                                    // 즉시 로컬 상태 업데이트 (옵티미스틱 UI)
+                                    setCases(prev => prev.map(case_ => 
+                                      case_.id === case_.id 
+                                        ? { ...case_, [fieldName]: checked }
+                                        : case_
+                                    ));
                                     
-                                    // 기존 skinTypes 배열도 함께 업데이트 (기존 기능 유지)
-                                    const currentSkinTypes = currentRoundInfo.skinTypes || [];
-                                    const newSkinTypes = checked
-                                      ? [...currentSkinTypes, skinType.value]
-                                      : currentSkinTypes.filter(s => s !== skinType.value);
-                                    handleRoundCustomerInfoUpdate(case_.id, currentRound, { skinTypes: newSkinTypes });
+                                    // 백그라운드에서 저장
+                                    try {
+                                      const updates = { [fieldName]: checked };
+                                      await updateCaseCheckboxes(case_.id, updates);
+                                      
+                                      // 기존 skinTypes 배열도 함께 업데이트 (기존 기능 유지)
+                                      const currentSkinTypes = currentRoundInfo.skinTypes || [];
+                                      const newSkinTypes = checked
+                                        ? [...currentSkinTypes, skinType.value]
+                                        : currentSkinTypes.filter(s => s !== skinType.value);
+                                      await handleRoundCustomerInfoUpdate(case_.id, currentRound, { skinTypes: newSkinTypes });
+                                    } catch (error) {
+                                      console.error('자동 저장 실패:', error);
+                                      // 실패 시 상태 되돌리기
+                                      setCases(prev => prev.map(case_ => 
+                                        case_.id === case_.id 
+                                          ? { ...case_, [fieldName]: !checked }
+                                          : case_
+                                      ));
+                                      toast.error('저장에 실패했습니다.');
+                                    }
                                   }}
                                   className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
                                 />
@@ -893,21 +1055,80 @@ export default function PersonalClinicalUploadPage() {
                       </div>
                       
                       {/* 블록 5: 특이사항 */}
-                      <div className="space-y-3 border-2 border-biofox-blue-violet/20 rounded-lg p-4 bg-biofox-blue-violet/5">
-                        <Label htmlFor={`memo-${case_.id}`} className="text-sm font-medium text-biofox-blue-violet">특이사항</Label>
+                      <div className="space-y-2 border-2 border-gray-200 rounded-lg p-4 bg-gray-50/50">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`memo-${case_.id}`} className="text-sm font-medium text-gray-700">특이사항</Label>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                const currentMemo = case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || '';
+                                await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: currentMemo });
+                                toast.success('특이사항이 저장되었습니다!');
+                              } catch (error) {
+                                toast.error('저장에 실패했습니다.');
+                              }
+                            }}
+                            className="text-xs px-3 py-1 h-7 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            저장
+                          </Button>
+                        </div>
                         <Textarea
                           id={`memo-${case_.id}`}
                           value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || ''}
-                          onChange={(e) => 
-                            handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: e.target.value })
-                          }
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            
+                            // 즉시 로컬 상태 업데이트 (UI 반응성을 위해)
+                            setCases(prev => prev.map(case_ => 
+                              case_.id === case_.id 
+                                ? { 
+                                    ...case_, 
+                                    roundCustomerInfo: {
+                                      ...case_.roundCustomerInfo,
+                                      [currentRounds[case_.id] || 1]: { 
+                                        treatmentType: '',
+                                        memo: '',
+                                        date: '',
+                                        ...case_.roundCustomerInfo[currentRounds[case_.id] || 1],
+                                        memo: newValue
+                                      }
+                                    }
+                                  }
+                                : case_
+                            ));
+
+                            // IME 입력 중이 아닐 때는 debounce 사용 (영어/숫자/특수문자)
+                            if (!isComposing) {
+                              const debounceKey = `memo-${case_.id}-${currentRounds[case_.id] || 1}`;
+                              debouncedUpdate(debounceKey, () => {
+                                handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: newValue });
+                              }, 800); // 800ms 디바운스
+                            }
+                          }}
+                          onCompositionStart={() => setIsComposing(true)}
+                          onCompositionEnd={(e) => {
+                            setIsComposing(false);
+                            // 한글 입력 완료 시 즉시 저장
+                            handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: e.currentTarget.value });
+                          }}
                           placeholder="해당 회차 관련 특이사항을 입력하세요..."
                           className="w-full min-h-[80px] border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                         />
                         
                         {/* 🚀 전체 정보 저장 버튼 */}
                         <Button
-                          onClick={() => savePersonalInfo(case_.id)}
+                          onClick={async () => {
+                            try {
+                              await savePersonalInfo(case_.id);
+                              toast.success('전체 정보가 저장되었습니다!');
+                            } catch (error) {
+                              toast.error('저장에 실패했습니다.');
+                            }
+                          }}
                           className="w-full h-9 text-sm bg-biofox-blue-violet hover:bg-biofox-blue-violet/90 text-white"
                         >
                           <Save className="mr-2 h-4 w-4" />
