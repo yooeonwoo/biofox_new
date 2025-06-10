@@ -629,7 +629,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
       .select('*')
       .eq('case_id', caseId)
       .eq('round_number', roundNumber)
-      .single();
+      .maybeSingle();
     
     const roundData = {
       case_id: caseId,
@@ -645,8 +645,8 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
 
     // undefined 값 제거
     Object.keys(roundData).forEach(key => {
-      if (roundData[key] === undefined) {
-        delete roundData[key];
+      if ((roundData as any)[key] === undefined) {
+        delete (roundData as any)[key];
       }
     });
 
