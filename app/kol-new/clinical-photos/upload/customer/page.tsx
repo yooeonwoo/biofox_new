@@ -267,7 +267,15 @@ export default function CustomerClinicalUploadPage() {
       try {
         // fetchCases API를 사용해서 실제 데이터 가져오기
         const { fetchCases } = await import('@/lib/clinical-photos');
-        const casesData = await fetchCases();
+        const allCasesData = await fetchCases();
+        
+        // 고객 케이스만 필터링 (본인 케이스 제외)
+        const casesData = allCasesData.filter(case_ => 
+          case_.customerName?.trim().toLowerCase() !== '본인' && 
+          !case_.customerName?.includes('본인')
+        );
+        
+        console.log('전체 케이스:', allCasesData.length, '고객 케이스:', casesData.length);
         
         // API 응답 데이터를 컴포넌트 형식에 맞게 변환
         const transformedCases: ClinicalCase[] = await Promise.all(casesData.map(async case_ => {

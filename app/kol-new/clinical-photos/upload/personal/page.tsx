@@ -222,15 +222,13 @@ export default function PersonalClinicalUploadPage() {
       try {
         // fetchCases API를 사용해서 실제 데이터 가져오기
         const { fetchCases } = await import('@/lib/clinical-photos');
-        const casesData = await fetchCases();
+        const allCasesData = await fetchCases();
         
-        console.log('전체 케이스 데이터:', casesData.map(c => ({ id: c.id, customerName: c.customerName })));
+        console.log('전체 케이스 데이터:', allCasesData.map(c => ({ id: c.id, customerName: c.customerName })));
         
-        // 본인 케이스만 정확히 찾기 (대소문자 무시, 공백 제거)
-        const personalCase = casesData.find(case_ => 
-          case_.customerName?.trim().toLowerCase() === '본인' ||
-          case_.customerName?.trim() === '본인' ||
-          case_.customerName?.includes('본인')
+        // 본인 케이스만 정확히 찾기 (정확한 매칭)
+        const personalCase = allCasesData.find(case_ => 
+          case_.customerName?.trim() === '본인'
         );
         
         console.log('찾은 본인 케이스:', personalCase);
