@@ -6,6 +6,7 @@ import { Separator } from "../../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { Button } from "../../../components/ui/button";
 import { FoxLogo } from "../../../components/ui/fox-logo";
+import { useUser } from "@clerk/nextjs";
 
 interface KolMobileMenuProps {
   userName?: string;
@@ -22,6 +23,9 @@ export default function KolMobileMenu({
   setMobileMenuOpen,
   onSignOut
 }: KolMobileMenuProps) {
+  const { user } = useUser();
+  const userRole = user?.publicMetadata?.role as string || "kol";
+  const isTestRole = userRole === "test";
   const userInitials = userName?.substring(0, 2) || "KL";
 
   return (
@@ -38,22 +42,26 @@ export default function KolMobileMenu({
       </div>
       <Separator />
       <nav className="flex flex-1 flex-col gap-1">
-        <Link 
-          href="/kol-new" 
-          onClick={() => setMobileMenuOpen(false)}
-          className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
-        >
-          <Home className="h-4 w-4" />
-          <span>대시보드</span>
-        </Link>
-        <Link 
-          href="/kol-new/stores" 
-          onClick={() => setMobileMenuOpen(false)}
-          className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
-        >
-          <Store className="h-4 w-4" />
-          <span>전문점 관리</span>
-        </Link>
+        {!isTestRole && (
+          <>
+            <Link 
+              href="/kol-new" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
+            >
+              <Home className="h-4 w-4" />
+              <span>대시보드</span>
+            </Link>
+            <Link 
+              href="/kol-new/stores" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
+            >
+              <Store className="h-4 w-4" />
+              <span>전문점 관리</span>
+            </Link>
+          </>
+        )}
         <Link 
           href="/kol-new/clinical-photos" 
           onClick={() => setMobileMenuOpen(false)}
@@ -82,15 +90,19 @@ export default function KolMobileMenu({
           <FoxLogo className="h-4 w-4" />
           <span>폭시</span>
         </a>
-        <Separator className="my-2" />
-        <Link 
-          href="/kol-new/notifications" 
-          onClick={() => setMobileMenuOpen(false)}
-          className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
-        >
-          <Bell className="h-4 w-4" />
-          <span>알림</span>
-        </Link>
+        {!isTestRole && (
+          <>
+            <Separator className="my-2" />
+            <Link 
+              href="/kol-new/notifications" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
+            >
+              <Bell className="h-4 w-4" />
+              <span>알림</span>
+            </Link>
+          </>
+        )}
         <Separator className="my-2" />
         <Button 
           variant="ghost" 

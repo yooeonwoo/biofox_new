@@ -117,7 +117,8 @@ export default function ClinicalPhotosPage() {
       try {
         const userRole = user.publicMetadata?.role as string || "kol";
         console.log('사용자 역할:', userRole);
-        setIsKol(userRole === "kol");
+        // test 역할과 kol 역할 모두 임상사진 페이지 접근 허용
+        setIsKol(userRole === "kol" || userRole === "test");
         setLoading(false);
       } catch (err) {
         console.error('사용자 역할 확인 중 오류:', err);

@@ -121,12 +121,19 @@ export default function KolNewPage() {
     refetch 
   } = useDashboardData();
 
-  // 사용자 역할 확인
+  // 사용자 역할 확인 및 리다이렉트
   useEffect(() => {
     if (isLoaded && isSignedIn && user) {
       try {
         const userRole = user.publicMetadata?.role as string || "kol";
         console.log('사용자 역할:', userRole);
+        
+        // test 역할인 경우 임상사진 페이지로 리다이렉트
+        if (userRole === "test") {
+          window.location.href = "/kol-new/clinical-photos";
+          return;
+        }
+        
         setIsKol(userRole === "kol");
       } catch (err) {
         console.error('사용자 역할 확인 중 오류:', err);
