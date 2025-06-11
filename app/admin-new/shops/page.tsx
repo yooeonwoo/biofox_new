@@ -2,22 +2,30 @@
 
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import ShopTable from "@/components/admin/shops/ShopTable";
-import ShopCreateDialog from "@/components/admin/shops/ShopCreateDialog";
-import { useShops } from "@/lib/hooks/shops";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import AdminNewShopTable from "@/components/admin_new/shops/ShopTable";
+import { useAdminNewShops } from "@/lib/hooks/adminNewShops";
 import { Loader2 } from "lucide-react";
 
-export default function AdminShopListPage() {
+export default function AdminNewShopListPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string | undefined>(undefined);
 
-  const queryParams = useMemo(() => ({
-    search: search.trim() || undefined,
-    status: status || undefined,
-  }), [search, status]);
+  const params = useMemo(
+    () => ({
+      search: search.trim() || undefined,
+      status: status || undefined,
+    }),
+    [search, status]
+  );
 
-  const { data = [], isLoading, isError } = useShops(queryParams);
+  const { data = [], isLoading, isError } = useAdminNewShops(params);
 
   return (
     <div className="flex flex-col gap-4">
@@ -37,14 +45,12 @@ export default function AdminShopListPage() {
           <SelectContent>
             <SelectItem value="">전체</SelectItem>
             <SelectItem value="active">활성</SelectItem>
-            <SelectItem value="inactive">비활성</SelectItem>
+            <SelectItem value="paused">중지</SelectItem>
           </SelectContent>
         </Select>
-
-        <ShopCreateDialog />
       </div>
 
-      {/* Table or state */}
+      {/* Table */}
       {isLoading ? (
         <div className="flex items-center justify-center py-10 text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" /> 로딩 중...
@@ -52,7 +58,7 @@ export default function AdminShopListPage() {
       ) : isError ? (
         <div className="text-destructive">데이터 로딩 중 오류가 발생했습니다.</div>
       ) : (
-        <ShopTable data={data} />
+        <AdminNewShopTable data={data} />
       )}
     </div>
   );
