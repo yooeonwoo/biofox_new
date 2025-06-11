@@ -1048,6 +1048,38 @@ export default function PersonalClinicalUploadPage() {
     return redirect('/');
   }
 
+  // 전체 저장 핸들러
+  const handleSaveAll = async (caseId: string) => {
+    try {
+      const targetCase = cases.find(c => c.id === caseId);
+      if (!targetCase) return;
+
+      const roundDay = currentRounds[caseId] || 1;
+      const roundInfo = targetCase.roundCustomerInfo[roundDay];
+
+      await Promise.all([
+        roundInfo ? handleRoundCustomerInfoUpdate(caseId, roundDay, roundInfo) : Promise.resolve(),
+        updateCaseCheckboxes(caseId, {
+          cureBooster: targetCase.cureBooster,
+          cureMask: targetCase.cureMask,
+          premiumMask: targetCase.premiumMask,
+          allInOneSerum: targetCase.allInOneSerum,
+          skinRedSensitive: targetCase.skinRedSensitive,
+          skinPigment: targetCase.skinPigment,
+          skinPore: targetCase.skinPore,
+          skinTrouble: targetCase.skinTrouble,
+          skinWrinkle: targetCase.skinWrinkle,
+          skinEtc: targetCase.skinEtc,
+        }),
+      ]);
+
+      toast.success('전체 저장되었습니다!');
+    } catch (error) {
+      console.error('전체 저장 실패:', error);
+      toast.error('전체 저장에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
@@ -1137,6 +1169,15 @@ export default function PersonalClinicalUploadPage() {
                           >
                             <Trash2 className="h-3 w-3" />
                             삭제
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleSaveAll(case_.id)}
+                            className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
+                          >
+                            <Save className="h-3 w-3" />
+                            전체 저장
                           </Button>
                         </div>
                       </div>

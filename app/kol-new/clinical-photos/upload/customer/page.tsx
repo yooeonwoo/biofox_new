@@ -1536,6 +1536,52 @@ export default function CustomerClinicalUploadPage() {
   // 새 고객 케이스인지 확인하는 함수
   const isNewCustomer = (caseId: string) => caseId.startsWith('new-customer-');
 
+  // 전체 저장 핸들러
+  const handleSaveAll = async (caseId: string) => {
+    try {
+      const targetCase = cases.find(c => c.id === caseId);
+      if (!targetCase) return;
+
+      // 새 고객 케이스라면 기존 저장 로직 재사용
+      if (isNewCustomer(caseId)) {
+        await handleSaveNewCustomer(caseId);
+        return;
+      }
+
+      const roundDay = currentRounds[caseId] || 1;
+      const roundInfo = targetCase.roundCustomerInfo[roundDay];
+
+      // 기본 정보, 회차별 정보, 체크박스 정보 저장
+      await Promise.all([
+        handleBasicCustomerInfoUpdate(caseId, {
+          name: targetCase.customerInfo.name,
+          age: targetCase.customerInfo.age,
+          gender: targetCase.customerInfo.gender,
+        }),
+        roundInfo
+          ? handleRoundCustomerInfoUpdate(caseId, roundDay, roundInfo)
+          : Promise.resolve(),
+        updateCaseCheckboxes(caseId, {
+          cureBooster: targetCase.cureBooster,
+          cureMask: targetCase.cureMask,
+          premiumMask: targetCase.premiumMask,
+          allInOneSerum: targetCase.allInOneSerum,
+          skinRedSensitive: targetCase.skinRedSensitive,
+          skinPigment: targetCase.skinPigment,
+          skinPore: targetCase.skinPore,
+          skinTrouble: targetCase.skinTrouble,
+          skinWrinkle: targetCase.skinWrinkle,
+          skinEtc: targetCase.skinEtc,
+        }),
+      ]);
+
+      toast.success('전체 저장되었습니다!');
+    } catch (error) {
+      console.error('전체 저장 실패:', error);
+      toast.error('전체 저장에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
   // 로딩 중이거나 사용자 정보 확인 중인 경우
   if (!isLoaded || isKol === null || loading) {
     return (
@@ -1765,6 +1811,15 @@ export default function CustomerClinicalUploadPage() {
                                 <Trash2 className="h-3 w-3" />
                                 삭제
                               </Button>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handleSaveAll(case_.id)}
+                                className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
+                              >
+                                <Save className="h-3 w-3" />
+                                전체 저장
+                              </Button>
                             </div>
                           ) : (
                             <div className="flex gap-1">
@@ -1780,6 +1835,15 @@ export default function CustomerClinicalUploadPage() {
                               >
                                 <Trash2 className="h-3 w-3" />
                                 삭제
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handleSaveAll(case_.id)}
+                                className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
+                              >
+                                <Save className="h-3 w-3" />
+                                전체 저장
                               </Button>
                             </div>
                           )}
