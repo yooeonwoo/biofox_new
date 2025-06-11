@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
+import { serverSupabase as supabase } from "@/lib/supabase";
 
 interface UpdateFieldRequest {
   field: string;
@@ -67,8 +68,6 @@ export async function PATCH(
         { status: 400 }
       );
     }
-
-    const { supabase } = await import("../../../../../../db/index");
 
     if (table === 'users') {
       // users 테이블 업데이트

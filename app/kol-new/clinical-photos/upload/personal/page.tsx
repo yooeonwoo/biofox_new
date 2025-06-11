@@ -67,6 +67,8 @@ interface CustomerInfo {
 
 // 회차별 고객 정보 타입
 interface RoundCustomerInfo {
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
   treatmentType?: string;
   products: string[];
   skinTypes: string[];
@@ -335,6 +337,26 @@ export default function PersonalClinicalUploadPage() {
             console.error(`Failed to load photos for case ${personalCase.id}:`, error);
           }
           
+          // 회차별 고객 정보 로드
+          let roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+          try {
+            const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+            const roundData = await fetchRoundCustomerInfo(personalCase.id);
+            roundData.forEach(round => {
+              roundCustomerInfo[round.round_number] = {
+                age: round.age,
+                gender: round.gender,
+                treatmentType: round.treatment_type || '',
+                products: round.products ? JSON.parse(round.products) : [],
+                skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
+                memo: round.memo || '',
+                date: round.treatment_date || ''
+              };
+            });
+          } catch (error) {
+            console.error(`Failed to load round info for case ${personalCase.id}:`, error);
+          }
+          
           // API 응답 데이터를 컴포넌트 형식에 맞게 변환
           const transformedCase: ClinicalCase = {
             id: personalCase.id.toString(),
@@ -350,16 +372,7 @@ export default function PersonalClinicalUploadPage() {
               skinTypes: skinTypeData,
               memo: personalCase.treatmentPlan ? personalCase.treatmentPlan.replace(/^\[본인\]\s*/, '') : ''
             },
-            roundCustomerInfo: {
-              1: {
-                treatmentType: '',
-                products: productTypes,
-                skinTypes: skinTypeData,
-                memo: personalCase.treatmentPlan ? personalCase.treatmentPlan.replace(/^\[본인\]\s*/, '') : '',
-                date: personalCase.createdAt.split('T')[0]
-              }
-            },
-            // 본래 API의 boolean 필드를 그대로 설정
+            roundCustomerInfo: roundCustomerInfo,
             cureBooster: personalCase.cureBooster || false,
             cureMask: personalCase.cureMask || false,
             premiumMask: personalCase.premiumMask || false,
@@ -787,10 +800,10 @@ export default function PersonalClinicalUploadPage() {
         await updateCase(parseInt(caseId), updateData);
       }
 
-      // round_customer_info 테이블에 회차별 정보 저장 (본인 케이스 전용)
+      // clinical_round_info 테이블에 회차별 정보 저장 (본인 케이스 전용)
       await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
         treatmentType: roundInfo.treatmentType,
-        roundDate: roundInfo.date,
+        treatmentDate: roundInfo.date,
         memo: roundInfo.memo ? `[본인] ${roundInfo.memo}` : roundInfo.memo, // 본인 케이스 구분자 추가
       });
       
@@ -954,6 +967,26 @@ export default function PersonalClinicalUploadPage() {
           console.error(`Failed to load photos for case ${personalCase.id}:`, error);
         }
         
+        // 회차별 고객 정보 로드
+        let roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+        try {
+          const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+          const roundData = await fetchRoundCustomerInfo(personalCase.id);
+          roundData.forEach(round => {
+            roundCustomerInfo[round.round_number] = {
+              age: round.age,
+              gender: round.gender,
+              treatmentType: round.treatment_type || '',
+              products: round.products ? JSON.parse(round.products) : [],
+              skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
+              memo: round.memo || '',
+              date: round.treatment_date || ''
+            };
+          });
+        } catch (error) {
+          console.error(`Failed to load round info for case ${personalCase.id}:`, error);
+        }
+        
         const transformedCase: ClinicalCase = {
           id: personalCase.id.toString(),
           customerName: '본인',
@@ -968,15 +1001,7 @@ export default function PersonalClinicalUploadPage() {
             skinTypes: skinTypeData,
             memo: personalCase.treatmentPlan ? personalCase.treatmentPlan.replace(/^\[본인\]\s*/, '') : ''
           },
-          roundCustomerInfo: {
-            1: {
-              treatmentType: '',
-              products: productTypes,
-              skinTypes: skinTypeData,
-              memo: personalCase.treatmentPlan ? personalCase.treatmentPlan.replace(/^\[본인\]\s*/, '') : '',
-              date: personalCase.createdAt.split('T')[0]
-            }
-          },
+          roundCustomerInfo: roundCustomerInfo,
           cureBooster: personalCase.cureBooster || false,
           cureMask: personalCase.cureMask || false,
           premiumMask: personalCase.premiumMask || false,
@@ -1221,7 +1246,7 @@ export default function PersonalClinicalUploadPage() {
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-medium text-biofox-blue-violet">본인 정보</h3>
-                            <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-biofox-blue-violet/20">
+                            <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-biofox-blue-violet/30">
                               {currentRounds[case_.id] || 1}회차
                             </span>
                           </div>
@@ -1282,21 +1307,21 @@ export default function PersonalClinicalUploadPage() {
                                 const newValue = e.target.value;
                                 
                                 // 즉시 로컬 상태 업데이트
-                                setCases(prev => prev.map(case_ => 
-                                  case_.id === case_.id 
+                                setCases(prev => prev.map(caseItem => 
+                                  caseItem.id === case_.id 
                                     ? { 
-                                        ...case_, 
+                                        ...caseItem, 
                                         roundCustomerInfo: {
-                                          ...case_.roundCustomerInfo,
+                                          ...caseItem.roundCustomerInfo,
                                           [currentRounds[case_.id] || 1]: { 
-                                            ...case_.roundCustomerInfo[currentRounds[case_.id] || 1],
+                                            ...caseItem.roundCustomerInfo[currentRounds[case_.id] || 1],
                                             date: newValue
                                           }
                                         }
                                       }
-                                    : case_
+                                    : caseItem
                                 ));
-                                
+
                                 // 자동 저장
                                 try {
                                   await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { date: newValue });

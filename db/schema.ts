@@ -244,7 +244,10 @@ export const clinicalRoundInfo = pgTable("clinical_round_info", {
   treatmentDate: date("treatment_date"),
   products: text("products"),
   skinTypes: text("skin_types"),
+  age: integer("age"),
+  gender: varchar("gender", { length: 10 }),
   memo: text("memo"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
@@ -303,6 +306,3 @@ export const clinicalConsentFilesRelations = relations(clinicalConsentFiles, ({ 
     references: [clinicalCases.id],
   }),
 }));
-
-
- 

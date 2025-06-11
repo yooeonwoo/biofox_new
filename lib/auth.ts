@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth as clerkAuth, currentUser } from '@clerk/nextjs/server';
-import { db } from '@/db';
-import { users, kols } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { serverSupabase } from './supabase';
+// Drizzle 기반 의존성 제거, Supabase SDK 사용
+import { serverSupabase as supabase } from './supabase';
+// supabaseAdmin, cookies 등 기존 로직 유지 필요 시 재사용
 import { supabaseAdmin } from './supabase-admin';
 import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
 export type AuthUser = {
   id: string;
@@ -13,20 +13,30 @@ export type AuthUser = {
   role: string;
 };
 
-// 간단한 구현을 위해 Clerk 의존성 제거
+// Clerk SDK를 이용해 실제 로그인된 사용자를 반환
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  // 임시 구현: 실제 환경에서는 세션 등에서 사용자 ID를 가져와야 함
-  const mockUserId = process.env.MOCK_USER_ID || null;
-  
-  if (!mockUserId) {
+  try {
+    const user = await currentUser();
+    if (!user) return null;
+
+    const email =
+      user.emailAddresses && user.emailAddresses.length > 0
+        ? user.emailAddresses[0].emailAddress
+        : '';
+
+    const role =
+      (user.publicMetadata?.role as string | undefined) ||
+      (user.privateMetadata?.role as string | undefined) ||
+      'user';
+
+    return {
+      id: user.id,
+      email,
+      role,
+    };
+  } catch {
     return null;
   }
-
-  return {
-    id: mockUserId,
-    email: 'user@example.com',
-    role: 'user',
-  };
 }
 
 export function isAuthenticated(request: NextRequest): boolean {
@@ -179,34 +189,40 @@ export async function checkAuth(
  */
 export async function getAuthSupabase(): Promise<{userId: string | null, role: string | null, email: string | null}> {
   try {
-    // Supabase에서 현재 사용자 정보 가져오기
-    const { data: { user }, error } = await serverSupabase.auth.getUser();
-    
+    // Route Handler Client를 사용해 세션 기반 인증 정보 가져오기
+    const supabaseAuth = createRouteHandlerClient({ cookies });
+
+    const {
+      data: { user },
+      error,
+    } = await supabaseAuth.auth.getUser();
+
     if (error || !user) {
       console.error('Supabase 사용자 정보 가져오기 실패:', error);
       return { userId: null, role: null, email: null };
     }
-    
-    // 사용자 이메일이 없는 경우
+
     if (!user.email) {
       console.error('Supabase 사용자 이메일이 없음:', user.id);
       return { userId: user.id, role: null, email: null };
     }
-    
-    // 사용자 이메일로 DB에서 역할 정보 조회
-    const userInfo = await db.query.users.findFirst({
-      where: eq(users.email, user.email),
-    });
-    
-    if (!userInfo) {
-      console.error('사용자 정보를 DB에서 찾을 수 없음:', user.email);
+
+    // DB에서 역할 조회 — supabase 사용 (익명키 기반)
+    const { data: userInfo, error: userInfoError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('email', user.email)
+      .single();
+
+    if (userInfoError || !userInfo) {
+      console.error('사용자 정보를 DB에서 찾을 수 없음:', user.email, userInfoError);
       return { userId: user.id, role: null, email: user.email };
     }
-    
-    return { 
-      userId: user.id, 
-      role: userInfo.role, 
-      email: user.email 
+
+    return {
+      userId: user.id,
+      role: userInfo.role,
+      email: user.email,
     };
   } catch (error) {
     console.error('Supabase 인증 정보 확인 중 오류:', error);
@@ -240,13 +256,15 @@ export async function checkAuthSupabase(
     // 사용자 기본 이메일 주소 가져오기
     const primaryEmail = user.emailAddresses[0].emailAddress;
 
-    // DB에서 사용자 정보와 역할 조회
-    const userInfo = await db.query.users.findFirst({
-      where: eq(users.email, primaryEmail),
-    });
+    // DB에서 사용자 정보와 역할 조회 (Supabase SDK)
+    const { data: userInfo, error: userInfoError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('email', primaryEmail)
+      .single();
 
-    if (!userInfo) {
-      console.error('사용자 정보를 DB에서 찾을 수 없음:', primaryEmail);
+    if (userInfoError || !userInfo) {
+      console.error('사용자 정보를 DB에서 찾을 수 없음:', primaryEmail, userInfoError);
       return NextResponse.json(
         { error: "사용자 정보를 찾을 수 없습니다." },
         { status: 404 }
@@ -287,21 +305,25 @@ export async function checkAuthSupabase(
  */
 export async function getKolId(userId: string): Promise<number | null> {
   try {
-    // 사용자 정보 조회
-    const userInfo = await db.query.users.findFirst({
-      where: eq(users.clerkId, userId),
-    });
+    // 사용자 정보 조회 (clerk_id 기준)
+    const { data: userRecord, error: userRecordError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('clerk_id', userId)
+      .single();
 
-    if (!userInfo) {
+    if (userRecordError || !userRecord) {
       return null;
     }
 
-    // KOL 정보 조회
-    const kol = await db.query.kols.findFirst({
-      where: eq(kols.userId, userInfo.id),
-    });
+    // KOL 정보 조회 (user_id 기준)
+    const { data: kolRecord } = await supabase
+      .from('kols')
+      .select('id')
+      .eq('user_id', userRecord.id)
+      .single();
 
-    return kol ? kol.id : null;
+    return kolRecord ? kolRecord.id : null;
   } catch (error) {
     console.error('KOL ID 조회 중 오류:', error);
     return null;

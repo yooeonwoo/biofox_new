@@ -3,9 +3,7 @@
  * 관리자가 사용자를 생성, 조회, 수정, 삭제할 수 있는 API를 제공합니다.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "../../../../db";
-import { users, kols } from "../../../../db/schema";
-import { eq } from "drizzle-orm";
+import { serverSupabase as supabase } from "@/lib/supabase";
 import { currentUser } from "@clerk/nextjs/server";
 
 /**
@@ -30,9 +28,7 @@ export async function GET(req: NextRequest) {
     // TODO: 실제 프로덕션에서는 사용자 권한을 확인하는 로직 추가 필요
     console.log("데이터베이스 연결 확인 중...");
 
-    // Supabase 클라이언트를 사용한 간단한 쿼리로 테스트
     console.log("Supabase 직접 쿼리 실행 중...");
-    const { supabase } = await import("../../../../db/index");
     
     const { data: userList, error: queryError } = await supabase
       .from('users')
@@ -133,8 +129,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("이메일 중복 확인 중...");
-    const { supabase } = await import("../../../../db/index");
-
+    
     // 이메일 중복 확인 - Supabase
     const { data: existingUsers, error: checkError } = await supabase
       .from('users')
@@ -272,8 +267,6 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const { supabase } = await import("../../../../db/index");
-
     // 사용자 역할 업데이트
     const { data: updatedUser, error: updateError } = await supabase
       .from('users')
@@ -295,6 +288,21 @@ export async function PATCH(req: NextRequest) {
     }
 
     console.log("사용자 역할 변경 성공:", updatedUser);
+
+    // Clerk 메타데이터도 업데이트 (pending이 아닌 경우만)
+    if (!updatedUser.clerk_id.startsWith('pending_')) {
+      try {
+        console.log(`Clerk 메타데이터 업데이트 중: ${updatedUser.clerk_id} -> ${role}`);
+        const { updateUserRole } = await import("../../../../lib/clerk/admin");
+        await updateUserRole(updatedUser.clerk_id, role);
+        console.log(`Clerk 메타데이터 업데이트 성공: ${updatedUser.clerk_id}`);
+      } catch (clerkError) {
+        console.error(`Clerk 메타데이터 업데이트 실패: ${updatedUser.clerk_id}`, clerkError);
+        // Clerk 업데이트 실패해도 DB 업데이트는 유지하고 경고만 로그
+      }
+    } else {
+      console.log(`Pending 사용자이므로 Clerk 메타데이터 업데이트 생략: ${updatedUser.clerk_id}`);
+    }
 
     return NextResponse.json({ 
       user: {
@@ -353,7 +361,6 @@ export async function DELETE(req: NextRequest) {
     }
 
     const userId = parseInt(id);
-    const { supabase } = await import("../../../../db/index");
 
     try {
       // 1. 먼저 사용자 정보 조회 (Clerk ID 확인용)
