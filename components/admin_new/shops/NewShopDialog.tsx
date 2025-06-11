@@ -27,6 +27,7 @@ interface FormValues {
   shopName: string;
   region?: string;
   contractDate?: string;
+  smartPlaceLink?: string;
   withDevice: boolean;
   deduct?: number;
 }
@@ -43,6 +44,8 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
     defaultValues: { withDevice: false },
   });
   const withDevice = watch("withDevice");
+  const deductWatch = watch("deduct");
+  const [deductSelect, setDeductSelect] = useState<string>("");
 
   const mutation = useCreateAdminNewShop();
 
@@ -70,8 +73,10 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
           <Input {...register("kolId", { required: true, valueAsNumber: true })} placeholder="KOL ID" />
           <Input {...register("ownerName", { required: true })} placeholder="대표자 이름" />
           <Input {...register("shopName", { required: true })} placeholder="전문점명" />
+          <Input type="date" {...register("contractDate")} placeholder="계약일자" />
           <Input {...register("region")} placeholder="지역" />
-          <Input type="date" {...register("contractDate")} />
+          <Input {...register("smartPlaceLink")}
+            placeholder="플레이스 주소(URL)" />
 
           <div className="flex items-center gap-2">
             <input type="checkbox" {...register("withDevice")} />
@@ -80,10 +85,19 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
 
           {withDevice && (
             <Select
+              value={deductSelect}
               onValueChange={(v) => {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-ignore
-                register("deduct").onChange({ target: { value: Number(v) } });
+                setDeductSelect(v);
+                if (v === "custom") {
+                  // reset deduct
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore
+                  register("deduct").onChange({ target: { value: undefined } });
+                } else {
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore
+                  register("deduct").onChange({ target: { value: Number(v) } });
+                }
               }}
             >
               <SelectTrigger className="w-32" size="sm">
@@ -94,8 +108,18 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
                 <SelectItem value="34">34</SelectItem>
                 <SelectItem value="21">21</SelectItem>
                 <SelectItem value="0">없음</SelectItem>
+                <SelectItem value="custom">직접입력</SelectItem>
               </SelectContent>
             </Select>
+
+            {deductSelect === "custom" && (
+              <Input
+                type="number"
+                placeholder="차감액 직접입력"
+                {...register("deduct", { valueAsNumber: true })}
+                className="w-32"
+              />
+            )}
           )}
 
           <Button type="submit" disabled={mutation.isPending} className="w-full">
