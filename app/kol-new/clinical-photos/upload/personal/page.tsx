@@ -357,7 +357,6 @@ export default function PersonalClinicalUploadPage() {
             console.error(`Failed to load round info for case ${personalCase.id}:`, error);
           }
           
-          // API 응답 데이터를 컴포넌트 형식에 맞게 변환
           const transformedCase: ClinicalCase = {
             id: personalCase.id.toString(),
             customerName: '본인',
@@ -1073,7 +1072,7 @@ export default function PersonalClinicalUploadPage() {
         }),
       ]);
 
-      toast.success('전체 저장되었습니다!');
+      toast.success('전체저장되었습니다!');
     } catch (error) {
       console.error('전체 저장 실패:', error);
       toast.error('전체 저장에 실패했습니다. 다시 시도해주세요.');
@@ -1169,15 +1168,6 @@ export default function PersonalClinicalUploadPage() {
                           >
                             <Trash2 className="h-3 w-3" />
                             삭제
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => handleSaveAll(case_.id)}
-                            className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
-                          >
-                            <Save className="h-3 w-3" />
-                            전체 저장
                           </Button>
                         </div>
                       </div>
@@ -1294,45 +1284,12 @@ export default function PersonalClinicalUploadPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={async () => {
-                              try {
-                                console.log('본인 정보 저장 버튼 클릭됨'); // 디버깅용
-                                
-                                // 현재 입력된 값들을 가져와서 저장
-                                const dateInput = document.querySelector(`#date-${case_.id}`) as HTMLInputElement;
-                                
-                                const updateData = {
-                                  date: dateInput?.value || case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.date,
-                                  treatmentType: case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.treatmentType
-                                };
-                                
-                                console.log('저장할 데이터:', updateData); // 디버깅용
-                                
-                                await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, updateData);
-                                
-                                // 저장 성공 피드백
-                                const button = document.querySelector(`#save-personal-info-${case_.id}`) as HTMLElement;
-                                if (button) {
-                                  const originalText = button.textContent;
-                                  button.textContent = '저장됨';
-                                  button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                                  setTimeout(() => {
-                                    button.textContent = originalText;
-                                    button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
-                                  }, 1500);
-                                }
-                                toast.success('본인 정보가 저장되었습니다!');
-                                console.log('본인 정보 저장 완료'); // 디버깅용
-                              } catch (error) {
-                                console.error('본인 정보 저장 실패:', error);
-                                toast.error('본인 정보 저장에 실패했습니다.');
-                              }
-                            }}
-                            id={`save-personal-info-${case_.id}`}
-                            className="text-xs px-3 py-1 h-7 border-biofox-blue-violet/30 hover:bg-biofox-blue-violet/10 hover:border-biofox-blue-violet/50 transition-all duration-200 cursor-pointer"
+                            onClick={() => handleSaveAll(case_.id)}
+                            id={`save-all-${case_.id}`}
+                            className="text-xs px-3 py-1 h-7 border-biofox-blue-violet/30 hover:bg-biofox-blue-violet/10 hover:border-biofox-blue-violet/50 transition-all duration-200 cursor-pointer flex items-center gap-1"
                           >
                             <Save className="h-3 w-3 mr-1" />
-                            저장
+                            전체저장
                           </Button>
                         </div>
                         
@@ -1617,45 +1574,8 @@ export default function PersonalClinicalUploadPage() {
                       
                       {/* 블록 5: 특이사항 */}
                       <div className="space-y-2 border-2 border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center">
                           <Label htmlFor={`memo-${case_.id}`} className="text-sm font-medium text-gray-700">특이사항</Label>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              try {
-                                console.log('특이사항 저장 버튼 클릭됨'); // 디버깅용
-                                
-                                const currentMemo = case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || '';
-                                console.log('저장할 메모:', currentMemo); // 디버깅용
-                                
-                                await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: currentMemo });
-                                
-                                // 저장 성공 피드백
-                                const button = document.querySelector(`#save-memo-${case_.id}`) as HTMLElement;
-                                if (button) {
-                                  const originalText = button.textContent;
-                                  button.textContent = '저장됨';
-                                  button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                                  setTimeout(() => {
-                                    button.textContent = originalText;
-                                    button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
-                                  }, 1500);
-                                }
-                                
-                                toast.success('특이사항이 저장되었습니다!');
-                                console.log('특이사항 저장 완료'); // 디버깅용
-                              } catch (error) {
-                                console.error('특이사항 저장 실패:', error);
-                                toast.error('특이사항 저장에 실패했습니다.');
-                              }
-                            }}
-                            id={`save-memo-${case_.id}`}
-                            className="text-xs px-3 py-1 h-7 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer"
-                          >
-                            <Save className="h-3 w-3 mr-1" />
-                            저장
-                          </Button>
                         </div>
                         <Textarea
                           id={`memo-${case_.id}`}

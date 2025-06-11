@@ -670,6 +670,8 @@ export default function CustomerClinicalUploadPage() {
           // 새 고객인 경우 임시 처리
           if (isNewCustomer(caseId)) {
             const imageUrl = URL.createObjectURL(file);
+            
+            // 해당 케이스의 동의서 업데이트 (새 고객)
             setCases(prev => prev.map(case_ => 
               case_.id === caseId 
                 ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
@@ -1575,7 +1577,7 @@ export default function CustomerClinicalUploadPage() {
         }),
       ]);
 
-      toast.success('전체 저장되었습니다!');
+      toast.success('전체저장되었습니다!');
     } catch (error) {
       console.error('전체 저장 실패:', error);
       toast.error('전체 저장에 실패했습니다. 다시 시도해주세요.');
@@ -1788,66 +1790,11 @@ export default function CustomerClinicalUploadPage() {
                           </button>
                         </div>
 
-                        {/* 진행중/완료 탭 또는 저장/삭제 버튼 */}
-                        <div className="flex-shrink-0">
-                          {isNewCustomer(case_.id) ? (
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleSaveNewCustomer(case_.id)}
-                                className="flex items-center gap-1 border-gray-200 hover:bg-biofox-lavender/20 hover:border-biofox-blue-violet/50 transition-all duration-200 text-xs px-2 py-1"
-                                disabled={!case_.customerInfo.name.trim()}
-                              >
-                                <Save className="h-3 w-3" />
-                                저장
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeleteNewCustomer(case_.id)}
-                                className="flex items-center gap-1 hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                                삭제
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleSaveAll(case_.id)}
-                                className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-3 py-1"
-                              >
-                                <Save className="h-3 w-3 mr-1" />
-                                전체 저장
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-1">
-                              <CaseStatusTabs
-                                status={case_.status}
-                                onStatusChange={(status) => handleCaseStatusChange(case_.id, status)}
-                              />
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeleteCase(case_.id)}
-                                className="flex items-center gap-1 hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                                삭제
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleSaveAll(case_.id)}
-                                className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-3 py-1"
-                              >
-                                <Save className="h-3 w-3 mr-1" />
-                                전체 저장
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                        {/* 진행중/완료 탭 */}
+                        <CaseStatusTabs
+                          status={case_.status}
+                          onStatusChange={(status) => handleCaseStatusChange(case_.id, status)}
+                        />
                       </div>
 
                       {/* 두 번째 줄: 동의서 상태 메타정보 */}
@@ -1962,51 +1909,14 @@ export default function CustomerClinicalUploadPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={async () => {
-                              try {
-                                console.log('고객 정보 저장 버튼 클릭됨'); // 디버깅용
-                                
-                                // 현재 입력된 값들을 가져와서 저장
-                                const nameInput = document.querySelector(`#name-${case_.id}`) as HTMLInputElement;
-                                const ageInput = document.querySelector(`#age-${case_.id}`) as HTMLInputElement;
-                                
-                                const updateData = {
-                                  name: nameInput?.value || case_.customerInfo.name,
-                                  age: ageInput?.value ? parseInt(ageInput.value) : case_.customerInfo.age,
-                                  gender: case_.customerInfo.gender
-                                };
-                                
-                                console.log('저장할 데이터:', updateData); // 디버깅용
-                                
-                                await handleBasicCustomerInfoUpdate(case_.id, updateData);
-                                
-                                // 저장 성공 피드백
-                                const button = document.querySelector(`#save-customer-info-${case_.id}`) as HTMLElement;
-                                if (button) {
-                                  const originalText = button.textContent;
-                                  button.textContent = '저장됨';
-                                  button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                                  setTimeout(() => {
-                                    button.textContent = originalText;
-                                    button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
-                                  }, 1500);
-                                }
-                                
-                                toast.success('고객 정보가 저장되었습니다!');
-                                console.log('고객 정보 저장 완료'); // 디버깅용
-                              } catch (error) {
-                                console.error('고객 정보 저장 실패:', error);
-                                toast.error('고객 정보 저장에 실패했습니다.');
-                              }
-                            }}
-                            id={`save-customer-info-${case_.id}`}
-                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 cursor-pointer"
+                            onClick={() => handleSaveAll(case_.id)}
+                            id={`save-all-${case_.id}`}
+                            className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 cursor-pointer flex items-center gap-1"
                           >
                             <Save className="h-3 w-3 mr-1" />
-                            저장
+                            전체저장
                           </Button>
                         </div>
-                        
                         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                           {/* 첫 번째 열 */}
                           <div className="space-y-3">
@@ -2299,43 +2209,6 @@ export default function CustomerClinicalUploadPage() {
                       <div className="space-y-2 border-2 border-gray-200 rounded-lg p-4 bg-gray-50/50">
                         <div className="flex items-center justify-between">
                           <Label htmlFor={`memo-${case_.id}`} className="text-sm font-medium text-gray-700">특이사항</Label>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              try {
-                                console.log('특이사항 저장 버튼 클릭됨'); // 디버깅용
-                                
-                                const currentMemo = case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || '';
-                                console.log('저장할 메모:', currentMemo); // 디버깅용
-                                
-                                await handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: currentMemo });
-                                
-                                // 저장 성공 피드백
-                                const button = document.querySelector(`#save-memo-${case_.id}`) as HTMLElement;
-                                if (button) {
-                                  const originalText = button.textContent;
-                                  button.textContent = '저장됨';
-                                  button.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                                  setTimeout(() => {
-                                    button.textContent = originalText;
-                                    button.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
-                                  }, 1500);
-                                }
-                                
-                                toast.success('특이사항이 저장되었습니다!');
-                                console.log('특이사항 저장 완료'); // 디버깅용
-                              } catch (error) {
-                                console.error('특이사항 저장 실패:', error);
-                                toast.error('특이사항 저장에 실패했습니다.');
-                              }
-                            }}
-                            id={`save-memo-${case_.id}`}
-                            className="text-xs px-3 py-1 h-7 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer"
-                          >
-                            <Save className="h-3 w-3 mr-1" />
-                            저장
-                          </Button>
                         </div>
                         <Textarea
                           id={`memo-${case_.id}`}
