@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ShopTable from "@/components/admin/shops/ShopTable";
+import ShopCreateDialog from "@/components/admin/shops/ShopCreateDialog";
 import { useShops } from "@/lib/hooks/shops";
 import { Loader2 } from "lucide-react";
 
@@ -39,6 +40,8 @@ export default function AdminShopListPage() {
             <SelectItem value="inactive">비활성</SelectItem>
           </SelectContent>
         </Select>
+
+        <ShopCreateDialog />
       </div>
 
       {/* Table or state */}
