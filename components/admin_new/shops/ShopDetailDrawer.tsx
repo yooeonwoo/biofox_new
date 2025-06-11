@@ -45,7 +45,7 @@ export default function ShopDetailDrawer({ shopId, open, onOpenChange }: Props) 
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <dt className="text-muted-foreground">KOL</dt>
-                <dd>{shop.kols?.name ?? "-"}</dd>
+                <dd>{shop.kol_name ?? "-"}</dd>
                 <dt className="text-muted-foreground">대표자</dt>
                 <dd>{shop.owner_name ?? "-"}</dd>
                 <dt className="text-muted-foreground">지역</dt>
@@ -53,7 +53,7 @@ export default function ShopDetailDrawer({ shopId, open, onOpenChange }: Props) 
                 <dt className="text-muted-foreground">계약일</dt>
                 <dd>{shop.contract_date ? format(new Date(shop.contract_date), "yyyy-MM-dd") : "-"}</dd>
                 <dt className="text-muted-foreground">총 보급 기기수</dt>
-                <dd>{shop.kol_device_accumulators?.total_device_cnt ?? 0}</dd>
+                <dd>{shop.device_cnt ?? 0}</dd>
               </dl>
               {shop.smart_place_link && (
                 <Button asChild variant="link" size="sm" className="px-0">

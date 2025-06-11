@@ -14,15 +14,10 @@ export async function GET(request: NextRequest) {
   const page = Number(searchParams.get('page') || '1');
   const size = Number(searchParams.get('size') || '20');
 
-  // base query
+  // base query (view includes kol_name, device_cnt)
   let query = supabaseAdmin
-    .from('shops')
-    .select(
-      `id, shop_name, region, status, contract_date, 
-       kols:kol_id ( name ),
-       kol_device_accumulators(total_device_cnt)`,
-      { count: 'exact' }
-    );
+    .from('admin_shop_list')
+    .select('*', { count: 'exact' });
 
   if (search) query = query.ilike('shop_name', `%${search}%`);
   if (kolId) {
@@ -48,8 +43,8 @@ export async function GET(request: NextRequest) {
     region: d.region,
     status: d.status,
     contractDate: d.contract_date,
-    kolName: d.kols?.name ?? null,
-    deviceCnt: d.kol_device_accumulators?.total_device_cnt ?? 0,
+    kolName: d.kol_name,
+    deviceCnt: d.device_cnt,
   }));
 
   return NextResponse.json({ ok: true, data: rows, total: count });
