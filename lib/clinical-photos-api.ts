@@ -45,39 +45,54 @@ async function getCurrentKolId(): Promise<number> {
     if (typeof window === 'undefined') {
       return 0;
     }
-    
-    const userEmail = await getUserEmail();
-    if (!userEmail) {
-      throw new Error('사용자 이메일을 찾을 수 없습니다');
+
+    // Clerk 사용자 ID 가져오기
+    const userResp = await fetch('/api/user');
+    if (!userResp.ok) throw new Error('사용자 정보를 가져올 수 없습니다');
+    const userJson = await userResp.json();
+    const clerkUserId: string | undefined = userJson.userId;
+    const userEmail: string | undefined = userJson.email;
+
+    // 1) clerk_id 로 우선 조회
+    if (clerkUserId) {
+      const { data: userRow, error: userErr } = await supabaseClient
+        .from('users')
+        .select('id')
+        .eq('clerk_id', clerkUserId)
+        .maybeSingle();
+
+      if (userErr) throw userErr;
+      if (userRow) {
+        const { data: kolRow, error: kolErr } = await supabaseClient
+          .from('kols')
+          .select('id')
+          .eq('user_id', userRow.id)
+          .order('created_at', { ascending: false })
+          .maybeSingle();
+        if (kolErr) throw kolErr;
+        if (kolRow) return kolRow.id;
+      }
     }
-    
-    // 먼저 users 테이블에서 이메일로 사용자 ID 찾기
-    const { data: userData, error: userError } = await supabaseClient
-      .from('users')
-      .select('id')
-      .eq('email', userEmail)
-      .single();
-    
-    if (userError || !userData) {
-      console.error('사용자 조회 실패:', userError);
-      throw new Error('사용자 정보를 찾을 수 없습니다');
+
+    // 2) 이메일로 fallback 조회 (이전 로직 호환)
+    if (userEmail) {
+      const { data: userRow, error: userErr } = await supabaseClient
+        .from('users')
+        .select('id')
+        .eq('email', userEmail)
+        .maybeSingle();
+      if (!userErr && userRow) {
+        const { data: kolRow, error: kolErr } = await supabaseClient
+          .from('kols')
+          .select('id')
+          .eq('user_id', userRow.id)
+          .order('created_at', { ascending: false })
+          .maybeSingle();
+        if (!kolErr && kolRow) return kolRow.id;
+      }
     }
-    
-    // 사용자 ID로 KOLs 테이블에서 KOL 정보 찾기 (여러 개가 있을 수 있음)
-    const { data: kolsData, error: kolsError } = await supabaseClient
-      .from('kols')
-      .select('id, created_at')
-      .eq('user_id', userData.id)
-      .order('created_at', { ascending: false }); // 가장 최근 생성된 것 우선
-    
-    if (kolsError || !kolsData || kolsData.length === 0) {
-      console.error('KOL 조회 실패:', kolsError);
-      throw new Error('KOL 정보를 찾을 수 없습니다');
-    }
-    
-    // 여러 KOL이 있을 경우 가장 최근에 생성된 것 사용
-    console.log(`임상사진: ${kolsData.length}개의 KOL 중 ID=${kolsData[0].id} 선택됨`);
-    return kolsData[0].id;
+
+    throw new Error('KOL 정보를 찾을 수 없습니다');
   } catch (error: any) {
     console.error('KOL ID 가져오기 실패:', error);
     return 0;
@@ -90,13 +105,13 @@ async function getUserEmail(): Promise<string> {
     if (typeof window === 'undefined') {
       return '';
     }
-    
+
     const response = await fetch('/api/user');
     if (response.ok) {
       const data = await response.json();
       return data.email || '';
     }
-    
+
     return '';
   } catch (error: any) {
     console.error('사용자 이메일 가져오기 실패:', error);
@@ -108,61 +123,47 @@ async function getUserEmail(): Promise<string> {
 export async function fetchCases(status?: string): Promise<ClinicalCase[]> {
   try {
     console.log('임상사진: fetchCases 시작');
-    
-    // 사용자 이메일 확인
-    const userEmail = await getUserEmail();
-    console.log('임상사진: 사용자 이메일', userEmail);
-    
+
     const kolId = await getCurrentKolId();
-    console.log('임상사진: 가져온 KOL ID', kolId);
-    
-    if (!kolId) {
-      throw new Error('KOL 정보를 찾을 수 없습니다');
-    }
-    
-    console.log('임상사진 조회 중, 사용하는 KOL ID:', kolId);
-    
-    // 48번 KOL을 위해 하드코딩으로 테스트 (테스트 후 제거 필요)
-    const targetKolId = kolId === 0 ? 48 : kolId;
-    console.log('임상사진: 최종 사용하는 KOL ID', targetKolId);
-    
-    // Supabase 쿼리 실행 (동의서 파일 정보 포함)
+    if (!kolId) throw new Error('KOL 정보를 찾을 수 없습니다');
+
+    // Supabase 쿼리 실행
     const { data, error } = await supabaseClient
       .from('clinical_cases')
       .select(`
         *,
         clinical_consent_files(file_url)
       `)
-      .eq('kol_id', targetKolId)
+      .eq('kol_id', kolId)
       .order('created_at', { ascending: false });
-    
+
     console.log('임상사진: Supabase 응답', { 결과있음: !!data, 데이터갯수: data?.length, 에러: error });
-    
+
     if (error) {
       console.error('임상사진: Supabase 에러', error.message);
       throw error;
     }
-    
+
     if (!data || !Array.isArray(data)) {
       throw new Error('데이터를 조회하는 데 실패했습니다');
     }
 
     // 각 케이스의 사진 개수 추출
     const photoCountsMap: Record<number, number> = {};
-    
+
     if (data.length > 0) {
       for (const caseItem of data) {
         const { count, error: countError } = await supabaseClient
           .from('clinical_photos')
           .select('*', { count: 'exact', head: true })
           .eq('case_id', caseItem.id);
-        
+
         if (!countError && count !== null) {
           photoCountsMap[caseItem.id] = count;
         }
       }
     }
-    
+
     // 데이터 형식 변환
     return data.map(c => ({
       id: c.id,
@@ -179,13 +180,13 @@ export async function fetchCases(status?: string): Promise<ClinicalCase[]> {
       updatedAt: c.updated_at,
       totalPhotos: photoCountsMap[c.id] || 0,
       consentImageUrl: c.consent_image_url || c.clinical_consent_files?.[0]?.file_url || undefined,
-      
+
       // 플레이어 제품 선택 필드
       cureBooster: c.cure_booster || false,
       cureMask: c.cure_mask || false,
       premiumMask: c.premium_mask || false,
       allInOneSerum: c.all_in_one_serum || false,
-      
+
       // 고객 피부타입 필드
       skinRedSensitive: c.skin_red_sensitive || false,
       skinPigment: c.skin_pigment || false,
@@ -217,10 +218,10 @@ export async function fetchCase(caseId: number): Promise<ClinicalCase | null> {
       `)
       .eq('id', caseId)
       .single();
-    
+
     if (error) throw error;
     if (!data) return null;
-    
+
     // 데이터 형식 변환
     return {
       id: data.id,
@@ -257,10 +258,21 @@ export async function createCase(caseData: {
   customerEmail?: string;
   customerBirthDate?: string;
   customerMemo?: string;
+  // 추가 필드
+  cureBooster?: boolean;
+  cureMask?: boolean;
+  premiumMask?: boolean;
+  allInOneSerum?: boolean;
+  skinRedSensitive?: boolean;
+  skinPigment?: boolean;
+  skinPore?: boolean;
+  skinTrouble?: boolean;
+  skinWrinkle?: boolean;
+  skinEtc?: boolean;
 }): Promise<ClinicalCase | null> {
   try {
     const kolId = await getCurrentKolId();
-    
+
     const { data, error } = await supabaseClient
       .from('clinical_cases')
       .insert({
@@ -272,12 +284,23 @@ export async function createCase(caseData: {
         consent_received: caseData.consentReceived || false,
         consent_date: caseData.consentDate,
         status: 'active',
+        // 신규 필드
+        cure_booster: caseData.cureBooster,
+        cure_mask: caseData.cureMask,
+        premium_mask: caseData.premiumMask,
+        all_in_one_serum: caseData.allInOneSerum,
+        skin_red_sensitive: caseData.skinRedSensitive,
+        skin_pigment: caseData.skinPigment,
+        skin_pore: caseData.skinPore,
+        skin_trouble: caseData.skinTrouble,
+        skin_wrinkle: caseData.skinWrinkle,
+        skin_etc: caseData.skinEtc,
       })
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     // 데이터 형식 변환
     return {
       id: data.id,
@@ -304,10 +327,10 @@ export async function createCase(caseData: {
 export async function updateCase(caseId: number, caseData: Partial<ClinicalCase>): Promise<ClinicalCase | null> {
   try {
     console.log('updateCase 호출됨:', { caseId, caseData }); // 디버깅용
-    
+
     // Supabase 필드명에 맞게 변환 (인덱스 시그니처 추가)
-    const supabaseData: { 
-      [key: string]: string | boolean | undefined 
+    const supabaseData: {
+      [key: string]: string | boolean | undefined
     } = {
       customer_name: caseData.customerName,
       case_name: caseData.caseName,
@@ -317,13 +340,13 @@ export async function updateCase(caseId: number, caseData: Partial<ClinicalCase>
       consent_date: caseData.consentDate,
       status: caseData.status,
       consent_image_url: caseData.consentImageUrl,
-      
+
       // 플레이어 제품 선택 필드
       cure_booster: caseData.cureBooster,
       cure_mask: caseData.cureMask,
       premium_mask: caseData.premiumMask,
       all_in_one_serum: caseData.allInOneSerum,
-      
+
       // 고객 피부타입 필드
       skin_red_sensitive: caseData.skinRedSensitive,
       skin_pigment: caseData.skinPigment,
@@ -332,28 +355,28 @@ export async function updateCase(caseId: number, caseData: Partial<ClinicalCase>
       skin_wrinkle: caseData.skinWrinkle,
       skin_etc: caseData.skinEtc,
     };
-    
+
     // undefined 제거
     Object.keys(supabaseData).forEach(key => {
       if (supabaseData[key] === undefined) {
         delete supabaseData[key];
       }
     });
-    
+
     console.log('Supabase 업데이트 데이터:', supabaseData); // 디버깅용
-    
+
     const { data, error } = await supabaseClient
       .from('clinical_cases')
       .update(supabaseData)
       .eq('id', caseId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('Supabase 업데이트 에러:', error); // 디버깅용
       throw error;
     }
-    
+
     // 데이터 형식 변환
     return {
       id: data.id,
@@ -384,7 +407,7 @@ export async function deleteCase(caseId: number): Promise<boolean> {
       .from('clinical_cases')
       .delete()
       .eq('id', caseId);
-    
+
     if (error) throw error;
     return true;
   } catch (error: any) {
@@ -402,9 +425,9 @@ export async function fetchPhotos(caseId: number): Promise<PhotoSlot[]> {
       .select('*')
       .eq('case_id', caseId)
       .order('round_number', { ascending: true });
-    
+
     if (error) throw error;
-    
+
     // 데이터 형식 변환
     return data.map(p => ({
       id: `${p.id}`,
@@ -427,13 +450,13 @@ function sanitizeFileName(fileName: string): string {
   const lastDotIndex = fileName.lastIndexOf('.');
   const extension = lastDotIndex > -1 ? fileName.substring(lastDotIndex) : '';
   const nameWithoutExt = lastDotIndex > -1 ? fileName.substring(0, lastDotIndex) : fileName;
-  
+
   // 안전한 파일명으로 변환 (알파벳, 숫자, 하이픈, 언더스코어만 허용)
   const safeName = nameWithoutExt
     .replace(/[^\w\-_]/g, '_')  // 특수문자를 언더스코어로 변경
     .replace(/_{2,}/g, '_')     // 연속된 언더스코어를 하나로 변경
     .substring(0, 100);        // 최대 100자로 제한
-  
+
   return `${safeName}${extension}`;
 }
 
@@ -444,20 +467,20 @@ export async function uploadImage(file: File, caseId: number, type: 'photo' | 'c
     formData.append('file', file);
     formData.append('caseId', caseId.toString());
     formData.append('type', type);
-    
+
     const response = await fetch('/api/kol-new/clinical-photos/upload', {
       method: 'POST',
       credentials: 'include',
       body: formData,
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `업로드 실패 (${response.status})`);
     }
-    
+
     const result = await response.json();
-    
+
     return {
       url: result.url,
       fileName: result.fileName,
@@ -494,7 +517,7 @@ export async function savePhoto(caseId: number, photoData: {
       })
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   } catch (error: any) {
@@ -514,10 +537,10 @@ export async function deletePhoto(caseId: number, roundNumber: number, angle: st
       .eq('round_number', roundNumber)
       .eq('angle', angle)
       .single();
-    
+
     if (fetchError) throw fetchError;
     if (!photoData) throw new Error('삭제할 사진을 찾을 수 없습니다.');
-    
+
     // 스토리지에서 파일 삭제 (URL에서 경로 추출)
     const filePathMatch = photoData.file_url.match(/clinical-photos\/([^?]+)/);
     if (filePathMatch && filePathMatch[1]) {
@@ -526,16 +549,16 @@ export async function deletePhoto(caseId: number, roundNumber: number, angle: st
         .storage
         .from('clinical-photos')
         .remove([filePath]);
-      
+
       if (storageError) console.error('스토리지에서 파일 삭제 실패:', storageError);
     }
-    
+
     // 데이터베이스에서 메타데이터 삭제
     const { error: deleteError } = await supabaseClient
       .from('clinical_photos')
       .delete()
       .eq('id', photoData.id);
-    
+
     if (deleteError) throw deleteError;
   } catch (error: any) {
     console.error('Error deleting photo:', error);
@@ -548,33 +571,33 @@ export async function deletePhoto(caseId: number, roundNumber: number, angle: st
 export async function uploadPhoto(caseId: number, roundNumber: number, angle: string, file: File): Promise<string> {
   try {
     console.log('uploadPhoto called with:', { caseId, roundNumber, angle, fileName: file.name, fileSize: file.size });
-    
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('caseId', caseId.toString());
     formData.append('type', 'photo');
     formData.append('roundNumber', roundNumber.toString());
     formData.append('angle', angle);
-    
+
     console.log('Sending request to /api/kol-new/clinical-photos/upload');
-    
+
     const response = await fetch('/api/kol-new/clinical-photos/upload', {
       method: 'POST',
       credentials: 'include',
       body: formData,
     });
-    
+
     console.log('Response status:', response.status);
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('Upload failed with error:', errorData);
       throw new Error(errorData.error || `사진 업로드 실패 (${response.status})`);
     }
-    
+
     const result = await response.json();
     console.log('Upload successful:', result);
-    
+
     // 업로드 성공 - API에서 이미 메타데이터 저장까지 완료됨
     return result.url;
   } catch (error: any) {
@@ -591,18 +614,18 @@ export async function uploadConsentImage(caseId: number, file: File): Promise<st
     formData.append('file', file);
     formData.append('caseId', caseId.toString());
     formData.append('type', 'consent');
-    
+
     const response = await fetch('/api/kol-new/clinical-photos/upload', {
       method: 'POST',
       credentials: 'include',
       body: formData,
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `동의서 업로드 실패 (${response.status})`);
     }
-    
+
     const result = await response.json();
     return result.url;
   } catch (error: any) {
@@ -630,7 +653,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
       .eq('case_id', caseId)
       .eq('round_number', roundNumber)
       .maybeSingle();
-    
+
     const roundData = {
       case_id: caseId,
       round_number: roundNumber,
@@ -659,7 +682,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
         .eq('round_number', roundNumber)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     } else {
@@ -669,7 +692,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
         .insert(roundData)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     }
@@ -687,9 +710,16 @@ export async function fetchRoundCustomerInfo(caseId: number): Promise<any[]> {
       .select('*')
       .eq('case_id', caseId)
       .order('round_number', { ascending: true });
-    
+
     if (error) throw error;
-    return data || [];
+
+    return (
+      data || []
+    ).map((row) => ({
+      ...row,
+      products: row.products ? JSON.parse(row.products) : [],
+      skin_types: row.skin_types ? JSON.parse(row.skin_types) : [],
+    }));
   } catch (error: any) {
     console.error('Error fetching round customer info:', error);
     throw error;

@@ -3,13 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 // 환경 변수 체크 및 기본값 설정
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ? process.env.NEXT_PUBLIC_SUPABASE_URL.trim() : '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.trim() : '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.trim() : supabaseAnonKey;
 
 // 환경 변수 로그 출력 (디버깅용)
 if (typeof window === 'undefined') { // 서버 사이드에서만 실행
   console.log('Supabase URL:', supabaseUrl ? '설정됨' : '미설정');
   console.log('Supabase Anon Key:', supabaseAnonKey ? '설정됨' : '미설정');
-  console.log('Supabase Service Key:', supabaseServiceKey ? '설정됨' : '미설정');
 }
 
 // URL 검증 함수
@@ -29,7 +27,6 @@ const validSupabaseUrl = isValidUrl(supabaseUrl)
   : 'https://placeholder-url.supabase.co';
 
 const validSupabaseKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
-const validServiceKey = supabaseServiceKey || validSupabaseKey;
 
 if (!isValidUrl(supabaseUrl)) {
   console.error('⚠️ 유효하지 않은 Supabase URL입니다:', supabaseUrl);
@@ -37,7 +34,8 @@ if (!isValidUrl(supabaseUrl)) {
 }
 
 // 서버 사이드 전용 Supabase 클라이언트 (API 라우트에서 사용)
-export const serverSupabase = createClient(validSupabaseUrl, validServiceKey, {
+// 서버사이드에서는 서비스 키 대신 익명 키를 사용해 세션 기반 인증만 처리
+export const serverSupabase = createClient(validSupabaseUrl, validSupabaseKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
