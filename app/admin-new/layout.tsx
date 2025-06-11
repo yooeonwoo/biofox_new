@@ -1,10 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import dynamic from 'next/dynamic';
-
-// AdminHeader is a client component, so import dynamically with no SSR to avoid mismatch in server layout
-const AdminHeader = dynamic(() => import('@/components/layout/AdminHeader'), { ssr: false });
+import AdminHeader from '@/components/layout/AdminHeader';
 
 export default async function AdminNewLayout({ children }: { children: ReactNode }) {
   const { userId, sessionClaims } = await auth();
