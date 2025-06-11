@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { redirect } from 'next/navigation';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
@@ -123,23 +123,22 @@ export default function StoresPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isLoadingShopDetail, setIsLoadingShopDetail] = useState(false);
 
-  // 필터링된 전문점 데이터 (API 응답 포맷에 맞춰 수정)
-  const showAllShops = true; // true로 변경하여 모든 전문점 표시
-  
-  // 필터링 로직 개선
-  // 모든 샵을 표시하도록 변경 (API에서 이미 필터링 제거)
-  console.log(`필터링 전 전문점 수: ${shopsData.length}`);
-  const filteredShops = shopsData; // 모든 샵 표시
-  console.log(`필터링 후 전문점 수: ${filteredShops.length}`);
+  // 필터링 로직: 현재는 모든 샵을 표시하지만, 향후 조건 추가 시 여기서 처리
+  const filteredShops = useMemo(() => {
+    return shopsData; // 향후 필터 조건 적용 가능
+  }, [shopsData]);
 
+  // 당월 매출 기준 바 차트 데이터 (memoized)
+  const currentMonthBarData = useMemo(() => {
+    return filteredShops
+      .slice() // 원본 배열 보존
+      .sort((a, b) => b.sales.total - a.sales.total)
+      .map(shop => ({
+        name: shop.shop_name,
+        매출: shop.sales.total
+      }));
+  }, [filteredShops]);
 
-  // 당월 매출 기준 바 차트 데이터 (제한 없이 전체 데이터)
-  const currentMonthBarData = filteredShops
-    .sort((a, b) => b.sales.total - a.sales.total)
-    .map(shop => ({
-      name: shop.shop_name,
-      매출: shop.sales.total
-    }));
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -175,12 +174,13 @@ export default function StoresPage() {
 
           // 전문점 데이터 로드
           // API 응답 구조 확인 및 로그
-          console.log('API 응답 구조:', {
-            hasShops: Boolean(shopsResult.shops),
-            shopsCount: shopsResult.shops?.length || 0,
-            hasMeta: Boolean(shopsResult.meta),
-            meta: shopsResult.meta
-          });
+          // 필요시 디버깅용 로그, 운영 시 주석 처리
+          // console.log('API 응답 구조:', {
+          //   hasShops: Boolean(shopsResult.shops),
+          //   shopsCount: shopsResult.shops?.length || 0,
+          //   hasMeta: Boolean(shopsResult.meta),
+          //   meta: shopsResult.meta
+          // });
           
           // 변경된 API 구조 처리 (shops와 meta 객체)
           if (shopsResult.shops && Array.isArray(shopsResult.shops)) {
@@ -200,23 +200,23 @@ export default function StoresPage() {
             
             // 메타 데이터가 있으면 사용 (새 API 구조)
             if (shopsResult.meta) {
-              console.log('메타 데이터 상세:', {
-                totalShopsCount: shopsResult.meta.totalShopsCount,
-                activeShopsCount: shopsResult.meta.activeShopsCount,
-                activeShopsFormatted: typeof shopsResult.meta.activeShopsCount
-              });
+              // console.log('메타 데이터 상세:', {
+              //   totalShopsCount: shopsResult.meta.totalShopsCount,
+              //   activeShopsCount: shopsResult.meta.activeShopsCount,
+              //   activeShopsFormatted: typeof shopsResult.meta.activeShopsCount
+              // });
               
               // 활성 전문점 상태 체크
               const activeShopsFromAPI = formattedShops.filter((shop: ShopData) => 
                 shop.status === 'active' // 수정: 매출 여부는 고려하지 않음
               );
-              console.log('활성 전문점 직접 계산:', activeShopsFromAPI.length);
-              console.log('활성 전문점 목록:', activeShopsFromAPI.map((shop: ShopData) => ({
-                name: shop.shop_name,
-                hasOrdered: shop.sales.hasOrdered,
-                total: shop.sales.total,
-                status: shop.status
-              })));
+              // console.log('활성 전문점 직접 계산:', activeShopsFromAPI.length);
+              // console.log('활성 전문점 목록:', activeShopsFromAPI.map((shop: ShopData) => ({
+              //   name: shop.shop_name,
+              //   hasOrdered: shop.sales.hasOrdered,
+              //   total: shop.sales.total,
+              //   status: shop.status
+              // })));
               
               setShopStats({
                 totalShopsCount: shopsResult.meta.totalShopsCount || 0,
@@ -224,12 +224,12 @@ export default function StoresPage() {
               });
               
               // 상태 업데이트 후 확인
-              setTimeout(() => {
-                console.log('설정된 상태 값:', shopStats);
-              }, 0);
+              // setTimeout(() => {
+              //   console.log('설정된 상태 값:', shopStats);
+              // }, 0);
             } else {
               // 메타 데이터가 없으면 직접 계산 (구 API 구조 호환성 유지)
-              console.log('메타 데이터 없음, 직접 계산');
+              // console.log('메타 데이터 없음, 직접 계산');
               setShopStats({
                 totalShopsCount: formattedShops.length,
                 activeShopsCount: formattedShops.filter((shop: ShopData) => 
@@ -239,7 +239,7 @@ export default function StoresPage() {
             }
           } else if (Array.isArray(shopsResult)) {
             // 이전 API 구조도 지원 (호환성 유지)
-            console.log('이전 API 구조 사용');
+            // console.log('이전 API 구조 사용');
             const formattedShops = shopsResult.map((shop: any) => ({
               ...shop,
               shop_name: shop.shop_name || shop.ownerName,
@@ -262,7 +262,7 @@ export default function StoresPage() {
               ).length
             });
           } else {
-            console.log('API 응답에 샵 데이터 없음');
+            // console.log('API 응답에 샵 데이터 없음');
             setShopsData([]);
             setShopStats({
               totalShopsCount: 0,

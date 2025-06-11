@@ -19,6 +19,7 @@ const ignorePaths = [
 // 역할별 기본 랜딩 페이지
 const roleLandingPages = {
   "admin": "/admin-dashboard/main",
+  "admin-new": "/admin-new",
   "kol": "/kol-new"
 };
 
@@ -73,6 +74,12 @@ export default clerkMiddleware(async (auth, req) => {
   if (userRole === "kol" && req.nextUrl.pathname.startsWith("/kol")) {
     console.log('KOL이 /kol 경로 접근, kol-new로 리다이렉트');
     return NextResponse.redirect(new URL("/kol-new", req.url));
+  }
+
+  // admin-new 전용 영역 보호: admin-new 역할이 아닌 사용자가 접근 시 홈으로 리다이렉트
+  if (req.nextUrl.pathname.startsWith("/admin-new") && userRole !== "admin-new") {
+    console.log(`${userRole} 사용자가 /admin-new 경로에 접근 시도 — 접근 거부`);
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   return NextResponse.next();
