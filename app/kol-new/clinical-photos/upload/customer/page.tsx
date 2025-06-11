@@ -1815,9 +1815,9 @@ export default function CustomerClinicalUploadPage() {
                                 size="sm"
                                 variant="default"
                                 onClick={() => handleSaveAll(case_.id)}
-                                className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
+                                className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-3 py-1"
                               >
-                                <Save className="h-3 w-3" />
+                                <Save className="h-3 w-3 mr-1" />
                                 전체 저장
                               </Button>
                             </div>
@@ -1840,9 +1840,9 @@ export default function CustomerClinicalUploadPage() {
                                 size="sm"
                                 variant="default"
                                 onClick={() => handleSaveAll(case_.id)}
-                                className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
+                                className="flex items-center gap-1 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white hover:shadow-md transition-all duration-200 text-xs px-3 py-1"
                               >
-                                <Save className="h-3 w-3" />
+                                <Save className="h-3 w-3 mr-1" />
                                 전체 저장
                               </Button>
                             </div>
