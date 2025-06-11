@@ -20,12 +20,17 @@ export async function GET(request: NextRequest) {
     .select(
       `id, shop_name, region, status, contract_date, 
        kols:kol_id ( name ),
-       kol_device_accumulators!inner(total_device_cnt)`,
+       kol_device_accumulators(total_device_cnt)`,
       { count: 'exact' }
     );
 
   if (search) query = query.ilike('shop_name', `%${search}%`);
-  if (kolId) query = query.eq('kol_id', kolId);
+  if (kolId) {
+    const kolIdNum = Number(kolId);
+    if (!Number.isNaN(kolIdNum)) {
+      query = query.eq('kol_id', kolIdNum);
+    }
+  }
   if (status) query = query.eq('status', status);
 
   const from = (page - 1) * size;

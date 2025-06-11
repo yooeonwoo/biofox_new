@@ -1,6 +1,10 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+import dynamic from 'next/dynamic';
+
+// AdminHeader is a client component, so import dynamically with no SSR to avoid mismatch in server layout
+const AdminHeader = dynamic(() => import('@/components/layout/AdminHeader'), { ssr: false });
 
 export default async function AdminNewLayout({ children }: { children: ReactNode }) {
   const { userId, sessionClaims } = await auth();
@@ -18,9 +22,8 @@ export default async function AdminNewLayout({ children }: { children: ReactNode
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
-      <header className="bg-gray-800 px-4 py-3 text-white">
-        <h1 className="text-lg font-bold">BIOFOX 새 관리자</h1>
-      </header>
+      {/* 공통 헤더 */}
+      <AdminHeader />
       <main className="flex-1 p-6">{children}</main>
     </div>
   );

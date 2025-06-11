@@ -79,10 +79,10 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
               register("kolId").onChange({ target: { value: Number(v) } });
             }}
           >
-            <SelectTrigger className="w-full" size="sm">
+            <SelectTrigger className="w-full bg-white" size="sm">
               <SelectValue placeholder="KOL 선택" />
             </SelectTrigger>
-            <SelectContent className="max-h-60 overflow-auto">
+            <SelectContent className="max-h-60 overflow-auto bg-white">
               {kols.map((k) => (
                 <SelectItem key={k.id} value={String(k.id)}>{k.name}</SelectItem>
               ))}
@@ -118,10 +118,10 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
                 }
               }}
             >
-              <SelectTrigger className="w-32" size="sm">
+              <SelectTrigger className="w-32 bg-white" size="sm">
                 <SelectValue placeholder="차감액" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="55">55</SelectItem>
                 <SelectItem value="34">34</SelectItem>
                 <SelectItem value="21">21</SelectItem>
