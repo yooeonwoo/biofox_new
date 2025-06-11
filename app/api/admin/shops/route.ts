@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         contract_date,
         kols(name),
         device_count:shop_device_allocations(count),
-        latest_allocation:shop_device_allocations(order:allocated_at.desc,limit:1).allocated_at
+        latest_allocation:shop_device_allocations(max:allocated_at)
       `
     );
 
