@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import AdminNewShopTable from "@/components/admin_new/shops/ShopTable";
+import NewShopDialog from "@/components/admin_new/shops/NewShopDialog";
 import { useAdminNewShops } from "@/lib/hooks/adminNewShops";
 import { Loader2 } from "lucide-react";
 
@@ -60,6 +61,8 @@ export default function AdminNewShopListPage() {
       ) : (
         <AdminNewShopTable data={data} />
       )}
+
+      <NewShopDialog createdBy={1} />
     </div>
   );
 }
