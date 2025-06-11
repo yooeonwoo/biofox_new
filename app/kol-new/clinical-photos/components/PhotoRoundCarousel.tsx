@@ -94,8 +94,10 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
   };
 
   // 회차 이름 변환
+  // 1회차를 "Before" 로 표시하고, 그 이후부터는 (round-1)회차로 표시
   const getRoundName = (round: number) => {
-    return `${round}회차`;
+    if (round === 1) return 'Before';
+    return `${round - 1}회차`;
   };
 
   // 파일 선택 핸들러
@@ -454,3 +456,6 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
 });
 
 export default PhotoRoundCarousel;
+
+// linting: react/display-name
+PhotoRoundCarousel.displayName = 'PhotoRoundCarousel';

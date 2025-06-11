@@ -1247,7 +1247,7 @@ export default function PersonalClinicalUploadPage() {
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-medium text-biofox-blue-violet">본인 정보</h3>
                             <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-biofox-blue-violet/30">
-                              {currentRounds[case_.id] || 1}회차
+                              {(currentRounds[case_.id] || 1) === 1 ? 'Before' : `${(currentRounds[case_.id] || 1) - 1}회차`}
                             </span>
                           </div>
                           <Button
@@ -1387,7 +1387,7 @@ export default function PersonalClinicalUploadPage() {
                         <div className="flex items-center gap-2">
                           <Label className="text-sm font-medium text-biofox-blue-violet">홈케어 제품</Label>
                           <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-biofox-blue-violet/30">
-                            {currentRounds[case_.id] || 1}회차
+                            {(currentRounds[case_.id] || 1) === 1 ? 'Before' : `${(currentRounds[case_.id] || 1) - 1}회차`}
                           </span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-2 gap-y-2">
@@ -1483,7 +1483,7 @@ export default function PersonalClinicalUploadPage() {
                         <div className="flex items-center gap-2">
                           <Label className="text-sm font-medium text-biofox-blue-violet">고객 피부타입</Label>
                           <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-biofox-blue-violet/30">
-                            {currentRounds[case_.id] || 1}회차
+                            {(currentRounds[case_.id] || 1) === 1 ? 'Before' : `${(currentRounds[case_.id] || 1) - 1}회차`}
                           </span>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2 gap-y-2">
