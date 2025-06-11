@@ -126,15 +126,19 @@ export async function GET() {
       return NextResponse.json({ shops: [], meta: { totalShopsCount: 0, activeShopsCount: 0 } });
     }
 
+    // 🚀 신규: 현재 KOL 전문점 id 목록 추출
+    const shopIds = shops.map(s => s.id);
+
     // shop_sales_metrics 테이블에서 전문점별 월간 매출 데이터 조회
     console.log(`💰 매출 데이터 조회 시작:`, {
       searchFormats: [currentMonth, currentMonthCompact],
-      shopIds: shops.map(s => s.id)
+      shopIds
     });
     
     const { data: salesData, error: salesError } = await supabase
       .from('shop_sales_metrics')
       .select('shop_id, total_sales, product_sales, device_sales, commission, year_month')
+      .in('shop_id', shopIds)
       .or(`year_month.eq.${currentMonth},year_month.eq.${currentMonthCompact}`);
 
     console.log(`💰 매출 데이터 조회 응답:`, {

@@ -156,20 +156,24 @@ export default function StoresPage() {
         try {
           setLoading(true);
           
-          // KOL 정보 로드
-          const dashboardResponse = await fetch('/api/kol-new/dashboard');
-          if (!dashboardResponse.ok) throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
-          const dashboardResult = await dashboardResponse.json();
+          // 대시보드 및 전문점 데이터를 병렬로 로드
+          const [dashboardResult, shopsResult] = await Promise.all([
+            fetch('/api/kol-new/dashboard').then(async (r) => {
+              if (!r.ok) throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
+              return r.json();
+            }),
+            fetch('/api/kol-new/shops').then(async (r) => {
+              if (!r.ok) throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
+              return r.json();
+            })
+          ]);
+
           setKolInfo({
             name: dashboardResult.kol.name,
             shopName: dashboardResult.kol.shopName
           });
 
           // 전문점 데이터 로드
-          const shopsResponse = await fetch('/api/kol-new/shops');
-          if (!shopsResponse.ok) throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
-          const shopsResult = await shopsResponse.json();
-          
           // API 응답 구조 확인 및 로그
           console.log('API 응답 구조:', {
             hasShops: Boolean(shopsResult.shops),
