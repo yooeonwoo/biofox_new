@@ -28,16 +28,29 @@ export default function KolMobileMenu({
   const isTestRole = userRole === "test";
   const userInitials = userName?.substring(0, 2) || "KL";
 
+  // 프로필 표시 개선 함수
+  const getDisplayName = () => {
+    if (!userName) return "사용자";
+    return userName;
+  };
+
+  const getDisplayShopName = () => {
+    if (!shopName) return "Shop";
+    return shopName;
+  };
+
   return (
     <div className="flex flex-col gap-6 py-4">
-      <div className="flex items-center gap-2 px-4">
-        <Avatar>
+      <div className="flex items-center gap-3 px-4">
+        <Avatar className="h-10 w-10">
           <AvatarImage src={userImage} />
-          <AvatarFallback>{userInitials}</AvatarFallback>
+          <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">
+            {userInitials}
+          </AvatarFallback>
         </Avatar>
-        <div>
-          <p className="text-sm font-medium">{userName || "로딩 중..."}</p>
-          <p className="text-xs text-muted-foreground">{shopName || "로딩 중..."}</p>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-900">{getDisplayShopName()}</p>
+          <p className="text-xs text-gray-500">{getDisplayName()}</p>
         </div>
       </div>
       <Separator />

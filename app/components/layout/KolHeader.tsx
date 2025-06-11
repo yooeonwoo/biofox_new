@@ -34,13 +34,25 @@ export default function KolHeader({
 }: KolHeaderProps) {
   const userInitials = userName?.substring(0, 2) || "KL";
 
+  // 프로필 표시 개선 함수
+  const getDisplayName = () => {
+    if (!userName) return "사용자";
+    return userName;
+  };
+
+  const getDisplayShopName = () => {
+    if (!shopName) return "내 상점";
+    return shopName;
+  };
+
   return (
     <header className="border-b bg-white px-4 py-2 shadow-sm md:px-6">
       <div className="flex items-center justify-between">
-        <div className="flex w-64 items-center">
+        {/* 왼쪽 영역 - BIOFOX 텍스트를 완전히 왼쪽 정렬 */}
+        <div className="flex items-center">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="mr-2">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -55,29 +67,42 @@ export default function KolHeader({
               />
             </SheetContent>
           </Sheet>
-          <Link href="/kol-new" className="flex w-full items-center justify-center font-bold text-sm md:text-lg">
+          <Link href="/kol-new" className="font-bold text-sm md:text-lg text-black hover:text-gray-700 transition-colors">
             BIOFOX
           </Link>
         </div>
+
+        {/* 오른쪽 프로필 영역 */}
         <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
+              <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-50">
                 <Avatar className="h-6 w-6 md:h-8 md:w-8">
                   <AvatarImage src={userImage} />
-                  <AvatarFallback>{userInitials}</AvatarFallback>
+                  <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
+                    {userInitials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="hidden flex-col items-start md:flex">
-                  <span className="text-xs md:text-sm font-medium">{shopName || "로딩 중..."}</span>
-                  <span className="text-xs text-gray-500">{userName || "로딩 중..."}</span>
+                  <span className="text-xs md:text-sm font-medium text-gray-900">
+                    {getDisplayShopName()}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {getDisplayName()}
+                  </span>
                 </div>
-                <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
+                <ChevronDown className="h-3 w-3 md:h-4 md:w-4 text-gray-400" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-white">
-              <DropdownMenuLabel>내 계정</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="bg-white w-48">
+              <DropdownMenuLabel className="text-sm">
+                <div className="flex flex-col space-y-1">
+                  <span className="font-medium text-gray-900">{getDisplayShopName()}</span>
+                  <span className="text-xs text-gray-500">{getDisplayName()}</span>
+                </div>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onSignOut}>
+              <DropdownMenuItem onClick={onSignOut} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>로그아웃</span>
               </DropdownMenuItem>
