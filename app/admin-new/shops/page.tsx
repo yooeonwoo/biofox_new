@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import KolSidebar from "@/components/admin_new/kols/KolSidebar";
 import ShopSidebar from "@/components/admin_new/shops/ShopSidebar";
 import AdminNewShopTable from "@/components/admin_new/shops/ShopTable";
@@ -12,9 +12,7 @@ import ShopDetailDrawer from "@/components/admin_new/shops/ShopDetailDrawer";
 export default function AdminNewShopListPage() {
   const [selectedKolId, setSelectedKolId] = useState<number | null>(null);
   const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
-
-  // Drawer open 상태는 shop 선택 여부로 결정
-  const drawerOpen = selectedShopId !== null;
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { data = [], isLoading, isError } = useAdminNewShops(
     selectedKolId ? { kolId: String(selectedKolId) } : {}
@@ -32,7 +30,11 @@ export default function AdminNewShopListPage() {
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             </div>
           ) : (
-            <AdminNewShopTable data={data.filter((s) => s.id === selectedShopId)} />
+            <AdminNewShopTable
+              data={data.filter((s) => s.id === selectedShopId)}
+              onRowSelect={(id) => { setSelectedShopId(id); setDrawerOpen(true); }}
+              selectedId={selectedShopId}
+            />
           )
         ) : (
           <div className="text-muted-foreground">전문점을 선택하세요.</div>
@@ -44,11 +46,7 @@ export default function AdminNewShopListPage() {
       </div>
 
       {/* Shop Detail Drawer */}
-      <ShopDetailDrawer shopId={selectedShopId} open={drawerOpen} onOpenChange={(open) => {
-        if (!open) {
-          setSelectedShopId(null);
-        }
-      }} />
+      <ShopDetailDrawer shopId={selectedShopId} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </div>
   );
 }

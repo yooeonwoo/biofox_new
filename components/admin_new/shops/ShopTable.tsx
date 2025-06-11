@@ -12,9 +12,11 @@ import { format } from "date-fns";
 
 interface Props {
   data: AdminNewShopRow[];
+  onRowSelect?: (id: number) => void;
+  selectedId?: number | null;
 }
 
-export default function AdminNewShopTable({ data }: Props) {
+export default function AdminNewShopTable({ data, onRowSelect, selectedId }: Props) {
   const columns = React.useMemo<ColumnDef<AdminNewShopRow>[]>(
     () => [
       { accessorKey: "id", header: "ID" },
@@ -57,7 +59,11 @@ export default function AdminNewShopTable({ data }: Props) {
         <TableBody>
           {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row: any) => (
-              <TableRow key={row.id} className="hover:bg-gray-50">
+              <TableRow
+                key={row.id}
+                className={`${row.original.id === selectedId ? 'bg-gray-100' : 'hover:bg-gray-50 cursor-pointer'}`}
+                onClick={() => onRowSelect?.(row.original.id)}
+              >
                 {row.getVisibleCells().map((cell: any) => (
                   <TableCell key={cell.id} className="whitespace-nowrap">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
