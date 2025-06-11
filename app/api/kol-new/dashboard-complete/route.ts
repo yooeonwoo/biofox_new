@@ -28,49 +28,27 @@ export async function GET() {
       kolId: kolData.id
     });
 
-    // 🚀 병렬로 모든 데이터 한 번에 조회
-    const [
-      shopsData,
-      activitiesData
-    ] = await Promise.all([
-      // 전문점 데이터 (매출 정보 포함) - 모든 전문점 포함 (매출 없는 전문점도 표시)
-      supabase
-        .from('shops')
-        .select(`
-          id,
-          owner_name,
-          shop_name,
-          region,
-          status,
-          created_at,
-          is_owner_kol,
-          is_self_shop,
-          shop_sales_metrics (
-            total_sales,
-            product_sales,
-            device_sales,
-            year_month
-          )
-        `)
-        .eq('kol_id', kolData.id)
-        .eq('is_self_shop', false), // 본인 샵 제외
-      
-      // 영업 일지 데이터
-      supabase
-        .from('sales_activities')
-        .select(`
-          id,
-          shop_id,
-          activity_date,
-          content,
-          created_at,
-          shop_name,
-          shops (shop_name)
-        `)
-        .eq('kol_id', kolData.id)
-        .order('activity_date', { ascending: false })
-        .limit(10)
-    ]);
+    // 🚀 전문점 데이터 조회
+    const shopsData = await supabase
+      .from('shops')
+      .select(`
+        id,
+        owner_name,
+        shop_name,
+        region,
+        status,
+        created_at,
+        is_owner_kol,
+        is_self_shop,
+        shop_sales_metrics (
+          total_sales,
+          product_sales,
+          device_sales,
+          year_month
+        )
+      `)
+      .eq('kol_id', kolData.id)
+      .eq('is_self_shop', false); // 본인 샵 제외
 
     // 우선순위 로직으로 대시보드 메트릭 조회 - 표준 형식 우선
     let dashboardMetrics = null;
@@ -155,10 +133,6 @@ export async function GET() {
       console.error('전문점 데이터 조회 오류:', shopsData.error);
     }
 
-    if (activitiesData.error) {
-      console.error('영업 일지 데이터 조회 오류:', activitiesData.error);
-    }
-
     // 기본값 설정
     const monthlySales = dashboardMetrics?.monthly_sales || 0;
     const monthlyCommission = dashboardMetrics?.monthly_commission || 0;
@@ -203,22 +177,7 @@ export async function GET() {
       };
     });
 
-    // 영업 일지 데이터 가공
-    const formattedActivities = (activitiesData.data || []).map((act: any) => ({
-      id: act.id,
-      shopId: act.shop_id,
-      shopName: act.shop_name || act.shops?.shop_name,
-      activityDate: new Date(act.activity_date).toLocaleDateString('ko-KR'),
-      content: act.content,
-      createdAt: new Date(act.created_at).toLocaleDateString('ko-KR'),
-      timeAgo: (() => {
-        const activityDate = new Date(act.activity_date);
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - activityDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays === 0 ? '오늘' : `${diffDays}일 전`;
-      })()
-    }));
+
 
     // 통합 응답 데이터 구성
     const completeData = {
@@ -250,8 +209,7 @@ export async function GET() {
           totalShopsCount: totalShops,
           activeShopsCount: activeOrderingShops
         }
-      },
-      activities: formattedActivities
+      }
     };
 
     console.log(`통합 대시보드 데이터 생성 완료: KOL ID=${kolData.id}`);

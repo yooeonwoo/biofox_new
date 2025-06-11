@@ -139,12 +139,6 @@ export default function KolNewPage() {
   // 🚀 React Query 데이터 가공
   const dashboardData = dashboardCompleteData?.dashboard;
   const shopsData = dashboardCompleteData?.shops?.shops || [];
-  const activityData = (dashboardCompleteData?.activities || []).map((act: any) => ({
-    ...act,
-    icon: act.shopId ? 
-      <Store className="h-4 w-4 text-blue-500" /> : 
-      <ClipboardList className="h-4 w-4 text-purple-500" />
-  }));
 
   // 로그아웃 함수
   const handleSignOut = async () => {
@@ -342,19 +336,7 @@ export default function KolNewPage() {
                     </div>
                   </div>
                   <div className="mt-1 text-[10px] sm:text-xs text-orange-500">
-                    {(() => {
-                      // 마지막 전문점 추가일 (가정: dashboardData에 lastShopAddedDate가 있음)
-                      const lastAddedDate = dashboardData?.shops?.lastAddedDate ? new Date(dashboardData.shops.lastAddedDate) : null;
-                      
-                      if (!lastAddedDate) return "최근 전문점 계약 정보가 없습니다.";
-                      
-                      // 오늘 날짜와의 차이 계산
-                      const today = new Date();
-                      const diffTime = Math.abs(today.getTime() - lastAddedDate.getTime());
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      
-                      return `${diffDays}일 동안 전문점 계약이 없었습니다.`;
-                    })()}
+                    전문점 관리 현황
                   </div>
                   
                   {/* 구분선 스타일 강화 */}
@@ -379,8 +361,8 @@ export default function KolNewPage() {
               </Card>
             </div>
 
-            {/* 테이블 및 영업 일지 영역 */}
-            <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* 전문점 매출 순위 영역 */}
+            <div className="mb-6">
               {/* 전문점 매출 순위 카드 */}
               <Card className="flex flex-col h-full"> 
                 <CardContent className="flex flex-1 flex-col p-0 overflow-auto">
@@ -391,58 +373,6 @@ export default function KolNewPage() {
                     <Button asChild variant="ghost" size="sm">
                       <Link href="/kol-new/stores"> 
                         모든 전문점 보기
-                        <ArrowRight className="ml-1 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-              
-              {/* 내 영업 일지 카드 - 반응형 높이 */}
-              <Card className="flex flex-col h-full">
-                <CardHeader className="pb-0">
-                  <CardTitle className="text-sm sm:text-base md:text-lg">내 영업 일지</CardTitle>
-                </CardHeader>
-                
-                {/* 높이 자동 조절을 위한 flex 구조 적용 */}
-                <CardContent className="flex flex-1 flex-col">
-                  {activityData.length === 0 ? (
-                    <div className="flex flex-1 items-center justify-center py-8">
-                      <p className="text-center text-[10px] sm:text-xs md:text-sm text-muted-foreground">영업 일지 데이터가 없습니다.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 mt-2">
-                      {activityData.slice(0, 5).map((activity) => (
-                        <div key={activity.id} className="flex items-start space-x-3 border-b border-gray-100 pb-2">
-                          <div className="rounded-full bg-gray-100 p-1.5">
-                            {activity.icon}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-baseline">
-                              <p className="font-medium text-xs sm:text-sm">
-                                {activity.shopName ? `${activity.shopName} 방문` : '일반 활동'}
-                              </p>
-                              <span className="text-[10px] sm:text-xs text-gray-500">{activity.timeAgo}</span>
-                            </div>
-                            <p className="text-[10px] sm:text-xs text-gray-700 line-clamp-2 mt-0.5">
-                              {activity.content}
-                            </p>
-                            <p className="text-[9px] sm:text-[10px] text-gray-400 mt-1">
-                              {activity.activityDate}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-                
-                {/* 푸터는 항상 하단에 고정 */}
-                <CardFooter className="mt-auto border-t px-6 py-3">
-                  <div className="ml-auto">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href="/kol-new/activities"> 
-                        모든 영업 일지 보기
                         <ArrowRight className="ml-1 h-4 w-4" />
                       </Link>
                     </Button>

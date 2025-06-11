@@ -2,7 +2,6 @@ import { pgTable, serial, varchar, timestamp, integer, boolean, text, numeric, d
 import { relations } from "drizzle-orm";
 
 // Enum 정의
-export const activityTypeEnum = pgEnum('activity_type_enum', ['general', 'visit']);
 export const caseStatusEnum = pgEnum('case_status_enum', ['active', 'completed', 'cancelled']);
 export const photoAngleEnum = pgEnum('photo_angle_enum', ['front', 'left', 'right']);
 
@@ -51,7 +50,6 @@ export const kolsRelations = relations(kols, ({ one, many }) => ({
   }),
   dashboardMetrics: many(kolDashboardMetrics),
   totalMonthlySales: many(kolTotalMonthlySales),
-  salesActivities: many(salesActivities),
 }));
 
 // 전문점 테이블
@@ -83,7 +81,6 @@ export const shopsRelations = relations(shops, ({ one, many }) => ({
     references: [kols.id],
   }),
   salesMetrics: many(shopSalesMetrics),
-  salesActivities: many(salesActivities),
 }));
 
 // 제품 테이블
@@ -123,30 +120,7 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
-// 영업 활동 테이블
-export const salesActivities = pgTable("sales_activities", {
-  id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  shopId: integer("shop_id").references(() => shops.id),
-  activityDate: date("activity_date").defaultNow().notNull(),
-  content: text("content").notNull(),
-  activityType: activityTypeEnum("activity_type").default("general"),
-  shopName: text("shop_name"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
 
-// 영업 활동 관계 정의
-export const salesActivitiesRelations = relations(salesActivities, ({ one }) => ({
-  kol: one(kols, {
-    fields: [salesActivities.kolId],
-    references: [kols.id],
-  }),
-  shop: one(shops, {
-    fields: [salesActivities.shopId],
-    references: [shops.id],
-  }),
-}));
 
 // KOL 대시보드 메트릭 테이블
 export const kolDashboardMetrics = pgTable("kol_dashboard_metrics", {

@@ -20,10 +20,6 @@ export default function KolSidebar() {
               <Store className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>전문점 관리</span>
             </Link>
-            <Link href="/kol-new/activities" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
-              <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>영업 일지</span>
-            </Link>
             <Link href="/kol-new/clinical-photos" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
               <Camera className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>임상사진</span>

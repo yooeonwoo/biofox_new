@@ -56,7 +56,7 @@ export default function KolHeader({
             </SheetContent>
           </Sheet>
           <Link href="/kol-new" className="flex w-full items-center justify-center font-bold text-sm md:text-lg">
-            BIOFOX CRM
+            BIOFOX
           </Link>
         </div>
         <div className="flex items-center gap-3">

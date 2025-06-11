@@ -31,7 +31,7 @@ const notoSansKr = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "BIOFOX KOL",
+  title: "BIOFOX",
   description: "KOL 및 전문점 관리 시스템",
   metadataBase: new URL('https://biofox-kol.vercel.app'),
 };
@@ -91,7 +91,6 @@ export default function RootLayout({
           identityPreviewEditButton: "text-[#6D28D9] hover:text-[#8B5CF6]",
         },
       }}
-      developmentMode={false}
     >
       <html lang="ko">
         <body className={`${inter.variable} ${notoSansKr.variable}`}>

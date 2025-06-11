@@ -393,17 +393,7 @@ export type ShopCamel = {
   updatedAt: string
 }
 
-export type SalesActivityCamel = {
-  id: number
-  kolId: number
-  shopId: number | null
-  activityDate: string
-  content: string
-  activityType: 'general' | 'visit' | null
-  shopName: string | null
-  createdAt: string
-  updatedAt: string
-}
+
 
 export type KolDashboardMetricCamel = {
   id: number

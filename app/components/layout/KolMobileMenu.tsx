@@ -55,14 +55,6 @@ export default function KolMobileMenu({
           <span>전문점 관리</span>
         </Link>
         <Link 
-          href="/kol-new/activities" 
-          onClick={() => setMobileMenuOpen(false)}
-          className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
-        >
-          <FileText className="h-4 w-4" />
-          <span>영업 일지</span>
-        </Link>
-        <Link 
           href="/kol-new/clinical-photos" 
           onClick={() => setMobileMenuOpen(false)}
           className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
