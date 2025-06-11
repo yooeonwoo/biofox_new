@@ -11,7 +11,7 @@ export default async function AdminNewLayout({ children }: { children: ReactNode
   }
 
   // 'admin-new' 권한이 아닌 경우 홈으로 리다이렉트
-  const role = sessionClaims?.role as string | undefined;
+  const role = ((sessionClaims?.metadata as { role?: string } | undefined)?.role ?? (sessionClaims?.role as string | undefined)) ?? "user";
   if (role !== 'admin-new') {
     redirect('/');
   }

@@ -59,8 +59,9 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(signInUrl);
   }
   
-  // 테스트를 위한 임시 역할 할당 (실제로는 sessionClaims에서 가져와야 함)
-  const userRole = sessionClaims?.role || (userId ? TEST_ROLE_MAPPING[userId] : undefined) || "kol";
+  // 역할 결정: sessionClaims.metadata.role -> sessionClaims.role -> TEST_ROLE_MAPPING -> 기본 kol
+  const metaRole = (sessionClaims?.metadata as { role?: string } | undefined)?.role as string | undefined;
+  const userRole = metaRole || (sessionClaims?.role as string | undefined) || (userId ? TEST_ROLE_MAPPING[userId] : undefined) || "kol";
   console.log('사용자 역할:', userRole, '현재 경로:', req.nextUrl.pathname);
   
   // 사용자가 루트 경로(/) 또는 /dashboard로 접근하는 경우 역할별 리다이렉트
