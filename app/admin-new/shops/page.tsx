@@ -7,10 +7,14 @@ import AdminNewShopTable from "@/components/admin_new/shops/ShopTable";
 import NewShopDialog from "@/components/admin_new/shops/NewShopDialog";
 import { useAdminNewShops } from "@/lib/hooks/adminNewShops";
 import { Loader2 } from "lucide-react";
+import ShopDetailDrawer from "@/components/admin_new/shops/ShopDetailDrawer";
 
 export default function AdminNewShopListPage() {
   const [selectedKolId, setSelectedKolId] = useState<number | null>(null);
   const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
+
+  // Drawer open 상태는 shop 선택 여부로 결정
+  const drawerOpen = selectedShopId !== null;
 
   const { data = [], isLoading, isError } = useAdminNewShops(
     selectedKolId ? { kolId: String(selectedKolId) } : {}
@@ -38,6 +42,13 @@ export default function AdminNewShopListPage() {
           <NewShopDialog createdBy={1} />
         </div>
       </div>
+
+      {/* Shop Detail Drawer */}
+      <ShopDetailDrawer shopId={selectedShopId} open={drawerOpen} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedShopId(null);
+        }
+      }} />
     </div>
   );
 }
