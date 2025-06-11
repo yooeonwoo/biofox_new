@@ -1,68 +1,43 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useState } from "react";
+import KolSidebar from "@/components/admin_new/kols/KolSidebar";
+import ShopSidebar from "@/components/admin_new/shops/ShopSidebar";
 import AdminNewShopTable from "@/components/admin_new/shops/ShopTable";
 import NewShopDialog from "@/components/admin_new/shops/NewShopDialog";
 import { useAdminNewShops } from "@/lib/hooks/adminNewShops";
 import { Loader2 } from "lucide-react";
 
 export default function AdminNewShopListPage() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string | undefined>(undefined);
+  const [selectedKolId, setSelectedKolId] = useState<number | null>(null);
+  const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
 
-  const params = useMemo(
-    () => ({
-      search: search.trim() || undefined,
-      status: status || undefined,
-    }),
-    [search, status]
+  const { data = [], isLoading, isError } = useAdminNewShops(
+    selectedKolId ? { kolId: String(selectedKolId) } : {}
   );
 
-  const { data = [], isLoading, isError } = useAdminNewShops(params);
-
   return (
-    <div className="flex flex-col gap-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          placeholder="전문점명 검색"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-48"
-        />
+    <div className="flex h-full">
+      <KolSidebar selectedId={selectedKolId} onSelect={(id) => { setSelectedKolId(id); setSelectedShopId(null); }} />
+      <ShopSidebar kolId={selectedKolId} selectedShopId={selectedShopId} onSelect={setSelectedShopId} />
 
-        <Select value={status ?? ""} onValueChange={(v) => setStatus(v === "" ? undefined : v)}>
-          <SelectTrigger className="w-36" size="sm">
-            <SelectValue placeholder="상태" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">전체</SelectItem>
-            <SelectItem value="active">활성</SelectItem>
-            <SelectItem value="paused">중지</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <div className="flex-1 flex flex-col p-4 gap-4 overflow-auto">
+        {selectedShopId ? (
+          isLoading ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            </div>
+          ) : (
+            <AdminNewShopTable data={data.filter((s) => s.id === selectedShopId)} />
+          )
+        ) : (
+          <div className="text-muted-foreground">전문점을 선택하세요.</div>
+        )}
 
-      {/* Table */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-10 text-muted-foreground">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" /> 로딩 중...
+        <div>
+          <NewShopDialog createdBy={1} />
         </div>
-      ) : isError ? (
-        <div className="text-destructive">데이터 로딩 중 오류가 발생했습니다.</div>
-      ) : (
-        <AdminNewShopTable data={data} />
-      )}
-
-      <NewShopDialog createdBy={1} />
+      </div>
     </div>
   );
 }
