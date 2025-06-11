@@ -20,6 +20,7 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { useCreateAdminNewShop } from "@/lib/hooks/adminNewShops";
 import { Loader2 } from "lucide-react";
+import { useAdminNewKols } from "@/lib/hooks/adminNewKols";
 
 interface FormValues {
   kolId: number;
@@ -46,6 +47,7 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
   const withDevice = watch("withDevice");
   const deductWatch = watch("deduct");
   const [deductSelect, setDeductSelect] = useState<string>("");
+  const { data: kols = [] } = useAdminNewKols();
 
   const mutation = useCreateAdminNewShop();
 
@@ -70,7 +72,22 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={onSubmit}>
-          <Input {...register("kolId", { required: true, valueAsNumber: true })} placeholder="KOL ID" />
+          <Select
+            onValueChange={(v) => {
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore
+              register("kolId").onChange({ target: { value: Number(v) } });
+            }}
+          >
+            <SelectTrigger className="w-full" size="sm">
+              <SelectValue placeholder="KOL 선택" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60 overflow-auto">
+              {kols.map((k) => (
+                <SelectItem key={k.id} value={String(k.id)}>{k.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input {...register("ownerName", { required: true })} placeholder="대표자 이름" />
           <Input {...register("shopName", { required: true })} placeholder="전문점명" />
           <Input type="date" {...register("contractDate")} placeholder="계약일자" />
@@ -84,6 +101,7 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
           </div>
 
           {withDevice && (
+            <>
             <Select
               value={deductSelect}
               onValueChange={(v) => {
@@ -120,6 +138,7 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
                 className="w-32"
               />
             )}
+            </>
           )}
 
           <Button type="submit" disabled={mutation.isPending} className="w-full">
