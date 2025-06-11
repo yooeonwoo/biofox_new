@@ -404,7 +404,7 @@ export default function CustomerClinicalUploadPage() {
                 products: round.products ? JSON.parse(round.products) : [],
                 skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
                 memo: round.memo || '',
-                date: round.round_date || ''
+                date: round.treatment_date || ''
               };
             });
           } catch (error) {
@@ -1101,7 +1101,7 @@ export default function CustomerClinicalUploadPage() {
         // round_customer_info 테이블에 회차별 정보 저장
         await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
           treatmentType: roundInfo.treatmentType,
-          roundDate: roundInfo.date,
+          treatmentDate: roundInfo.date,
           memo: roundInfo.memo,
         });
       }
@@ -1243,7 +1243,7 @@ export default function CustomerClinicalUploadPage() {
               products: round.products ? JSON.parse(round.products) : [],
               skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
               memo: round.memo || '',
-              date: round.round_date || ''
+              date: round.treatment_date || ''
             };
           });
         } catch (error) {

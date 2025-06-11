@@ -617,7 +617,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
   age?: number;
   gender?: 'male' | 'female' | 'other';
   treatmentType?: string;
-  roundDate?: string;
+  treatmentDate?: string;
   products?: string[];
   skinTypes?: string[];
   memo?: string;
@@ -625,7 +625,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
   try {
     // 기존 데이터 확인
     const { data: existingData, error: fetchError } = await supabaseClient
-      .from('round_customer_info')
+      .from('clinical_round_info')
       .select('*')
       .eq('case_id', caseId)
       .eq('round_number', roundNumber)
@@ -637,7 +637,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
       age: roundInfo.age,
       gender: roundInfo.gender,
       treatment_type: roundInfo.treatmentType,
-      round_date: roundInfo.roundDate,
+      treatment_date: roundInfo.treatmentDate,
       products: roundInfo.products ? JSON.stringify(roundInfo.products) : null,
       skin_types: roundInfo.skinTypes ? JSON.stringify(roundInfo.skinTypes) : null,
       memo: roundInfo.memo,
@@ -653,7 +653,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
     if (existingData) {
       // 업데이트
       const { data, error } = await supabaseClient
-        .from('round_customer_info')
+        .from('clinical_round_info')
         .update(roundData)
         .eq('case_id', caseId)
         .eq('round_number', roundNumber)
@@ -665,7 +665,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
     } else {
       // 새로 생성
       const { data, error } = await supabaseClient
-        .from('round_customer_info')
+        .from('clinical_round_info')
         .insert(roundData)
         .select()
         .single();
@@ -683,7 +683,7 @@ export async function saveRoundCustomerInfo(caseId: number, roundNumber: number,
 export async function fetchRoundCustomerInfo(caseId: number): Promise<any[]> {
   try {
     const { data, error } = await supabaseClient
-      .from('round_customer_info')
+      .from('clinical_round_info')
       .select('*')
       .eq('case_id', caseId)
       .order('round_number', { ascending: true });

@@ -296,6 +296,21 @@ export async function PATCH(req: NextRequest) {
 
     console.log("사용자 역할 변경 성공:", updatedUser);
 
+    // Clerk 메타데이터도 업데이트 (pending이 아닌 경우만)
+    if (!updatedUser.clerk_id.startsWith('pending_')) {
+      try {
+        console.log(`Clerk 메타데이터 업데이트 중: ${updatedUser.clerk_id} -> ${role}`);
+        const { updateUserRole } = await import("../../../../lib/clerk/admin");
+        await updateUserRole(updatedUser.clerk_id, role);
+        console.log(`Clerk 메타데이터 업데이트 성공: ${updatedUser.clerk_id}`);
+      } catch (clerkError) {
+        console.error(`Clerk 메타데이터 업데이트 실패: ${updatedUser.clerk_id}`, clerkError);
+        // Clerk 업데이트 실패해도 DB 업데이트는 유지하고 경고만 로그
+      }
+    } else {
+      console.log(`Pending 사용자이므로 Clerk 메타데이터 업데이트 생략: ${updatedUser.clerk_id}`);
+    }
+
     return NextResponse.json({ 
       user: {
         id: updatedUser.id,
