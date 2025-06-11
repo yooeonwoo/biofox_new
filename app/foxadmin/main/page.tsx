@@ -138,7 +138,7 @@ export default function AdminDashboardMainPage() {
           description="KOL과 전문점 정보를 추가, 수정, 조회합니다."
           icon={<Users size={24} />}
           linkText="관리하기"
-          linkHref="/foxadmin/entities"
+          linkHref="/admin-dashboard/entities"
         />
         
         <DashboardCard
@@ -146,7 +146,7 @@ export default function AdminDashboardMainPage() {
           description="KOL의 월별 실적 및 통계 데이터를 관리합니다."
           icon={<BarChart3 size={24} />}
           linkText="관리하기"
-          linkHref="/foxadmin/kol-metrics"
+          linkHref="/admin-dashboard/kol-metrics"
         />
         
         <DashboardCard
@@ -154,7 +154,7 @@ export default function AdminDashboardMainPage() {
           description="전문점별 매출 데이터를 관리합니다."
           icon={<Store size={24} />}
           linkText="관리하기"
-          linkHref="/foxadmin/shop-sales"
+          linkHref="/admin-dashboard/shop-sales"
         />
         
         <DashboardCard
@@ -162,7 +162,7 @@ export default function AdminDashboardMainPage() {
           description="제품별 매출 비율 및 수량을 관리합니다."
           icon={<PieChart size={24} />}
           linkText="관리하기"
-          linkHref="/foxadmin/product-sales"
+          linkHref="/admin-dashboard/product-sales"
         />
       </div>
     </div>

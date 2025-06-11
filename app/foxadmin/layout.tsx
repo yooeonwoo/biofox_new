@@ -86,12 +86,12 @@ export default function AdminDashboardLayout({
   
   // 사이드바 메뉴 아이템
   const menuItems = [
-    { name: '대시보드', href: '/foxadmin/main', icon: <LayoutDashboard size={20} /> },
-    { name: '사용자 관리', href: '/foxadmin/user-management', icon: <UserPlus size={20} /> },
-    { name: 'KOL 및 전문점 관리', href: '/foxadmin/entities', icon: <Users size={20} /> },
-    { name: 'KOL 데이터 입력', href: '/foxadmin/kol-data-entry', icon: <FileInput size={20} /> },
-    { name: 'KOL 현황', href: '/foxadmin/kol-dashboard', icon: <BarChart size={20} /> },
-    { name: 'KOL 메트릭스 관리', href: '/foxadmin/kol-metrics-management', icon: <Settings size={20} /> },
+    { name: '대시보드', href: '/admin-dashboard/main', icon: <LayoutDashboard size={20} /> },
+    { name: '사용자 관리', href: '/admin-dashboard/user-management', icon: <UserPlus size={20} /> },
+    { name: 'KOL 및 전문점 관리', href: '/admin-dashboard/entities', icon: <Users size={20} /> },
+    { name: 'KOL 데이터 입력', href: '/admin-dashboard/kol-data-entry', icon: <FileInput size={20} /> },
+    { name: 'KOL 현황', href: '/admin-dashboard/kol-dashboard', icon: <BarChart size={20} /> },
+    { name: 'KOL 메트릭스 관리', href: '/admin-dashboard/kol-metrics-management', icon: <Settings size={20} /> },
   ];
 
   // 로그아웃 함수
