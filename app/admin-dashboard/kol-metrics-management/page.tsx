@@ -220,11 +220,12 @@ export default function KolMetricsManagementPage() {
             <div className="flex gap-2">
               <Button 
                 onClick={updateMetrics} 
-                disabled={updateLoading}
-                className="flex items-center gap-2"
+                disabled={true}
+                className="flex items-center gap-2 opacity-50 cursor-not-allowed"
+                title="이 기능은 비활성화되었습니다"
               >
-                <RefreshCw className={`h-4 w-4 ${updateLoading ? 'animate-spin' : ''}`} />
-                {updateLoading ? '업데이트 중...' : '메트릭스 업데이트'}
+                <RefreshCw className="h-4 w-4" />
+                메트릭스 업데이트 (비활성화)
               </Button>
               <Button 
                 variant="outline" 

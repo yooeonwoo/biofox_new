@@ -156,6 +156,7 @@ export default function KOLDataEntry() {
       
       const dataToSave = kolMonthlyData[kolId];
       
+      // 1. kol_total_monthly_sales 테이블 처리
       // 이미 존재하는 데이터인지 확인
       const { data: existingData, error: checkError } = await supabase
         .from('kol_total_monthly_sales')
@@ -189,13 +190,54 @@ export default function KOLDataEntry() {
         
         if (insertError) throw insertError;
       }
+
+      // 2. kol_dashboard_metrics 테이블 처리 (YYYY-MM 형식으로 변환)
+      const dashboardYearMonth = yearMonth.length === 6 
+        ? `${yearMonth.substring(0, 4)}-${yearMonth.substring(4, 6)}`
+        : yearMonth;
+
+      // kol_dashboard_metrics 데이터 확인
+      const { data: existingDashboardData, error: dashboardCheckError } = await supabase
+        .from('kol_dashboard_metrics')
+        .select('id')
+        .eq('kol_id', kolId)
+        .eq('year_month', dashboardYearMonth)
+        .maybeSingle();
+      
+      if (dashboardCheckError) throw dashboardCheckError;
+
+      const dashboardDataToSave = {
+        kol_id: kolId,
+        year_month: dashboardYearMonth,
+        monthly_sales: dataToSave.total_sales,
+        monthly_commission: dataToSave.total_commission,
+        total_shops_count: dataToSave.total_shops,
+        active_shops_count: dataToSave.total_active_shops
+      };
+
+      if (existingDashboardData?.id) {
+        // kol_dashboard_metrics 업데이트
+        const { error: dashboardUpdateError } = await supabase
+          .from('kol_dashboard_metrics')
+          .update(dashboardDataToSave)
+          .eq('id', existingDashboardData.id);
+        
+        if (dashboardUpdateError) throw dashboardUpdateError;
+      } else {
+        // kol_dashboard_metrics 새로 생성
+        const { error: dashboardInsertError } = await supabase
+          .from('kol_dashboard_metrics')
+          .insert([dashboardDataToSave]);
+        
+        if (dashboardInsertError) throw dashboardInsertError;
+      }
       
       setSaveStatus(prev => ({
         ...prev,
         [kolId]: 'saved'
       }));
       
-      alert(`KOL ID ${kolId}의 데이터가 저장되었습니다.`);
+      alert(`KOL ID ${kolId}의 데이터가 두 테이블에 모두 저장되었습니다.`);
     } catch (error) {
       console.error('데이터 저장 오류:', error);
       alert('데이터 저장 중 오류가 발생했습니다.');

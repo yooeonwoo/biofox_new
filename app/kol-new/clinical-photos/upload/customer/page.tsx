@@ -166,9 +166,9 @@ export default function CustomerClinicalUploadPage() {
     
     const checkFocusState = () => {
       const activeElement = document.activeElement;
-      const isInputFocused = activeElement && 
+      const isInputFocused = !!(activeElement &&
         interactiveElements.includes(activeElement.tagName) &&
-        activeElement !== document.body;
+        activeElement !== document.body);
       
       console.log('포커스 상태 변경:', { 
         activeElement: activeElement?.tagName, 
@@ -197,9 +197,9 @@ export default function CustomerClinicalUploadPage() {
       userActivityTimeoutRef.current = setTimeout(() => {
         // 여전히 포커스된 요소가 있는지 재확인
         const activeElement = document.activeElement;
-        const isInputFocused = activeElement && 
+        const isInputFocused = !!(activeElement &&
           interactiveElements.includes(activeElement.tagName) &&
-          activeElement !== document.body;
+          activeElement !== document.body);
           
         if (!isInputFocused) {
           console.log('사용자 활동 타임아웃 - 상호작용 상태 해제');
@@ -422,7 +422,7 @@ export default function CustomerClinicalUploadPage() {
             console.error(`Failed to load round info for case ${case_.id}:`, error);
           }
 
-          // 기본 회차 정보가 없으면 생성
+          // 기본 회차 정보가 없으면 생성 (또는 제품/피부타입 정보가 비어있을 때 기본값 채우기)
           if (!roundCustomerInfo[1]) {
             roundCustomerInfo[1] = {
               age: undefined,
@@ -431,15 +431,25 @@ export default function CustomerClinicalUploadPage() {
               products: productTypes,
               skinTypes: skinTypeData,
               memo: case_.treatmentPlan || '',
-              date: case_.createdAt.split('T')[0]
+              date: case_.createdAt.split('T')[0],
             };
+          } else {
+            // DB에 값이 없을 때만 기본값 보완
+            if ((!roundCustomerInfo[1].products || roundCustomerInfo[1].products.length === 0) && productTypes.length > 0) {
+              roundCustomerInfo[1].products = productTypes;
+            }
+            if ((!roundCustomerInfo[1].skinTypes || roundCustomerInfo[1].skinTypes.length === 0) && skinTypeData.length > 0) {
+              roundCustomerInfo[1].skinTypes = skinTypeData;
+            }
           }
           
           // 변환된 케이스 데이터 반환
           return {
             id: case_.id.toString(),
             customerName: case_.customerName,
-            status: case_.status === 'cancelled' || case_.status === 'archived' ? 'active' : (case_.status as any),
+            status: (case_.status === 'archived' || (case_.status as any) === 'cancelled')
+              ? 'active'
+              : (case_.status as 'active' | 'completed'),
             createdAt: case_.createdAt.split('T')[0],
             consentReceived: case_.consentReceived,
             consentImageUrl: case_.consentImageUrl,
@@ -732,7 +742,7 @@ export default function CustomerClinicalUploadPage() {
           toast.success('동의서가 성공적으로 업로드되었습니다.');
         } catch (error) {
           console.error('동의서 업로드 실패:', error);
-          alert(`동의서 업로드에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
+          alert(`동의서 업로드에 실패했습니다: ${(error as any).message || '알 수 없는 오류'}`);
           
           // 에러 발생 시 동의 상태 되돌리기
           setCases(prev => prev.map(case_ => 
@@ -810,7 +820,7 @@ export default function CustomerClinicalUploadPage() {
       toast.success('동의서가 성공적으로 삭제되었습니다.');
     } catch (error) {
       console.error('동의서 삭제 실패:', error);
-      toast.error(`동의서 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
+      toast.error(`동의서 삭제에 실패했습니다: ${(error as any).message || '알 수 없는 오류'}`);
     }
   };
 
@@ -1117,8 +1127,12 @@ export default function CustomerClinicalUploadPage() {
 
         // round_customer_info 테이블에 회차별 정보 저장
         await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
+          age: roundInfo.age,
+          gender: roundInfo.gender,
           treatmentType: roundInfo.treatmentType,
           treatmentDate: roundInfo.date,
+          products: roundInfo.products,
+          skinTypes: roundInfo.skinTypes,
           memo: roundInfo.memo,
         });
       }
@@ -1271,7 +1285,7 @@ export default function CustomerClinicalUploadPage() {
           console.error(`Failed to load round info for case ${case_.id}:`, error);
         }
 
-        // 기본 회차 정보가 없으면 생성
+        // 기본 회차 정보가 없으면 생성 (또는 누락된 제품/피부타입 기본값 보완)
         if (!roundCustomerInfo[1]) {
           roundCustomerInfo[1] = {
             age: undefined,
@@ -1280,14 +1294,23 @@ export default function CustomerClinicalUploadPage() {
             products: productTypes,
             skinTypes: skinTypeData,
             memo: case_.treatmentPlan || '',
-            date: case_.createdAt.split('T')[0]
+            date: case_.createdAt.split('T')[0],
           };
+        } else {
+          if ((!roundCustomerInfo[1].products || roundCustomerInfo[1].products.length === 0) && productTypes.length > 0) {
+            roundCustomerInfo[1].products = productTypes;
+          }
+          if ((!roundCustomerInfo[1].skinTypes || roundCustomerInfo[1].skinTypes.length === 0) && skinTypeData.length > 0) {
+            roundCustomerInfo[1].skinTypes = skinTypeData;
+          }
         }
         
         return {
           id: case_.id.toString(),
           customerName: case_.customerName,
-          status: case_.status === 'cancelled' || case_.status === 'archived' ? 'active' : (case_.status as any),
+          status: (case_.status === 'archived' || (case_.status as any) === 'cancelled')
+            ? 'active'
+            : (case_.status as 'active' | 'completed'),
           createdAt: case_.createdAt.split('T')[0],
           consentReceived: case_.consentReceived,
           consentImageUrl: case_.consentImageUrl,
@@ -1814,7 +1837,7 @@ export default function CustomerClinicalUploadPage() {
 
                         {/* 진행중/완료 탭 */}
                         <CaseStatusTabs
-                          status={case_.status}
+                          status={case_.status as 'active' | 'completed'}
                           onStatusChange={(status) => handleCaseStatusChange(case_.id, status)}
                         />
                       </div>
@@ -2265,9 +2288,6 @@ export default function CustomerClinicalUploadPage() {
                                     roundCustomerInfo: {
                                       ...case_.roundCustomerInfo,
                                       [currentRounds[case_.id] || 1]: { 
-                                        treatmentType: '',
-                                        memo: '',
-                                        date: '',
                                         ...case_.roundCustomerInfo[currentRounds[case_.id] || 1],
                                         memo: newValue
                                       }

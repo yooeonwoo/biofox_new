@@ -40,10 +40,18 @@ interface ClinicalPhotoRecord {
 }
 
 // 현재 사용자의 KOL ID를 가져오는 함수
-async function getCurrentKolId(): Promise<number> {
+// TEST_KOL_ID가 존재하면 우선적으로 반환하고, 그 외에는 브라우저 환경에서 Clerk 유저 정보를 통해 조회한다.
+// 브라우저가 아닌 환경(예: 통합 테스트, 서버 사이드 렌더링)에서는 TEST_KOL_ID가 반드시 설정되어 있어야 한다.
+async function getCurrentKolId(): Promise<string> {
   try {
+    // 통합 테스트 등에서 주입되는 고정 KOL ID가 있는 경우 바로 반환
+    if (process.env.TEST_KOL_ID) {
+      return process.env.TEST_KOL_ID;
+    }
+
+    // 브라우저 환경이 아니면 KOL ID를 조회할 수 있는 방법이 없으므로 오류를 던진다.
     if (typeof window === 'undefined') {
-      return 0;
+      throw new Error('KOL 정보를 가져올 수 없는 환경입니다. TEST_KOL_ID 환경 변수를 설정했는지 확인하세요.');
     }
 
     // Clerk 사용자 ID 가져오기
@@ -53,49 +61,29 @@ async function getCurrentKolId(): Promise<number> {
     const clerkUserId: string | undefined = userJson.userId;
     const userEmail: string | undefined = userJson.email;
 
-    // 1) clerk_id 로 우선 조회
+    // 1) Clerk ID가 있으면 그대로 반환 (clinical_cases.kol_id 는 Clerk ID(UUID) 임)
     if (clerkUserId) {
-      const { data: userRow, error: userErr } = await supabaseClient
-        .from('users')
-        .select('id')
-        .eq('clerk_id', clerkUserId)
-        .maybeSingle();
-
-      if (userErr) throw userErr;
-      if (userRow) {
-        const { data: kolRow, error: kolErr } = await supabaseClient
-          .from('kols')
-          .select('id')
-          .eq('user_id', userRow.id)
-          .order('created_at', { ascending: false })
-          .maybeSingle();
-        if (kolErr) throw kolErr;
-        if (kolRow) return kolRow.id;
-      }
+      return clerkUserId;
     }
 
-    // 2) 이메일로 fallback 조회 (이전 로직 호환)
+    // 2) 이메일로 fallback 조회 (Clerk ID를 얻지 못한 경우)
     if (userEmail) {
       const { data: userRow, error: userErr } = await supabaseClient
         .from('users')
-        .select('id')
+        .select('clerk_id')
         .eq('email', userEmail)
         .maybeSingle();
-      if (!userErr && userRow) {
-        const { data: kolRow, error: kolErr } = await supabaseClient
-          .from('kols')
-          .select('id')
-          .eq('user_id', userRow.id)
-          .order('created_at', { ascending: false })
-          .maybeSingle();
-        if (!kolErr && kolRow) return kolRow.id;
+
+      if (userErr) throw userErr;
+      if (userRow?.clerk_id) {
+        return String(userRow.clerk_id);
       }
     }
 
     throw new Error('KOL 정보를 찾을 수 없습니다');
   } catch (error: any) {
     console.error('KOL ID 가져오기 실패:', error);
-    return 0;
+    return '';
   }
 }
 
@@ -725,3 +713,6 @@ export async function fetchRoundCustomerInfo(caseId: number): Promise<any[]> {
     throw error;
   }
 }
+
+// 테스트 및 외부 모듈에서 getCurrentKolId 모킹이 가능하도록 export
+export { getCurrentKolId };

@@ -47,8 +47,31 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query.order('id', { ascending: false });
   if (error) {
-    return jsonError(error.message, 500);
+    // 🔄 fallback: shop_device_allocations 테이블이 아직 없을 수 있으므로 기본 컬럼만 조회
+    console.warn('[GET /api/admin/shops] 기본 쿼리 실패, fallback 수행:', error.message);
+
+    const fallbackQuery = supabaseAdmin
+      .from('shops')
+      .select(`
+        id,
+        shop_name,
+        region,
+        status,
+        kol_id,
+        contract_date,
+        kols(name)
+      `)
+      .order('id', { ascending: false });
+
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+    if (fallbackError) {
+      // fallback 도 실패 시 원본 에러 메시지를 포함하여 반환
+      return jsonError(`[primary] ${error.message} / [fallback] ${fallbackError.message}`, 500);
+    }
+
+    return NextResponse.json({ success: true, shops: fallbackData });
   }
+
   return NextResponse.json({ success: true, shops: data });
 }
 

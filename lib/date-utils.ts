@@ -5,11 +5,13 @@
 
 /**
  * 오늘 날짜를 YYYY-MM-DD 형식으로 반환
- * 임시로 2025-05-15로 고정
  */
 export function getCurrentDate(): string {
-  // 임시로 5월 데이터를 당월로 표시
-  return '2025-05-15';
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
