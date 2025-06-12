@@ -54,6 +54,25 @@ const SYSTEM_OPTIONS = {
   ] as const
 } as const;
 
+// 문자열 혹은 JSON 문자열/배열을 안전하게 string[]로 변환
+function safeParseStringArray(input: any): string[] {
+  if (!input) return [];
+  if (Array.isArray(input)) return input as string[];
+  if (typeof input === 'string') {
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {
+      // JSON.parse 실패 – fallback 처리
+    }
+    return input
+      .split(/[;,]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+  return [];
+}
+
 // 고객 정보 관련 타입
 interface CustomerInfo {
   name: string;
@@ -412,8 +431,8 @@ export default function CustomerClinicalUploadPage() {
                 age: round.age,
                 gender: round.gender,
                 treatmentType: round.treatment_type || '',
-                products: round.products ? JSON.parse(round.products) : [],
-                skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
+                products: safeParseStringArray(round.products),
+                skinTypes: safeParseStringArray(round.skin_types),
                 memo: round.memo || '',
                 date: round.treatment_date || ''
               };
@@ -1275,8 +1294,8 @@ export default function CustomerClinicalUploadPage() {
               age: round.age,
               gender: round.gender,
               treatmentType: round.treatment_type || '',
-              products: round.products ? JSON.parse(round.products) : [],
-              skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
+              products: safeParseStringArray(round.products),
+              skinTypes: safeParseStringArray(round.skin_types),
               memo: round.memo || '',
               date: round.treatment_date || ''
             };
