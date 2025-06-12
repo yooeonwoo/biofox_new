@@ -735,12 +735,24 @@ export async function fetchRoundCustomerInfo(caseId: number): Promise<any[]> {
 
     if (error) throw error;
 
+    // 안전하게 JSON 배열 파싱
+    function safeParseArray(input: any): string[] {
+      if (!input || typeof input !== 'string') return [];
+      try {
+        const parsed = JSON.parse(input);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.warn('safeParseArray: invalid JSON array string', input);
+        return [];
+      }
+    }
+
     return (
       data || []
     ).map((row) => ({
       ...row,
-      products: row.products ? JSON.parse(row.products) : [],
-      skin_types: row.skin_types ? JSON.parse(row.skin_types) : [],
+      products: safeParseArray(row.products),
+      skin_types: safeParseArray(row.skin_types),
     }));
   } catch (error: any) {
     console.error('Error fetching round customer info:', error);
