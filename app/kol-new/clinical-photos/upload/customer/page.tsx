@@ -1933,20 +1933,30 @@ export default function CustomerClinicalUploadPage() {
                             variant="outline"
                             onClick={() => handleSaveAll(case_.id)}
                             id={`save-all-${case_.id}`}
+                            disabled={saveStatus[case_.id]==='saving'}
                             className="text-xs px-3 py-1 h-7 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 cursor-pointer flex items-center gap-1"
                           >
-                            <Save className="h-3 w-3 mr-1" />
-                            전체저장
+                            {saveStatus[case_.id]==='saving' && (
+                              <>
+                                <Save className="h-3 w-3 mr-1 animate-spin" /> 저장 중...
+                              </>
+                            )}
+                            {saveStatus[case_.id]==='saved' && (
+                              <>
+                                ✅ 저장됨
+                              </>
+                            )}
+                            {saveStatus[case_.id]==='error' && (
+                              <>
+                                ❌ 오류
+                              </>
+                            )}
+                            {(!saveStatus[case_.id] || saveStatus[case_.id]==='idle') && (
+                              <>
+                                <Save className="h-3 w-3 mr-1" /> 전체저장
+                              </>
+                            )}
                           </Button>
-                          {saveStatus[case_.id]==='saving' && (
-                            <span className="text-xs text-gray-500 ml-2">저장 중...</span>
-                          )}
-                          {saveStatus[case_.id]==='saved' && (
-                            <span className="text-xs text-green-600 ml-2">저장됨 ✅</span>
-                          )}
-                          {saveStatus[case_.id]==='error' && (
-                            <span className="text-xs text-red-600 ml-2">오류 ❌</span>
-                          )}
                         </div>
                         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                           {/* 첫 번째 열 */}

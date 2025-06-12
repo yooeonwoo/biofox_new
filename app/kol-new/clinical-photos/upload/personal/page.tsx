@@ -803,6 +803,8 @@ export default function PersonalClinicalUploadPage() {
       await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
         treatmentType: roundInfo.treatmentType,
         treatmentDate: roundInfo.date,
+        products: roundInfo.products,
+        skinTypes: roundInfo.skinTypes,
         memo: roundInfo.memo ? `[본인] ${roundInfo.memo}` : roundInfo.memo, // 본인 케이스 구분자 추가
       });
       
