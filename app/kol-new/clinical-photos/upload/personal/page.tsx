@@ -347,8 +347,8 @@ export default function PersonalClinicalUploadPage() {
                 age: round.age,
                 gender: round.gender,
                 treatmentType: round.treatment_type || '',
-                products: round.products ? JSON.parse(round.products) : [],
-                skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
+                products: round.products,
+                skinTypes: round.skin_types,
                 memo: round.memo || '',
                 date: round.treatment_date || ''
               };
@@ -978,8 +978,8 @@ export default function PersonalClinicalUploadPage() {
               age: round.age,
               gender: round.gender,
               treatmentType: round.treatment_type || '',
-              products: round.products ? JSON.parse(round.products) : [],
-              skinTypes: round.skin_types ? JSON.parse(round.skin_types) : [],
+              products: round.products,
+              skinTypes: round.skin_types,
               memo: round.memo || '',
               date: round.treatment_date || ''
             };
