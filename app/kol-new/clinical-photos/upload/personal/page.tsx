@@ -41,15 +41,15 @@ const SYSTEM_OPTIONS = {
     { value: 'cure_booster', label: '큐어 부스터' },
     { value: 'cure_mask', label: '큐어 마스크' },
     { value: 'premium_mask', label: '프리미엄 마스크' },
-    { value: 'allinone_serum', label: '올인원 세럼' }
+    { value: 'all_in_one_serum', label: '올인원 세럼' }
   ] as const,
   
   skinTypes: [
     { value: 'red_sensitive', label: '붉고 예민함' },
-    { value: 'pigmentation', label: '색소 / 미백' },
-    { value: 'pores_enlarged', label: '모공 늘어짐' },
-    { value: 'acne_trouble', label: '트러블 / 여드름' },
-    { value: 'wrinkles_elasticity', label: '주름 / 탄력' },
+    { value: 'pigment', label: '색소 / 미백' },
+    { value: 'pore', label: '모공 늘어짐' },
+    { value: 'trouble', label: '트러블 / 여드름' },
+    { value: 'wrinkle', label: '주름 / 탄력' },
     { value: 'other', label: '기타' }
   ] as const
 } as const;
@@ -310,15 +310,15 @@ export default function PersonalClinicalUploadPage() {
           if (personalCase.cureBooster) productTypes.push('cure_booster');
           if (personalCase.cureMask) productTypes.push('cure_mask');
           if (personalCase.premiumMask) productTypes.push('premium_mask');
-          if (personalCase.allInOneSerum) productTypes.push('allinone_serum');
+          if (personalCase.allInOneSerum) productTypes.push('all_in_one_serum');
           
           // 체크박스 관련 피부타입 데이터 처리
           const skinTypeData = [];
           if (personalCase.skinRedSensitive) skinTypeData.push('red_sensitive');
-          if (personalCase.skinPigment) skinTypeData.push('pigmentation');
-          if (personalCase.skinPore) skinTypeData.push('pores_enlarged');
-          if (personalCase.skinTrouble) skinTypeData.push('acne_trouble');
-          if (personalCase.skinWrinkle) skinTypeData.push('wrinkles_elasticity');
+          if (personalCase.skinPigment) skinTypeData.push('pigment');
+          if (personalCase.skinPore) skinTypeData.push('pore');
+          if (personalCase.skinTrouble) skinTypeData.push('trouble');
+          if (personalCase.skinWrinkle) skinTypeData.push('wrinkle');
           if (personalCase.skinEtc) skinTypeData.push('other');
           
           // 사진 데이터 로드
@@ -941,15 +941,15 @@ export default function PersonalClinicalUploadPage() {
         if (personalCase.cureBooster) productTypes.push('cure_booster');
         if (personalCase.cureMask) productTypes.push('cure_mask');
         if (personalCase.premiumMask) productTypes.push('premium_mask');
-        if (personalCase.allInOneSerum) productTypes.push('allinone_serum');
+        if (personalCase.allInOneSerum) productTypes.push('all_in_one_serum');
         
         // 피부타입 데이터 처리
         const skinTypeData = [];
         if (personalCase.skinRedSensitive) skinTypeData.push('red_sensitive');
-        if (personalCase.skinPigment) skinTypeData.push('pigmentation');
-        if (personalCase.skinPore) skinTypeData.push('pores_enlarged');
-        if (personalCase.skinTrouble) skinTypeData.push('acne_trouble');
-        if (personalCase.skinWrinkle) skinTypeData.push('wrinkles_elasticity');
+        if (personalCase.skinPigment) skinTypeData.push('pigment');
+        if (personalCase.skinPore) skinTypeData.push('pore');
+        if (personalCase.skinTrouble) skinTypeData.push('trouble');
+        if (personalCase.skinWrinkle) skinTypeData.push('wrinkle');
         if (personalCase.skinEtc) skinTypeData.push('other');
         
         // 사진 데이터 로드
@@ -1124,8 +1124,8 @@ export default function PersonalClinicalUploadPage() {
                     <CardHeader className="pb-4 bg-gray-50/30 rounded-t-xl">
                       {/* 첫 번째 줄: 본인 임상사진 + 동의/미동의 + 진행중/완료 */}
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="text-lg font-medium text-gray-800 truncate">본인 임상사진</span>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-medium text-gray-800 truncate">본인 임상사진</h3>
                           {/* 완료 상태인데 동의서가 없으면 경고 */}
                           {case_.status === 'completed' && case_.consentReceived && !case_.consentImageUrl && (
                             <span className="text-orange-500 flex-shrink-0">⚠️</span>
@@ -1441,7 +1441,7 @@ export default function PersonalClinicalUploadPage() {
                                       case 'premium_mask':
                                         boolUpdates.premiumMask = checked as boolean;
                                         break;
-                                      case 'allinone_serum':
+                                      case 'all_in_one_serum':
                                         boolUpdates.allInOneSerum = checked as boolean;
                                         break;
                                     }
@@ -1559,16 +1559,16 @@ export default function PersonalClinicalUploadPage() {
                                       case 'red_sensitive':
                                         boolUpdates.skinRedSensitive = checked as boolean;
                                         break;
-                                      case 'pigmentation':
+                                      case 'pigment':
                                         boolUpdates.skinPigment = checked as boolean;
                                         break;
-                                      case 'pores_enlarged':
+                                      case 'pore':
                                         boolUpdates.skinPore = checked as boolean;
                                         break;
-                                      case 'acne_trouble':
+                                      case 'trouble':
                                         boolUpdates.skinTrouble = checked as boolean;
                                         break;
-                                      case 'wrinkles_elasticity':
+                                      case 'wrinkle':
                                         boolUpdates.skinWrinkle = checked as boolean;
                                         break;
                                       case 'other':

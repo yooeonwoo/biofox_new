@@ -41,15 +41,15 @@ const SYSTEM_OPTIONS = {
     { value: 'cure_booster', label: '큐어 부스터' },
     { value: 'cure_mask', label: '큐어 마스크' },
     { value: 'premium_mask', label: '프리미엄 마스크' },
-    { value: 'allinone_serum', label: '올인원 세럼' }
+    { value: 'all_in_one_serum', label: '올인원 세럼' }
   ] as const,
   
   skinTypes: [
     { value: 'red_sensitive', label: '붉고 예민함' },
-    { value: 'pigmentation', label: '색소 / 미백' },
-    { value: 'pores_enlarged', label: '모공 늘어짐' },
+    { value: 'pigment', label: '색소 / 미백' },
+    { value: 'pore', label: '모공 늘어짐' },
     { value: 'acne_trouble', label: '트러블 / 여드름' },
-    { value: 'wrinkles_elasticity', label: '주름 / 탄력' },
+    { value: 'wrinkle', label: '주름 / 탄력' },
     { value: 'other', label: '기타' }
   ] as const
 } as const;
@@ -145,7 +145,7 @@ export default function CustomerClinicalUploadPage() {
   const mainContentRef = useRef<HTMLElement>(null);
   const casesRef = useRef<ClinicalCase[]>([]);
 
-  // 🎯 사용자 상호작용 상태 추적 (Focus State + User Activity)
+  // 사용자 상호작용 상태 추적 (Focus State + User Activity)
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const userActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -375,15 +375,15 @@ export default function CustomerClinicalUploadPage() {
           if (case_.cureBooster) productTypes.push('cure_booster');
           if (case_.cureMask) productTypes.push('cure_mask');
           if (case_.premiumMask) productTypes.push('premium_mask');
-          if (case_.allInOneSerum) productTypes.push('allinone_serum');
+          if (case_.allInOneSerum) productTypes.push('all_in_one_serum');
           
           // 체크박스 관련 피부타입 데이터 처리
           const skinTypeData = [];
           if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
-          if (case_.skinPigment) skinTypeData.push('pigmentation');
-          if (case_.skinPore) skinTypeData.push('pores_enlarged');
-          if (case_.skinTrouble) skinTypeData.push('acne_trouble');
-          if (case_.skinWrinkle) skinTypeData.push('wrinkles_elasticity');
+          if (case_.skinPigment) skinTypeData.push('pigment');
+          if (case_.skinPore) skinTypeData.push('pore');
+          if (case_.skinTrouble) skinTypeData.push('trouble');
+          if (case_.skinWrinkle) skinTypeData.push('wrinkle');
           if (case_.skinEtc) skinTypeData.push('other');
           
           // 사진 데이터 로드
@@ -494,7 +494,7 @@ export default function CustomerClinicalUploadPage() {
     loadCases();
   }, [isLoaded, isSignedIn, isKol]);
 
-  // 🎯 스크롤 기반 숫자 애니메이션 (사용자 상호작용 중이 아닐 때만 표시)
+  // 스크롤 기반 숫자 애니메이션 (사용자 상호작용 중이 아닐 때만 표시)
   useEffect(() => {
     let scrollTimeout: NodeJS.Timeout | null = null;
     let throttleTimeout: NodeJS.Timeout | null = null;
@@ -503,7 +503,7 @@ export default function CustomerClinicalUploadPage() {
     const handleScroll = () => {
       console.log('스크롤 이벤트 감지됨', { isUserInteracting }); // 디버깅용
       
-      // 🚫 사용자 상호작용 중이면 애니메이션 비활성화
+      // 사용자 상호작용 중이면 애니메이션 비활성화
       if (isUserInteracting) {
         console.log('사용자 상호작용 중 - 스크롤 애니메이션 차단');
         return;
@@ -512,7 +512,7 @@ export default function CustomerClinicalUploadPage() {
       // 스크롤 시작 시에만 숫자 표시 (throttling으로 성능 향상)
       if (!isScrolling && !throttleTimeout) {
         isScrolling = true;
-        console.log('📜 의도적 스크롤 감지 - 숫자 애니메이션 시작'); // 디버깅용
+        console.log(' 의도적 스크롤 감지 - 숫자 애니메이션 시작'); // 디버깅용
         
         // 현재 cases 상태를 ref로 접근하여 애니메이션 표시
         const currentCases = casesRef.current;
@@ -529,7 +529,7 @@ export default function CustomerClinicalUploadPage() {
       // 스크롤이 멈추면 숫자 숨기기 (디바운싱)
       if (scrollTimeout) clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
-        console.log('📜 스크롤 멈춤 - 숫자 애니메이션 종료'); // 디버깅용
+        console.log(' 스크롤 멈춤 - 숫자 애니메이션 종료'); // 디버깅용
         setNumberVisibleCards(new Set());
         isScrolling = false;
       }, 800); // 0.8초 후 숫자 숨김 (조금 더 길게)
@@ -545,10 +545,10 @@ export default function CustomerClinicalUploadPage() {
     };
   }, [isUserInteracting]); // isUserInteracting 의존성 추가
 
-  // 🎬 초기 애니메이션 테스트 (케이스 로드 후 한 번만 실행, 사용자 상호작용 중이 아닐 때만)
+  // 초기 애니메이션 테스트 (케이스 로드 후 한 번만 실행, 사용자 상호작용 중이 아닐 때만)
   useEffect(() => {
     if (cases.length > 0 && !isUserInteracting) {
-      console.log('💫 초기 애니메이션 테스트 시작', { casesLength: cases.length, isUserInteracting });
+      console.log(' 초기 애니메이션 테스트 시작', { casesLength: cases.length, isUserInteracting });
       
       // 약간의 지연 후 애니메이션 시작 (페이지 로드 완료 후)
       const initialAnimationTimer = setTimeout(() => {
@@ -1238,15 +1238,15 @@ export default function CustomerClinicalUploadPage() {
         if (case_.cureBooster) productTypes.push('cure_booster');
         if (case_.cureMask) productTypes.push('cure_mask');
         if (case_.premiumMask) productTypes.push('premium_mask');
-        if (case_.allInOneSerum) productTypes.push('allinone_serum');
+        if (case_.allInOneSerum) productTypes.push('all_in_one_serum');
         
         // 피부타입 데이터 처리
         const skinTypeData = [];
         if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
-        if (case_.skinPigment) skinTypeData.push('pigmentation');
-        if (case_.skinPore) skinTypeData.push('pores_enlarged');
-        if (case_.skinTrouble) skinTypeData.push('acne_trouble');
-        if (case_.skinWrinkle) skinTypeData.push('wrinkles_elasticity');
+        if (case_.skinPigment) skinTypeData.push('pigment');
+        if (case_.skinPore) skinTypeData.push('pore');
+        if (case_.skinTrouble) skinTypeData.push('trouble');
+        if (case_.skinWrinkle) skinTypeData.push('wrinkle');
         if (case_.skinEtc) skinTypeData.push('other');
         
         // 사진 데이터 로드
@@ -1803,7 +1803,9 @@ export default function CustomerClinicalUploadPage() {
                           </div>
                           <span className="text-lg font-medium text-gray-800 truncate">{case_.customerName || '새 고객'}</span>
                           {isNewCustomer(case_.id) && (
-                            <span className="text-xs bg-biofox-lavender/20 text-purple-700 px-2 py-1 rounded-full">새 고객</span>
+                            <span className="text-xs bg-biofox-lavender/20 text-purple-700 px-2 py-1 rounded-full border border-biofox-lavender/40">
+                              새 고객
+                            </span>
                           )}
                           {/* 완료 상태인데 동의서가 없으면 경고 */}
                           {case_.status === 'completed' && case_.consentReceived && !case_.consentImageUrl && (
