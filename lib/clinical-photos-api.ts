@@ -735,16 +735,34 @@ export async function fetchRoundCustomerInfo(caseId: number): Promise<any[]> {
 
     if (error) throw error;
 
-    // 안전하게 JSON 배열 파싱
+    // 안전하게 JSON 배열 파싱 유틸 - 레거시 문자열도 지원
     function safeParseArray(input: any): string[] {
-      if (!input || typeof input !== 'string') return [];
-      try {
-        const parsed = JSON.parse(input);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
-        console.warn('safeParseArray: invalid JSON array string', input);
-        return [];
+      if (!input) return [];
+      // 이미 배열이면 그대로 반환
+      if (Array.isArray(input)) {
+        return input as string[];
       }
+      if (typeof input === 'string') {
+        // 1) JSON 문자열 시도
+        try {
+          const parsed = JSON.parse(input);
+          if (Array.isArray(parsed)) {
+            return parsed;
+          }
+        } catch (e) {
+          // JSON.parse 실패 – 다음 단계로 Fallback
+        }
+
+        /*
+          2) 콤마(,) 혹은 세미콜론(;) 구분자로 분리된 일반 문자열 처리
+             예) "여드름성 피부", "프락셀 레이저, 재생 크림"
+        */
+        return input
+          .split(/[;,]/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+      }
+      return [];
     }
 
     return (
