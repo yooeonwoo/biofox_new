@@ -54,30 +54,64 @@ async function getCurrentKolId(): Promise<string> {
       throw new Error('KOL 정보를 가져올 수 없는 환경입니다. TEST_KOL_ID 환경 변수를 설정했는지 확인하세요.');
     }
 
-    // Clerk 사용자 ID 가져오기
+    // Clerk 사용자 ID 및 이메일 가져오기
     const userResp = await fetch('/api/user');
     if (!userResp.ok) throw new Error('사용자 정보를 가져올 수 없습니다');
     const userJson = await userResp.json();
     const clerkUserId: string | undefined = userJson.userId;
     const userEmail: string | undefined = userJson.email;
 
-    // 1) Clerk ID가 있으면 그대로 반환 (clinical_cases.kol_id 는 Clerk ID(UUID) 임)
+    // 1) Clerk ID -> Supabase users -> kols 경로로 숫자형 KOL ID 조회 시도
     if (clerkUserId) {
-      return clerkUserId;
+      const { data: userRow, error: userErr } = await supabaseClient
+        .from('users')
+        .select('id')
+        .eq('clerk_id', clerkUserId)
+        .maybeSingle();
+
+      if (userErr) throw userErr;
+
+      if (userRow?.id) {
+        const { data: kolRow, error: kolErr } = await supabaseClient
+          .from('kols')
+          .select('id')
+          .eq('user_id', userRow.id)
+          .maybeSingle();
+
+        if (kolErr) throw kolErr;
+        if (kolRow?.id) {
+          // 숫자형이지만 문자열로 반환하여 타입 변경 최소화
+          return String(kolRow.id);
+        }
+      }
     }
 
-    // 2) 이메일로 fallback 조회 (Clerk ID를 얻지 못한 경우)
+    // 2) 이메일로 fallback 조회 (Clerk ID 매핑 실패 시)
     if (userEmail) {
       const { data: userRow, error: userErr } = await supabaseClient
         .from('users')
-        .select('clerk_id')
+        .select('id')
         .eq('email', userEmail)
         .maybeSingle();
 
       if (userErr) throw userErr;
-      if (userRow?.clerk_id) {
-        return String(userRow.clerk_id);
+      if (userRow?.id) {
+        const { data: kolRow, error: kolErr } = await supabaseClient
+          .from('kols')
+          .select('id')
+          .eq('user_id', userRow.id)
+          .maybeSingle();
+
+        if (kolErr) throw kolErr;
+        if (kolRow?.id) {
+          return String(kolRow.id);
+        }
       }
+    }
+
+    // 3) 마지막 fallback: Clerk ID 자체를 반환 (기존 로직 유지)
+    if (clerkUserId) {
+      return clerkUserId;
     }
 
     throw new Error('KOL 정보를 찾을 수 없습니다');
@@ -264,7 +298,7 @@ export async function createCase(caseData: {
     const { data, error } = await supabaseClient
       .from('clinical_cases')
       .insert({
-        kol_id: kolId,
+        kol_id: Number(kolId),
         customer_name: caseData.customerName,
         case_name: caseData.caseName,
         concern_area: caseData.concernArea,

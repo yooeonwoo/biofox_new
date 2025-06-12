@@ -2,7 +2,7 @@ import { toast } from 'sonner';
 
 export interface ClinicalCase {
   id: number;
-  kolId: string; // Supabase에서는 kol_id가 string 타입임
+  kolId: number; // Supabase clinical_cases.kol_id는 숫자형(KOL 내부 ID)
   customerId?: string; // Supabase에서는 customer_id가 string 타입임
   customerName: string;
   caseName: string;
