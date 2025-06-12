@@ -1424,11 +1424,34 @@ export default function PersonalClinicalUploadPage() {
                                       ? [...currentRoundInfo.products, product.value]
                                       : currentRoundInfo.products.filter(p => p !== product.value);
                                     
+                                    // Boolean 필드 매핑
+                                    const boolUpdates: Partial<{ 
+                                      cureBooster: boolean; 
+                                      cureMask: boolean; 
+                                      premiumMask: boolean; 
+                                      allInOneSerum: boolean; 
+                                    }> = {};
+                                    switch (product.value) {
+                                      case 'cure_booster':
+                                        boolUpdates.cureBooster = checked as boolean;
+                                        break;
+                                      case 'cure_mask':
+                                        boolUpdates.cureMask = checked as boolean;
+                                        break;
+                                      case 'premium_mask':
+                                        boolUpdates.premiumMask = checked as boolean;
+                                        break;
+                                      case 'allinone_serum':
+                                        boolUpdates.allInOneSerum = checked as boolean;
+                                        break;
+                                    }
+                                    
                                     // 즉시 로컬 상태 업데이트
                                     setCases(prev => prev.map(c => 
                                       c.id === case_.id 
                                         ? { 
                                             ...c, 
+                                            ...boolUpdates,
                                             roundCustomerInfo: {
                                               ...c.roundCustomerInfo,
                                               [currentRound]: {
@@ -1445,6 +1468,9 @@ export default function PersonalClinicalUploadPage() {
                                       await handleRoundCustomerInfoUpdate(case_.id, currentRound, { 
                                         products: updatedProducts 
                                       });
+                                      if (Object.keys(boolUpdates).length > 0) {
+                                        updateCaseCheckboxes(case_.id, boolUpdates);
+                                      }
                                     } catch (error) {
                                       console.error('제품 선택 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
@@ -1520,11 +1546,42 @@ export default function PersonalClinicalUploadPage() {
                                       ? [...currentRoundInfo.skinTypes, skinType.value]
                                       : currentRoundInfo.skinTypes.filter(s => s !== skinType.value);
                                     
+                                    // Boolean 필드 매핑
+                                    const boolUpdates: Partial<{ 
+                                      skinRedSensitive: boolean; 
+                                      skinPigment: boolean; 
+                                      skinPore: boolean; 
+                                      skinTrouble: boolean; 
+                                      skinWrinkle: boolean; 
+                                      skinEtc: boolean; 
+                                    }> = {};
+                                    switch (skinType.value) {
+                                      case 'red_sensitive':
+                                        boolUpdates.skinRedSensitive = checked as boolean;
+                                        break;
+                                      case 'pigmentation':
+                                        boolUpdates.skinPigment = checked as boolean;
+                                        break;
+                                      case 'pores_enlarged':
+                                        boolUpdates.skinPore = checked as boolean;
+                                        break;
+                                      case 'acne_trouble':
+                                        boolUpdates.skinTrouble = checked as boolean;
+                                        break;
+                                      case 'wrinkles_elasticity':
+                                        boolUpdates.skinWrinkle = checked as boolean;
+                                        break;
+                                      case 'other':
+                                        boolUpdates.skinEtc = checked as boolean;
+                                        break;
+                                    }
+                                    
                                     // 즉시 로컬 상태 업데이트
                                     setCases(prev => prev.map(c => 
                                       c.id === case_.id 
                                         ? { 
                                             ...c, 
+                                            ...boolUpdates,
                                             roundCustomerInfo: {
                                               ...c.roundCustomerInfo,
                                               [currentRound]: {
@@ -1541,6 +1598,9 @@ export default function PersonalClinicalUploadPage() {
                                       await handleRoundCustomerInfoUpdate(case_.id, currentRound, { 
                                         skinTypes: updatedSkinTypes 
                                       });
+                                      if (Object.keys(boolUpdates).length > 0) {
+                                        updateCaseCheckboxes(case_.id, boolUpdates);
+                                      }
                                     } catch (error) {
                                       console.error('피부타입 선택 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
