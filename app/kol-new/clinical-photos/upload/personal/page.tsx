@@ -338,7 +338,7 @@ export default function PersonalClinicalUploadPage() {
           }
           
           // 회차별 고객 정보 로드
-          let roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+          const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
           try {
             const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
             const roundData = await fetchRoundCustomerInfo(personalCase.id);
@@ -967,7 +967,7 @@ export default function PersonalClinicalUploadPage() {
         }
         
         // 회차별 고객 정보 로드
-        let roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+        const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
         try {
           const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
           const roundData = await fetchRoundCustomerInfo(personalCase.id);

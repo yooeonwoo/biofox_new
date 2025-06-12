@@ -149,6 +149,17 @@ export default function CustomerClinicalUploadPage() {
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const userActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [saveStatus, setSaveStatus] = useState<{[caseId:string]: 'idle' | 'saving' | 'saved' | 'error'}>({});
+
+  const markSaving = (caseId:string) => setSaveStatus(prev=>({...prev,[caseId]:'saving'}));
+  const markSaved = (caseId:string) => {
+    setSaveStatus(prev=>({...prev,[caseId]:'saved'}));
+    setTimeout(()=>{
+      setSaveStatus(prev=>({...prev,[caseId]:'idle'}));
+    },2000);
+  };
+  const markError = (caseId:string) => setSaveStatus(prev=>({...prev,[caseId]:'error'}));
+
   // 사용자 상호작용 감지 훅
   useEffect(() => {
     const interactiveElements = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
@@ -392,7 +403,7 @@ export default function CustomerClinicalUploadPage() {
           }
 
           // 회차별 고객 정보 로드
-          let roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+          const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
           try {
             const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
             const roundData = await fetchRoundCustomerInfo(case_.id);
@@ -997,6 +1008,7 @@ export default function CustomerClinicalUploadPage() {
 
   // 기본 고객정보 업데이트 핸들러 (이름, 나이, 성별) - IME 처리 개선
   const handleBasicCustomerInfoUpdate = async (caseId: string, customerInfo: Partial<Pick<CustomerInfo, 'name' | 'age' | 'gender'>>) => {
+    markSaving(caseId);
     try {
       // IME 입력 중이면 로컬 상태만 업데이트
       if (isComposing && customerInfo.name !== undefined) {
@@ -1054,15 +1066,18 @@ export default function CustomerClinicalUploadPage() {
           : case_
       ));
       
+      markSaved(caseId);
       console.log('기본 고객 정보가 업데이트되었습니다.');
     } catch (error) {
       console.error('기본 고객 정보 업데이트 실패:', error);
+      markError(caseId);
       // 조용히 실패 처리 (사용자 경험 방해하지 않도록)
     }
   };
 
   // 회차별 고객정보 업데이트 핸들러 (시술유형, 제품, 피부타입, 메모) - IME 처리 개선
   const handleRoundCustomerInfoUpdate = async (caseId: string, roundDay: number, roundInfo: Partial<RoundCustomerInfo>) => {
+    markSaving(caseId);
     try {
       // IME 입력 중이면 로컬 상태만 업데이트
       if (isComposing && roundInfo.memo !== undefined) {
@@ -1127,9 +1142,11 @@ export default function CustomerClinicalUploadPage() {
           : case_
       ));
       
+      markSaved(caseId);
       console.log('회차별 고객 정보가 업데이트되었습니다.');
     } catch (error) {
       console.error('회차별 고객 정보 업데이트 실패:', error);
+      markError(caseId);
       // 조용히 실패 처리 (사용자 경험 방해하지 않도록)
     }
   };
@@ -1166,10 +1183,12 @@ export default function CustomerClinicalUploadPage() {
         await updateCase(parseInt(caseId), updates);
       }
       
+      markSaved(caseId);
       console.log('체크박스 정보가 저장되었습니다');
 
     } catch (error) {
       console.error('체크박스 업데이트 오류:', error);
+      markError(caseId);
       // 오류 발생 시 로칼 상태 되돌리기
       // 불러온 데이터를 우리 케이스 구조에 맞게 변환해야 함
       fetchCases().then(fetchedCases => {
@@ -1233,7 +1252,7 @@ export default function CustomerClinicalUploadPage() {
         }
 
         // 회차별 고객 정보 로드
-        let roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+        const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
         try {
           const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
           const roundData = await fetchRoundCustomerInfo(case_.id);
@@ -1540,6 +1559,7 @@ export default function CustomerClinicalUploadPage() {
 
   // 전체 저장 핸들러
   const handleSaveAll = async (caseId: string) => {
+    markSaving(caseId);
     try {
       const targetCase = cases.find(c => c.id === caseId);
       if (!targetCase) return;
@@ -1577,9 +1597,11 @@ export default function CustomerClinicalUploadPage() {
         }),
       ]);
 
+      markSaved(caseId);
       toast.success('전체저장되었습니다!');
     } catch (error) {
       console.error('전체 저장 실패:', error);
+      markError(caseId);
       toast.error('전체 저장에 실패했습니다. 다시 시도해주세요.');
     }
   };
@@ -1916,6 +1938,15 @@ export default function CustomerClinicalUploadPage() {
                             <Save className="h-3 w-3 mr-1" />
                             전체저장
                           </Button>
+                          {saveStatus[case_.id]==='saving' && (
+                            <span className="text-xs text-gray-500 ml-2">저장 중...</span>
+                          )}
+                          {saveStatus[case_.id]==='saved' && (
+                            <span className="text-xs text-green-600 ml-2">저장됨 ✅</span>
+                          )}
+                          {saveStatus[case_.id]==='error' && (
+                            <span className="text-xs text-red-600 ml-2">오류 ❌</span>
+                          )}
                         </div>
                         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                           {/* 첫 번째 열 */}
