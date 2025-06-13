@@ -265,7 +265,7 @@ export default function PersonalClinicalUploadPage() {
               customerName: '본인',
               caseName: '본인 임상 케이스',
               concernArea: '본인 케어',
-              treatmentPlan: '[본인] 개인 관리 계획',
+              treatmentPlan: '개인 관리 계획',
               consentReceived: false,
             });
             
@@ -368,7 +368,7 @@ export default function PersonalClinicalUploadPage() {
                 treatmentType: round.treatment_type || '',
                 products: round.products,
                 skinTypes: round.skin_types,
-                memo: round.memo || '',
+                memo: (round.memo || '').replace(/^\[본인\]\s*/, ''),
                 date: round.treatment_date || ''
               };
             });
@@ -811,8 +811,7 @@ export default function PersonalClinicalUploadPage() {
       
       // 메모 정보를 treatmentPlan으로 업데이트 (본인 케이스 전용)
       if (roundInfo.memo !== undefined) {
-        // 본인 케이스의 메모는 "[본인] " 접두사를 붙여서 구분
-        updateData.treatmentPlan = `[본인] ${roundInfo.memo}`;
+        updateData.treatmentPlan = roundInfo.memo;
       }
       
       if (Object.keys(updateData).length > 0) {
@@ -821,11 +820,13 @@ export default function PersonalClinicalUploadPage() {
 
       // clinical_round_info 테이블에 회차별 정보 저장 (본인 케이스 전용)
       await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
+        age: roundInfo.age,
+        gender: roundInfo.gender,
         treatmentType: roundInfo.treatmentType,
         treatmentDate: roundInfo.date,
         products: roundInfo.products,
         skinTypes: roundInfo.skinTypes,
-        memo: roundInfo.memo ? `[본인] ${roundInfo.memo}` : roundInfo.memo, // 본인 케이스 구분자 추가
+        memo: roundInfo.memo,
       });
       
       // 로컬 상태 업데이트
@@ -999,7 +1000,7 @@ export default function PersonalClinicalUploadPage() {
               treatmentType: round.treatment_type || '',
               products: round.products,
               skinTypes: round.skin_types,
-              memo: round.memo || '',
+              memo: (round.memo || '').replace(/^\[본인\]\s*/, ''),
               date: round.treatment_date || ''
             };
           });
