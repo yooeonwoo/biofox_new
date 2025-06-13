@@ -48,7 +48,7 @@ const SYSTEM_OPTIONS = {
     { value: 'red_sensitive', label: '붉고 예민함' },
     { value: 'pigment', label: '색소 / 미백' },
     { value: 'pore', label: '모공 늘어짐' },
-    { value: 'trouble', label: '트러블 / 여드름' },
+    { value: 'acne_trouble', label: '트러블 / 여드름' },
     { value: 'wrinkle', label: '주름 / 탄력' },
     { value: 'other', label: '기타' }
   ] as const
@@ -317,7 +317,7 @@ export default function PersonalClinicalUploadPage() {
           if (personalCase.skinRedSensitive) skinTypeData.push('red_sensitive');
           if (personalCase.skinPigment) skinTypeData.push('pigment');
           if (personalCase.skinPore) skinTypeData.push('pore');
-          if (personalCase.skinTrouble) skinTypeData.push('trouble');
+          if (personalCase.skinTrouble) skinTypeData.push('acne_trouble');
           if (personalCase.skinWrinkle) skinTypeData.push('wrinkle');
           if (personalCase.skinEtc) skinTypeData.push('other');
           
@@ -948,7 +948,7 @@ export default function PersonalClinicalUploadPage() {
         if (personalCase.skinRedSensitive) skinTypeData.push('red_sensitive');
         if (personalCase.skinPigment) skinTypeData.push('pigment');
         if (personalCase.skinPore) skinTypeData.push('pore');
-        if (personalCase.skinTrouble) skinTypeData.push('trouble');
+        if (personalCase.skinTrouble) skinTypeData.push('acne_trouble');
         if (personalCase.skinWrinkle) skinTypeData.push('wrinkle');
         if (personalCase.skinEtc) skinTypeData.push('other');
         
@@ -1565,7 +1565,7 @@ export default function PersonalClinicalUploadPage() {
                                       case 'pore':
                                         boolUpdates.skinPore = checked as boolean;
                                         break;
-                                      case 'trouble':
+                                      case 'acne_trouble':
                                         boolUpdates.skinTrouble = checked as boolean;
                                         break;
                                       case 'wrinkle':

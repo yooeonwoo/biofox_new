@@ -401,7 +401,7 @@ export default function CustomerClinicalUploadPage() {
           if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
           if (case_.skinPigment) skinTypeData.push('pigment');
           if (case_.skinPore) skinTypeData.push('pore');
-          if (case_.skinTrouble) skinTypeData.push('trouble');
+          if (case_.skinTrouble) skinTypeData.push('acne_trouble');
           if (case_.skinWrinkle) skinTypeData.push('wrinkle');
           if (case_.skinEtc) skinTypeData.push('other');
           
@@ -743,7 +743,7 @@ export default function CustomerClinicalUploadPage() {
               // 케이스 조회 실패 시 기존 방식으로 업데이트
               setCases(prev => prev.map(case_ => 
                 case_.id === caseId 
-                  ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
+                  ? { ...case_, consentImageUrl: undefined, consentReceived: false }
                   : case_
               ));
             }
@@ -752,7 +752,7 @@ export default function CustomerClinicalUploadPage() {
             // 새로고침 실패 시 기존 방식으로 로컬 업데이트
             setCases(prev => prev.map(case_ => 
               case_.id === caseId 
-                ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
+                ? { ...case_, consentImageUrl: undefined, consentReceived: false }
                 : case_
             ));
           }
@@ -803,8 +803,8 @@ export default function CustomerClinicalUploadPage() {
               case_.id === caseId 
                 ? { 
                     ...case_, 
-                    consentImageUrl: updatedCase.consentImageUrl, 
-                    consentReceived: updatedCase.consentReceived 
+                    consentImageUrl: undefined, 
+                    consentReceived: false 
                   }
                 : case_
             ));
@@ -1264,7 +1264,7 @@ export default function CustomerClinicalUploadPage() {
         if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
         if (case_.skinPigment) skinTypeData.push('pigment');
         if (case_.skinPore) skinTypeData.push('pore');
-        if (case_.skinTrouble) skinTypeData.push('trouble');
+        if (case_.skinTrouble) skinTypeData.push('acne_trouble');
         if (case_.skinWrinkle) skinTypeData.push('wrinkle');
         if (case_.skinEtc) skinTypeData.push('other');
         
@@ -2163,6 +2163,15 @@ export default function CustomerClinicalUploadPage() {
                                       await handleRoundCustomerInfoUpdate(case_.id, currentRound, { 
                                         products: updatedProducts 
                                       });
+                                      // boolean 필드 동기화 - 홈케어 제품
+                                      const booleanUpdates = {
+                                        cureBooster: updatedProducts.includes('cure_booster'),
+                                        cureMask: updatedProducts.includes('cure_mask'),
+                                        premiumMask: updatedProducts.includes('premium_mask'),
+                                        allInOneSerum: updatedProducts.includes('all_in_one_serum'),
+                                      };
+
+                                      await updateCaseCheckboxes(case_.id, booleanUpdates);
                                     } catch (error) {
                                       console.error('제품 선택 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
@@ -2258,6 +2267,17 @@ export default function CustomerClinicalUploadPage() {
                                       await handleRoundCustomerInfoUpdate(case_.id, currentRound, { 
                                         skinTypes: updatedSkinTypes 
                                       });
+                                      // boolean 필드 동기화 - 피부 타입
+                                      const skinBooleanUpdates = {
+                                        skinRedSensitive: updatedSkinTypes.includes('red_sensitive'),
+                                        skinPigment: updatedSkinTypes.includes('pigment'),
+                                        skinPore: updatedSkinTypes.includes('pore'),
+                                        skinTrouble: updatedSkinTypes.includes('acne_trouble'),
+                                        skinWrinkle: updatedSkinTypes.includes('wrinkle'),
+                                        skinEtc: updatedSkinTypes.includes('other'),
+                                      };
+
+                                      await updateCaseCheckboxes(case_.id, skinBooleanUpdates);
                                     } catch (error) {
                                       console.error('피부타입 선택 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
