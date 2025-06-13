@@ -9,7 +9,7 @@ export default function CustomerClinicalUploadPageRefactor() {
 
   const handleAddCustomer = async () => {
     const newCase = await createCase({
-      customerName: '새 고객',
+      customerName: '',
       caseName: '신규 케이스',
     });
     if (newCase) {
