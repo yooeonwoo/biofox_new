@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import KolHeader from "../../../../components/layout/KolHeader";
 import KolSidebar from "../../../../components/layout/KolSidebar";
 import KolFooter from "../../../../components/layout/KolFooter";
@@ -1143,7 +1144,7 @@ export default function PersonalClinicalUploadPage() {
                     <div>
                     <CardHeader className="pb-4 bg-gray-50/30 rounded-t-xl">
                       {/* 첫 번째 줄: 본인 임상사진 + 동의/미동의 + 진행중/완료 */}
-                      <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center justify-between gap-2 mb-2 relative">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-medium text-gray-800 truncate">본인 임상사진</h3>
                           {/* 완료 상태인데 동의서가 없으면 경고 */}
@@ -1182,15 +1183,27 @@ export default function PersonalClinicalUploadPage() {
                             status={case_.status}
                             onStatusChange={(status) => handleCaseStatusChange(case_.id, status)}
                           />
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteCase(case_.id)}
-                            className="flex items-center gap-1 hover:shadow-md transition-all duration-200 text-xs px-2 py-1"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            삭제
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="absolute top-0 right-0 mt-1 mr-1 text-gray-400 hover:text-red-600">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>케이스 삭제</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  삭제하시면 이전 데이터는 복원되지 않습니다. 계속 삭제하시겠습니까?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>취소</AlertDialogCancel>
+                                <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={() => handleDeleteCase(case_.id)}>
+                                  삭제
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
 

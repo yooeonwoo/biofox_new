@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import KolHeader from "../../../../components/layout/KolHeader";
 import KolSidebar from "../../../../components/layout/KolSidebar";
 import KolFooter from "../../../../components/layout/KolFooter";
@@ -1542,9 +1543,7 @@ export default function CustomerClinicalUploadPage() {
   // 케이스 삭제 핸들러 (새 고객 + 실제 케이스)
   const handleDeleteCase = async (caseId: string) => {
     try {
-      // 삭제 확인
-      const confirmed = window.confirm('정말로 이 케이스를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.');
-      if (!confirmed) return;
+      // AlertDialog에서 이미 확인됨
 
       // 새 고객인 경우
       if (isNewCustomer(caseId)) {
