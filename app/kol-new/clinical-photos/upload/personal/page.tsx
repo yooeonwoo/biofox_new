@@ -1735,8 +1735,11 @@ export default function PersonalClinicalUploadPage() {
                           onCompositionStart={() => setIsComposing(true)}
                           onCompositionEnd={(e) => {
                             setIsComposing(false);
-                            // 한글 입력 완료 시 즉시 저장
-                            handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: e.currentTarget.value });
+                            // 한글 입력 완료 후에도 디바운스를 통해 저장하도록 처리
+                            const debounceKey = `memo-${case_.id}-${currentRounds[case_.id] || 1}`;
+                            debouncedUpdate(debounceKey, () => {
+                              handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { memo: e.currentTarget.value });
+                            }, 800);
                           }}
                           placeholder="해당 회차 관련 특이사항을 입력하세요..."
                           className="w-full min-h-[80px] border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
