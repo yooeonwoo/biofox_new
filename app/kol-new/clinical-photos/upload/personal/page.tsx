@@ -144,6 +144,15 @@ export default function PersonalClinicalUploadPage() {
   const [isComposing, setIsComposing] = useState(false);
   const [inputDebounceTimers, setInputDebounceTimers] = useState<{[key: string]: NodeJS.Timeout}>({});
   
+  // ---------------- 저장 상태 관리 ----------------
+  const [saveStatus, setSaveStatus] = useState<{[caseId:string]: 'idle' | 'saving' | 'saved' | 'error'}>({});
+  const markSaving = (caseId:string) => setSaveStatus(prev=>({...prev,[caseId]:'saving'}));
+  const markSaved = (caseId:string) => {
+    setSaveStatus(prev=>({...prev,[caseId]:'saved'}));
+    setTimeout(()=> setSaveStatus(prev=>({...prev,[caseId]:'idle'})), 2000);
+  };
+  const markError = (caseId:string) => setSaveStatus(prev=>({...prev,[caseId]:'error'}));
+  
   // ✅ 케이스별 API 직렬화를 위한 Promise Queue
   const updateQueue = useRef<Record<string, Promise<void>>>({});
   const enqueue = (caseId:string, task:()=>Promise<void>) => {
@@ -1059,6 +1068,7 @@ export default function PersonalClinicalUploadPage() {
 
   // 전체 저장 핸들러
   const handleSaveAll = async (caseId: string) => {
+    markSaving(caseId);
     try {
       const targetCase = cases.find(c => c.id === caseId);
       if (!targetCase) return;
@@ -1082,9 +1092,11 @@ export default function PersonalClinicalUploadPage() {
         }),
       ]);
 
+      markSaved(caseId);
       toast.success('전체저장되었습니다!');
     } catch (error) {
       console.error('전체 저장 실패:', error);
+      markError(caseId);
       toast.error('전체 저장에 실패했습니다. 다시 시도해주세요.');
     }
   };
@@ -1296,10 +1308,25 @@ export default function PersonalClinicalUploadPage() {
                             variant="outline"
                             onClick={() => handleSaveAll(case_.id)}
                             id={`save-all-${case_.id}`}
+                            disabled={saveStatus[case_.id]==='saving'}
                             className="text-xs px-3 py-1 h-7 border-biofox-blue-violet/30 hover:bg-biofox-blue-violet/10 hover:border-biofox-blue-violet/50 transition-all duration-200 cursor-pointer flex items-center gap-1"
                           >
-                            <Save className="h-3 w-3 mr-1" />
-                            전체저장
+                            {saveStatus[case_.id]==='saving' && (
+                              <>
+                                <Save className="h-3 w-3 mr-1 animate-spin" /> 저장 중...
+                              </>
+                            )}
+                            {saveStatus[case_.id]==='saved' && (
+                              <>✅ 저장됨</>
+                            )}
+                            {saveStatus[case_.id]==='error' && (
+                              <>❌ 오류</>
+                            )}
+                            {(!saveStatus[case_.id] || saveStatus[case_.id]==='idle') && (
+                              <>
+                                <Save className="h-3 w-3 mr-1" /> 전체저장
+                              </>
+                            )}
                           </Button>
                         </div>
                         
