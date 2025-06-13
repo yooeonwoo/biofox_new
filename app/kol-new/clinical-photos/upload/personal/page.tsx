@@ -774,6 +774,7 @@ export default function PersonalClinicalUploadPage() {
               }
             : case_
         ));
+        markSaved(caseId); // IME 입력 중에도 UI 저장 상태 리셋
         return;
       }
 

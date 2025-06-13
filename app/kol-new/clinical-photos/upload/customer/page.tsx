@@ -1138,6 +1138,7 @@ export default function CustomerClinicalUploadPage() {
               }
             : case_
         ));
+        markSaved(caseId);
         return;
       }
 
