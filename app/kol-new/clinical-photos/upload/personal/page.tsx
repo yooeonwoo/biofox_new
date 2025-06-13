@@ -1393,19 +1393,19 @@ export default function PersonalClinicalUploadPage() {
                               value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.treatmentType || ''}
                               onValueChange={async (value) => {
                                 // 즉시 로컬 상태 업데이트
-                                setCases(prev => prev.map(case_ => 
-                                  case_.id === case_.id 
+                                setCases(prev => prev.map(item => 
+                                  item.id === case_.id 
                                     ? { 
-                                        ...case_, 
+                                        ...item, 
                                         roundCustomerInfo: {
-                                          ...case_.roundCustomerInfo,
+                                          ...item.roundCustomerInfo,
                                           [currentRounds[case_.id] || 1]: { 
-                                            ...case_.roundCustomerInfo[currentRounds[case_.id] || 1],
+                                            ...item.roundCustomerInfo[currentRounds[case_.id] || 1],
                                             treatmentType: value
                                           }
                                         }
                                       }
-                                    : case_
+                                    : item
                                 ));
                                 
                                 // 자동 저장
