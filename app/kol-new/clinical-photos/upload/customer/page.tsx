@@ -179,6 +179,16 @@ export default function CustomerClinicalUploadPage() {
   };
   const markError = (caseId:string) => setSaveStatus(prev=>({...prev,[caseId]:'error'}));
 
+  // -------- 직렬화용 Promise Queue 추가 --------
+  const updateQueue = useRef<Record<string, Promise<void>>>({});
+  const enqueue = (caseId:string, task:()=>Promise<void>) => {
+    updateQueue.current[caseId] = (updateQueue.current[caseId] ?? Promise.resolve())
+      .then(task)
+      .catch(err => { console.error('enqueue error', err); });
+    return updateQueue.current[caseId];
+  };
+  // ---------------------------------------------
+
   // 사용자 상호작용 감지 훅
   useEffect(() => {
     const interactiveElements = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
@@ -1132,27 +1142,24 @@ export default function CustomerClinicalUploadPage() {
 
       // 새 고객이 아닌 경우에만 실제 API 호출
       if (!isNewCustomer(caseId)) {
-        const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
-        const updateData: any = {};
-        
-        // 메모 정보만 treatmentPlan으로 업데이트 (다른 필드는 체크박스로 처리)
-        if (roundInfo.memo !== undefined) {
-          updateData.treatmentPlan = roundInfo.memo;
-        }
-        
-        if (Object.keys(updateData).length > 0) {
-          await updateCase(parseInt(caseId), updateData);
-        }
-
-        // round_customer_info 테이블에 회차별 정보 저장
-        await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
-          age: roundInfo.age,
-          gender: roundInfo.gender,
-          treatmentType: roundInfo.treatmentType,
-          treatmentDate: roundInfo.date,
-          products: roundInfo.products,
-          skinTypes: roundInfo.skinTypes,
-          memo: roundInfo.memo,
+        await enqueue(caseId, async () => {
+          const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+          const updateData: any = {};
+          if (roundInfo.memo !== undefined) {
+            updateData.treatmentPlan = roundInfo.memo;
+          }
+          if (Object.keys(updateData).length > 0) {
+            await updateCase(parseInt(caseId), updateData);
+          }
+          await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
+            age: roundInfo.age,
+            gender: roundInfo.gender,
+            treatmentType: roundInfo.treatmentType,
+            treatmentDate: roundInfo.date,
+            products: roundInfo.products,
+            skinTypes: roundInfo.skinTypes,
+            memo: roundInfo.memo,
+          });
         });
       }
       
@@ -1211,9 +1218,10 @@ export default function CustomerClinicalUploadPage() {
       
       // 새 고객이 아닌 경우에만 실제 API 호출
       if (!isNewCustomer(caseId)) {
-        // 본래 API 호출을 통해 서버에 업데이트
-        const { updateCase } = await import('@/lib/clinical-photos-api');
-        await updateCase(parseInt(caseId), updates);
+        await enqueue(caseId, async () => {
+          const { updateCase } = await import('@/lib/clinical-photos-api');
+          await updateCase(parseInt(caseId), updates);
+        });
       }
       
       markSaved(caseId);
@@ -1224,14 +1232,11 @@ export default function CustomerClinicalUploadPage() {
       markError(caseId);
       // 오류 발생 시 로칼 상태 되돌리기
       // 불러온 데이터를 우리 케이스 구조에 맞게 변환해야 함
-      fetchCases().then(fetchedCases => {
-        // 페이지 리로드
-        window.location.reload();
-      }).catch(err => {
-        console.error('케이스 불러오기 오류:', err);
-      });
+      refreshCases();
       
-      console.error('체크박스 정보 저장 중 오류가 발생하였습니다');
+      toast.error('체크박스 정보 저장에 실패했습니다. 다시 시도해주세요.');
+      // 필요 시 데이터 새로고침
+      refreshCases();
     }
   };
 
@@ -2137,32 +2142,20 @@ export default function CustomerClinicalUploadPage() {
                                   id={`product-${case_.id}-${currentRound}-${product.value}`}
                                   checked={isSelected}
                                   onCheckedChange={async (checked) => {
-                                    // 현재 회차의 제품 목록 업데이트
-                                    const updatedProducts = checked
-                                      ? [...currentRoundInfo.products, product.value]
-                                      : currentRoundInfo.products.filter(p => p !== product.value);
-                                    
-                                    // 즉시 로컬 상태 업데이트
-                                    setCases(prev => prev.map(c => 
-                                      c.id === case_.id 
-                                        ? { 
-                                            ...c, 
-                                            roundCustomerInfo: {
-                                              ...c.roundCustomerInfo,
-                                              [currentRound]: {
-                                                ...currentRoundInfo,
-                                                products: updatedProducts
-                                              }
-                                            }
-                                          }
-                                        : c
-                                    ));
+                                    if (checked === 'indeterminate') return;
+                                    const isChecked = Boolean(checked);
+                                    let updatedProducts: string[] = [];
+                                    // prev 기반으로 상태 계산하여 stale 문제 해결
+                                    setCases(prev => prev.map(c => {
+                                      if (c.id !== case_.id) return c;
+                                      const prevRound = c.roundCustomerInfo[currentRound] || { treatmentType:'', products:[], skinTypes:[], memo:'', date:'' };
+                                      updatedProducts = isChecked ? [...prevRound.products, product.value] : prevRound.products.filter(p=>p!==product.value);
+                                      return { ...c, roundCustomerInfo: { ...c.roundCustomerInfo, [currentRound]: { ...prevRound, products: updatedProducts } } };
+                                    }));
                                     
                                     // 백그라운드에서 저장
                                     try {
-                                      await handleRoundCustomerInfoUpdate(case_.id, currentRound, { 
-                                        products: updatedProducts 
-                                      });
+                                      await handleRoundCustomerInfoUpdate(case_.id, currentRound, { products: updatedProducts });
                                       // boolean 필드 동기화 - 홈케어 제품
                                       const booleanUpdates = {
                                         cureBooster: updatedProducts.includes('cure_booster'),
@@ -2175,7 +2168,7 @@ export default function CustomerClinicalUploadPage() {
                                     } catch (error) {
                                       console.error('제품 선택 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
-                                      const revertedProducts = checked
+                                      const revertedProducts = isChecked
                                         ? currentRoundInfo.products.filter(p => p !== product.value)
                                         : [...currentRoundInfo.products, product.value];
                                       
@@ -2241,66 +2234,39 @@ export default function CustomerClinicalUploadPage() {
                                   id={`skin-${case_.id}-${currentRound}-${skinType.value}`}
                                   checked={isSelected}
                                   onCheckedChange={async (checked) => {
-                                    // 현재 회차의 피부타입 목록 업데이트
-                                    const updatedSkinTypes = checked
-                                      ? [...currentRoundInfo.skinTypes, skinType.value]
-                                      : currentRoundInfo.skinTypes.filter(s => s !== skinType.value);
-                                    
-                                    // 즉시 로컬 상태 업데이트
-                                    setCases(prev => prev.map(c => 
-                                      c.id === case_.id 
-                                        ? { 
-                                            ...c, 
-                                            roundCustomerInfo: {
-                                              ...c.roundCustomerInfo,
-                                              [currentRound]: {
-                                                ...currentRoundInfo,
-                                                skinTypes: updatedSkinTypes
-                                              }
-                                            }
-                                          }
-                                        : c
-                                    ));
-                                    
-                                    // 백그라운드에서 저장
-                                    try {
-                                      await handleRoundCustomerInfoUpdate(case_.id, currentRound, { 
-                                        skinTypes: updatedSkinTypes 
-                                      });
-                                      // boolean 필드 동기화 - 피부 타입
-                                      const skinBooleanUpdates = {
-                                        skinRedSensitive: updatedSkinTypes.includes('red_sensitive'),
-                                        skinPigment: updatedSkinTypes.includes('pigment'),
-                                        skinPore: updatedSkinTypes.includes('pore'),
-                                        skinTrouble: updatedSkinTypes.includes('acne_trouble'),
-                                        skinWrinkle: updatedSkinTypes.includes('wrinkle'),
-                                        skinEtc: updatedSkinTypes.includes('other'),
-                                      };
-
-                                      await updateCaseCheckboxes(case_.id, skinBooleanUpdates);
-                                    } catch (error) {
-                                      console.error('피부타입 선택 저장 실패:', error);
-                                      // 실패 시 상태 되돌리기
-                                      const revertedSkinTypes = checked
-                                        ? currentRoundInfo.skinTypes.filter(s => s !== skinType.value)
-                                        : [...currentRoundInfo.skinTypes, skinType.value];
-                                      
-                                      setCases(prev => prev.map(c => 
-                                        c.id === case_.id 
-                                          ? { 
-                                              ...c, 
-                                              roundCustomerInfo: {
-                                                ...c.roundCustomerInfo,
-                                                [currentRound]: {
-                                                  ...currentRoundInfo,
-                                                  skinTypes: revertedSkinTypes
-                                                }
-                                              }
-                                            }
-                                          : c
-                                      ));
-                                    }
-                                  }}
+                                    if (checked === 'indeterminate') return;
+                                    const isChecked = Boolean(checked);
+                                    let updatedSkinTypes: string[] = [];
+                                    setCases(prev => prev.map(c => {
+                                      if (c.id !== case_.id) return c;
+                                      const prevRound = c.roundCustomerInfo[currentRound] || { treatmentType:'', products:[], skinTypes:[], memo:'', date:'' };
+                                      updatedSkinTypes = isChecked ? [...prevRound.skinTypes, skinType.value] : prevRound.skinTypes.filter(s=>s!==skinType.value);
+                                      return { ...c, roundCustomerInfo: { ...c.roundCustomerInfo, [currentRound]: { ...prevRound, skinTypes: updatedSkinTypes } } };
+                                    }));
+                                     // Boolean 필드 매핑
+                                     const skinBooleanUpdates = {
+                                       skinRedSensitive: updatedSkinTypes.includes('red_sensitive'),
+                                       skinPigment: updatedSkinTypes.includes('pigment'),
+                                       skinPore: updatedSkinTypes.includes('pore'),
+                                       skinTrouble: updatedSkinTypes.includes('acne_trouble'),
+                                       skinWrinkle: updatedSkinTypes.includes('wrinkle'),
+                                       skinEtc: updatedSkinTypes.includes('other'),
+                                     };
+                                     
+                                     // 백그라운드에서 저장
+                                     try {
+                                       await handleRoundCustomerInfoUpdate(case_.id, currentRound, { skinTypes: updatedSkinTypes });
+                                       await updateCaseCheckboxes(case_.id, skinBooleanUpdates);
+                                     } catch (error) {
+                                       console.error('피부타입 선택 저장 실패:', error);
+                                       setCases(prev => prev.map(c => {
+                                         if (c.id !== case_.id) return c;
+                                         const prevRound = c.roundCustomerInfo[currentRound] || { treatmentType:'', products:[], skinTypes:[], memo:'', date:'' };
+                                         const reverted = isChecked ? prevRound.skinTypes.filter(s=>s!==skinType.value) : [...prevRound.skinTypes, skinType.value];
+                                         return { ...c, roundCustomerInfo: { ...c.roundCustomerInfo, [currentRound]: { ...prevRound, skinTypes: reverted } } };
+                                       }));
+                                     }
+                                   }}
                                   className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
                                 />
                                 <span className="text-xs leading-tight">{skinType.label}</span>

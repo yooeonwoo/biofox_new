@@ -143,6 +143,15 @@ export default function PersonalClinicalUploadPage() {
   // IME 상태 관리 (한글 입력 문제 해결) 및 debounce
   const [isComposing, setIsComposing] = useState(false);
   const [inputDebounceTimers, setInputDebounceTimers] = useState<{[key: string]: NodeJS.Timeout}>({});
+  
+  // ✅ 케이스별 API 직렬화를 위한 Promise Queue
+  const updateQueue = useRef<Record<string, Promise<void>>>({});
+  const enqueue = (caseId:string, task:()=>Promise<void>) => {
+    updateQueue.current[caseId] = (updateQueue.current[caseId] ?? Promise.resolve())
+      .then(task)
+      .catch(err => { console.error('enqueue error', err); });
+    return updateQueue.current[caseId];
+  };
 
   // debounce 함수 (영어/숫자/특수문자 입력 문제 해결)
   const debouncedUpdate = (key: string, updateFn: () => void, delay: number = 500) => {
@@ -863,17 +872,16 @@ export default function PersonalClinicalUploadPage() {
       
       // 본래 API 호출을 통해 서버에 업데이트
       // API에서는 caseId를 number로 기대하기 때문에 변환
-      await updateCase(parseInt(caseId), updates);
+      await enqueue(caseId, async () => {
+        await updateCase(parseInt(caseId), updates);
+      });
       
       console.log('체크박스 정보가 저장되었습니다');
 
     } catch (error) {
       console.error('체크박스 업데이트 오류:', error);
-      // 오류 발생 시 로칼 상태 되돌리기
-      // 페이지 리로드
-      window.location.reload();
-      
-      console.error('체크박스 정보 저장 중 오류가 발생하였습니다');
+      toast.error('체크박스 정보 저장에 실패했습니다. 다시 시도해주세요.');
+      refreshCases();
     }
   };
 
@@ -1419,30 +1427,38 @@ export default function PersonalClinicalUploadPage() {
                                   id={`product-${case_.id}-${currentRound}-${product.value}`}
                                   checked={isSelected}
                                   onCheckedChange={async (checked) => {
-                                    // 현재 회차의 제품 목록 업데이트
-                                    const updatedProducts = checked
-                                      ? [...currentRoundInfo.products, product.value]
-                                      : currentRoundInfo.products.filter(p => p !== product.value);
+                                    if (checked === 'indeterminate') return;
+                                    const isChecked = Boolean(checked);
+                                    let updatedProducts: string[] = [];
+                                    // prev 기준 계산
+                                    setCases(prev => prev.map(c => {
+                                      if (c.id !== case_.id) return c;
+                                      const prevRound = c.roundCustomerInfo[currentRound] || { treatmentType:'', products:[], skinTypes:[], memo:'', date:'' };
+                                      updatedProducts = isChecked ? [...prevRound.products, product.value] : prevRound.products.filter(p=>p!==product.value);
+                                      return { ...c, roundCustomerInfo: { ...c.roundCustomerInfo, [currentRound]: { ...prevRound, products: updatedProducts } } };
+                                    }));
                                     
-                                    // Boolean 필드 매핑
+                                    // Boolean 필드 매핑 객체 먼저 선언
                                     const boolUpdates: Partial<{ 
                                       cureBooster: boolean; 
                                       cureMask: boolean; 
                                       premiumMask: boolean; 
                                       allInOneSerum: boolean; 
                                     }> = {};
+                                    
+                                    // prev 기준 계산 및 상태 반영
                                     switch (product.value) {
                                       case 'cure_booster':
-                                        boolUpdates.cureBooster = checked as boolean;
+                                        boolUpdates.cureBooster = isChecked;
                                         break;
                                       case 'cure_mask':
-                                        boolUpdates.cureMask = checked as boolean;
+                                        boolUpdates.cureMask = isChecked;
                                         break;
                                       case 'premium_mask':
-                                        boolUpdates.premiumMask = checked as boolean;
+                                        boolUpdates.premiumMask = isChecked;
                                         break;
                                       case 'all_in_one_serum':
-                                        boolUpdates.allInOneSerum = checked as boolean;
+                                        boolUpdates.allInOneSerum = isChecked;
                                         break;
                                     }
                                     
@@ -1474,7 +1490,7 @@ export default function PersonalClinicalUploadPage() {
                                     } catch (error) {
                                       console.error('제품 선택 저장 실패:', error);
                                       // 실패 시 상태 되돌리기
-                                      const revertedProducts = checked
+                                      const revertedProducts = isChecked
                                         ? currentRoundInfo.products.filter(p => p !== product.value)
                                         : [...currentRoundInfo.products, product.value];
                                       
