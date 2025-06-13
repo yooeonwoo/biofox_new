@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { 
   ChevronDown, 
   Menu,
-  LogOut
+  LogOut,
+  Key
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../../../components/ui/sheet";
@@ -14,6 +15,8 @@ import { Badge } from "../../../components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import KolMobileMenu from "./KolMobileMenu";
+import { useState } from "react";
+import ChangePasswordDialog from "@/components/account/ChangePasswordDialog";
 
 interface KolHeaderProps {
   userName?: string;
@@ -44,6 +47,9 @@ export default function KolHeader({
     if (!shopName) return "내 상점";
     return shopName;
   };
+
+  // 비밀번호 변경 다이얼로그 상태
+  const [pwdDialogOpen, setPwdDialogOpen] = useState(false);
 
   return (
     <header className="border-b bg-white px-4 py-2 shadow-sm md:px-6">
@@ -102,12 +108,23 @@ export default function KolHeader({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+
+              {/* 비밀번호 변경 */}
+              <DropdownMenuItem onClick={() => setPwdDialogOpen(true)}>
+                <Key className="mr-2 h-4 w-4" />
+                <span>비밀번호 변경</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSignOut} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>로그아웃</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* 비밀번호 변경 다이얼로그 */}
+          <ChangePasswordDialog open={pwdDialogOpen} setOpen={setPwdDialogOpen} />
         </div>
       </div>
     </header>
