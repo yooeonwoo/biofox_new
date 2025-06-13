@@ -1144,7 +1144,7 @@ export default function PersonalClinicalUploadPage() {
                     <div>
                     <CardHeader className="pb-4 bg-gray-50/30 rounded-t-xl">
                       {/* 첫 번째 줄: 본인 임상사진 + 동의/미동의 + 진행중/완료 */}
-                      <div className="flex items-center justify-between gap-2 mb-2 relative">
+                      <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-medium text-gray-800 truncate">본인 임상사진</h3>
                           {/* 완료 상태인데 동의서가 없으면 경고 */}
@@ -1153,39 +1153,42 @@ export default function PersonalClinicalUploadPage() {
                           )}
                         </div>
                         
-                        {/* 동의/미동의 탭 */}
-                        <div className="flex bg-gray-100/70 p-1 rounded-lg flex-shrink-0">
-                          <button
-                            className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
-                              case_.consentReceived 
-                                ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
-                                : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                            onClick={() => handleConsentChange(case_.id, true)}
-                          >
-                            동의
-                          </button>
-                          <button
-                            className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
-                              !case_.consentReceived 
-                                ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
-                                : 'text-gray-600 hover:text-gray-800'
-                            }`}
-                            onClick={() => handleConsentChange(case_.id, false)}
-                          >
-                            미동의
-                          </button>
-                        </div>
+                        {/* 오른쪽 컨트롤 그룹: 동의/미동의 + 진행 상태 + 삭제 */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {/* 동의/미동의 탭 */}
+                          <div className="flex bg-gray-100/70 p-1 rounded-lg">
+                            <button
+                              className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
+                                case_.consentReceived 
+                                  ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
+                                  : 'text-gray-600 hover:text-gray-800'
+                              }`}
+                              onClick={() => handleConsentChange(case_.id, true)}
+                            >
+                              동의
+                            </button>
+                            <button
+                              className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
+                                !case_.consentReceived 
+                                  ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
+                                  : 'text-gray-600 hover:text-gray-800'
+                              }`}
+                              onClick={() => handleConsentChange(case_.id, false)}
+                            >
+                              미동의
+                            </button>
+                          </div>
 
-                        {/* 진행중/완료 탭 + 삭제 버튼 */}
-                        <div className="flex gap-1 flex-shrink-0">
+                          {/* 진행중/완료 탭 */}
                           <CaseStatusTabs
                             status={case_.status}
                             onStatusChange={(status) => handleCaseStatusChange(case_.id, status)}
                           />
+
+                          {/* 삭제 버튼 */}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="absolute top-0 right-0 mt-1 mr-1 text-gray-400 hover:text-red-600">
+                              <Button size="icon" variant="ghost" className="text-gray-400 hover:text-red-600" aria-label="케이스 삭제">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
