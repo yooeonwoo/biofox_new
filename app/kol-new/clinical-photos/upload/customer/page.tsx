@@ -1873,7 +1873,7 @@ export default function CustomerClinicalUploadPage() {
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent>
+                          <AlertDialogContent className="sm:max-w-sm bg-white">
                             <AlertDialogHeader>
                               <AlertDialogTitle>케이스 삭제</AlertDialogTitle>
                               <AlertDialogDescription>

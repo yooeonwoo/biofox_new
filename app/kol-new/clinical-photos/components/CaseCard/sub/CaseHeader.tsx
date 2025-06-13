@@ -44,7 +44,7 @@ export const CaseHeader: React.FC<CaseHeaderProps> = ({ caseItem, showDelete = f
               <Trash2 className="w-4 h-4" />
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className="sm:max-w-sm bg-white">
             <AlertDialogHeader>
               <AlertDialogTitle>케이스를 삭제하시겠습니까?</AlertDialogTitle>
               <AlertDialogDescription>
