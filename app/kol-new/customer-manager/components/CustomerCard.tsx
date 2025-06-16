@@ -88,10 +88,13 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
       className="relative bg-white border-2 border-black rounded-xl p-4 mb-5 max-w-full md:max-w-4xl mx-auto"
     >
       <ConnectionLines cardRef={cardRef} />
-      <CustomerHeader customer={customer} progress={localProgress} />
-
-      {/* Basic Info Section */}
-      <BasicInfoStage value={basicInfo} onChange={setBasicInfo} />
+      <CustomerHeader
+        customer={customer}
+        progress={localProgress}
+        cardNumber={cardNumber}
+        basicInfo={basicInfo}
+        onBasicInfoChange={setBasicInfo}
+      />
 
       <StageBlocks stageData={localProgress.stageData} onStageChange={handleStageChange} />
     </div>
