@@ -7,6 +7,7 @@ import StageBlocks from "./StageBlocks";
 import ConnectionLines from "./ConnectionLines";
 import { useUpdateCustomer } from "@/lib/hooks/customers";
 import { debounce } from "@/lib/utils";
+import BasicInfoStage, { BasicInfoValue } from "./stages/BasicInfoStage";
 
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
@@ -60,6 +61,27 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
 
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const [basicInfo, setBasicInfo] = useState<BasicInfoValue>({
+    shopName: customer.shopName,
+    phone: customer.phone,
+    region: customer.region,
+    placeAddress: customer.placeAddress,
+    assignee: customer.assignee,
+    manager: customer.manager,
+  });
+
+  // Save basic info debounce
+  const debouncedSaveInfo = useCallback(
+    debounce((info: BasicInfoValue) => {
+      // TODO: update customer table via mutation
+    }, 1000),
+    [],
+  );
+
+  useEffect(() => {
+    debouncedSaveInfo(basicInfo);
+  }, [basicInfo, debouncedSaveInfo]);
+
   return (
     <div
       ref={cardRef}
@@ -67,6 +89,10 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
     >
       <ConnectionLines cardRef={cardRef} />
       <CustomerHeader customer={customer} progress={localProgress} />
+
+      {/* Basic Info Section */}
+      <BasicInfoStage value={basicInfo} onChange={setBasicInfo} />
+
       <StageBlocks stageData={localProgress.stageData} onStageChange={handleStageChange} />
     </div>
   );
