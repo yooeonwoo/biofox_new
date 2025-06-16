@@ -277,6 +277,7 @@ export async function POST(req: Request) {
             .from('kols')
             .insert({
               user_id: userId,
+              clerk_user_id: clerkId,
               name: userName,
               shop_name: `${userName}의 샵`, // 기본 샵 이름
               status: 'active',
@@ -295,6 +296,7 @@ export async function POST(req: Request) {
             .from('kols')
             .update({ 
               status: 'active',
+              clerk_user_id: clerkId,
               updated_at: new Date().toISOString()
             })
             .eq('user_id', userId);
