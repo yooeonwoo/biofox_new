@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Store, BarChart3, LogOut, Bell, FileText, ShoppingBag, Camera } from "lucide-react";
+import { Home, Store, Users, BarChart3, LogOut, Bell, FileText, ShoppingBag, Camera } from "lucide-react";
 import { Separator } from "../../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
 import { Button } from "../../../components/ui/button";
@@ -72,6 +72,14 @@ export default function KolMobileMenu({
             >
               <Store className="h-4 w-4" />
               <span>전문점 관리</span>
+            </Link>
+            <Link 
+              href="/kol-new/customer-manager" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 rounded-md px-4 py-2 text-sm hover:bg-muted"
+            >
+              <Users className="h-4 w-4" />
+              <span>고객 관리</span>
             </Link>
           </>
         )}

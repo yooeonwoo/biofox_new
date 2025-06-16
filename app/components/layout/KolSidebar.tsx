@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Store, FileText, Bell, ShoppingBag, Camera } from "lucide-react";
+import { Home, Store, Users, FileText, Bell, ShoppingBag, Camera } from "lucide-react";
 import { Separator } from "../../../components/ui/separator";
 import { FoxLogo } from "../../../components/ui/fox-logo";
 import { useUser } from "@clerk/nextjs";
@@ -25,6 +25,10 @@ export default function KolSidebar() {
                 <Link href="/kol-new/stores" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
                   <Store className="mr-2 h-4 w-4 text-muted-foreground" />
                   <span>전문점 관리</span>
+                </Link>
+                <Link href="/kol-new/customer-manager" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
+                  <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>고객 관리</span>
                 </Link>
               </>
             )}

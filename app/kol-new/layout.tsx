@@ -25,11 +25,10 @@ export default async function KolNewLayout({
     redirect("/admin-dashboard/main");
   }
   
-  // kol 역할이 아니면 (admin 제외) 권한 없음 페이지로 리다이렉트
+  // kol 및 admin 외 다른 권한: 홈으로 리다이렉트
   if (role !== "kol" && role !== "admin") {
-    console.log('[kol-new 레이아웃] 권한 없는 사용자 리다이렉트');
-    // return new Response("접근 권한이 없습니다", { status: 403 });
-    // 홈으로 리다이렉트하지 않음 - 무한 리다이렉션 방지
+    console.log('[kol-new 레이아웃] 권한 없는 사용자 리다이렉트 /');
+    redirect("/");
   }
   
   return (
