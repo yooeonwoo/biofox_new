@@ -13,13 +13,60 @@ export interface Customer {
   updatedAt: string | Date;
 }
 
+// ---------------- 단계별 상세 타입 -----------------------------
+export interface InflowStage {
+  /** 유입 채널 */
+  channel?: "온라인" | "오프라인" | "지인";
+  /** 최초 연락/유입 일자 (ISO string) */
+  date?: string;
+  /** 메모 */
+  memo?: string;
+}
+
+export interface ContractStage {
+  /** 계약서 서명 여부 */
+  contractSigned: boolean;
+  /** 계약일 (ISO string) */
+  contractDate?: string;
+}
+
+export interface DeliveryStage {
+  /** 장비·제품 설치 완료 여부 */
+  delivered: boolean;
+  /** 설치일 (ISO string) */
+  deliveryDate?: string;
+}
+
+export interface EducationNotesStage {
+  /** 교육/설치 시 특이사항 메모 */
+  note?: string;
+  /** 작성일 (ISO string) */
+  date?: string;
+}
+
+export interface GrowthStage {
+  /** 성장 단계(레벨) 또는 점수 */
+  growthLevel?: number;
+  /** 메모 */
+  memo?: string;
+  /** 기록일 (ISO string) */
+  date?: string;
+}
+
+export interface ExpertStage {
+  /** 전문가(mentor) 인증 여부 */
+  expertCertified: boolean;
+  /** 인증일 (ISO string) */
+  date?: string;
+}
+
 export interface StageData {
-  inflow?: Record<string, unknown>;
-  contract?: Record<string, unknown>;
-  delivery?: Record<string, unknown>;
-  educationNotes?: Record<string, unknown>;
-  growth?: Record<string, unknown>;
-  expert?: Record<string, unknown>;
+  inflow?: InflowStage;
+  contract?: ContractStage;
+  delivery?: DeliveryStage;
+  educationNotes?: EducationNotesStage;
+  growth?: GrowthStage;
+  expert?: ExpertStage;
 }
 
 export interface Achievements {
@@ -33,5 +80,6 @@ export interface CustomerProgress {
   customerId: string;
   stageData: StageData;
   achievements: Achievements;
-  updatedAt?: string | Date;
+  /** 마지막 수정 시각 (Supabase Nullable) */
+  updatedAt: string | null;
 } 

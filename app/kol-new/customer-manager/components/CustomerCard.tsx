@@ -1,6 +1,12 @@
 "use client";
 
-import { Customer, CustomerProgress } from "@/lib/types/customer";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Customer, CustomerProgress, StageData, Achievements } from "@/lib/types/customer";
+import CustomerHeader from "./CustomerHeader";
+import StageBlocks from "./StageBlocks";
+import ConnectionLines from "./ConnectionLines";
+import { useUpdateCustomer } from "@/lib/hooks/customers";
+import { debounce } from "@/lib/utils";
 
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
@@ -8,14 +14,60 @@ interface Props {
   cardNumber: number;
 }
 
+const defaultStageData: StageData = {} as StageData;
+
+const defaultAchievements: Achievements = {
+  basicTraining: false,
+  standardProtocol: false,
+  expertCourse: false,
+};
+
 export default function CustomerCard({ customer, cardNumber }: Props) {
+  const initialProgress: CustomerProgress =
+    customer.customer_progress?.[0] || {
+      id: "temp-" + customer.id,
+      customerId: customer.id,
+      stageData: defaultStageData,
+      achievements: defaultAchievements,
+      updatedAt: null,
+    };
+
+  const [localProgress, setLocalProgress] = useState<CustomerProgress>(initialProgress);
+
+  const updateMutation = useUpdateCustomer();
+
+  const debouncedSave = useCallback(
+    debounce((p: CustomerProgress) => {
+      updateMutation.mutate({ customerId: customer.id, progress: p });
+    }, 1000),
+    [customer.id]
+  );
+
+  // 저장 사이드이펙트
+  useEffect(() => {
+    debouncedSave(localProgress);
+  }, [localProgress, debouncedSave]);
+
+  function handleStageChange(stageKey: keyof StageData, value: any) {
+    setLocalProgress((prev) => ({
+      ...prev,
+      stageData: {
+        ...prev.stageData,
+        [stageKey]: value,
+      },
+    }));
+  }
+
+  const cardRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="bg-white border border-gray-300 rounded-lg p-4 shadow-sm">
-      <h3 className="font-semibold text-lg mb-1">
-        {cardNumber}. {customer.name}
-      </h3>
-      {customer.phone && <p className="text-sm text-gray-600">{customer.phone}</p>}
-      {customer.region && <p className="text-sm text-gray-600">지역: {customer.region}</p>}
+    <div
+      ref={cardRef}
+      className="relative bg-white border-2 border-black rounded-xl p-4 mb-5 max-w-full md:max-w-4xl mx-auto"
+    >
+      <ConnectionLines cardRef={cardRef} />
+      <CustomerHeader customer={customer} progress={localProgress} />
+      <StageBlocks stageData={localProgress.stageData} onStageChange={handleStageChange} />
     </div>
   );
 } 

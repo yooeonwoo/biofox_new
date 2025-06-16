@@ -101,3 +101,15 @@ export function getPreviousYearMonth() {
   const month = String(now.getMonth() + 1).padStart(2, "0")
   return `${year}-${month}`
 }
+
+/**
+ * 지정한 ms 이후 실행되는 디바운스 유틸
+ * @example const save = debounce(() => doSave(data), 1000)
+ */
+export function debounce<F extends (...args: any[]) => void>(fn: F, ms = 1000) {
+  let t: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<F>) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
