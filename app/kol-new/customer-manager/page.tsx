@@ -14,18 +14,31 @@ export default async function CustomerManagerPage() {
   const supabase = supabaseServer(cookies());
 
   // Clerk user → KOL ID 조회
-  const { data: kol, error: kolError } = await supabase
+  const { data: kolData, error: kolError } = await supabase
     .from("kols")
     .select("id")
     .eq("clerk_user_id", userId)
     .single();
 
+  let kol = kolData;
+
+  // KOL 레코드가 없으면 자동 생성 (최초 접속 시)
   if (kolError || !kol) {
-    return (
-      <div className="p-6 text-center">
-        KOL 정보를 찾을 수 없습니다. 관리자에게 문의하세요.
-      </div>
-    );
+    const { data: newKol, error: insertError } = await supabase
+      .from("kols")
+      .insert({ clerk_user_id: userId })
+      .select("id")
+      .single();
+
+    if (insertError || !newKol) {
+      return (
+        <div className="p-6 text-center">
+          KOL 정보를 찾을 수 없습니다. 관리자에게 문의하세요.
+        </div>
+      );
+    }
+
+    kol = newKol;
   }
 
   const kolId = kol.id as number;
