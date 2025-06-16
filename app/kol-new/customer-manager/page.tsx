@@ -13,20 +13,43 @@ export default async function CustomerManagerPage() {
 
   const supabase = supabaseServer(cookies());
 
-  // Clerk user → KOL ID 조회
+  // 1) Clerk ID -> 내부 users 테이블 ID 조회
+  const {
+    data: userRecord,
+    error: userError,
+  } = await supabase
+    .from("users")
+    .select("id, name")
+    .eq("clerk_id", userId)
+    .single();
+
+  if (userError || !userRecord) {
+    return (
+      <div className="p-6 text-center">
+        사용자 정보를 찾을 수 없습니다. 관리자에게 문의하세요.
+      </div>
+    );
+  }
+
+  // 2) users.id → KOL ID 조회
   const { data: kolData, error: kolError } = await supabase
     .from("kols")
     .select("id")
-    .eq("clerk_user_id", userId)
+    .eq("user_id", userRecord.id)
     .single();
 
   let kol = kolData;
 
-  // KOL 레코드가 없으면 자동 생성 (최초 접속 시)
+  // 3) KOL 레코드가 없으면 자동 생성 (최초 접속 시)
   if (kolError || !kol) {
     const { data: newKol, error: insertError } = await supabase
       .from("kols")
-      .insert({ clerk_user_id: userId })
+      .insert({
+        user_id: userRecord.id,
+        name: userRecord.name || userId,
+        shop_name: `${userRecord.name || userId}의 매장`,
+        status: "active",
+      })
       .select("id")
       .single();
 

@@ -1,0 +1,36 @@
+import React from "react";
+import { Button } from "@/components/ui/button";
+
+export interface ExpertStageValue {
+  topic?: "매출업" | "상담법" | "마케팅";
+}
+
+interface Props {
+  value: ExpertStageValue | undefined;
+  onChange: (val: ExpertStageValue | undefined) => void;
+}
+
+export default function ExpertStage({ value, onChange }: Props) {
+  const current = value || {};
+  const toggle = (t: ExpertStageValue["topic"]) => {
+    onChange({ topic: current.topic === t ? undefined : t });
+  };
+
+  return (
+    <div className="stage-block border border-gray-200 rounded-md p-3 flex flex-col gap-2">
+      <div className="flex gap-2">
+        {["매출업", "상담법", "마케팅"].map((t) => (
+          <Button
+            key={t}
+            variant={current.topic === t ? "default" : "outline"}
+            size="sm"
+            className="flex-1 text-xs h-8"
+            onClick={() => toggle(t as any)}
+          >
+            {t}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+} 
