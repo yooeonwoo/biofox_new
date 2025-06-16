@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient, createServerClient } from '@supabase/ssr';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 
@@ -129,4 +130,23 @@ export const subscribeToAuthChanges = (
 ) => {
   const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(callback);
   return () => subscription.unsubscribe();
-}; 
+};
+
+// Supabase SSR & Browser 클라이언트 헬퍼 -----------------------------
+// 브라우저(클라이언트 컴포넌트) 전용 클라이언트
+export const supabaseBrowser = () =>
+  createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+// Server Component / API Route 등 쿠키 기반 세션이 필요한 환경 전용 클라이언트
+// cookies(): next/headers 의 cookies 함수 그대로 전달
+export const supabaseServer = (cookieStore: any) =>
+  createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
+    {
+      cookies: cookieStore as any,
+    }
+  ); 
