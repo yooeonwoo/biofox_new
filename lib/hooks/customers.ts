@@ -9,7 +9,7 @@ import { toast } from "sonner";
  * 고객 목록 조회 훅
  * @param kolId KOL 고유 ID
  */
-export function useCustomers(kolId: number) {
+export function useCustomers(kolId: number, initialData?: any) {
   return useQuery({
     queryKey: ["customers", kolId],
     queryFn: async () => {
@@ -25,6 +25,7 @@ export function useCustomers(kolId: number) {
       })[];
     },
     enabled: typeof kolId === "number" && kolId > 0,
+    initialData,
   });
 }
 
