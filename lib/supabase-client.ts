@@ -141,11 +141,11 @@ export const supabaseBrowser = () =>
   );
 
 // Server Component / API Route 등 쿠키 기반 세션이 필요한 환경 전용 클라이언트
-// cookies(): next/headers 의 cookies 함수 그대로 전달
+// 서버 측에서는 (Service Role → RLS 우회) 키를 우선 사용, 없으면 익명키 사용
 export const supabaseServer = (cookieStore: any) =>
   createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: cookieStore as any,
     }
