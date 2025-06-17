@@ -82,6 +82,7 @@ export default function StageBlocks({ stageData, onStageChange }: Props) {
               title={TITLES[key]}
               number={5}
               memo={(stageData as any)[key]?.memo || ""}
+              bgClass="bg-green-50"
               onMemoChange={(m: string) =>
                 onStageChange(key, { ...(stageData as any)[key], memo: m })
               }
@@ -107,6 +108,7 @@ export default function StageBlocks({ stageData, onStageChange }: Props) {
               title={TITLES[key]}
               number={6}
               memo={(stageData as any)[key]?.memo || ""}
+              bgClass="bg-violet-50"
               onMemoChange={(m: string) =>
                 onStageChange(key, { ...(stageData as any)[key], memo: m })
               }

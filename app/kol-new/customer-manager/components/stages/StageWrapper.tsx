@@ -8,14 +8,15 @@ interface Props {
   number: number;
   memo: string;
   onMemoChange: (m: string) => void;
+  bgClass?: string;
   children: React.ReactNode;
 }
 
-export default function StageWrapper({ title, number, memo, onMemoChange, children }: Props) {
+export default function StageWrapper({ title, number, memo, onMemoChange, children, bgClass }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={cn("stage-block border border-gray-200 rounded-xl p-4 relative bg-white")}>
+    <div className={cn("stage-block border border-gray-200 rounded-xl p-4 relative", bgClass ?? "bg-white")}>
       {/* 헤더 (번호 + 제목) */}
       <div className="flex items-center gap-2 mb-3">
         <div className="size-7 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center">
