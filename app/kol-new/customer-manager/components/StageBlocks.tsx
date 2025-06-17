@@ -33,15 +33,6 @@ const COMPONENTS: Record<keyof StageData, any> = {
   expert: ExpertStage,
 };
 
-const COLOR: Record<keyof StageData, string> = {
-  inflow: "bg-blue-50",
-  contract: "bg-emerald-50",
-  delivery: "bg-orange-50",
-  educationNotes: "bg-purple-50",
-  growth: "bg-pink-50",
-  expert: "bg-cyan-50",
-};
-
 function SectionBlock({ title, bgClass, children }: { title: string; bgClass: string; children: React.ReactNode }) {
   return (
     <div className={`rounded-xl border p-4 ${bgClass} space-y-6`}>      
@@ -65,7 +56,6 @@ export default function StageBlocks({ stageData, onStageChange }: Props) {
               key={key}
               title={TITLES[key]}
               number={idx + 1}
-              accentColor={COLOR[key]}
               memo={(stageData as any)[key]?.memo || ""}
               onMemoChange={(m: string) =>
                 onStageChange(key, { ...(stageData as any)[key], memo: m })
@@ -91,7 +81,6 @@ export default function StageBlocks({ stageData, onStageChange }: Props) {
               key={key}
               title={TITLES[key]}
               number={5}
-              accentColor={COLOR[key]}
               memo={(stageData as any)[key]?.memo || ""}
               onMemoChange={(m: string) =>
                 onStageChange(key, { ...(stageData as any)[key], memo: m })
@@ -117,7 +106,6 @@ export default function StageBlocks({ stageData, onStageChange }: Props) {
               key={key}
               title={TITLES[key]}
               number={6}
-              accentColor={COLOR[key]}
               memo={(stageData as any)[key]?.memo || ""}
               onMemoChange={(m: string) =>
                 onStageChange(key, { ...(stageData as any)[key], memo: m })
