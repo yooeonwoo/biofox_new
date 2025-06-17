@@ -1,6 +1,8 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Pencil } from "lucide-react";
 import { StageData } from "@/lib/types/customer";
 
 export interface InflowStageValue {
@@ -29,6 +31,8 @@ const BTN: Record<string, { label: string; value: InflowStageValue["source"] }> 
 export default function InflowStage({ value, onChange }: Props) {
   const current = value || {};
 
+  const [memoOpen, setMemoOpen] = useState(false);
+
   const setSource = (src: InflowStageValue["source"] | undefined) => {
     if (!src) {
       onChange(undefined);
@@ -37,8 +41,33 @@ export default function InflowStage({ value, onChange }: Props) {
     }
   };
 
+  const setField = (field: keyof InflowStageValue, val: any) => {
+    onChange({ ...current, [field]: val });
+  };
+
   return (
-    <div className="stage-block flex flex-col gap-2 border border-gray-200 rounded-md p-3">
+    <div className="stage-block flex flex-col gap-2 border border-gray-200 rounded-md p-3 relative text-xs">
+      {/* 메모 토글 */}
+      <button
+        aria-label={memoOpen ? "메모 닫기" : "메모 열기"}
+        className="absolute top-2 right-2 text-gray-500 hover:text-blue-600 transition-colors"
+        onClick={() => setMemoOpen((o) => !o)}
+      >
+        <Pencil size={14} />
+      </button>
+
+      {/* 메모 영역 */}
+      <div
+        className={`border border-gray-300 rounded-md bg-gray-50 overflow-hidden transition-[max-height,padding] duration-300 ${memoOpen ? "max-h-40 p-2 mt-7" : "max-h-0 p-0"}`}
+      >
+        <Textarea
+          value={current.memo || ""}
+          onChange={(e) => setField("memo", e.target.value)}
+          placeholder="이 섹션에 대한 메모를 입력하세요..."
+          className="h-24 text-xs"
+        />
+      </div>
+
       {/* 상단 토글 버튼들 */}
       <div className="flex gap-2 mb-2">
         {(["cafe", "insta", "intro"] as const).map((k) => (
