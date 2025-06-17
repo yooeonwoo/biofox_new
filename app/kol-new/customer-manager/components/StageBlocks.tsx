@@ -8,8 +8,6 @@ import EducationNotesStage from "./stages/EducationNotesStage";
 import GrowthStage from "./stages/GrowthStage";
 import ExpertStage from "./stages/ExpertStage";
 import StageWrapper from "./stages/StageWrapper";
-import { Mailbox, FileSignature, Package, StickyNote, BarChart3, GraduationCap } from "lucide-react";
-// TODO: import DeliveryStage, EducationNotesStage, GrowthStage, ExpertStage after creation
 
 interface Props {
   stageData: StageData;
@@ -18,11 +16,11 @@ interface Props {
 
 const TITLES: Record<keyof StageData, string> = {
   inflow: "유입",
-  contract: "계약",
+  contract: "계약/결제",
   delivery: "설치/교육",
-  educationNotes: "특이사항",
+  educationNotes: "교육 완료 후 특이사항",
   growth: "성장",
-  expert: "전문가",
+  expert: "전문가과정",
 };
 
 const COMPONENTS: Record<keyof StageData, any> = {
@@ -43,15 +41,6 @@ const COLOR: Record<keyof StageData, string> = {
   expert: "bg-cyan-50",
 };
 
-const ICON: Record<keyof StageData, React.ReactNode> = {
-  inflow: <Mailbox size={14} className="text-blue-600" />,
-  contract: <FileSignature size={14} className="text-emerald-600" />,
-  delivery: <Package size={14} className="text-orange-600" />,
-  educationNotes: <StickyNote size={14} className="text-purple-600" />,
-  growth: <BarChart3 size={14} className="text-pink-600" />,
-  expert: <GraduationCap size={14} className="text-cyan-600" />,
-};
-
 export default function StageBlocks({ stageData, onStageChange }: Props) {
   return (
     <div className="grid gap-4 stage-grid md:grid-cols-3 lg:grid-cols-6">
@@ -63,7 +52,6 @@ export default function StageBlocks({ stageData, onStageChange }: Props) {
             title={TITLES[key]}
             number={idx + 1}
             accentColor={COLOR[key]}
-            icon={ICON[key]}
           >
             {Comp && (
               <Comp
