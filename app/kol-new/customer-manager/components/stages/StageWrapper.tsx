@@ -11,17 +11,15 @@ interface Props {
 
 export default function StageWrapper({ title, number, accentColor, icon, children }: Props) {
   return (
-    <div className={cn("stage-block relative border border-gray-200 rounded-xl p-4", accentColor)}>
-      {/* 번호 뱃지 */}
-      <div className="absolute -top-3 -left-3 size-7 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center shadow">
-        {number}
-      </div>
-
-      {/* 헤더 */}
-      <h4 className="flex items-center gap-1 text-sm font-semibold mb-3">
+    <div className={cn("stage-block border border-gray-200 rounded-xl p-4", accentColor)}>
+      {/* 헤더 (번호 + 아이콘 + 제목) */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="size-7 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center">
+          {number}
+        </div>
         {icon}
-        <span>{title}</span>
-      </h4>
+        <h4 className="text-sm font-semibold">{title}</h4>
+      </div>
 
       {children}
     </div>
