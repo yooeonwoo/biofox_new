@@ -40,7 +40,7 @@ export default function EducationNotesStage({ value, onChange }: Props) {
 
       {/* 슬라이드 메모 영역 */}
       <div
-        className={`border border-gray-300 rounded-md bg-gray-50 overflow-hidden transition-[max-height,padding] duration-300 ${memoOpen ? "max-h-40 p-2 mt-5" : "max-h-0 p-0"}`}
+        className={`rounded-md overflow-hidden transition-[max-height,padding] duration-300 text-xs ${memoOpen ? "max-h-40 p-2 mt-5 border border-gray-300 bg-gray-50" : "max-h-0 p-0 mt-0 border-0 bg-transparent"}`}
       >
         <Textarea
           value={current.memo || ""}
