@@ -97,9 +97,18 @@ export default function GrowthStage({ value, onChange }: Props) {
   return (
     <div className="stage-block border border-gray-200 rounded-md p-3 flex flex-col gap-4 text-xs">
       {/* ──────────── 임상 ──────────── */}
-      <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-        <div className="font-medium mb-2">임상 (본인)</div>
-        <div className="flex gap-1 mb-3">
+      <div className="p-3 border border-gray-300 rounded-md">
+        <h5 className="text-sm font-medium mb-3">임상</h5>
+
+        {/* 본인 영역 */}
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium">👤 본인</span>
+          <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+            보러가기
+          </Button>
+        </div>
+
+        <div className="flex gap-1 mb-4">
           {Array.from({ length: 10 }).map((_, i) => (
             <button
               key={i}
@@ -112,8 +121,15 @@ export default function GrowthStage({ value, onChange }: Props) {
         </div>
         <Progress value={((current.personalLevel || 0) / 10) * 100} />
 
-        {/* 고객 10명 진행도 */}
-        <div className="mt-4 space-y-2">
+        {/* 고객 영역 */}
+        <div className="flex justify-between items-center mt-4 mb-2">
+          <span className="text-sm font-medium">👥 고객</span>
+          <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
+            보러가기
+          </Button>
+        </div>
+
+        <div className="space-y-2">
           {[0, 1].map((row) => (
             <div key={row} className="flex gap-1 justify-between">
               {Array.from({ length: 5 }).map((_, idx) => {
