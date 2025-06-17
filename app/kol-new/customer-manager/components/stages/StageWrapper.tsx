@@ -37,7 +37,7 @@ export default function StageWrapper({ title, number, accentColor, memo, onMemoC
 
       {/* 메모 영역 */}
       <div
-        className={`border border-gray-300 rounded-md bg-gray-50 overflow-hidden transition-[max-height,padding] duration-300 text-xs ${open ? "max-h-48 p-3 mb-3" : "max-h-0 p-0 mb-0"}`}
+        className={`rounded-md overflow-hidden transition-[max-height,padding] duration-300 text-xs ${open ? "max-h-48 p-3 mb-3 border border-gray-300 bg-gray-50" : "max-h-0 p-0 mb-0 border-0 bg-transparent"}`}
       >
         <Textarea
           value={memo}
