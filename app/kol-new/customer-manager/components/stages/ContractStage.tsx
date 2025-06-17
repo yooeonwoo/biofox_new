@@ -1,10 +1,7 @@
 import React from "react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Pencil } from "lucide-react";
 
 export interface ContractStageValue {
   type?: "buy" | "deposit" | "reject";
@@ -32,36 +29,13 @@ const BTN: Record<string, { label: string; value: ContractStageValue["type"] }> 
 export default function ContractStage({ value, onChange }: Props) {
   const current = value || {};
 
-  const [memoOpen, setMemoOpen] = useState(false);
-
   const setType = (tp: ContractStageValue["type"] | undefined) => {
     if (!tp) onChange(undefined);
     else onChange({ ...current, type: tp });
   };
 
   return (
-    <div className="stage-block flex flex-col gap-2 border border-gray-200 rounded-md p-3 relative text-xs">
-      {/* 메모 토글 */}
-      <button
-        aria-label={memoOpen ? "메모 닫기" : "메모 열기"}
-        className="absolute top-2 right-2 text-gray-500 hover:text-blue-600 transition-colors"
-        onClick={() => setMemoOpen((o) => !o)}
-      >
-        <Pencil size={14} />
-      </button>
-
-      {/* 메모 영역 */}
-      <div
-        className={`border border-gray-300 rounded-md bg-gray-50 overflow-hidden transition-[max-height,padding] duration-300 ${memoOpen ? "max-h-40 p-2 mt-7" : "max-h-0 p-0"}`}
-      >
-        <Textarea
-          value={current.memo || ""}
-          onChange={(e) => onChange({ ...current, memo: e.target.value })}
-          placeholder="이 섹션에 대한 메모를 입력하세요..."
-          className="h-24 text-xs"
-        />
-      </div>
-
+    <div className="stage-block flex flex-col gap-2 border border-gray-200 rounded-md p-3 text-xs">
       <div className="grid grid-cols-3 gap-2">
         {/* 구매 */}
         <div className="flex flex-col gap-1">

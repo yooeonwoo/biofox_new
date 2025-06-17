@@ -52,6 +52,10 @@ export default function StageBlocks({ stageData, onStageChange }: Props) {
             title={TITLES[key]}
             number={idx + 1}
             accentColor={COLOR[key]}
+            memo={(stageData as any)[key]?.memo || ""}
+            onMemoChange={(m: string) =>
+              onStageChange(key, { ...(stageData as any)[key], memo: m })
+            }
           >
             {Comp && (
               <Comp
