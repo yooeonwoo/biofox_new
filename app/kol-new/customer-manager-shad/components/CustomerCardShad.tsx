@@ -9,6 +9,7 @@ import { debounce } from "@/lib/utils";
 import { CustomerHeaderShad as CustomerHeader } from "./index";
 import { BasicInfoValue } from "../../customer-manager/components/stages/BasicInfoStage";
 import { useUpdateCustomerInfo } from "@/lib/hooks/customer-info";
+import { AchievementSectionShad } from "./index";
 
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
@@ -80,6 +81,10 @@ export default function CustomerCardShad({ customer, cardNumber }: Props) {
     debouncedSaveInfo(basicInfo);
   }, [basicInfo, debouncedSaveInfo]);
 
+  function handleAchievementChange(newAch: Achievements) {
+    setLocalProgress((prev) => ({ ...prev, achievements: newAch }));
+  }
+
   const cardRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -98,6 +103,13 @@ export default function CustomerCardShad({ customer, cardNumber }: Props) {
 
       {/* 스테이지 블록 */}
       <StageBlocksShad stageData={localProgress.stageData} onStageChange={handleStageChange} />
+
+      {/* 성취도 체크박스 */}
+      <AchievementSectionShad
+        value={localProgress.achievements}
+        onChange={handleAchievementChange}
+        className="mt-6"
+      />
     </div>
   );
 } 

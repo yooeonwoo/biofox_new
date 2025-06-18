@@ -74,24 +74,18 @@ export default function CustomerHeaderShad({ customer, progress, cardNumber, bas
         </div>
       </div>
 
-      {/* 성취 배지 */}
-      <div className="flex items-center justify-between gap-2 mt-4">
-        {progress?.achievements?.basicTraining && (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Star size={14} className="fill-yellow-400 text-yellow-400" /> 기본
-          </Badge>
-        )}
-        {progress?.achievements?.standardProtocol && (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Star size={14} className="fill-yellow-400 text-yellow-400" /> 표준
-          </Badge>
-        )}
-        {progress?.achievements?.expertCourse && (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Star size={14} className="fill-yellow-400 text-yellow-400" /> 전문가
-          </Badge>
-        )}
-      </div>
+      {/* 성취 배지 (최고 단계만큼 별) */}
+      {(() => {
+        const ach = progress?.achievements;
+        const level = ach?.expertCourse ? 3 : ach?.standardProtocol ? 2 : ach?.basicTraining ? 1 : 0;
+        return (
+          <div className="flex items-center gap-1 mt-4">
+            {Array.from({ length: level }).map((_, i) => (
+              <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
+            ))}
+          </div>
+        );
+      })()}
 
       {/* 진행률 바 */}
       <Progress value={percent} className="mt-2" />
