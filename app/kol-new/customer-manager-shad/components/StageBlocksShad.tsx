@@ -106,10 +106,33 @@ const COMPONENTS: Record<keyof StageData, any> = {
   expert: ExpertStageShad,
 };
 
-function SectionBlock({ title, bgClass, children }: { title: string; bgClass: string; children: React.ReactNode }) {
+function SectionBlock({
+  title,
+  bgClass,
+  children,
+  level,
+}: {
+  title: string;
+  bgClass: string;
+  children: React.ReactNode;
+  level?: 2 | 3;
+}) {
+  const titleColorMap: Record<number, string> = {
+    2: "text-emerald-800 border-emerald-500",
+    3: "text-violet-800 border-violet-500",
+  };
+  const titleStyle = level ? titleColorMap[level] : "text-gray-800 border-gray-500";
+
   return (
-    <div className={`rounded-xl border p-4 ${bgClass} space-y-6`}>
-      <div className="font-semibold mb-4 text-sm pl-2 border-l-4 border-current">{title}</div>
+    <div className={cn("relative rounded-xl border p-4 space-y-6 overflow-hidden", bgClass)}>
+      {level && (
+        <div className="absolute top-4 right-4 text-4xl opacity-10 pointer-events-none select-none flex gap-2">
+          {Array.from({ length: level }).map((_, i) => (
+            <span key={i}>⭐</span>
+          ))}
+        </div>
+      )}
+      <div className={cn("font-bold text-base mb-4 pl-3 border-l-4", titleStyle)}>{title}</div>
       {children}
     </div>
   );
@@ -117,68 +140,74 @@ function SectionBlock({ title, bgClass, children }: { title: string; bgClass: st
 
 export default function StageBlocksShad({ stageData, onStageChange, achievements, onAchievementsChange }: Props) {
   return (
-    <div className="grid gap-4 stage-grid md:grid-cols-3 lg:grid-cols-6">
+    <div className="grid gap-6 md:grid-cols-3">
       {/* 기본 과정 1~4 */}
-      <SectionBlock title="기본 과정" bgClass="bg-gray-50 border-gray-200">
-        {(Object.keys(TITLES) as (keyof StageData)[]).slice(0, 4).map((key, idx) => {
-          const Comp = COMPONENTS[key];
-          return (
-            <StageWrapperShad
-              key={key}
-              title={TITLES[key]}
-              number={idx + 1}
-              memo={(stageData as any)[key]?.memo || ""}
-              onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
-            >
-              {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
-            </StageWrapperShad>
-          );
-        })}
-        {/* 4단계 완료 체크박스 → 레벨 1 */}
-        <SingleAchieveCheckbox level={1} achievements={achievements} onChange={onAchievementsChange} />
-      </SectionBlock>
+      <div className="md:col-span-1 space-y-4">
+        <SectionBlock title="기본 과정" bgClass="bg-gray-50 border-gray-200">
+          {(Object.keys(TITLES) as (keyof StageData)[]).slice(0, 4).map((key, idx) => {
+            const Comp = COMPONENTS[key];
+            return (
+              <StageWrapperShad
+                key={key}
+                title={TITLES[key]}
+                number={idx + 1}
+                memo={(stageData as any)[key]?.memo || ""}
+                onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
+              >
+                {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
+              </StageWrapperShad>
+            );
+          })}
+          {/* 4단계 완료 체크박스 → 레벨 1 */}
+          <SingleAchieveCheckbox level={1} achievements={achievements} onChange={onAchievementsChange} />
+        </SectionBlock>
+      </div>
 
       {/* 성장 과정 5단계 */}
-      <SectionBlock title="성장 과정" bgClass="bg-green-50 border-green-200">
-        {(Object.keys(TITLES) as (keyof StageData)[]).slice(4, 5).map((key) => {
-          const Comp = COMPONENTS[key];
-          return (
-            <StageWrapperShad
-              key={key}
-              title={TITLES[key]}
-              number={5}
-              memo={(stageData as any)[key]?.memo || ""}
-              bgClass="bg-green-50"
-              onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
-            >
-              {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
-            </StageWrapperShad>
-          );
-        })}
-        {/* 5단계 완료 체크박스 → 레벨 2 */}
-        <SingleAchieveCheckbox level={2} achievements={achievements} onChange={onAchievementsChange} />
-      </SectionBlock>
+      <div className="md:col-span-1 space-y-4">
+        <SectionBlock title="성장 과정" bgClass="bg-emerald-50 border-emerald-200" level={2}>
+          {(Object.keys(TITLES) as (keyof StageData)[]).slice(4, 5).map((key) => {
+            const Comp = COMPONENTS[key];
+            return (
+              <StageWrapperShad
+                key={key}
+                title={TITLES[key]}
+                number={5}
+                memo={(stageData as any)[key]?.memo || ""}
+                bgClass="bg-green-50"
+                onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
+              >
+                {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
+              </StageWrapperShad>
+            );
+          })}
+          {/* 5단계 완료 체크박스 → 레벨 2 */}
+          <SingleAchieveCheckbox level={2} achievements={achievements} onChange={onAchievementsChange} />
+        </SectionBlock>
+      </div>
 
       {/* 전문가 과정 6단계 */}
-      <SectionBlock title="전문가 과정" bgClass="bg-violet-50 border-violet-200">
-        {(Object.keys(TITLES) as (keyof StageData)[]).slice(5).map((key) => {
-          const Comp = COMPONENTS[key];
-          return (
-            <StageWrapperShad
-              key={key}
-              title={TITLES[key]}
-              number={6}
-              memo={(stageData as any)[key]?.memo || ""}
-              bgClass="bg-violet-50"
-              onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
-            >
-              {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
-            </StageWrapperShad>
-          );
-        })}
-        {/* 6단계 완료 체크박스 → 레벨 3 */}
-        <SingleAchieveCheckbox level={3} achievements={achievements} onChange={onAchievementsChange} />
-      </SectionBlock>
+      <div className="md:col-span-1 space-y-4">
+        <SectionBlock title="전문가 과정" bgClass="bg-violet-50 border-violet-200" level={3}>
+          {(Object.keys(TITLES) as (keyof StageData)[]).slice(5).map((key) => {
+            const Comp = COMPONENTS[key];
+            return (
+              <StageWrapperShad
+                key={key}
+                title={TITLES[key]}
+                number={6}
+                memo={(stageData as any)[key]?.memo || ""}
+                bgClass="bg-violet-50"
+                onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
+              >
+                {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
+              </StageWrapperShad>
+            );
+          })}
+          {/* 6단계 완료 체크박스 → 레벨 3 */}
+          <SingleAchieveCheckbox level={3} achievements={achievements} onChange={onAchievementsChange} />
+        </SectionBlock>
+      </div>
     </div>
   );
 } 
