@@ -141,9 +141,9 @@ function SectionBlock({
 
 export default function StageBlocksShad({ stageData, onStageChange, achievements, onAchievementsChange }: Props) {
   return (
-    <div className="grid gap-6 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6">
       {/* 기본 과정 1~4 */}
-      <div className="md:col-span-1 space-y-4">
+      <div className="space-y-4">
         <SectionBlock title="기본 과정" bgClass="bg-gray-50 border-gray-200">
           {(Object.keys(TITLES) as (keyof StageData)[]).slice(0, 4).map((key, idx) => {
             const Comp = COMPONENTS[key];
@@ -165,7 +165,7 @@ export default function StageBlocksShad({ stageData, onStageChange, achievements
       </div>
 
       {/* 성장 과정 5단계 */}
-      <div className="md:col-span-1 space-y-4">
+      <div className="space-y-4">
         <SectionBlock title="성장 과정" bgClass="bg-emerald-50 border-emerald-200" level={2}>
           {(Object.keys(TITLES) as (keyof StageData)[]).slice(4, 5).map((key) => {
             const Comp = COMPONENTS[key];
@@ -188,7 +188,7 @@ export default function StageBlocksShad({ stageData, onStageChange, achievements
       </div>
 
       {/* 전문가 과정 6단계 */}
-      <div className="md:col-span-1 space-y-4">
+      <div className="space-y-4">
         <SectionBlock title="전문가 과정" bgClass="bg-violet-50 border-violet-200" level={3}>
           {(Object.keys(TITLES) as (keyof StageData)[]).slice(5).map((key) => {
             const Comp = COMPONENTS[key];
