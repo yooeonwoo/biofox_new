@@ -4,10 +4,49 @@ import { StageData } from "@/lib/types/customer";
 import { StageWrapperShad, InflowStageShad, ContractStageShad, DeliveryStageShad, EducationNotesStageShad, GrowthStageShad, ExpertStageShad } from "./stages";
 // 아직 교체되지 않은 스테이지는 기존 컴포넌트 사용
 import React from "react";
+import { Star } from "lucide-react";
+
+// Achievements 타입 및 단일 체크박스 컴포넌트 추가
+import { Achievements } from "@/lib/types/customer";
+
+function SingleAchieveCheckbox({ level, achievements, onChange }: { level: 1 | 2 | 3; achievements: Achievements; onChange: (a: Achievements) => void }) {
+  const keys: (keyof Achievements)[] = ["basicTraining", "standardProtocol", "expertCourse"];
+  const key = keys[level - 1];
+  const checked = achievements[key];
+
+  const toggle = () => {
+    const newVal = { ...achievements };
+    if (!checked) {
+      // 체크 → 하위레벨까지 모두 true
+      for (let i = 0; i < level; i++) newVal[keys[i]] = true;
+    } else {
+      // 해제 → 상위레벨부터 모두 false
+      for (let i = level - 1; i < 3; i++) newVal[keys[i]] = false;
+    }
+    onChange(newVal);
+  };
+
+  return (
+    <div className="flex items-center gap-2 mt-2 select-none">
+      <input
+        type="checkbox"
+        className="w-4 h-4"
+        checked={checked}
+        onChange={toggle}
+        aria-label={`단계 ${level} 달성`}
+      />
+      {Array.from({ length: level }).map((_, i) => (
+        <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />
+      ))}
+    </div>
+  );
+}
 
 interface Props {
   stageData: StageData;
   onStageChange: (stageKey: keyof StageData, value: any) => void;
+  achievements: Achievements;
+  onAchievementsChange: (a: Achievements) => void;
 }
 
 const TITLES: Record<keyof StageData, string> = {
@@ -37,7 +76,7 @@ function SectionBlock({ title, bgClass, children }: { title: string; bgClass: st
   );
 }
 
-export default function StageBlocksShad({ stageData, onStageChange }: Props) {
+export default function StageBlocksShad({ stageData, onStageChange, achievements, onAchievementsChange }: Props) {
   return (
     <div className="grid gap-4 stage-grid md:grid-cols-3 lg:grid-cols-6">
       {/* 기본 과정 1~4 */}
@@ -56,6 +95,8 @@ export default function StageBlocksShad({ stageData, onStageChange }: Props) {
             </StageWrapperShad>
           );
         })}
+        {/* 4단계 완료 체크박스 → 레벨 1 */}
+        <SingleAchieveCheckbox level={1} achievements={achievements} onChange={onAchievementsChange} />
       </SectionBlock>
 
       {/* 성장 과정 5단계 */}
@@ -75,6 +116,8 @@ export default function StageBlocksShad({ stageData, onStageChange }: Props) {
             </StageWrapperShad>
           );
         })}
+        {/* 5단계 완료 체크박스 → 레벨 2 */}
+        <SingleAchieveCheckbox level={2} achievements={achievements} onChange={onAchievementsChange} />
       </SectionBlock>
 
       {/* 전문가 과정 6단계 */}
@@ -94,6 +137,8 @@ export default function StageBlocksShad({ stageData, onStageChange }: Props) {
             </StageWrapperShad>
           );
         })}
+        {/* 6단계 완료 체크박스 → 레벨 3 */}
+        <SingleAchieveCheckbox level={3} achievements={achievements} onChange={onAchievementsChange} />
       </SectionBlock>
     </div>
   );
