@@ -2,164 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* 기본 컬러 팔레트 */
-  --biofox-purple: #6a0dad;
-  --biofox-cyan: #00f0ff;
-  --biofox-blue: #0077be;
-  
-  /* 기본 변수 */
-  --background: #000000;
-  --foreground: #ffffff;
-  
-  /* 그림자, 블러 */
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.2);
-  --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --blur-effect: blur(12px);
-  --blur-heavy: blur(24px);
-  
-  /* 애니메이션 타이밍 */
-  --transition-fast: 0.2s;
-  --transition-normal: 0.3s;
-  --transition-slow: 0.5s;
-
-  /* 폰트 */
-  --font-sans: 'SF Compact Text', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  --font-mono: 'SF Mono', ui-monospace, SFMono-Regular;
-
-  /* 테두리 반경 */
-  --border-radius-sm: 8px;
-  --border-radius-md: 12px;
-  --border-radius-lg: 16px;
-  --border-radius-xl: 24px;
-  --border-radius-full: 9999px;
-}
-
-/* 버튼 스타일 */
-.btn-primary {
-  background-color: var(--biofox-purple);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: var(--border-radius-md);
-  font-weight: 600;
-  transition: all var(--transition-normal);
-}
-
-.btn-primary:hover {
-  background-color: var(--biofox-cyan);
-  transform: translateY(-2px);
-}
-
-.btn-secondary {
-  border: 1px solid var(--biofox-cyan);
-  color: var(--biofox-purple);
-  padding: 0.5rem 1.5rem;
-  border-radius: var(--border-radius-md);
-  font-weight: 600;
-  transition: all var(--transition-normal);
-}
-
-.btn-secondary:hover {
-  background-color: var(--biofox-cyan);
-  color: white;
-  transform: translateY(-2px);
-}
-
-.btn-ghost {
-  background-color: transparent;
-  color: var(--biofox-purple);
-  padding: 0.5rem 1.5rem;
-  border-radius: var(--border-radius-md);
-  font-weight: 600;
-  transition: all var(--transition-normal);
-}
-
-.btn-ghost:hover {
-  background-color: rgba(106, 13, 173, 0.1);
-  box-shadow: 0 0 0 1px var(--biofox-cyan);
-}
-
-/* 카드 스타일 */
-.card {
-  background-color: rgba(0, 0, 0, 0.2);
-  color: var(--foreground);
-  border-radius: var(--border-radius-md);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-card);
-  transition: all var(--transition-normal);
-  backdrop-filter: var(--blur-effect);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-subtle);
-  border-color: var(--biofox-cyan);
-}
-
-/* 애니메이션 */
-@keyframes appear {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 14.5%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 14.5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 14.5%;
+    --primary: 246 81% 4%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4% 95%;
+    --secondary-foreground: 246 81% 4%;
+    --muted: 240 11% 93%;
+    --muted-foreground: 240 7% 48%;
+    --accent: 220 15% 93%;
+    --accent-foreground: 246 81% 4%;
+    --destructive: 348 79% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 92.2%;
+    --input: 0 0% 92.2%;
+    --ring: 0 0% 70.8%;
+    --radius: 0.625rem;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .dark {
+    /* Note: The reference implementation did not have a full dark theme defined.
+       These are approximated values based on the light theme.
+       You may need to adjust these to your liking. */
+    --background: 246 81% 4%;
+    --foreground: 0 0% 95%;
+    --card: 246 81% 4%;
+    --card-foreground: 0 0% 95%;
+    --popover: 246 81% 4%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 95%;
+    --primary-foreground: 246 81% 4%;
+    --secondary: 240 7% 15%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 240 7% 15%;
+    --muted-foreground: 240 4% 65%;
+    --accent: 240 7% 15%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 348 79% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 7% 20%;
+    --input: 240 7% 20%;
+    --ring: 0 0% 70.8%;
+    --radius: 0.625rem;
   }
 }
 
-@keyframes appear-zoom {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-appear {
-  animation: appear 0.5s ease-out forwards;
-}
-
-.animate-appear-zoom {
-  animation: appear-zoom 0.5s ease-out forwards;
-}
-
-/* 딜레이 클래스 */
-.delay-100 { animation-delay: 0.1s; }
-.delay-300 { animation-delay: 0.3s; }
-.delay-500 { animation-delay: 0.5s; }
-.delay-700 { animation-delay: 0.7s; }
-.delay-1000 { animation-delay: 1s; }
-
-/* 모션 감소 설정 */
-@media (prefers-reduced-motion: reduce) {
+@layer base {
   * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    @apply border-border;
   }
-}
-
-/* 기본 스타일 */
-.backdrop-blur {
-  backdrop-filter: var(--blur-effect);
-  -webkit-backdrop-filter: var(--blur-effect);
-}
-
-.backdrop-blur-heavy {
-  backdrop-filter: var(--blur-heavy);
-  -webkit-backdrop-filter: var(--blur-heavy);
-}
-
-.hover-lift {
-  transition: transform var(--transition-normal);
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
+  body {
+    @apply bg-background text-foreground;
+  }
 }
