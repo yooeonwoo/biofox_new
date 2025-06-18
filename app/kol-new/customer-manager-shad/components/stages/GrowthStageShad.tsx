@@ -186,7 +186,7 @@ export default function GrowthStageShad({ value, onChange }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Object.entries(current.learningProgress || {}).map(([key, p]) => (
             <div key={key} className="flex-1">
               <div className="text-center mb-1 text-muted-foreground text-[11px]">{p.label}</div>
@@ -204,7 +204,7 @@ export default function GrowthStageShad({ value, onChange }: Props) {
           <span className="font-medium">평가</span>
           <span className="text-xs">평균: {averageScore}점</span>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {Object.entries(current.evaluationScores || {}).map(([key, score]) => (
             <div key={key} className="flex-1">
               <div className="text-center mb-1 text-muted-foreground text-[11px]">{key}</div>

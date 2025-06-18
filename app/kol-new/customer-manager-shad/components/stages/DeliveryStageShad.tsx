@@ -51,7 +51,7 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
 
   return (
     <div className="stage-block flex flex-col gap-2 border rounded-md p-3 text-xs bg-card">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-2">
         {/* 출고 */}
         <div className="flex flex-col gap-1">
           <Button
@@ -63,19 +63,25 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
           >
             출고
           </Button>
-          <Input
-            type="date"
-            placeholder="날짜"
-            className="text-xs h-7 border-gray-200"
-            value={current.shipDate || ""}
-            onChange={(e) => onChange({ ...current, shipDate: e.target.value })}
-          />
-          <Input
-            placeholder="패키지"
-            className="text-xs h-7 border-gray-200"
-            value={current.package || ""}
-            onChange={(e) => onChange({ ...current, package: e.target.value })}
-          />
+          <div className="grid grid-cols-[auto,1fr] items-center gap-1 mb-1">
+            <label className="text-xs">날짜:</label>
+            <Input
+              type="date"
+              placeholder="날짜"
+              className="text-xs h-7 border-gray-200"
+              value={current.shipDate || ""}
+              onChange={(e) => onChange({ ...current, shipDate: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-[auto,1fr] items-center gap-1">
+            <label className="text-xs">패키지:</label>
+            <Input
+              placeholder="패키지"
+              className="text-xs h-7 border-gray-200"
+              value={current.package || ""}
+              onChange={(e) => onChange({ ...current, package: e.target.value })}
+            />
+          </div>
         </div>
 
         {/* 설치/교육 */}
@@ -89,13 +95,16 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
           >
             설치/교육
           </Button>
-          <Input
-            type="date"
-            placeholder="날짜"
-            className="text-xs h-7 border-gray-200"
-            value={current.installDate || ""}
-            onChange={(e) => onChange({ ...current, installDate: e.target.value })}
-          />
+          <div className="grid grid-cols-[auto,1fr] items-center gap-1">
+            <label className="text-xs">날짜:</label>
+            <Input
+              type="date"
+              placeholder="날짜"
+              className="text-xs h-7 border-gray-200"
+              value={current.installDate || ""}
+              onChange={(e) => onChange({ ...current, installDate: e.target.value })}
+            />
+          </div>
         </div>
 
         {/* 리타겟 */}

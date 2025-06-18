@@ -78,7 +78,7 @@ export default function CustomerHeaderShad({ customer, progress, cardNumber, bas
       <hr className="my-3" />
 
       {/* Form rows */}
-      <div className="grid grid-cols-2 gap-3 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
         <div className="flex items-center gap-2">
           <span className="min-w-[40px]">샵명:</span>
           <Input className="h-7 flex-1" value={basicInfo.shopName || ""} onChange={(e) => setField("shopName", e.target.value)} />

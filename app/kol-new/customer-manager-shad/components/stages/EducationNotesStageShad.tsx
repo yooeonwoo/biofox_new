@@ -82,7 +82,7 @@ export default function EducationNotesStageShad({ value, onChange }: Props) {
 
       {/* MBTI 선택 그룹 */}
       <div className="p-3 border rounded-md bg-muted/20">
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {["ENFP", "ENTP", "ISTJ", "INFP"].map((mbti) => (
             <Button
               key={mbti}

@@ -84,7 +84,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
       </div>
 
       {/* 세미나 & 방문 2열 */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* 세미나 */}
         <div className="flex gap-2">
           <Button
@@ -96,19 +96,21 @@ export default function InflowStageShad({ value, onChange }: Props) {
           >
             세미나
           </Button>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1">
-              <span className="text-xs min-w-[30px]">날짜:</span>
+          <div className="flex flex-col gap-1 w-full">
+            <div className="grid grid-cols-[auto,1fr] items-center gap-1">
+              <label htmlFor="seminar-date" className="text-xs">날짜:</label>
               <Input
+                id="seminar-date"
                 type="date"
                 className="text-xs h-7 w-full border-gray-200"
                 value={current.seminarDate || ""}
                 onChange={(e) => onChange({ ...current, seminarDate: e.target.value })}
               />
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs min-w-[30px]">횟수:</span>
+            <div className="grid grid-cols-[auto,1fr] items-center gap-1">
+              <label htmlFor="seminar-count" className="text-xs">횟수:</label>
               <Input
+                id="seminar-count"
                 type="number"
                 className="text-xs h-7 w-full border-gray-200"
                 value={current.seminarCount || ""}
@@ -129,19 +131,21 @@ export default function InflowStageShad({ value, onChange }: Props) {
           >
             방문
           </Button>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1">
-              <span className="text-xs min-w-[30px]">날짜:</span>
+          <div className="flex flex-col gap-1 w-full">
+            <div className="grid grid-cols-[auto,1fr] items-center gap-1">
+              <label htmlFor="visit-date" className="text-xs">날짜:</label>
               <Input
+                id="visit-date"
                 type="date"
                 className="text-xs h-7 w-full border-gray-200"
                 value={current.visitDate || ""}
                 onChange={(e) => onChange({ ...current, visitDate: e.target.value })}
               />
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs min-w-[30px]">횟수:</span>
+            <div className="grid grid-cols-[auto,1fr] items-center gap-1">
+              <label htmlFor="visit-count" className="text-xs">횟수:</label>
               <Input
+                id="visit-count"
                 type="number"
                 className="text-xs h-7 w-full border-gray-200"
                 value={current.visitCount || ""}

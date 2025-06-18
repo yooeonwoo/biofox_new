@@ -68,7 +68,7 @@ export default function ContractStageShad({ value, onChange }: Props) {
 
   return (
     <div className="stage-block flex flex-col gap-2 border rounded-md p-3 text-xs bg-card">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-2">
         {/* 구매 */}
         <div className="flex flex-col gap-1">
           <Button
@@ -131,7 +131,7 @@ export default function ContractStageShad({ value, onChange }: Props) {
                 size="sm"
                 className="text-xs h-8"
                 onClick={(e) => {
-                  if(current.type === "reject") {
+                  if (current.type === "reject") {
                     e.preventDefault();
                     setType(undefined);
                   }
@@ -155,26 +155,27 @@ export default function ContractStageShad({ value, onChange }: Props) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-
           <Input
             type="date"
             className="text-xs h-7 border-gray-200"
             value={current.rejectDate || ""}
             onChange={(e) => setField("rejectDate", e.target.value)}
           />
-          <Input
-            placeholder="거절사유"
-            className="text-xs h-7 border-gray-200"
-            value={current.rejectReason || ""}
-            onChange={(e) => setField("rejectReason", e.target.value)}
-          />
-          <div className="flex items-center justify-end gap-2 mt-1">
-            <Checkbox
-              id="ad-add"
-              checked={current.rejectAd}
-              onCheckedChange={(c) => onChange({ ...current, rejectAd: !!c })}
+          <div className="flex flex-col justify-between flex-grow">
+            <Input
+              placeholder="거절사유"
+              className="text-xs h-7 border-gray-200"
+              value={current.rejectReason || ""}
+              onChange={(e) => setField("rejectReason", e.target.value)}
             />
-            <label htmlFor="ad-add" className="text-xs font-normal">광고추가</label>
+            <div className="flex items-center justify-end gap-1 mt-auto pt-1">
+              <Checkbox
+                id={`ad-add-${BTN.reject.label}`}
+                checked={current.rejectAd}
+                onCheckedChange={(c) => onChange({ ...current, rejectAd: !!c })}
+              />
+              <label htmlFor={`ad-add-${BTN.reject.label}`} className="text-xs font-normal">광고추가</label>
+            </div>
           </div>
         </div>
       </div>
