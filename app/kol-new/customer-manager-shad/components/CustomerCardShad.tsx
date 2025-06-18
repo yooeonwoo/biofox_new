@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Customer, CustomerProgress, StageData, Achievements } from "@/lib/types/customer";
 import StageBlocksShad from "./StageBlocksShad";
-import ConnectionLines from "../../customer-manager/components/ConnectionLines";
 import { useUpdateCustomer } from "@/lib/hooks/customers";
 import { debounce } from "@/lib/utils";
 import { CustomerHeaderShad as CustomerHeader } from "./index";
 import { BasicInfoValue } from "../../customer-manager/components/stages/BasicInfoStage";
 import { useUpdateCustomerInfo } from "@/lib/hooks/customer-info";
+import { ConnectionLineProvider } from "../contexts/ConnectionLineProvider";
+import ConnectionLinesShad from "./ConnectionLinesShad";
 
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
@@ -88,25 +89,27 @@ export default function CustomerCardShad({ customer, cardNumber }: Props) {
 
   return (
     <div ref={cardRef} className="relative bg-card border rounded-xl p-4 mb-5 max-w-full md:max-w-4xl mx-auto shadow">
-      {/* 연결선 */}
-      <ConnectionLines cardRef={cardRef} />
+      <ConnectionLineProvider cardRef={cardRef}>
+        {/* 연결선 */}
+        <ConnectionLinesShad stageData={localProgress.stageData} />
 
-      {/* 상단 헤더 */}
-      <CustomerHeader
-        customer={customer}
-        progress={localProgress}
-        cardNumber={cardNumber}
-        basicInfo={basicInfo}
-        onBasicInfoChange={setBasicInfo}
-      />
+        {/* 상단 헤더 */}
+        <CustomerHeader
+          customer={customer}
+          progress={localProgress}
+          cardNumber={cardNumber}
+          basicInfo={basicInfo}
+          onBasicInfoChange={setBasicInfo}
+        />
 
-      {/* 스테이지 블록 */}
-      <StageBlocksShad
-        stageData={localProgress.stageData}
-        onStageChange={handleStageChange}
-        achievements={localProgress.achievements}
-        onAchievementsChange={handleAchievementChange}
-      />
+        {/* 스테이지 블록 */}
+        <StageBlocksShad
+          stageData={localProgress.stageData}
+          onStageChange={handleStageChange}
+          achievements={localProgress.achievements}
+          onAchievementsChange={handleAchievementChange}
+        />
+      </ConnectionLineProvider>
     </div>
   );
 } 

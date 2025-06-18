@@ -52,44 +52,49 @@ export default function EducationNotesStageShad({ value, onChange }: Props) {
         />
       </div>
 
-      {(["understanding", "cleanliness", "setting"] as const).map((field) => (
-        <div key={field} className="flex justify-between items-center gap-1">
-          <span className="text-left">
-            {field === "understanding"
-              ? "1. 설명을 잘 이해하는가?"
-              : field === "cleanliness"
-              ? "2. 샵은 깔끔한가?"
-              : "3. 플레이스 세팅은 되어있는가?"}
-          </span>
-          <div className="flex gap-1">
-            {LEVELS.map((lvl) => (
-              <Button
-                key={lvl}
-                variant={current[field] === lvl ? "default" : "outline"}
-                size="sm"
-                className="text-xs h-6 w-8"
-                onClick={() => setField(field, lvl)}
-              >
-                {lvl}
-              </Button>
-            ))}
+      {/* 질문 그룹 */}
+      <div className="p-3 border rounded-md bg-muted/20 space-y-3">
+        {(["understanding", "cleanliness", "setting"] as const).map((field) => (
+          <div key={field} className="flex justify-between items-center gap-1">
+            <span className="text-left">
+              {field === "understanding"
+                ? "1. 설명을 잘 이해하는가?"
+                : field === "cleanliness"
+                ? "2. 샵은 깔끔한가?"
+                : "3. 플레이스 세팅은 되어있는가?"}
+            </span>
+            <div className="flex gap-1">
+              {LEVELS.map((lvl) => (
+                <Button
+                  key={lvl}
+                  variant={current[field] === lvl ? "default" : "outline"}
+                  size="sm"
+                  className="text-xs h-6 w-8"
+                  onClick={() => setField(field, lvl)}
+                >
+                  {lvl}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-
-      {/* MBTI 선택 */}
-      <div className="flex gap-2 mt-1">
-        {["ENFP", "ENTP", "ISTJ", "INFP"].map((mbti) => (
-          <Button
-            key={mbti}
-            variant="outline"
-            size="sm"
-            className={`flex-1 text-xs h-8 ${current.personality === mbti ? "bg-primary text-primary-foreground border-primary" : ""}`}
-            onClick={() => setField("personality", current.personality === mbti ? undefined : mbti)}
-          >
-            {mbti}
-          </Button>
         ))}
+      </div>
+
+      {/* MBTI 선택 그룹 */}
+      <div className="p-3 border rounded-md bg-muted/20">
+        <div className="flex gap-2">
+          {["ENFP", "ENTP", "ISTJ", "INFP"].map((mbti) => (
+            <Button
+              key={mbti}
+              variant="outline"
+              size="sm"
+              className={`flex-1 text-xs h-8 ${current.personality === mbti ? "bg-primary text-primary-foreground border-primary" : ""}`}
+              onClick={() => setField("personality", current.personality === mbti ? undefined : mbti)}
+            >
+              {mbti}
+            </Button>
+          ))}
+        </div>
       </div>
     </div>
   );

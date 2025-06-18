@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 // Achievements 타입 및 단일 체크박스 컴포넌트 추가
 import { Achievements } from "@/lib/types/customer";
+import AchievementCheckbox from "./AchievementCheckbox";
 
 const LABELS: Record<1 | 2 | 3, string> = {
   1: "본사 실무교육 이수",
@@ -159,7 +160,7 @@ export default function StageBlocksShad({ stageData, onStageChange, achievements
             );
           })}
           {/* 4단계 완료 체크박스 → 레벨 1 */}
-          <SingleAchieveCheckbox level={1} achievements={achievements} onChange={onAchievementsChange} />
+          <AchievementCheckbox level={1} achievements={achievements} onChange={onAchievementsChange} />
         </SectionBlock>
       </div>
 
@@ -182,7 +183,7 @@ export default function StageBlocksShad({ stageData, onStageChange, achievements
             );
           })}
           {/* 5단계 완료 체크박스 → 레벨 2 */}
-          <SingleAchieveCheckbox level={2} achievements={achievements} onChange={onAchievementsChange} />
+          <AchievementCheckbox level={2} achievements={achievements} onChange={onAchievementsChange} />
         </SectionBlock>
       </div>
 
@@ -205,7 +206,7 @@ export default function StageBlocksShad({ stageData, onStageChange, achievements
             );
           })}
           {/* 6단계 완료 체크박스 → 레벨 3 */}
-          <SingleAchieveCheckbox level={3} achievements={achievements} onChange={onAchievementsChange} />
+          <AchievementCheckbox level={3} achievements={achievements} onChange={onAchievementsChange} />
         </SectionBlock>
       </div>
     </div>

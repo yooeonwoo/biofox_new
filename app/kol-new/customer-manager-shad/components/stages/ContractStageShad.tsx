@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useRef, useContext, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export interface ContractStageValue {
   type?: "buy" | "deposit" | "reject";
@@ -32,10 +34,36 @@ const BTN: Record<string, { label: string; value: ContractStageValue["type"] }> 
  */
 export default function ContractStageShad({ value, onChange }: Props) {
   const current = value || {};
+  const context = useContext(ConnectionLineContext);
+
+  const buttonRefs = {
+    buy: useRef<HTMLButtonElement>(null),
+    deposit: useRef<HTMLButtonElement>(null),
+    reject: useRef<HTMLButtonElement>(null),
+  };
+
+  useEffect(() => {
+    if (context) {
+      Object.entries(buttonRefs).forEach(([key, ref]) => {
+        context.registerButton(`contract-${key}`, ref);
+      });
+    }
+    return () => {
+      if (context) {
+        Object.keys(buttonRefs).forEach(key => {
+          context.unregisterButton(`contract-${key}`);
+        });
+      }
+    };
+  }, [context]);
 
   const setType = (tp: ContractStageValue["type"] | undefined) => {
     if (!tp) onChange(undefined);
     else onChange({ ...current, type: tp });
+  };
+
+  const setField = (field: keyof ContractStageValue, value: string) => {
+    onChange({ ...current, [field]: value });
   };
 
   return (
@@ -44,6 +72,7 @@ export default function ContractStageShad({ value, onChange }: Props) {
         {/* 구매 */}
         <div className="flex flex-col gap-1">
           <Button
+            ref={buttonRefs.buy}
             variant={current.type === "buy" ? "default" : "outline"}
             size="sm"
             className="text-xs h-8"
@@ -52,22 +81,24 @@ export default function ContractStageShad({ value, onChange }: Props) {
             {BTN.buy.label}
           </Button>
           <Input
-            placeholder="날짜"
-            className="text-xs h-7 w-full"
+            type="date"
+            className="text-xs h-7 border-gray-200"
             value={current.buyDate || ""}
-            onChange={(e) => onChange({ ...current, buyDate: e.target.value })}
+            onChange={(e) => setField("buyDate", e.target.value)}
           />
           <Input
-            placeholder="금액"
-            className="text-xs h-7 w-full"
+            type="number"
+            placeholder="금액(만원)"
+            className="text-xs h-7 border-gray-200"
             value={current.buyAmount || ""}
-            onChange={(e) => onChange({ ...current, buyAmount: e.target.value })}
+            onChange={(e) => setField("buyAmount", e.target.value)}
           />
         </div>
 
         {/* 계약금 */}
         <div className="flex flex-col gap-1">
           <Button
+            ref={buttonRefs.deposit}
             variant={current.type === "deposit" ? "default" : "outline"}
             size="sm"
             className="text-xs h-8"
@@ -76,49 +107,74 @@ export default function ContractStageShad({ value, onChange }: Props) {
             {BTN.deposit.label}
           </Button>
           <Input
-            placeholder="날짜"
-            className="text-xs h-7 w-full"
+            type="date"
+            className="text-xs h-7 border-gray-200"
             value={current.depositDate || ""}
-            onChange={(e) => onChange({ ...current, depositDate: e.target.value })}
+            onChange={(e) => setField("depositDate", e.target.value)}
           />
           <Input
-            placeholder="금액"
-            className="text-xs h-7 w-full"
+            type="number"
+            placeholder="금액(만원)"
+            className="text-xs h-7 border-gray-200"
             value={current.depositAmount || ""}
-            onChange={(e) => onChange({ ...current, depositAmount: e.target.value })}
+            onChange={(e) => setField("depositAmount", e.target.value)}
           />
         </div>
 
         {/* 거절 */}
         <div className="flex flex-col gap-1">
-          <Button
-            variant={current.type === "reject" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-8"
-            onClick={() => setType(current.type === "reject" ? undefined : "reject")}
-          >
-            {BTN.reject.label}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                ref={buttonRefs.reject}
+                variant={current.type === "reject" ? "destructive" : "outline"}
+                size="sm"
+                className="text-xs h-8"
+                onClick={(e) => {
+                  if(current.type === "reject") {
+                    e.preventDefault();
+                    setType(undefined);
+                  }
+                }}
+              >
+                {BTN.reject.label}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>거절 처리하시겠습니까?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  이 작업은 되돌릴 수 없습니다. 고객을 '거절' 상태로 변경하고 관련 정보를 기록합니다.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>취소</AlertDialogCancel>
+                <AlertDialogAction onClick={() => setType("reject")}>
+                  확인
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <Input
-            placeholder="날짜"
-            className="text-xs h-7 w-full"
+            type="date"
+            className="text-xs h-7 border-gray-200"
             value={current.rejectDate || ""}
-            onChange={(e) => onChange({ ...current, rejectDate: e.target.value })}
+            onChange={(e) => setField("rejectDate", e.target.value)}
           />
           <Input
-            placeholder="사유"
-            className="text-xs h-7 w-full"
+            placeholder="거절사유"
+            className="text-xs h-7 border-gray-200"
             value={current.rejectReason || ""}
-            onChange={(e) => onChange({ ...current, rejectReason: e.target.value })}
+            onChange={(e) => setField("rejectReason", e.target.value)}
           />
-          <div className="flex items-center gap-1 justify-end">
+          <div className="flex items-center justify-end gap-2 mt-1">
             <Checkbox
-              checked={current.rejectAd || false}
-              onCheckedChange={(checked) => onChange({ ...current, rejectAd: !!checked })}
-              className="w-4 h-4"
-              id="reject-ad"
+              id="ad-add"
+              checked={current.rejectAd}
+              onCheckedChange={(c) => onChange({ ...current, rejectAd: !!c })}
             />
-            <label htmlFor="reject-ad" className="text-xs select-none">광고추가</label>
+            <label htmlFor="ad-add" className="text-xs font-normal">광고추가</label>
           </div>
         </div>
       </div>

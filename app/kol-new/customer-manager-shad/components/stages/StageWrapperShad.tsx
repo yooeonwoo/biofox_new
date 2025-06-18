@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Pencil } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
   title: string;
@@ -23,8 +24,8 @@ export default function StageWrapperShad({ title, number, memo, onMemoChange, ch
   return (
     <Card
       className={cn(
-        "stage-block relative p-4 border-muted-foreground/20",
-        bgClass ?? "bg-white"
+        "stage-block relative p-4 border-black/5 bg-white shadow-sm",
+        bgClass,
       )}
     >
       {/* 헤더 (번호 + 제목) */}
@@ -33,16 +34,25 @@ export default function StageWrapperShad({ title, number, memo, onMemoChange, ch
           {number}
         </div>
         <h4 className="text-sm font-semibold flex-1">{title}</h4>
-
-        {/* 메모 토글 버튼 */}
-        <button
-          type="button"
-          aria-label={open ? "메모 닫기" : "메모 열기"}
-          className="size-6 rounded-full flex items-center justify-center bg-muted hover:bg-muted/70 text-muted-foreground transition-colors"
-          onClick={() => setOpen((o) => !o)}
-        >
-          <Pencil size={14} />
-        </button>
+        
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {/* 메모 토글 버튼 */}
+              <button
+                type="button"
+                aria-label={open ? "메모 닫기" : "메모 열기"}
+                className="size-6 rounded-full flex items-center justify-center bg-muted hover:bg-muted/70 text-muted-foreground transition-colors"
+                onClick={() => setOpen((o) => !o)}
+              >
+                <Pencil size={14} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{open ? "메모 닫기" : "메모 열기"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* 메모 영역 */}
