@@ -34,6 +34,11 @@ interface UpdateCustomerInput {
   progress: CustomerProgress;
 }
 
+interface UpdateCustomerInfoInput {
+  customerId: string;
+  info: Partial<Customer>;
+}
+
 /**
  * 고객 진행 상태 업데이트 훅 (디바운스 호출 예정)
  */

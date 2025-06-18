@@ -1,0 +1,100 @@
+"use client";
+
+import { StageData } from "@/lib/types/customer";
+import { StageWrapperShad, InflowStageShad, ContractStageShad, DeliveryStageShad, EducationNotesStageShad, GrowthStageShad, ExpertStageShad } from "./stages";
+// 아직 교체되지 않은 스테이지는 기존 컴포넌트 사용
+import React from "react";
+
+interface Props {
+  stageData: StageData;
+  onStageChange: (stageKey: keyof StageData, value: any) => void;
+}
+
+const TITLES: Record<keyof StageData, string> = {
+  inflow: "유입",
+  contract: "계약/결제",
+  delivery: "설치/교육",
+  educationNotes: "교육 완료 후 특이사항",
+  growth: "성장",
+  expert: "전문가과정",
+};
+
+const COMPONENTS: Record<keyof StageData, any> = {
+  inflow: InflowStageShad,
+  contract: ContractStageShad,
+  delivery: DeliveryStageShad,
+  educationNotes: EducationNotesStageShad,
+  growth: GrowthStageShad,
+  expert: ExpertStageShad,
+};
+
+function SectionBlock({ title, bgClass, children }: { title: string; bgClass: string; children: React.ReactNode }) {
+  return (
+    <div className={`rounded-xl border p-4 ${bgClass} space-y-6`}>
+      <div className="font-semibold mb-4 text-sm pl-2 border-l-4 border-current">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+export default function StageBlocksShad({ stageData, onStageChange }: Props) {
+  return (
+    <div className="grid gap-4 stage-grid md:grid-cols-3 lg:grid-cols-6">
+      {/* 기본 과정 1~4 */}
+      <SectionBlock title="기본 과정" bgClass="bg-gray-50 border-gray-200">
+        {(Object.keys(TITLES) as (keyof StageData)[]).slice(0, 4).map((key, idx) => {
+          const Comp = COMPONENTS[key];
+          return (
+            <StageWrapperShad
+              key={key}
+              title={TITLES[key]}
+              number={idx + 1}
+              memo={(stageData as any)[key]?.memo || ""}
+              onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
+            >
+              {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
+            </StageWrapperShad>
+          );
+        })}
+      </SectionBlock>
+
+      {/* 성장 과정 5단계 */}
+      <SectionBlock title="성장 과정" bgClass="bg-green-50 border-green-200">
+        {(Object.keys(TITLES) as (keyof StageData)[]).slice(4, 5).map((key) => {
+          const Comp = COMPONENTS[key];
+          return (
+            <StageWrapperShad
+              key={key}
+              title={TITLES[key]}
+              number={5}
+              memo={(stageData as any)[key]?.memo || ""}
+              bgClass="bg-green-50"
+              onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
+            >
+              {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
+            </StageWrapperShad>
+          );
+        })}
+      </SectionBlock>
+
+      {/* 전문가 과정 6단계 */}
+      <SectionBlock title="전문가 과정" bgClass="bg-violet-50 border-violet-200">
+        {(Object.keys(TITLES) as (keyof StageData)[]).slice(5).map((key) => {
+          const Comp = COMPONENTS[key];
+          return (
+            <StageWrapperShad
+              key={key}
+              title={TITLES[key]}
+              number={6}
+              memo={(stageData as any)[key]?.memo || ""}
+              bgClass="bg-violet-50"
+              onMemoChange={(m: string) => onStageChange(key, { ...(stageData as any)[key], memo: m })}
+            >
+              {Comp && <Comp value={(stageData as any)[key]} onChange={(val: any) => onStageChange(key, val)} />}
+            </StageWrapperShad>
+          );
+        })}
+      </SectionBlock>
+    </div>
+  );
+} 

@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Customer, CustomerProgress, StageData, Achievements } from "@/lib/types/customer";
-import CustomerHeader from "./CustomerHeader";
-import StageBlocks from "./StageBlocks";
-import ConnectionLines from "./ConnectionLines";
+import StageBlocksShad from "./StageBlocksShad";
+import ConnectionLines from "../../customer-manager/components/ConnectionLines";
 import { useUpdateCustomer } from "@/lib/hooks/customers";
 import { debounce } from "@/lib/utils";
+import { CustomerHeaderShad as CustomerHeader } from "./index";
+import { BasicInfoValue } from "../../customer-manager/components/stages/BasicInfoStage";
 import { useUpdateCustomerInfo } from "@/lib/hooks/customer-info";
-import BasicInfoStage, { BasicInfoValue } from "./stages/BasicInfoStage";
 
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
@@ -24,7 +24,7 @@ const defaultAchievements: Achievements = {
   expertCourse: false,
 };
 
-export default function CustomerCard({ customer, cardNumber }: Props) {
+export default function CustomerCardShad({ customer, cardNumber }: Props) {
   const initialProgress: CustomerProgress =
     customer.customer_progress?.[0] || {
       id: "temp-" + customer.id,
@@ -35,7 +35,6 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
     };
 
   const [localProgress, setLocalProgress] = useState<CustomerProgress>(initialProgress);
-
   const updateMutation = useUpdateCustomer();
 
   const debouncedSave = useCallback(
@@ -45,7 +44,6 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
     [customer.id]
   );
 
-  // 저장 사이드이펙트
   useEffect(() => {
     debouncedSave(localProgress);
   }, [localProgress, debouncedSave]);
@@ -60,8 +58,7 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
     }));
   }
 
-  const cardRef = useRef<HTMLDivElement>(null);
-
+  // 기본 정보 편집
   const [basicInfo, setBasicInfo] = useState<BasicInfoValue>({
     shopName: customer.shopName,
     phone: customer.phone,
@@ -72,25 +69,25 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
   });
 
   const updateInfoMutation = useUpdateCustomerInfo();
-
-  // Save basic info debounce
   const debouncedSaveInfo = useCallback(
     debounce((info: BasicInfoValue) => {
       updateInfoMutation.mutate({ customerId: customer.id, info });
     }, 1000),
-    [],
+    []
   );
 
   useEffect(() => {
     debouncedSaveInfo(basicInfo);
   }, [basicInfo, debouncedSaveInfo]);
 
+  const cardRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div
-      ref={cardRef}
-      className="relative bg-white border-2 border-black rounded-xl p-4 mb-5 max-w-full md:max-w-4xl mx-auto"
-    >
+    <div ref={cardRef} className="relative bg-card border rounded-xl p-4 mb-5 max-w-full md:max-w-4xl mx-auto shadow">
+      {/* 연결선 */}
       <ConnectionLines cardRef={cardRef} />
+
+      {/* 상단 헤더 */}
       <CustomerHeader
         customer={customer}
         progress={localProgress}
@@ -99,7 +96,8 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
         onBasicInfoChange={setBasicInfo}
       />
 
-      <StageBlocks stageData={localProgress.stageData} onStageChange={handleStageChange} />
+      {/* 스테이지 블록 */}
+      <StageBlocksShad stageData={localProgress.stageData} onStageChange={handleStageChange} />
     </div>
   );
 } 
