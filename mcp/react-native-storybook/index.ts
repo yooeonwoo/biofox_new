@@ -1,4 +1,4 @@
-import { createMcp } from '@modelcontextprotocol/sdk';
+import { createMcp } from '@modelcontextprotocol/sdk/server';
 import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
