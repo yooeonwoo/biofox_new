@@ -44,7 +44,30 @@ export default function CustomerHeaderShad({ customer, progress, cardNumber, bas
           <div className="size-8 rounded bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow">
             {cardNumber}
           </div>
-          <h3 className="text-lg font-semibold">{customer.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{customer.name}</h3>
+            {(() => {
+              const ach = progress?.achievements;
+              const level = ach?.expertCourse
+                ? 3
+                : ach?.standardProtocol
+                ? 2
+                : ach?.basicTraining
+                ? 1
+                : 0;
+              return (
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: level }).map((_, i) => (
+                    <Star
+                      key={i}
+                      size={16}
+                      className="fill-yellow-500 text-yellow-500"
+                    />
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
         <div className="text-right space-y-1">
           {customer.manager && <div className="text-sm">담당자 : {customer.manager}</div>}
@@ -73,19 +96,6 @@ export default function CustomerHeaderShad({ customer, progress, cardNumber, bas
           <Input className="h-7 flex-1" value={basicInfo.placeAddress || ""} onChange={(e) => setField("placeAddress", e.target.value)} />
         </div>
       </div>
-
-      {/* 성취 배지 (최고 단계만큼 별) */}
-      {(() => {
-        const ach = progress?.achievements;
-        const level = ach?.expertCourse ? 3 : ach?.standardProtocol ? 2 : ach?.basicTraining ? 1 : 0;
-        return (
-          <div className="flex items-center gap-1 mt-4">
-            {Array.from({ length: level }).map((_, i) => (
-              <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
-            ))}
-          </div>
-        );
-      })()}
 
       {/* 진행률 바 */}
       <Progress value={percent} className="mt-2" />
