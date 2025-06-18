@@ -12,7 +12,10 @@
     "migrate:year-month": "echo '⚠️  데이터베이스 마이그레이션을 실행합니다. 백업을 먼저 확인하세요!' && echo 'psql -h $DB_HOST -d $DB_NAME -f scripts/migrate-year-month-format.sql'",
     "db:check-formats": "echo '📊 year_month 형식 분석 중...' && node -e \"require('./scripts/test-year-month-fix.js')\"",
     "clerk:mcp": "npx -y @clerk/agent-toolkit -p local-mcp --secret-key $CLERK_SECRET_KEY",
-    "test": "vitest run"
+    "test": "vitest run",
+    "storybook": "storybook dev -p 6006",
+    "storybook:mcp": "bun mcp/storybook/index.ts",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@clerk/agent-toolkit": "^0.1.0",
@@ -30,6 +33,7 @@
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-dropdown-menu": "^2.1.6",
     "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-scroll-area": "^1.2.3",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-separator": "^1.1.2",
     "@radix-ui/react-slot": "^1.2.3",
@@ -67,14 +71,18 @@
     "tailwind-merge": "^3.2.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
-    "zod": "^3.25.30",
     "vaul": "^1.1.2",
-    "@radix-ui/react-scroll-area": "^1.2.3"
+    "zod": "^3.25.30"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@modelcontextprotocol/sdk": "^1.12.3",
+    "@storybook/addon-docs": "^9.0.11",
+    "@storybook/addon-onboarding": "^9.0.11",
+    "@storybook/nextjs": "^9.0.11",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.3.0",
+    "@types/glob": "^8.1.0",
     "@types/node": "20.17.27",
     "@types/pg": "^8.11.11",
     "@types/react": "19.0.12",
@@ -84,10 +92,12 @@
     "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.2.3",
+    "eslint-plugin-storybook": "^9.0.11",
     "jsdom": "^26.1.0",
     "postcss": "^8.4.35",
+    "storybook": "^9.0.11",
     "tailwindcss": "^3.4.1",
-    "typescript": "5.8.2",
+    "typescript": "^5.8.2",
     "vitest": "^1.5.3"
   }
 }

@@ -86,3 +86,6 @@ test_python.py
 run_python.sh
 split_codebase.py
 project_structure.txt
+
+*storybook.log
+storybook-static
