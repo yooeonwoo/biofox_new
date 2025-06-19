@@ -1,15 +1,17 @@
-import React, { useRef, useContext, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
+"use client";
 
-export interface DeliveryStageValue {
-  type?: "ship" | "install" | "retarget";
-  shipDate?: string;
-  package?: string;
-  installDate?: string;
-  memo?: string;
-}
+import { DeliveryStageValue } from "@/lib/types/customer";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "lucide-react";
+
+const DELIVERY_TYPES: Array<{
+    key: "ship" | "install" | "retarget";
+    label: string;
+}> = [
+    { key: "ship", label: "출고" },
+    { key: "install", label: "설치/교육" },
+    { key: "retarget", label: "리타겟" },
+];
 
 interface Props {
   value: DeliveryStageValue | undefined;
@@ -21,104 +23,78 @@ interface Props {
  */
 export default function DeliveryStageShad({ value, onChange }: Props) {
   const current = value || {};
-  const context = useContext(ConnectionLineContext);
-
-  const buttonRefs = {
-    ship: useRef<HTMLButtonElement>(null),
-    install: useRef<HTMLButtonElement>(null),
-    retarget: useRef<HTMLButtonElement>(null),
+  
+  const setType = (type?: "ship" | "install" | "retarget") => {
+    onChange({ ...current, type });
   };
-
-  useEffect(() => {
-    if (context) {
-      Object.entries(buttonRefs).forEach(([key, ref]) => {
-        context.registerButton(`delivery-${key}`, ref);
-      });
-    }
-    return () => {
-      if (context) {
-        Object.keys(buttonRefs).forEach(key => {
-          context.unregisterButton(`delivery-${key}`);
-        });
-      }
-    };
-  }, [context]);
-
-  const setType = (tp: DeliveryStageValue["type"] | undefined) => {
-    if (!tp) onChange(undefined);
-    else onChange({ ...current, type: tp });
+  
+  const setField = (field: keyof Omit<DeliveryStageValue, 'type'>, val: any) => {
+    onChange({ ...current, [field]: val });
   };
 
   return (
-    <div className="stage-block flex flex-col gap-2 border rounded-md p-3 text-xs bg-card">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-2">
-        {/* 출고 */}
-        <div className="flex flex-col gap-1">
-          <Button
-            ref={buttonRefs.ship}
-            variant={current.type === "ship" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-auto py-2 mb-2"
-            onClick={() => setType(current.type === "ship" ? undefined : "ship")}
-          >
-            출고
-          </Button>
-          <div className="grid grid-cols-[auto,1fr] items-center gap-1 mb-1">
-            <label className="text-xs shrink-0">날짜:</label>
-            <Input
-              type="date"
-              placeholder="날짜"
-              className="text-xs h-7 border-gray-200"
-              value={current.shipDate || ""}
-              onChange={(e) => onChange({ ...current, shipDate: e.target.value })}
-            />
-          </div>
-          <div className="grid grid-cols-[auto,1fr] items-center gap-1">
-            <label className="text-xs shrink-0">패키지:</label>
-            <Input
-              placeholder="패키지"
-              className="text-xs h-7 border-gray-200"
-              value={current.package || ""}
-              onChange={(e) => onChange({ ...current, package: e.target.value })}
-            />
-          </div>
-        </div>
+    <div className="stage-block flex flex-col gap-3 text-xs bg-card">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {DELIVERY_TYPES.map(({ key, label }) => {
+          const isActive = current.type === key;
 
-        {/* 설치/교육 */}
-        <div className="flex flex-col gap-1">
-          <Button
-            ref={buttonRefs.install}
-            variant={current.type === "install" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-auto py-2 mb-2"
-            onClick={() => setType(current.type === "install" ? undefined : "install")}
-          >
-            설치/교육
-          </Button>
-          <div className="grid grid-cols-[auto,1fr] items-center gap-1">
-            <label className="text-xs shrink-0">날짜:</label>
-            <Input
-              type="date"
-              placeholder="날짜"
-              className="text-xs h-7 border-gray-200"
-              value={current.installDate || ""}
-              onChange={(e) => onChange({ ...current, installDate: e.target.value })}
-            />
-          </div>
-        </div>
+          return (
+            <label 
+              key={key} 
+              htmlFor={`radio-delivery-${key}`} 
+              className="flex flex-col p-3 border rounded-lg cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400"
+            >
+              <input
+                type="radio"
+                id={`radio-delivery-${key}`}
+                name="delivery-type"
+                checked={isActive}
+                onChange={() => setType(isActive ? undefined : key)}
+                className="sr-only"
+              />
+              <span className="font-semibold text-sm mb-2">{label}</span>
 
-        {/* 리타겟 */}
-        <div className="flex flex-col gap-1">
-          <Button
-            ref={buttonRefs.retarget}
-            variant={current.type === "retarget" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-full"
-            onClick={() => setType(current.type === "retarget" ? undefined : "retarget")}
-          >
-            리타겟
-          </Button>
-        </div>
+              {key === 'ship' && (
+                <div className="flex flex-col gap-2 mt-auto">
+                  <div className="relative w-full">
+                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                        type="date"
+                        className="h-9 pl-8 text-sm"
+                        value={current.shipDate || ""}
+                        onChange={e => setField('shipDate', e.target.value)}
+                    />
+                  </div>
+                  <div className="relative w-full">
+                     <Input
+                        placeholder="패키지"
+                        className="h-9 text-sm"
+                        value={current.shipPackage || ""}
+                        onChange={e => setField('shipPackage', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {key === 'install' && (
+                 <div className="relative w-full mt-auto">
+                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                        type="date"
+                        className="h-9 pl-8 text-sm"
+                        value={current.installDate || ""}
+                        onChange={e => setField('installDate', e.target.value)}
+                    />
+                  </div>
+              )}
+
+              {/* '리타겟'은 별도 입력 필드가 없으므로, 레이아웃을 채우기 위한 플레이스홀더 추가 */}
+              {key === 'retarget' && (
+                  <div className="flex-grow"></div>
+              )}
+            </label>
+          );
+        })}
       </div>
     </div>
   );

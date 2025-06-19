@@ -60,10 +60,30 @@ export interface ExpertStage {
   date?: string;
 }
 
+export type IntroSource = "cafe" | "insta" | "intro";
+
+export interface InflowStageValue {
+  source?: "seminar" | "visit";
+  introSource?: IntroSource[];
+  seminarDate?: string;
+  seminarCount?: string;
+  visitDate?: string;
+  visitCount?: string;
+  memo?: string;
+}
+
+export interface DeliveryStageValue {
+  type?: "ship" | "install" | "retarget";
+  shipDate?: string;
+  shipPackage?: string;
+  installDate?: string;
+  memo?: string;
+}
+
 export interface StageData {
-  inflow?: InflowStage;
+  inflow?: InflowStageValue;
   contract?: ContractStage;
-  delivery?: DeliveryStage;
+  delivery?: DeliveryStageValue;
   educationNotes?: EducationNotesStage;
   growth?: GrowthStage;
   expert?: ExpertStage;
