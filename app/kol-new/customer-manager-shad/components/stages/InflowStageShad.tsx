@@ -69,8 +69,9 @@ export default function InflowStageShad({ value, onChange }: Props) {
             const isActive = current.source === key;
 
             return (
-                <label key={key} htmlFor={`radio-inflow-${key}`} className="block p-3 border rounded-lg cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
-                    <div
+                <div key={key} className="p-3 border rounded-lg has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                     <label 
+                        htmlFor={`radio-inflow-${key}`} 
                         className="w-full h-full flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 mb-3"
                     >
                         <input
@@ -82,7 +83,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
                             className="peer sr-only"
                         />
                         <span className="w-full text-center py-2">{label}</span>
-                    </div>
+                    </label>
                     <div className="flex flex-col gap-2">
                         <div className="relative w-full">
                             <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -103,7 +104,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
                             />
                         </div>
                     </div>
-                </label>
+                </div>
             )
         })}
         </div>
