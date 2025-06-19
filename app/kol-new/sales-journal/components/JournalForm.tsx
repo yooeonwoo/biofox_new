@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card';
 import { Plus, Bell, Send, Clock, Maximize2, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { DateTimePicker } from './DateTimePicker';
 
 interface JournalFormProps {
     managedShops: string[];
@@ -60,21 +61,39 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
             return;
         }
 
+        const reminder = (reminderContent.trim() && reminderDateTime) ? { content: reminderContent, dateTime: reminderDateTime } : undefined;
+        const ownerMessage = (ownerMessageContent.trim()) ? { content: ownerMessageContent, dateTime: ownerMessageDateTime, sendNow: !ownerMessageDateTime } : undefined;
+
         const newEntryData: Omit<JournalEntryData, 'id' | 'createdAt' | 'updatedAt'> = {
             date: date,
             shopName,
             content,
             specialNotes: shopSpecialNotes[shopName] || '',
-            reminder: reminderContent.trim() && reminderDateTime ? { content: reminderContent, dateTime: reminderDateTime } : undefined,
-            ownerMessage: ownerMessageContent.trim() ? { content: ownerMessageContent, dateTime: ownerMessageDateTime, sendNow: !ownerMessageDateTime } : undefined,
+            reminder,
+            ownerMessage,
         };
         onSave(newEntryData);
     };
 
-    const getDefaultDateTime = () => {
-        const now = new Date();
-        now.setHours(now.getHours() + 1);
-        return now.toISOString().slice(0, 16);
+    const handleOwnerMessageSend = (sendNow: boolean) => {
+        if (!ownerMessageContent.trim()) {
+            alert('메시지 내용을 입력해주세요.');
+            return;
+        }
+        if (!sendNow && !ownerMessageDateTime) {
+            alert('예약 발송 시간을 설정해주세요.');
+            return;
+        }
+
+        const message = `[원장님 메시지]\n내용: ${ownerMessageContent}\n${sendNow ? '즉시 발송' : `예약 시간: ${formatDateTime(ownerMessageDateTime)}`}`;
+        alert(message);
+        // TODO: 실제 발송 로직
+    }
+    
+    const formatDateTime = (dateTimeString: string) => {
+        if (!dateTimeString) return '';
+        const d = new Date(dateTimeString);
+        return d.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
     return (
@@ -83,12 +102,7 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
             <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex items-center gap-2 flex-1">
                     <Label className="w-12 text-sm text-muted-foreground">날짜</Label>
-                    <Input
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        className="h-9"
-                    />
+                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-9" />
                 </div>
                 <div className="flex items-center gap-2 flex-1">
                     <Label className="w-12 text-sm text-muted-foreground">샵명</Label>
@@ -100,9 +114,7 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                         </div>
                     ) : (
                         <Select value={shopName} onValueChange={handleShopSelect}>
-                            <SelectTrigger className="h-9">
-                                <SelectValue placeholder="샵을 선택하세요" />
-                            </SelectTrigger>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="샵을 선택하세요" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="add-new" className="text-primary flex items-center gap-2"><Plus className="w-4 h-4" /> 새로 추가</SelectItem>
                                 {managedShops.map((shop) => (<SelectItem key={shop} value={shop}>{shop}</SelectItem>))}
@@ -115,25 +127,12 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
             {/* 일지 내용 */}
             <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-gray-50">
                 <Label className="text-sm text-muted-foreground shrink-0">일지 내용</Label>
-                <Input
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="영업 활동과 생각을 자유롭게 적어보세요..."
-                    className="flex-1 bg-transparent border-0 shadow-none focus-visible:ring-0 h-8"
-                />
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8 shrink-0"><Maximize2 className="size-4" /></Button>
-                    </DialogTrigger>
+                <Input value={content} onChange={(e) => setContent(e.target.value)} placeholder="영업 활동과 생각을 자유롭게 적어보세요..." className="flex-1 bg-transparent border-0 shadow-none focus-visible:ring-0 h-8" />
+                <Dialog><DialogTrigger asChild><Button variant="ghost" size="icon" className="size-8 shrink-0"><Maximize2 className="size-4" /></Button></DialogTrigger>
                     <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>일지 내용 작성</DialogTitle>
-                            <DialogDescription>내용을 자세하게 입력해주세요.</DialogDescription>
-                        </DialogHeader>
+                        <DialogHeader><DialogTitle>일지 내용 작성</DialogTitle><DialogDescription>내용을 자세하게 입력해주세요.</DialogDescription></DialogHeader>
                         <Textarea value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[200px]" />
-                        <DialogFooter>
-                            <DialogClose asChild><Button>확인</Button></DialogClose>
-                        </DialogFooter>
+                        <DialogFooter><DialogClose asChild><Button>확인</Button></DialogClose></DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>
@@ -142,45 +141,20 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
             <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-blue-50 border-blue-200">
                 <Bell className="size-4 text-blue-600 shrink-0" />
                 <Label className="text-sm text-blue-800 shrink-0">리마인드</Label>
-                <Input
-                    value={reminderContent}
-                    onChange={(e) => setReminderContent(e.target.value)}
-                    placeholder="나중에 확인할 내용..."
-                    className="flex-1 bg-white border-0 shadow-none focus-visible:ring-0 h-8"
-                />
-                <Input type="datetime-local" value={reminderDateTime} onChange={e => setReminderDateTime(e.target.value)} className="h-8 bg-white w-auto text-xs" />
-                <Dialog>
-                     <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8 shrink-0"><Maximize2 className="size-4" /></Button>
-                    </DialogTrigger>
-                     <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>리마인드 내용</DialogTitle>
-                        </DialogHeader>
-                        <Textarea value={reminderContent} onChange={(e) => setReminderContent(e.target.value)} className="min-h-[120px]" />
-                        <DialogFooter>
-                             <DialogClose asChild><Button>확인</Button></DialogClose>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-                <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={() => alert('리마인드 저장 기능은 준비 중입니다.')}>저장</Button>
+                <Input value={reminderContent} onChange={(e) => setReminderContent(e.target.value)} placeholder="나중에 확인할 내용..." className="flex-1 bg-white border-0 shadow-none focus-visible:ring-0 h-8" />
+                <DateTimePicker value={reminderDateTime} onChange={setReminderDateTime} />
             </div>
 
             {/* 원장님 메시지 */}
             <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-green-50 border-green-200">
                 <Send className="size-4 text-green-600 shrink-0" />
-                <Label className="text-sm text-green-800 shrink-0">원장님 메시지</Label>
-                <Input
-                    value={ownerMessageContent}
-                    onChange={(e) => setOwnerMessageContent(e.target.value)}
-                    placeholder="원장님께 보낼 메시지"
-                    className="flex-1 bg-white border-0 shadow-none focus-visible:ring-0 h-8"
-                />
-                 <Input type="datetime-local" value={ownerMessageDateTime} onChange={e => setOwnerMessageDateTime(e.target.value)} className="h-8 bg-white w-auto text-xs" />
-                <Button size="sm" variant="outline" className="h-8 bg-white gap-1.5" onClick={() => alert('예약 발송 기능은 준비 중입니다.')}>
+                <Label className="text-sm text-green-800 shrink-0">원장님</Label>
+                <Input value={ownerMessageContent} onChange={(e) => setOwnerMessageContent(e.target.value)} placeholder="원장님께 보낼 메시지" className="flex-1 bg-white border-0 shadow-none focus-visible:ring-0 h-8" />
+                <DateTimePicker value={ownerMessageDateTime} onChange={setOwnerMessageDateTime} />
+                <Button size="sm" variant="outline" className="h-8 bg-white gap-1.5 text-green-800 border-green-300 hover:bg-green-100 hover:text-green-900" onClick={() => handleOwnerMessageSend(false)}>
                     <Clock className="size-3" /> 예약발송
                 </Button>
-                <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700 gap-1.5" onClick={() => alert('즉시 보내기 기능은 준비 중입니다.')}>
+                <Button size="sm" className="h-8 bg-green-500 hover:bg-green-600 text-white gap-1.5" onClick={() => handleOwnerMessageSend(true)}>
                     <Send className="size-3" /> 즉시보내기
                 </Button>
             </div>
