@@ -19,7 +19,7 @@ export default function PageHeader({
   isAdding,
 }: PageHeaderProps) {
   return (
-    <div className="py-3 px-4 md:px-6 border-b">
+    <div className="sticky top-[64px] z-30 bg-white/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-3 border-b">
       <div className="flex items-center justify-between gap-4 max-w-4xl mx-auto">
         {/* 뒤로가기 버튼 */}
         <Button variant="outline" size="sm" asChild>
