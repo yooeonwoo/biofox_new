@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from 'react';
-import { JournalEntryData, ReminderData, OwnerMessageData } from '../lib/types';
+import { JournalEntryData } from '../lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Bell, Send, XCircle, Clock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { Plus, Bell, Send, Clock, Maximize2, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 interface JournalFormProps {
     managedShops: string[];
@@ -19,12 +20,14 @@ interface JournalFormProps {
 }
 
 export default function JournalForm({ managedShops, shopSpecialNotes, onSave, onCancel, onAddShop }: JournalFormProps) {
-    const [content, setContent] = useState('');
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [shopName, setShopName] = useState('');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    
+    const [content, setContent] = useState('');
     
     const [reminderContent, setReminderContent] = useState('');
     const [reminderDateTime, setReminderDateTime] = useState('');
+    
     const [ownerMessageContent, setOwnerMessageContent] = useState('');
     const [ownerMessageDateTime, setOwnerMessageDateTime] = useState('');
     
@@ -43,8 +46,9 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
 
     const handleAddNewShop = () => {
         if (newShopInput.trim()) {
-            onAddShop(newShopInput.trim());
-            setShopName(newShopInput.trim());
+            const newShop = newShopInput.trim();
+            onAddShop(newShop);
+            setShopName(newShop);
             setNewShopInput('');
             setIsAddingNewShop(false);
         }
@@ -57,7 +61,7 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
         }
 
         const newEntryData: Omit<JournalEntryData, 'id' | 'createdAt' | 'updatedAt'> = {
-            date: selectedDate,
+            date: date,
             shopName,
             content,
             specialNotes: shopSpecialNotes[shopName] || '',
@@ -67,131 +71,124 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
         onSave(newEntryData);
     };
 
+    const getDefaultDateTime = () => {
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        return now.toISOString().slice(0, 16);
+    };
 
     return (
-        <Card className="p-4 sm:p-6 space-y-4 shadow-md border-primary/20">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">새 영업일지 작성</h3>
-                <Button variant="ghost" size="icon" onClick={onCancel} className="text-muted-foreground">
-                    <XCircle />
-                </Button>
-            </div>
-            
+        <div className="p-4 sm:p-6 space-y-3 shadow-sm border rounded-xl bg-card">
+            {/* 날짜, 샵명 선택 */}
             <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex items-center gap-2 flex-1">
-                    <Label htmlFor="journal-date" className="shrink-0">날짜</Label>
+                    <Label className="w-12 text-sm text-muted-foreground">날짜</Label>
                     <Input
-                        id="journal-date"
                         type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="w-full sm:w-auto"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="h-9"
                     />
                 </div>
-
                 <div className="flex items-center gap-2 flex-1">
-                    <Label htmlFor="shop-select" className="shrink-0">샵명</Label>
+                    <Label className="w-12 text-sm text-muted-foreground">샵명</Label>
                     {isAddingNewShop ? (
                         <div className="flex items-center gap-2 w-full">
-                            <Input
-                                value={newShopInput}
-                                onChange={(e) => setNewShopInput(e.target.value)}
-                                placeholder="새 샵명 입력"
-                                className="flex-1"
-                                autoFocus
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddNewShop()}
-                            />
+                            <Input value={newShopInput} onChange={(e) => setNewShopInput(e.target.value)} placeholder="새 샵명" className="h-9" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleAddNewShop()} />
                             <Button size="sm" onClick={handleAddNewShop} disabled={!newShopInput.trim()}>추가</Button>
-                            <Button size="sm" variant="outline" onClick={() => { setIsAddingNewShop(false); setNewShopInput(''); }}>취소</Button>
+                            <Button size="sm" variant="outline" onClick={() => setIsAddingNewShop(false)}>취소</Button>
                         </div>
                     ) : (
                         <Select value={shopName} onValueChange={handleShopSelect}>
-                            <SelectTrigger id="shop-select" className="w-full">
+                            <SelectTrigger className="h-9">
                                 <SelectValue placeholder="샵을 선택하세요" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="add-new" className="text-primary">
-                                    <div className="flex items-center gap-2">
-                                        <Plus className="w-4 h-4" />
-                                        새로 추가
-                                    </div>
-                                </SelectItem>
-                                {managedShops.map((shop) => (
-                                    <SelectItem key={shop} value={shop}>
-                                        {shop}
-                                    </SelectItem>
-                                ))}
+                                <SelectItem value="add-new" className="text-primary flex items-center gap-2"><Plus className="w-4 h-4" /> 새로 추가</SelectItem>
+                                {managedShops.map((shop) => (<SelectItem key={shop} value={shop}>{shop}</SelectItem>))}
                             </SelectContent>
                         </Select>
                     )}
                 </div>
             </div>
 
-            {shopName && shopSpecialNotes[shopName] && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
-                    <Label className="text-amber-800 font-semibold">특이사항</Label>
-                    <div className="text-amber-700 mt-1 text-sm">{shopSpecialNotes[shopName]}</div>
-                </div>
-            )}
-
-            <div>
-                 <Label htmlFor="journal-content">일지 내용</Label>
-                 <Textarea
-                    id="journal-content"
+            {/* 일지 내용 */}
+            <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-gray-50">
+                <Label className="text-sm text-muted-foreground shrink-0">일지 내용</Label>
+                <Input
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    placeholder="영업 활동과 생각을 자유롭게 적어보세요... (팁: * [시간] 내용 형식으로 입력하면 시간대별로 정리됩니다)"
-                    className="mt-1 min-h-[120px]"
+                    placeholder="영업 활동과 생각을 자유롭게 적어보세요..."
+                    className="flex-1 bg-transparent border-0 shadow-none focus-visible:ring-0 h-8"
                 />
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8 shrink-0"><Maximize2 className="size-4" /></Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>일지 내용 작성</DialogTitle>
+                            <DialogDescription>내용을 자세하게 입력해주세요.</DialogDescription>
+                        </DialogHeader>
+                        <Textarea value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[200px]" />
+                        <DialogFooter>
+                            <DialogClose asChild><Button>확인</Button></DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
             
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
-                <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-blue-600" />
-                    <Label className="text-blue-800 text-sm font-semibold">리마인드 설정</Label>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <Input
-                        value={reminderContent}
-                        onChange={(e) => setReminderContent(e.target.value)}
-                        placeholder="나중에 확인할 내용..."
-                        className="flex-1 bg-white text-sm"
-                    />
-                    <Input
-                        type="datetime-local"
-                        value={reminderDateTime}
-                        onChange={(e) => setReminderDateTime(e.target.value)}
-                        className="bg-white text-sm w-full sm:w-auto"
-                    />
-                </div>
+            {/* 리마인드 */}
+            <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-blue-50 border-blue-200">
+                <Bell className="size-4 text-blue-600 shrink-0" />
+                <Label className="text-sm text-blue-800 shrink-0">리마인드</Label>
+                <Input
+                    value={reminderContent}
+                    onChange={(e) => setReminderContent(e.target.value)}
+                    placeholder="나중에 확인할 내용..."
+                    className="flex-1 bg-white border-0 shadow-none focus-visible:ring-0 h-8"
+                />
+                <Input type="datetime-local" value={reminderDateTime} onChange={e => setReminderDateTime(e.target.value)} className="h-8 bg-white w-auto text-xs" />
+                <Dialog>
+                     <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8 shrink-0"><Maximize2 className="size-4" /></Button>
+                    </DialogTrigger>
+                     <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>리마인드 내용</DialogTitle>
+                        </DialogHeader>
+                        <Textarea value={reminderContent} onChange={(e) => setReminderContent(e.target.value)} className="min-h-[120px]" />
+                        <DialogFooter>
+                             <DialogClose asChild><Button>확인</Button></DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+                <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700" onClick={() => alert('리마인드 저장 기능은 준비 중입니다.')}>저장</Button>
             </div>
 
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
-                <div className="flex items-center gap-2">
-                    <Send className="w-4 h-4 text-green-600" />
-                    <Label className="text-green-800 text-sm font-semibold">원장님께 메시지 보내기</Label>
-                </div>
-                 <div className="flex flex-col sm:flex-row gap-2">
-                    <Input
-                        value={ownerMessageContent}
-                        onChange={(e) => setOwnerMessageContent(e.target.value)}
-                        placeholder="원장님께 전달할 메시지..."
-                        className="flex-1 bg-white text-sm"
-                    />
-                     <Input
-                        type="datetime-local"
-                        value={ownerMessageDateTime}
-                        onChange={(e) => setOwnerMessageDateTime(e.target.value)}
-                        className="bg-white text-sm w-full sm:w-auto"
-                    />
-                </div>
-                <p className="text-xs text-muted-foreground">시간을 설정하지 않으면 즉시 발송됩니다.</p>
+            {/* 원장님 메시지 */}
+            <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-green-50 border-green-200">
+                <Send className="size-4 text-green-600 shrink-0" />
+                <Label className="text-sm text-green-800 shrink-0">원장님 메시지</Label>
+                <Input
+                    value={ownerMessageContent}
+                    onChange={(e) => setOwnerMessageContent(e.target.value)}
+                    placeholder="원장님께 보낼 메시지"
+                    className="flex-1 bg-white border-0 shadow-none focus-visible:ring-0 h-8"
+                />
+                 <Input type="datetime-local" value={ownerMessageDateTime} onChange={e => setOwnerMessageDateTime(e.target.value)} className="h-8 bg-white w-auto text-xs" />
+                <Button size="sm" variant="outline" className="h-8 bg-white gap-1.5" onClick={() => alert('예약 발송 기능은 준비 중입니다.')}>
+                    <Clock className="size-3" /> 예약발송
+                </Button>
+                <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700 gap-1.5" onClick={() => alert('즉시 보내기 기능은 준비 중입니다.')}>
+                    <Send className="size-3" /> 즉시보내기
+                </Button>
             </div>
-
-            <div className="flex gap-2 justify-end pt-2">
-                <Button variant="outline" onClick={onCancel}>취소</Button>
+            
+            <div className="flex justify-end gap-2 pt-4">
+                <Button variant="ghost" onClick={onCancel}>취소</Button>
                 <Button onClick={handleSaveClick} disabled={!content.trim() || !shopName}>일지 저장</Button>
             </div>
-        </Card>
+        </div>
     );
 } 

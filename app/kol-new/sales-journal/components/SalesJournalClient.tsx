@@ -7,6 +7,7 @@ import { Plus, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import JournalList from './JournalList';
 import JournalForm from './JournalForm';
+import { Card } from '@/components/ui/card';
 
 
 interface Props {
@@ -133,14 +134,29 @@ export default function SalesJournalClient({
                 )}
 
                 {/* 일지 목록 */}
-                <JournalList 
-                    entries={entries} 
-                    managedShops={managedShops}
-                    shopSpecialNotes={shopSpecialNotes}
-                    onUpdate={handleUpdateJournal}
-                    onDelete={handleDeleteJournal}
-                    onAddShop={handleAddShop}
-                />
+                {entries.length > 0 ? (
+                    <JournalList 
+                        entries={entries} 
+                        managedShops={managedShops}
+                        shopSpecialNotes={shopSpecialNotes}
+                        onUpdate={handleUpdateJournal}
+                        onDelete={handleDeleteJournal}
+                        onAddShop={handleAddShop}
+                    />
+                ) : !showForm ? (
+                    <Card 
+                        className="p-8 text-center cursor-pointer hover:bg-muted/20 transition-colors rounded-lg border-dashed"
+                        onClick={handleAddJournal}
+                    >
+                        <div className="w-16 h-16 mx-auto mb-4 bg-muted/50 rounded-lg flex items-center justify-center">
+                            <Plus className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-muted-foreground font-semibold mb-2">영업일지를 추가해주세요</h3>
+                        <p className="text-sm text-muted-foreground">
+                            상단의 '새 글 추가' 버튼을 사용해서 첫 번째 일지를 등록해보세요
+                        </p>
+                    </Card>
+                ) : null}
             </div>
         </div>
     );

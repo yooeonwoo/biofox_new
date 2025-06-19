@@ -42,12 +42,8 @@ export default function JournalList({
   };
 
   if (entries.length === 0) {
-    return (
-        <div className="text-center text-muted-foreground p-8 border rounded-lg">
-            <p>작성된 영업일지가 없습니다.</p>
-            <p className="text-sm">상단의 '새 글 추가' 버튼을 눌러 첫 일지를 작성해보세요.</p>
-        </div>
-    )
+    // '새 글 추가' 폼이 보이지 않을 때만 빈 상태 메시지를 표시합니다.
+    return null;
   }
 
   return (
