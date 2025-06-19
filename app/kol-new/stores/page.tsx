@@ -412,7 +412,7 @@ export default function StoresPage() {
   };
 
   return (
-    <>
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold">전문점 현황</h1>
       </div>
@@ -648,6 +648,6 @@ export default function StoresPage() {
           });
         });
       `}} />
-    </>
+    </div>
   );
 }

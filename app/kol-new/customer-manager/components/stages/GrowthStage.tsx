@@ -150,32 +150,27 @@ export default function GrowthStage({ value, onChange }: Props) {
           <span className="text-sm font-medium">👥 고객</span>
           <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
-        <div className="space-y-2">
-          {[0, 1].map((row) => (
-            <div 
-              key={row} 
-              className="flex gap-x-1.5 pb-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {Array.from({ length: 5 }).map((_, idx) => {
-                const customerIdx = row * 5 + idx;
-                const progress = current.clinicalProgress?.customers?.[customerIdx] || 0;
-                return (
-                  <div key={customerIdx} className="flex flex-col items-center gap-1 shrink-0">
-                    <span className="text-[10px] text-muted-foreground">{customerIdx + 1}</span>
-                    <div className="flex gap-0.5 border rounded p-0.5 bg-gray-200">
-                      {Array.from({length: 3}).map((_, pIdx) => (
-                        <div key={pIdx} 
-                          className={`w-4 h-4 rounded-sm transition-colors cursor-pointer ${pIdx < progress ? 'bg-primary' : 'bg-white'}`} 
-                          onClick={() => toggleCustomerProgress(customerIdx, pIdx)}
-                          aria-label={`고객 ${customerIdx+1} 단계 ${pIdx+1}`}>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+        <div className="grid grid-cols-10 gap-1 sm:gap-1.5">
+          {Array.from({ length: 10 }).map((_, customerIdx) => {
+            const progress = current.clinicalProgress?.customers?.[customerIdx] || 0;
+            return (
+              <div key={customerIdx} className="flex flex-col items-center gap-1">
+                <span className="text-[10px] text-muted-foreground">{customerIdx + 1}</span>
+                <div className="flex w-full justify-center gap-0.5 border rounded p-0.5 bg-gray-200">
+                  {Array.from({ length: 3 }).map((_, pIdx) => (
+                    <div
+                      key={pIdx}
+                      className={`aspect-square w-full rounded-sm transition-colors cursor-pointer ${
+                        pIdx < progress ? 'bg-primary' : 'bg-white'
+                      }`}
+                      onClick={() => toggleCustomerProgress(customerIdx, pIdx)}
+                      aria-label={`고객 ${customerIdx + 1} 단계 ${pIdx + 1}`}
+                    ></div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -79,7 +79,7 @@ export default function CustomerList({ initialData, kolId }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-0 max-w-4xl mx-auto sm:p-0">
+    <>
       <PageHeader 
         backPath="/kol-new"
         journalPath="/kol-new/sales-journal"
@@ -98,6 +98,6 @@ export default function CustomerList({ initialData, kolId }: Props) {
             />
           ))}
       </div>
-    </div>
+    </>
   );
 } 

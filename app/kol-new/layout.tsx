@@ -42,8 +42,8 @@ export default function KolLayout({ children }: Props) {
       />
       <div className="flex flex-1 overflow-hidden">
         <KolSidebar />
-        <main className="flex-1 overflow-auto bg-muted/10 p-4 md:p-6">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1 overflow-auto bg-muted/10">
+          <div className="mx-auto max-w-7xl h-full">
             {children}
             <KolFooter />
           </div>

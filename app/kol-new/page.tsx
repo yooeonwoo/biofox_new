@@ -169,7 +169,7 @@ export default function KolNewPage() {
   }
 
   return (
-    <>
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{dashboardData?.kol?.shopName || "..."} - {dashboardData?.kol?.name || "..."} KOL</h1>
       </div>
@@ -286,6 +286,6 @@ export default function KolNewPage() {
           </div>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

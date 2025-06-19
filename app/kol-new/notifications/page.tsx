@@ -299,7 +299,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <>
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold">알림</h1>
         <p className="text-sm text-muted-foreground">중요한 알림과 업데이트를 확인하세요.</p>
@@ -483,6 +483,6 @@ export default function NotificationsPage() {
           </DialogClose>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 } 

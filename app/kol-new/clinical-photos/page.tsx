@@ -159,7 +159,7 @@ export default function ClinicalPhotosPage() {
   }
 
   return (
-    <>
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold">임상사진 관리</h1>
         <p className="text-sm text-muted-foreground mt-1">관리 전후 사진을 체계적으로 관리하세요</p>
@@ -226,6 +226,6 @@ export default function ClinicalPhotosPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }
