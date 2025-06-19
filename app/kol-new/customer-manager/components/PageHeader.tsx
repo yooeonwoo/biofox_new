@@ -50,7 +50,7 @@ export default function PageHeader({
 
         {/* 영업일지 버튼 */}
         <Button variant="outline" size="sm" asChild>
-          <Link href={journalPath}>
+          <Link href="/kol-new/sales-journal">
             <BookText className="mr-2 h-4 w-4" />
             영업일지
           </Link>
