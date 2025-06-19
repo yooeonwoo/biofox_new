@@ -113,43 +113,45 @@ export default function JournalCard({
         className="p-4 cursor-pointer bg-card hover:bg-muted/50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-semibold text-gray-800">{shopName}</span>
-            <div className="flex items-center gap-2">
-                {reminder && (
-                    <Badge variant="outline" className="text-blue-600 border-blue-200">
-                        <Bell className="w-3 h-3" />
-                        리마인드
-                    </Badge>
-                )}
-                {ownerMessage && (
-                    <Badge variant="outline" className="text-green-600 border-green-200">
-                        <Send className="w-3 h-3" />
-                        메시지
-                    </Badge>
-                )}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex-1">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <span className="font-semibold text-gray-800 text-base">{shopName}</span>
+                    <span className="text-sm text-muted-foreground">{formatTime(entry.createdAt)}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-2 sm:mt-1">
+                    {reminder && (
+                        <Badge variant="outline" className="text-blue-600 border-blue-200">
+                            <Bell className="w-3 h-3 mr-1" />
+                            리마인드
+                        </Badge>
+                    )}
+                    {ownerMessage && (
+                        <Badge variant="outline" className="text-green-600 border-green-200">
+                            <Send className="w-3 h-3 mr-1" />
+                            메시지
+                        </Badge>
+                    )}
+                     {entry.updatedAt && (
+                        <Badge variant="outline">
+                            수정됨
+                        </Badge>
+                    )}
+                </div>
             </div>
-            {entry.updatedAt && (
-                <span className="text-xs text-muted-foreground">
-                    (수정됨)
-                </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-             <span className="text-sm text-muted-foreground">{formatTime(entry.createdAt)}</span>
-             <Button
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setIsExpanded(!isExpanded);
-                }}
-            >
-                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </Button>
-          </div>
+            <div className="flex items-center gap-2 self-start sm:self-center">
+                 <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsExpanded(!isExpanded);
+                    }}
+                >
+                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
+            </div>
         </div>
       </div>
 
