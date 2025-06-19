@@ -2,21 +2,21 @@
 
 import { useRef, useContext, useEffect } from "react";
 import { InflowStageValue } from "@/lib/types/customer";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "lucide-react";
 import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 import { cn } from "@/lib/utils";
 
-const ALL_SOURCES: Array<{
-  key: "cafe" | "insta" | "intro" | "seminar" | "visit";
-  label: string;
-  hasInputs: boolean;
-}> = [
-  { key: "cafe", label: "카페", hasInputs: false },
-  { key: "insta", label: "인스타", hasInputs: false },
-  { key: "intro", label: "소개", hasInputs: false },
-  { key: "seminar", label: "세미나", hasInputs: true },
-  { key: "visit", label: "방문", hasInputs: true },
+const INTRO_SOURCES: Array<{ key: "cafe" | "insta" | "intro"; label: string; }> = [
+  { key: "cafe", label: "카페" },
+  { key: "insta", label: "인스타" },
+  { key: "intro", label: "소개" },
+];
+
+const BLOCK_SOURCES: Array<{ key: "seminar" | "visit"; label: string; }> = [
+  { key: "seminar", label: "세미나" },
+  { key: "visit", label: "방문" },
 ];
 
 interface Props {
@@ -28,29 +28,33 @@ export default function InflowStageShad({ value, onChange }: Props) {
   const current = value || {};
   const context = useContext(ConnectionLineContext);
   
-  const refs: Record<string, React.RefObject<HTMLDivElement | null>> = {
-    cafe: useRef<HTMLDivElement>(null),
-    insta: useRef<HTMLDivElement>(null),
-    intro: useRef<HTMLDivElement>(null),
+  const buttonRefs = {
+    cafe: useRef<HTMLButtonElement>(null),
+    insta: useRef<HTMLButtonElement>(null),
+    intro: useRef<HTMLButtonElement>(null),
+  };
+  const blockRefs = {
     seminar: useRef<HTMLDivElement>(null),
     visit: useRef<HTMLDivElement>(null),
   };
 
   useEffect(() => {
     if (!context) return;
-    Object.entries(refs).forEach(([key, ref]) => {
+    const allRefs = {...buttonRefs, ...blockRefs};
+    Object.entries(allRefs).forEach(([key, ref]) => {
       context.registerButton(`inflow-${key}`, ref);
     });
     return () => {
       if (!context) return;
-      Object.keys(refs).forEach(key => {
+      Object.keys(allRefs).forEach(key => {
         context.unregisterButton(`inflow-${key}`);
       });
     };
   }, [context]);
 
   const setSource = (source?: InflowStageValue["source"]) => {
-    onChange({ ...current, source });
+    const newSource = current.source === source ? undefined : source;
+    onChange({ ...current, source: newSource });
   };
   
   const setField = (field: keyof Omit<InflowStageValue, 'source'>, val: any) => {
@@ -58,48 +62,51 @@ export default function InflowStageShad({ value, onChange }: Props) {
   };
 
   return (
-    <div className="stage-block flex flex-col gap-3 text-xs bg-card">
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-        {ALL_SOURCES.map(({ key, label, hasInputs }) => {
+    <div className="stage-block flex flex-col gap-4 text-xs bg-card">
+      <div className="flex flex-wrap gap-2">
+        {INTRO_SOURCES.map(({ key, label }) => {
           const isActive = current.source === key;
-          const dateValue = (current as any)[`${key}Date`];
-          const countValue = (current as any)[`${key}Count`];
-
           return (
-            <div 
-              key={key} 
-              ref={refs[key]}
-              className={cn(
-                "flex flex-col p-2 border rounded-lg cursor-pointer transition-colors",
-                isActive ? "bg-blue-50 border-blue-400" : "bg-card hover:bg-muted/50"
-              )}
+            <Button 
+              key={key}
+              ref={buttonRefs[key]}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              className={cn("flex-1", isActive && "bg-blue-600 text-white border-blue-600")}
+              onClick={() => setSource(key)}
             >
-              <label 
-                htmlFor={`radio-inflow-${key}`} 
+              {label}
+            </Button>
+          )
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {BLOCK_SOURCES.map(({ key, label }) => {
+            const isActive = current.source === key;
+            const dateValue = (current as any)[`${key}Date`];
+            const countValue = (current as any)[`${key}Count`];
+
+            return (
+              <div 
+                key={key} 
+                ref={blockRefs[key]}
+                onClick={() => setSource(key)}
                 className={cn(
-                  "w-full flex items-center justify-center text-sm font-semibold rounded-md cursor-pointer h-10",
-                  isActive && "text-blue-800"
+                  "flex flex-col p-3 border rounded-lg cursor-pointer transition-colors gap-3",
+                  isActive ? "bg-blue-50 border-blue-400" : "bg-card hover:bg-muted/50"
                 )}
               >
-                <input
-                    type="radio"
-                    id={`radio-inflow-${key}`}
-                    name="inflow-source"
-                    checked={isActive}
-                    onChange={() => setSource(isActive ? undefined : key)}
-                    className="sr-only"
-                />
-                {label}
-              </label>
-              {hasInputs && (
-                 <div className="flex flex-col gap-2 pt-2 border-t mt-2">
+                <div className={cn("font-semibold text-sm", isActive && "text-blue-800")}>{label}</div>
+                <div className="flex flex-col gap-2">
                     <div className="relative w-full">
                         <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input
                             type="date"
                             className="h-9 pl-8 text-sm bg-white"
-                            value={(current as any)[`${key}Date`] || ""}
-                            onChange={e => setField(`${key}Date` as keyof Omit<InflowStageValue, 'source'>, e.target.value)}
+                            value={dateValue || ""}
+                            onChange={e => setField(`${key}Date` as any, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
                         />
                     </div>
                     <div className="relative w-full">
@@ -107,14 +114,14 @@ export default function InflowStageShad({ value, onChange }: Props) {
                             type="number"
                             placeholder="횟수"
                             className="h-9 text-sm pl-3 bg-white"
-                            value={(current as any)[`${key}Count`] || ""}
-                            onChange={e => setField(`${key}Count` as keyof Omit<InflowStageValue, 'source'>, e.target.value)}
+                            value={countValue || ""}
+                            onChange={e => setField(`${key}Count` as any, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
                         />
                     </div>
                 </div>
-              )}
-            </div>
-          );
+              </div>
+            )
         })}
       </div>
     </div>
