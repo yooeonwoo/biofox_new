@@ -44,15 +44,19 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
               htmlFor={`radio-delivery-${key}`} 
               className="flex flex-col p-3 border rounded-lg cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400"
             >
-              <input
-                type="radio"
-                id={`radio-delivery-${key}`}
-                name="delivery-type"
-                checked={isActive}
-                onChange={() => setType(isActive ? undefined : key)}
-                className="sr-only"
-              />
-              <span className="font-semibold text-sm mb-2">{label}</span>
+              <div 
+                className="w-full h-10 flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 mb-3"
+              >
+                  <input
+                    type="radio"
+                    id={`radio-delivery-${key}`}
+                    name="delivery-type"
+                    checked={isActive}
+                    onChange={() => setType(isActive ? undefined : key)}
+                    className="peer sr-only"
+                  />
+                  <span className="w-full text-center">{label}</span>
+              </div>
 
               {key === 'ship' && (
                 <div className="flex flex-col gap-2 mt-auto">

@@ -53,7 +53,7 @@ export default function ContractStageShad({ value, onChange }: Props) {
             />
             <label 
                 htmlFor={`radio-${key}`}
-                className="w-full h-full flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary"
+                className="w-full h-full flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600"
             >
                 {label}
             </label>
