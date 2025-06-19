@@ -18,9 +18,6 @@ import SalesChart from "../../components/sales-chart";
 import StoreRankingTable from "../../components/store-ranking-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import KolHeader from "../components/layout/KolHeader";
-import KolSidebar from "../components/layout/KolSidebar";
-import KolFooter from "../components/layout/KolFooter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DialogTitle } from "@/components/ui/dialog";
 import KolMobileMenu from "../components/layout/KolMobileMenu";
@@ -179,186 +176,142 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
   }
 
   return (
-    <div className="flex h-screen flex-col">
-      {/* Header */}
-      <KolHeader 
-        userName={dashboardData?.kol?.name}
-        shopName={dashboardData?.kol?.shopName}
-        userImage={user?.imageUrl}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-        onSignOut={handleSignOut}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Desktop Only */}
-        <KolSidebar />
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto bg-muted/10 p-4 md:p-6">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-6">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
-                {dashboardData?.kol?.shopName || "..."} - {dashboardData?.kol?.name || "..."} KOL
-                {initialData && (
-                  <span className="ml-2 text-sm text-green-600 bg-green-100 px-2 py-1 rounded">
-                    서버 렌더링
-                  </span>
-                )}
-              </h1>
-            </div>
-
-            {/* 상단 메트릭 카드 영역 */}
-            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* 카드 1: 매출 & 수당 */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
-                      <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 매출:</span>
-                      <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
-                        {dashboardData?.sales?.currentMonth !== undefined 
-                          ? formatToManUnit(dashboardData.sales.currentMonth)
-                          : "0원"}
-                      </span>
-                    </div>
-                    <div className="rounded-full bg-yellow-100 p-1 sm:p-1.5 text-yellow-700 flex-shrink-0">
-                       <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </div>
-                  </div>
-                  
-                  <div className="mt-1 invisible h-[21px] sm:h-[24px]">
-                    <div className="flex items-center text-[10px] sm:text-xs">
-                      <span>&nbsp;</span>
-                    </div>
-                  </div>
-                  
-                  <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
-                      <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 수당:</span>
-                      <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
-                        {dashboardData?.allowance?.currentMonth !== undefined 
-                          ? formatToManUnit(dashboardData.allowance.currentMonth)
-                          : "0원"}
-                      </span>
-                    </div>
-                    <div className="rounded-full bg-purple-100 p-1 sm:p-1.5 text-purple-700 flex-shrink-0">
-                       <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </div>
-                  </div>
-                  {dashboardData?.allowance?.growth !== undefined && (
-                    <div className={`mt-1 flex items-center text-[10px] sm:text-xs ${dashboardData.allowance.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {dashboardData.allowance.growth >= 0 ? (
-                        <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                      ) : (
-                        <TrendingDown className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                      )}
-                      <span>전월 대비 {Math.abs(dashboardData.allowance.growth) >= 10000 
-                        ? formatToManUnit(Math.abs(dashboardData.allowance.growth)) 
-                        : Math.abs(dashboardData.allowance.growth).toLocaleString() + '원'} {dashboardData.allowance.growth >= 0 ? '증가' : '감소'}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* 카드 2: 현황 & 주문 */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                     <div className="flex items-baseline gap-2">
-                      <span className="text-sm sm:text-lg md:text-xl font-bold">전문점 현황:</span>
-                      <span className="text-sm sm:text-lg md:text-xl font-bold">
-                         {dashboardData?.shops?.total || 0}곳
-                      </span>
-                    </div>
-                    <div className="rounded-full bg-blue-100 p-1 sm:p-1.5 text-blue-700">
-                       <Store className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </div>
-                  </div>
-                  <div className="mt-1 text-[10px] sm:text-xs text-orange-500">
-                    최근 전문점 계약 정보를 확인 중입니다.
-                  </div>
-                  
-                  <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
-
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-baseline gap-2">
-                      <span className="text-sm sm:text-lg md:text-xl font-bold">당월 주문 전문점:</span>
-                      <span className="text-sm sm:text-lg md:text-xl font-bold">
-                        {dashboardData?.shops?.ordering || 0}곳
-                      </span>
-                    </div>
-                    <div className="rounded-full bg-green-100 p-1 sm:p-1.5 text-green-700">
-                       <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </div>
-                  </div>
-                  <div className="mt-1 text-[10px] sm:text-xs text-red-500">
-                    {dashboardData?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* 전문점 매출 순위 영역 */}
-            <div className="mb-6">
-              {/* 전문점 매출 순위 카드 */}
-              <Card className="flex flex-col h-full"> 
-                <CardContent className="flex flex-1 flex-col p-0 overflow-auto">
-                  <StoreRankingTable shops={shopsData} />
-                </CardContent>
-                <CardFooter className="mt-auto border-t px-6 py-3">
-                  <div className="ml-auto">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href="/kol-new/stores"> 
-                        모든 전문점 보기
-                        <ArrowRight className="ml-1 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            </div>
-
-            {/* Chart */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="text-sm sm:text-base md:text-lg">나의 월별 수당</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <SalesChart kolId={dashboardData?.kol?.id} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Footer */}
-            <KolFooter />
-          </div>
-        </main>
+    <>
+      <div className="mb-6">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
+          {dashboardData?.kol?.shopName || "..."} - {dashboardData?.kol?.name || "..."} KOL
+          {initialData && (
+            <span className="ml-2 text-sm text-green-600 bg-green-100 px-2 py-1 rounded">
+              서버 렌더링
+            </span>
+          )}
+        </h1>
       </div>
 
-      {/* Mobile Menu */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetTrigger className="block sm:hidden">
-          <div className="flex items-center justify-center p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
-            </svg>
+      {/* 상단 메트릭 카드 영역 */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* 카드 1: 매출 & 수당 */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
+                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 매출:</span>
+                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+                  {dashboardData?.sales?.currentMonth !== undefined 
+                    ? formatToManUnit(dashboardData.sales.currentMonth)
+                    : "0원"}
+                </span>
+              </div>
+              <div className="rounded-full bg-yellow-100 p-1 sm:p-1.5 text-yellow-700 flex-shrink-0">
+                 <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+              </div>
+            </div>
+            
+            <div className="mt-1 invisible h-[21px] sm:h-[24px]">
+              <div className="flex items-center text-[10px] sm:text-xs">
+                <span>&nbsp;</span>
+              </div>
+            </div>
+            
+            <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
+
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
+                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 수당:</span>
+                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
+                  {dashboardData?.allowance?.currentMonth !== undefined 
+                    ? formatToManUnit(dashboardData.allowance.currentMonth)
+                    : "0원"}
+                </span>
+              </div>
+              <div className="rounded-full bg-purple-100 p-1 sm:p-1.5 text-purple-700 flex-shrink-0">
+                 <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+              </div>
+            </div>
+            {dashboardData?.allowance?.growth !== undefined && (
+              <div className={`mt-1 flex items-center text-[10px] sm:text-xs ${dashboardData.allowance.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {dashboardData.allowance.growth >= 0 ? (
+                  <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                ) : (
+                  <TrendingDown className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                )}
+                <span>전월 대비 {Math.abs(dashboardData.allowance.growth) >= 10000 
+                  ? formatToManUnit(Math.abs(dashboardData.allowance.growth)) 
+                  : Math.abs(dashboardData.allowance.growth).toLocaleString() + '원'} {dashboardData.allowance.growth >= 0 ? '증가' : '감소'}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 카드 2: 현황 & 주문 */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+               <div className="flex items-baseline gap-2">
+                <span className="text-sm sm:text-lg md:text-xl font-bold">전문점 현황:</span>
+                <span className="text-sm sm:text-lg md:text-xl font-bold">
+                   {dashboardData?.shops?.total || 0}곳
+                </span>
+              </div>
+              <div className="rounded-full bg-blue-100 p-1 sm:p-1.5 text-blue-700">
+                 <Store className="h-3 w-3 sm:h-4 sm:w-4" />
+              </div>
+            </div>
+            <div className="mt-1 text-[10px] sm:text-xs text-orange-500">
+              최근 전문점 계약 정보를 확인 중입니다.
+            </div>
+            
+            <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
+
+             <div className="flex items-center justify-between">
+               <div className="flex items-baseline gap-2">
+                <span className="text-sm sm:text-lg md:text-xl font-bold">당월 주문 전문점:</span>
+                <span className="text-sm sm:text-lg md:text-xl font-bold">
+                  {dashboardData?.shops?.ordering || 0}곳
+                </span>
+              </div>
+              <div className="rounded-full bg-green-100 p-1 sm:p-1.5 text-green-700">
+                 <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
+              </div>
+            </div>
+            <div className="mt-1 text-[10px] sm:text-xs text-red-500">
+              {dashboardData?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 전문점 매출 순위 영역 */}
+      <div className="mb-6">
+        {/* 전문점 매출 순위 카드 */}
+        <Card className="flex flex-col h-full"> 
+          <CardContent className="flex flex-1 flex-col p-0 overflow-auto">
+            <StoreRankingTable shops={shopsData} />
+          </CardContent>
+          <CardFooter className="mt-auto border-t px-6 py-3">
+            <div className="ml-auto">
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/kol-new/stores"> 
+                  모든 전문점 보기
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+
+      {/* Chart */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-sm sm:text-base md:text-lg">나의 월별 수당</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <SalesChart kolId={dashboardData?.kol?.id} />
           </div>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[250px] sm:w-[300px]">
-          <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
-          <KolMobileMenu 
-            userName={dashboardData?.kol?.name} 
-            shopName={dashboardData?.kol?.shopName} 
-            userImage={user?.imageUrl} 
-            setMobileMenuOpen={setMobileMenuOpen} 
-            onSignOut={handleSignOut}
-          />
-        </SheetContent>
-      </Sheet>
-    </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }

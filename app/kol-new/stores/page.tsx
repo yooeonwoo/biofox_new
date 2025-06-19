@@ -17,14 +17,6 @@ import {
   CrownIcon
 } from "lucide-react";
 
-// 레이아웃 컴포넌트
-import KolHeader from "../../components/layout/KolHeader";
-import KolSidebar from "../../components/layout/KolSidebar";
-import KolFooter from "../../components/layout/KolFooter";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DialogTitle, Dialog, DialogContent, DialogHeader, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import KolMobileMenu from "../../components/layout/KolMobileMenu";
-
 // UI 컴포넌트
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +30,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -419,250 +412,206 @@ export default function StoresPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col">
-      {/* Header */}
-      <KolHeader 
-        userName={kolInfo?.name}
-        shopName={kolInfo?.shopName}
-        userImage={user?.imageUrl}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-        onSignOut={handleSignOut}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Desktop Only */}
-        <KolSidebar />
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto bg-muted/10 p-4 md:p-6">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-6">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">전문점 현황</h1>
-            </div>
-
-            {/* 차트 영역 */}
-            <div className="mb-6 grid grid-cols-1 gap-4">
-              {/* 전문점별 순위 */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex flex-row items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <CardTitle className="text-sm sm:text-base md:text-lg whitespace-normal">
-                        <span className="hidden sm:inline">전문점별 순위</span>
-                        <span className="sm:hidden">순위</span>
-                      </CardTitle>
-                      <CardDescription className="whitespace-normal text-xs sm:text-sm">
-                        <span className="hidden sm:inline">당월 매출액 기준 전문점 순위</span>
-                        <span className="sm:hidden">당월 매출액 기준</span>
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[400px] overflow-x-auto custom-scrollbar">
-                    {currentMonthBarData.length === 0 ? (
-                      <div className="flex h-full items-center justify-center text-muted-foreground">
-                        전문점 매출 데이터가 없습니다.
-                      </div>
-                    ) : (
-                      <div className="h-full pl-0">
-                        <ResponsiveContainer width={Math.max(800, currentMonthBarData.length * 120)} height="100%">
-                          <BarChart
-                            data={currentMonthBarData}
-                            margin={{ top: 30, right: 30, left: 0, bottom: 40 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis 
-                              dataKey="name" 
-                              axisLine={false} 
-                              tickLine={false}
-                              height={50}
-                              interval={0}
-                              tick={(props) => {
-                                const { x, y, payload } = props;
-                                return (
-                                  <g transform={`translate(${x},${y})`}>
-                                    <text 
-                                      x={0} 
-                                      y={0} 
-                                      dy={16} 
-                                      textAnchor="end" 
-                                      transform="rotate(-90)"
-                                      fill="#555"
-                                      fontSize={13}
-                                      fontFamily="'SF Compact Text', system-ui, sans-serif"
-                                      fontWeight="500"
-                                    >
-                                      {payload.value}
-                                    </text>
-                                  </g>
-                                );
-                              }}
-                            />
-                            <YAxis 
-                              tickFormatter={(value) => formatToManUnit(value).replace('원', '')} 
-                              axisLine={false}
-                              tickLine={false}
-                              tick={{
-                                fill: "#555",
-                                fontSize: 13,
-                                fontFamily: "'SF Compact Text', system-ui, sans-serif",
-                                fontWeight: "500"
-                              }}
-                            />
-                            <Tooltip 
-                              formatter={(value) => formatToManUnit(value as number)} 
-                              cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-                              contentStyle={{
-                                borderRadius: '8px',
-                                fontFamily: "'SF Compact Text', system-ui, sans-serif",
-                                fontSize: '13px'
-                              }}
-                            />
-                            <Bar 
-                              dataKey="매출" 
-                              fill="#8884d8" 
-                              radius={[4, 4, 0, 0]}
-                              maxBarSize={70}
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* 전문점 통계 정보 */}
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex flex-col">
-                    <div className="text-sm text-gray-500 mb-1">전체 전문점</div>
-                    <div className="flex items-baseline">
-                      <span className="text-2xl font-bold">{shopStats.totalShopsCount}</span>
-                      <span className="ml-1 text-sm text-gray-500">개</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex flex-col">
-                    <div className="text-sm text-gray-500 mb-1">활성 전문점</div>
-                    <div className="flex items-baseline">
-                      <span className="text-2xl font-bold">{shopStats.activeShopsCount}</span>
-                      <span className="ml-1 text-sm text-gray-500">개</span>
-                      <span className="ml-2 text-xs text-gray-400">(당월 매출 기준)</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* 전문점 목록 테이블 */}
-            <Card className="mb-6">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm sm:text-base md:text-lg">전문점 목록</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="rounded-lg p-0 overflow-hidden">
-                  <div className="overflow-x-auto overflow-y-auto max-h-[500px] border border-gray-200">
-                    <Table className="border-collapse w-full relative">
-                      <TableHeader className="sticky top-0 z-20 bg-gray-50 shadow-sm">
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="w-[40px] sm:w-[60px] text-center border-b border-gray-200">순위</TableHead>
-                          <TableHead className="w-[30px] border-b border-gray-200"></TableHead>
-                          <TableHead className="w-[30%] border-b border-gray-200">전문점명</TableHead>
-                          <TableHead className="w-[30%] text-center border-b border-gray-200">당월 매출</TableHead>
-                          <TableHead className="w-[30%] text-center border-b border-gray-200">당월 수당</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredShops.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="h-16 text-center border-b border-gray-200">
-                              전문점 데이터가 없습니다.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredShops.map((shop, index) => (
-                            <TableRow
-                              key={shop.id}
-                              className={getRowColorClass(index + 1, shop.sales.total, index)}
-                              onClick={() => handleShopClick(shop)}
-                            >
-                              <TableCell className="text-center font-medium border-b border-gray-200">
-                                <div className="flex items-center justify-center">
-                                  {index < 3 && shop.sales.total > 0 ? (
-                                    <div className={`
-                                      flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold
-                                      ${index === 0 ? 'bg-yellow-100 text-yellow-800' : 
-                                        index === 1 ? 'bg-blue-100 text-blue-800' : 
-                                        'bg-orange-100 text-orange-800'}
-                                    `}>
-                                      {index + 1}
-                                    </div>
-                                  ) : (
-                                    <span className="font-bold text-gray-500">{index + 1}</span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="w-[30px] text-center border-b border-gray-200">
-                                {shop.is_owner_kol && (
-                                  <CrownIcon className="h-4 w-4 text-yellow-500" />
-                                )}
-                              </TableCell>
-                              <TableCell className="border-b border-gray-200">
-                                {shop.shop_name}
-                              </TableCell>
-                              <TableCell className="text-center border-b border-gray-200">
-                                <span className="font-medium">{formatToManUnit(shop.sales.total)}</span>
-                              </TableCell>
-                              <TableCell className="text-center border-b border-gray-200">
-                                {formatToManUnit(shop.sales.commission || 0)}
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-600 mt-2 ml-1">
-                  총 {filteredShops.length}개의 전문점
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Footer */}
-            <KolFooter />
-          </div>
-        </main>
+    <>
+      <div className="mb-6">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold">전문점 현황</h1>
       </div>
 
-      {/* Mobile Menu */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetTrigger className="block sm:hidden">
-          <div className="flex items-center justify-center p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
-            </svg>
+      {/* 차트 영역 */}
+      <div className="mb-6 grid grid-cols-1 gap-4">
+        {/* 전문점별 순위 */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex flex-row items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle className="text-sm sm:text-base md:text-lg whitespace-normal">
+                  <span className="hidden sm:inline">전문점별 순위</span>
+                  <span className="sm:hidden">순위</span>
+                </CardTitle>
+                <CardDescription className="whitespace-normal text-xs sm:text-sm">
+                  <span className="hidden sm:inline">당월 매출액 기준 전문점 순위</span>
+                  <span className="sm:hidden">당월 매출액 기준</span>
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[400px] overflow-x-auto custom-scrollbar">
+              {currentMonthBarData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  전문점 매출 데이터가 없습니다.
+                </div>
+              ) : (
+                <div className="h-full pl-0">
+                  <ResponsiveContainer width={Math.max(800, currentMonthBarData.length * 120)} height="100%">
+                    <BarChart
+                      data={currentMonthBarData}
+                      margin={{ top: 30, right: 30, left: 0, bottom: 40 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false}
+                        height={50}
+                        interval={0}
+                        tick={(props) => {
+                          const { x, y, payload } = props;
+                          return (
+                            <g transform={`translate(${x},${y})`}>
+                              <text 
+                                x={0} 
+                                y={0} 
+                                dy={16} 
+                                textAnchor="end" 
+                                transform="rotate(-90)"
+                                fill="#555"
+                                fontSize={13}
+                                fontFamily="'SF Compact Text', system-ui, sans-serif"
+                                fontWeight="500"
+                              >
+                                {payload.value}
+                              </text>
+                            </g>
+                          );
+                        }}
+                      />
+                      <YAxis 
+                        tickFormatter={(value) => formatToManUnit(value).replace('원', '')} 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fill: "#555",
+                          fontSize: 13,
+                          fontFamily: "'SF Compact Text', system-ui, sans-serif",
+                          fontWeight: "500"
+                        }}
+                      />
+                      <Tooltip 
+                        formatter={(value) => formatToManUnit(value as number)} 
+                        cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                        contentStyle={{
+                          borderRadius: '8px',
+                          fontFamily: "'SF Compact Text', system-ui, sans-serif",
+                          fontSize: '13px'
+                        }}
+                      />
+                      <Bar 
+                        dataKey="매출" 
+                        fill="#8884d8" 
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={70}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 전문점 통계 정보 */}
+      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col">
+              <div className="text-sm text-gray-500 mb-1">전체 전문점</div>
+              <div className="flex items-baseline">
+                <span className="text-2xl font-bold">{shopStats.totalShopsCount}</span>
+                <span className="ml-1 text-sm text-gray-500">개</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col">
+              <div className="text-sm text-gray-500 mb-1">활성 전문점</div>
+              <div className="flex items-baseline">
+                <span className="text-2xl font-bold">{shopStats.activeShopsCount}</span>
+                <span className="ml-1 text-sm text-gray-500">개</span>
+                <span className="ml-2 text-xs text-gray-400">(당월 매출 기준)</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 전문점 목록 테이블 */}
+      <Card className="mb-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm sm:text-base md:text-lg">전문점 목록</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="rounded-lg p-0 overflow-hidden">
+            <div className="overflow-x-auto overflow-y-auto max-h-[500px] border border-gray-200">
+              <Table className="border-collapse w-full relative">
+                <TableHeader className="sticky top-0 z-20 bg-gray-50 shadow-sm">
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="w-[40px] sm:w-[60px] text-center border-b border-gray-200">순위</TableHead>
+                    <TableHead className="w-[30px] border-b border-gray-200"></TableHead>
+                    <TableHead className="w-[30%] border-b border-gray-200">전문점명</TableHead>
+                    <TableHead className="w-[30%] text-center border-b border-gray-200">당월 매출</TableHead>
+                    <TableHead className="w-[30%] text-center border-b border-gray-200">당월 수당</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredShops.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-16 text-center border-b border-gray-200">
+                        전문점 데이터가 없습니다.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredShops.map((shop, index) => (
+                      <TableRow
+                        key={shop.id}
+                        className={getRowColorClass(index + 1, shop.sales.total, index)}
+                        onClick={() => handleShopClick(shop)}
+                      >
+                        <TableCell className="text-center font-medium border-b border-gray-200">
+                          <div className="flex items-center justify-center">
+                            {index < 3 && shop.sales.total > 0 ? (
+                              <div className={`
+                                flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold
+                                ${index === 0 ? 'bg-yellow-100 text-yellow-800' : 
+                                  index === 1 ? 'bg-blue-100 text-blue-800' : 
+                                  'bg-orange-100 text-orange-800'}
+                              `}>
+                                {index + 1}
+                              </div>
+                            ) : (
+                              <span className="font-bold text-gray-500">{index + 1}</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="w-[30px] text-center border-b border-gray-200">
+                          {shop.is_owner_kol && (
+                            <CrownIcon className="h-4 w-4 text-yellow-500" />
+                          )}
+                        </TableCell>
+                        <TableCell className="border-b border-gray-200">
+                          {shop.shop_name}
+                        </TableCell>
+                        <TableCell className="text-center border-b border-gray-200">
+                          <span className="font-medium">{formatToManUnit(shop.sales.total)}</span>
+                        </TableCell>
+                        <TableCell className="text-center border-b border-gray-200">
+                          {formatToManUnit(shop.sales.commission || 0)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[250px] sm:w-[300px]">
-          <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
-          <KolMobileMenu 
-            userName={kolInfo?.name} 
-            shopName={kolInfo?.shopName} 
-            userImage={user?.imageUrl} 
-            setMobileMenuOpen={setMobileMenuOpen} 
-            onSignOut={handleSignOut}
-          />
-        </SheetContent>
-      </Sheet>
+          <div className="text-sm text-gray-600 mt-2 ml-1">
+            총 {filteredShops.length}개의 전문점
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 상점 상세 정보 모달 렌더링 */}
       <ShopDetailModal />
@@ -699,6 +648,6 @@ export default function StoresPage() {
           });
         });
       `}} />
-    </div>
+    </>
   );
 }
