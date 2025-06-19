@@ -47,12 +47,15 @@ export function useUpdateCustomer() {
 
   return useMutation({
     mutationFn: async ({ customerId, progress }: UpdateCustomerInput) => {
+      // Deep-copy and clean stageData to remove undefined values
+      const cleanedStageData = JSON.parse(JSON.stringify(progress.stageData || {}));
+      
       const { error } = await supabaseBrowser()
         .from("customer_progress")
         .upsert(
           {
             customer_id: customerId,
-            stage_data: progress.stageData,
+            stage_data: cleanedStageData,
             achievements: progress.achievements,
           },
           { onConflict: "customer_id" }
