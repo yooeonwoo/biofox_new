@@ -1,121 +1,130 @@
-import React, { useRef } from "react";
+"use client";
+
+import { useRef, useContext, useEffect } from "react";
+import { InflowStageValue } from "@/lib/types/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StageData } from "@/lib/types/customer";
+import { Calendar } from "lucide-react";
+import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
+import { cn } from "@/lib/utils";
 
-export interface InflowStageValue {
-  source?: "cafe" | "insta" | "intro" | "seminar" | "visit";
-  seminarDate?: string;
-  seminarCount?: string;
-  visitDate?: string;
-  visitCount?: string;
-  memo?: string;
-}
+const INTRO_SOURCES: Array<{ key: "cafe" | "insta" | "intro"; label: string; }> = [
+  { key: "cafe", label: "카페" },
+  { key: "insta", label: "인스타" },
+  { key: "intro", label: "소개" },
+];
+
+const BLOCK_SOURCES: Array<{ key: "seminar" | "visit"; label: string; }> = [
+  { key: "seminar", label: "세미나" },
+  { key: "visit", label: "방문" },
+];
 
 interface Props {
   value: InflowStageValue | undefined;
   onChange: (val: InflowStageValue | undefined) => void;
 }
 
-// 버튼 key와 라벨 매핑
-const BTN: Record<string, { label: string; value: InflowStageValue["source"] }> = {
-  cafe: { label: "카페", value: "cafe" },
-  insta: { label: "인스타", value: "insta" },
-  intro: { label: "소개", value: "intro" },
-  seminar: { label: "세미나", value: "seminar" },
-  visit: { label: "방문", value: "visit" },
-};
-
 export default function InflowStage({ value, onChange }: Props) {
   const current = value || {};
+  const context = useContext(ConnectionLineContext);
+  
+  const buttonRefs = {
+    cafe: useRef<HTMLButtonElement>(null),
+    insta: useRef<HTMLButtonElement>(null),
+    intro: useRef<HTMLButtonElement>(null),
+  };
+  const blockRefs = {
+    seminar: useRef<HTMLDivElement>(null),
+    visit: useRef<HTMLDivElement>(null),
+  };
 
-  const setSource = (src: InflowStageValue["source"] | undefined) => {
-    if (!src) {
-      onChange(undefined);
-    } else {
-      onChange({ ...current, source: src });
-    }
+  useEffect(() => {
+    if (!context) return;
+    const allRefs = {...buttonRefs, ...blockRefs};
+    Object.entries(allRefs).forEach(([key, ref]) => {
+      context.registerButton(`inflow-${key}`, ref);
+    });
+    return () => {
+      if (!context) return;
+      Object.keys(allRefs).forEach(key => {
+        context.unregisterButton(`inflow-${key}`);
+      });
+    };
+  }, [context]);
+
+  const setSource = (source?: InflowStageValue["source"]) => {
+    const newSource = current.source === source ? undefined : source;
+    onChange({ ...current, source: newSource });
+  };
+  
+  const setField = (field: keyof Omit<InflowStageValue, 'source'>, val: any) => {
+    onChange({ ...current, [field]: val });
   };
 
   return (
-    <div className="stage-block flex flex-col gap-2 border border-gray-200 rounded-md p-3 text-xs">
-      {/* 상단 토글 버튼들 */}
-      <div className="flex gap-2 mb-2">
-        {(["cafe", "insta", "intro"] as const).map((k) => (
-          <Button
-            key={k}
-            variant={current.source === BTN[k].value ? "default" : "outline"}
-            size="sm"
-            className="flex-1 text-xs h-8"
-            onClick={() => setSource(current.source === BTN[k].value ? undefined : BTN[k].value)}
-          >
-            {BTN[k].label}
-          </Button>
-        ))}
+    <fieldset className="stage-block flex flex-col gap-4 text-xs bg-card">
+      <legend className="sr-only">유입 경로 선택</legend>
+      <div className="flex flex-wrap gap-2">
+        {INTRO_SOURCES.map(({ key, label }) => {
+          const isActive = current.source === key;
+          return (
+            <Button 
+              key={key}
+              ref={buttonRefs[key]}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              className={cn("flex-1", isActive && "bg-blue-600 text-white border-blue-600")}
+              onClick={() => setSource(key)}
+            >
+              {label}
+            </Button>
+          )
+        })}
       </div>
 
-      {/* 세미나 & 방문 2열 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* 세미나 */}
-        <div className="flex gap-2">
-          <Button
-            variant={current.source === "seminar" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-16 w-16"
-            onClick={() => setSource(current.source === "seminar" ? undefined : "seminar")}
-          >
-            세미나
-          </Button>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1">
-              <span className="text-xs">날짜:</span>
-              <Input
-                className="text-xs h-7 flex-1 min-w-0"
-                value={current.seminarDate || ""}
-                onChange={(e) => onChange({ ...current, seminarDate: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs">횟수:</span>
-              <Input
-                className="text-xs h-7 flex-1 min-w-0"
-                value={current.seminarCount || ""}
-                onChange={(e) => onChange({ ...current, seminarCount: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {BLOCK_SOURCES.map(({ key, label }) => {
+            const isActive = current.source === key;
+            const dateValue = (current as any)[`${key}Date`];
+            const countValue = (current as any)[`${key}Count`];
 
-        {/* 방문 */}
-        <div className="flex gap-2">
-          <Button
-            variant={current.source === "visit" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-16 w-16"
-            onClick={() => setSource(current.source === "visit" ? undefined : "visit")}
-          >
-            방문
-          </Button>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1">
-              <span className="text-xs">날짜:</span>
-              <Input
-                className="text-xs h-7 flex-1 min-w-0"
-                value={current.visitDate || ""}
-                onChange={(e) => onChange({ ...current, visitDate: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs">횟수:</span>
-              <Input
-                className="text-xs h-7 flex-1 min-w-0"
-                value={current.visitCount || ""}
-                onChange={(e) => onChange({ ...current, visitCount: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
+            return (
+              <div 
+                key={key} 
+                ref={blockRefs[key]}
+                onClick={() => setSource(key)}
+                className={cn(
+                  "flex flex-col p-3 border rounded-lg cursor-pointer transition-colors gap-3",
+                  isActive ? "bg-blue-50 border-blue-400" : "bg-card hover:bg-muted/50"
+                )}
+              >
+                <div className={cn("font-semibold text-sm", isActive && "text-blue-800")}>{label}</div>
+                <div className="flex flex-col gap-2">
+                    <div className="relative w-full">
+                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                        <Input
+                            type="date"
+                            className="h-9 pl-8 text-sm bg-white"
+                            value={dateValue || ""}
+                            onChange={e => setField(`${key}Date` as any, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                    <div className="relative w-full">
+                          <Input
+                            type="number"
+                            placeholder="횟수"
+                            className="h-9 text-sm pl-3 bg-white"
+                            value={countValue || ""}
+                            onChange={e => setField(`${key}Count` as any, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                </div>
+              </div>
+            )
+        })}
       </div>
-    </div>
+    </fieldset>
   );
 } 

@@ -1,14 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { supabaseServer } from "@/lib/supabase-client";
-// 기본(old) 리스트
-import CustomerListLegacy from "./components/CustomerList";
-// shad 스타일 신규 리스트
-import { CustomerListShad } from "../customer-manager-shad/components";
+import CustomerList from "./components/CustomerList";
 
 export const revalidate = 0; // 항상 최신 데이터를 가져오기 위해 ISR 끔
-
-const USE_SHAD = process.env.NEXT_PUBLIC_USE_SHAD_CUSTOMER === "true";
 
 export default async function CustomerManagerPage() {
   const { userId } = await auth();
@@ -80,11 +75,7 @@ export default async function CustomerManagerPage() {
 
   return (
     <div className="container mx-auto">
-      {USE_SHAD ? (
-        <CustomerListShad initialData={customers ?? []} kolId={kolId} />
-      ) : (
-        <CustomerListLegacy initialData={customers ?? []} kolId={kolId} />
-      )}
+      <CustomerList initialData={customers ?? []} kolId={kolId} />
     </div>
   );
 } 

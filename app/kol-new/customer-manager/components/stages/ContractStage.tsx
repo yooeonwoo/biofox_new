@@ -1,123 +1,137 @@
-import React from "react";
+"use client";
+
+import { useRef, useMemo, useContext, useEffect } from "react";
+import { ContractStageValue } from "@/lib/types/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DollarSign, Calendar, Eraser } from "lucide-react";
+import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 
-export interface ContractStageValue {
-  type?: "buy" | "deposit" | "reject";
-  buyDate?: string;
-  buyAmount?: string;
-  depositDate?: string;
-  depositAmount?: string;
-  rejectDate?: string;
-  rejectReason?: string;
-  rejectAd?: boolean;
-  memo?: string;
-}
+const SECTIONS_CONFIG: Array<{
+  key: "purchase" | "deposit" | "reject";
+  label: string;
+}> = [
+  { key: "purchase", label: "구매" },
+  { key: "deposit", label: "계약금" },
+  { key: "reject", label: "거절" },
+];
 
 interface Props {
   value: ContractStageValue | undefined;
   onChange: (val: ContractStageValue | undefined) => void;
 }
 
-const BTN: Record<string, { label: string; value: ContractStageValue["type"] }> = {
-  buy: { label: "구매", value: "buy" },
-  deposit: { label: "계약금", value: "deposit" },
-  reject: { label: "거절", value: "reject" },
-};
-
 export default function ContractStage({ value, onChange }: Props) {
   const current = value || {};
+  const context = useContext(ConnectionLineContext);
+  
+  const refs = {
+    purchase: useRef<HTMLDivElement>(null),
+    deposit: useRef<HTMLDivElement>(null),
+    reject: useRef<HTMLDivElement>(null),
+  };
 
-  const setType = (tp: ContractStageValue["type"] | undefined) => {
-    if (!tp) onChange(undefined);
-    else onChange({ ...current, type: tp });
+  useEffect(() => {
+    if (context) {
+      Object.entries(refs).forEach(([key, ref]) => {
+        context.registerButton(`contract-${key}`, ref);
+      });
+    }
+    return () => {
+      if (context) {
+        Object.keys(refs).forEach(key => {
+          context.unregisterButton(`contract-${key}`);
+        });
+      }
+    };
+  }, [context]);
+
+  const setField = (field: keyof ContractStageValue, val: any) => {
+    onChange({ ...current, [field]: val });
+  };
+
+  const renderSection = (section: { key: "purchase" | "deposit" | "reject"; label: string }) => {
+    const { key, label } = section;
+    const dateValue = (current as any)[`${key}Date`];
+    const amountValue = (current as any)[`${key}Amount`];
+    const reasonValue = (current as any)[`${key}Reason`];
+    const adValue = (current as any)[`${key}Ad`];
+    
+    const isActive = current.type === key;
+
+    const setType = () => {
+        onChange({ ...current, type: isActive ? undefined : key });
+    }
+
+    return (
+      <div key={key} ref={refs[key as keyof typeof refs]} className="flex flex-col md:flex-row items-stretch gap-3 p-3 rounded-lg border bg-card has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+        <div className="w-full md:w-24 shrink-0">
+            <input 
+                type="radio" 
+                name="contract-type" 
+                id={`radio-${key}`} 
+                checked={isActive} 
+                onChange={setType}
+                className="sr-only"
+            />
+            <label 
+                htmlFor={`radio-${key}`}
+                className="w-full h-full flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600"
+            >
+                {label}
+            </label>
+        </div>
+
+        <div className="w-full flex flex-col gap-2 md:flex-row">
+          <div className="relative w-full">
+            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              type="date"
+              className="h-10 pl-8 text-sm"
+              value={dateValue || ""}
+              onChange={(e) => setField(`${key}Date`, e.target.value)}
+            />
+          </div>
+
+          {key !== "reject" ? (
+            <div className="relative w-full">
+              <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                type="number"
+                placeholder="금액(만원)"
+                className="h-10 pl-8 text-sm"
+                value={amountValue || ""}
+                onChange={(e) => setField(`${key}Amount`, e.target.value)}
+              />
+            </div>
+          ) : (
+            <div className="relative w-full">
+              <Eraser className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                placeholder="거절사유"
+                className="h-10 pl-8 text-sm"
+                value={reasonValue || ""}
+                onChange={(e) => setField(`${key}Reason`, e.target.value)}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                <Checkbox
+                  id={`ad-add-${key}`}
+                  checked={adValue}
+                  onCheckedChange={(c) => setField(`${key}Ad`, !!c)}
+                />
+                <label htmlFor={`ad-add-${key}`} className="text-xs font-normal whitespace-nowrap">광고</label>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="stage-block flex flex-col gap-2 border border-gray-200 rounded-md p-3 text-xs">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {/* 구매 */}
-        <div className="flex flex-col gap-1">
-          <Button
-            variant={current.type === "buy" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-8"
-            onClick={() => setType(current.type === "buy" ? undefined : "buy")}
-          >
-            {BTN.buy.label}
-          </Button>
-          <Input
-            placeholder="날짜"
-            className="text-xs h-7 w-full"
-            value={current.buyDate || ""}
-            onChange={(e) => onChange({ ...current, buyDate: e.target.value })}
-          />
-          <Input
-            placeholder="금액"
-            className="text-xs h-7 w-full"
-            value={current.buyAmount || ""}
-            onChange={(e) => onChange({ ...current, buyAmount: e.target.value })}
-          />
-        </div>
-
-        {/* 계약금 */}
-        <div className="flex flex-col gap-1">
-          <Button
-            variant={current.type === "deposit" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-8"
-            onClick={() => setType(current.type === "deposit" ? undefined : "deposit")}
-          >
-            {BTN.deposit.label}
-          </Button>
-          <Input
-            placeholder="날짜"
-            className="text-xs h-7 w-full"
-            value={current.depositDate || ""}
-            onChange={(e) => onChange({ ...current, depositDate: e.target.value })}
-          />
-          <Input
-            placeholder="금액"
-            className="text-xs h-7 w-full"
-            value={current.depositAmount || ""}
-            onChange={(e) => onChange({ ...current, depositAmount: e.target.value })}
-          />
-        </div>
-
-        {/* 거절 */}
-        <div className="flex flex-col gap-1">
-          <Button
-            variant={current.type === "reject" ? "default" : "outline"}
-            size="sm"
-            className="text-xs h-8"
-            onClick={() => setType(current.type === "reject" ? undefined : "reject")}
-          >
-            {BTN.reject.label}
-          </Button>
-          <Input
-            placeholder="날짜"
-            className="text-xs h-7 w-full"
-            value={current.rejectDate || ""}
-            onChange={(e) => onChange({ ...current, rejectDate: e.target.value })}
-          />
-          <Input
-            placeholder="사유"
-            className="text-xs h-7 w-full"
-            value={current.rejectReason || ""}
-            onChange={(e) => onChange({ ...current, rejectReason: e.target.value })}
-          />
-          <div className="flex items-center gap-1 justify-end">
-            <Checkbox
-              checked={current.rejectAd || false}
-              onCheckedChange={(checked) => onChange({ ...current, rejectAd: !!checked })}
-              className="w-4 h-4"
-              id="reject-ad"
-            />
-            <label htmlFor="reject-ad" className="text-xs">광고추가</label>
-          </div>
-        </div>
-      </div>
+    <div className="stage-block flex flex-col gap-3 text-xs bg-card">
+      {SECTIONS_CONFIG.map(renderSection)}
     </div>
   );
 } 

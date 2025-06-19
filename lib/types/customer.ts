@@ -1,7 +1,7 @@
 // 프론트엔드에서 사용하기 위한 카멜케이스 변환 타입 ----------------------
 export interface Customer {
-  id: string;
-  kolId: number; // 👈 신규 컬럼
+  id: string | number;
+  kol_id: number;
   name: string;
   shopName?: string;
   phone: string;
@@ -9,8 +9,13 @@ export interface Customer {
   placeAddress?: string;
   assignee: string;
   manager: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
+  created_at: string;
+  updated_at?: string;
+  status: string;
+  notes?: string;
+  completed_stages?: number;
+  total_stages?: number;
+  customer_progress?: CustomerProgress[];
 }
 
 // ---------------- 단계별 상세 타입 -----------------------------

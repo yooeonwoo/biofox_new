@@ -1,55 +1,93 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useContext, useMemo } from 'react';
+import { ConnectionLineContext } from '../contexts/ConnectionLineContext';
+import { StageData } from '@/lib/types/customer';
 
 interface Props {
-  cardRef: React.RefObject<HTMLDivElement | null>;
+    stageData: StageData;
 }
 
-type Point = { x: number; y: number };
+const connectionFlow: (keyof StageData)[][] = [
+    ['inflow'],
+    ['contract'],
+    ['delivery'],
+];
 
-export default function ConnectionLines({ cardRef }: Props) {
-  const [points, setPoints] = useState<Point[]>([]);
-  const observerRef = useRef<ResizeObserver | null>(null);
+export default function ConnectionLinesShad({ stageData }: Props) {
+    const context = useContext(ConnectionLineContext);
+    
+    const connectionPaths = useMemo(() => {
+        if (!context || !stageData) return [];
 
-  useEffect(() => {
-    function calc() {
-      if (!cardRef.current) return;
-      const sections = cardRef.current.querySelectorAll<HTMLDivElement>(".stage-block");
-      const newPoints: Point[] = [];
-      sections.forEach((el) => {
-        const rect = el.getBoundingClientRect();
-        const cardRect = cardRef.current!.getBoundingClientRect();
-        newPoints.push({
-          x: rect.left - cardRect.left + rect.width / 2,
-          y: rect.top - cardRect.top + rect.height / 2,
-        });
-      });
-      setPoints(newPoints);
+        const { buttonPositions } = context;
+        const paths: Array<{ from: { x: number; y: number }, to: { x: number; y: number } }> = [];
+        
+        for (let i = 0; i < connectionFlow.length - 1; i++) {
+            const currentStageKey = connectionFlow[i][0];
+            const nextStageKey = connectionFlow[i+1][0];
+
+            const currentStageInfo = (stageData as any)[currentStageKey];
+            const nextStageInfo = (stageData as any)[nextStageKey];
+
+            const fromKey = currentStageInfo?.type || currentStageInfo?.source;
+            const toKey = nextStageInfo?.type || nextStageInfo?.source;
+            
+            if (fromKey && toKey) {
+                const fromButtonKey = `${currentStageKey}-${fromKey}`;
+                const toButtonKey = `${nextStageKey}-${toKey}`;
+                
+                const fromPos = buttonPositions[fromButtonKey];
+                const toPos = buttonPositions[toButtonKey];
+
+                if (fromPos && toPos) {
+                    paths.push({
+                        from: { x: fromPos.x, y: fromPos.y + fromPos.height / 2 },
+                        to: { x: toPos.x, y: toPos.y + toPos.height / 2 },
+                    });
+                }
+            }
+        }
+
+        return paths;
+    }, [stageData, context]);
+
+    if (!context) {
+        return null;
     }
 
-    calc();
-
-    if (observerRef.current) observerRef.current.disconnect();
-    observerRef.current = new ResizeObserver(calc);
-    if (cardRef.current) observerRef.current.observe(cardRef.current);
-
-    window.addEventListener("resize", calc);
-    return () => {
-      window.removeEventListener("resize", calc);
-      observerRef.current?.disconnect();
-    };
-  }, [cardRef]);
-
-  if (points.length < 2) return null;
-
-  const path = points
-    .map((p, idx) => (idx === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
-    .join(" ");
-
-  return (
-    <svg className="absolute inset-0 pointer-events-none hidden md:block" width="100%" height="100%">
-      <path d={path} stroke="#A3A3A3" strokeWidth={1} fill="none" />
-    </svg>
-  );
+    return (
+        <svg
+            className="absolute inset-0 pointer-events-none z-0"
+            width="100%"
+            height="100%"
+            style={{ overflow: 'visible' }}
+        >
+            <defs>
+                <marker
+                    id="arrowhead"
+                    markerWidth="10"
+                    markerHeight="7"
+                    refX="9"
+                    refY="3.5"
+                    orient="auto"
+                >
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+                </marker>
+            </defs>
+            {connectionPaths.map((path, index) => (
+                <line
+                    key={index}
+                    x1={path.from.x}
+                    y1={path.from.y}
+                    x2={path.to.x}
+                    y2={path.to.y}
+                    stroke="#3b82f6"
+                    strokeWidth="1.5"
+                    markerEnd="url(#arrowhead)"
+                    className="drop-shadow-sm"
+                />
+            ))}
+        </svg>
+    );
 } 
