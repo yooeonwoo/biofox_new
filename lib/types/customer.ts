@@ -63,8 +63,7 @@ export interface ExpertStage {
 export type IntroSource = "cafe" | "insta" | "intro";
 
 export interface InflowStageValue {
-  source?: "seminar" | "visit";
-  introSource?: IntroSource[];
+  source?: "cafe" | "insta" | "intro" | "seminar" | "visit";
   seminarDate?: string;
   seminarCount?: string;
   visitDate?: string;
