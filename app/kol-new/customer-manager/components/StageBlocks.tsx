@@ -112,11 +112,13 @@ function SectionBlock({
   bgClass,
   children,
   level,
+  isAchieved,
 }: {
   title: string;
   bgClass: string;
   children: React.ReactNode;
   level?: 2 | 3;
+  isAchieved?: boolean;
 }) {
   const titleColorMap: Record<number, string> = {
     2: "text-emerald-800 border-emerald-500",
@@ -125,7 +127,14 @@ function SectionBlock({
   const titleStyle = level ? titleColorMap[level] : "text-gray-800 border-gray-500";
 
   return (
-    <div className={cn("relative rounded-xl border p-4 space-y-6 overflow-hidden", bgClass)}>
+    <div
+      className={cn(
+        "relative rounded-xl border p-4 space-y-6 overflow-hidden transition-all duration-300",
+        isAchieved
+          ? "shadow-lg border-blue-300 bg-blue-50/70"
+          : bgClass
+      )}
+    >
       {level && (
         <div className="absolute top-4 right-4 text-4xl opacity-10 pointer-events-none select-none flex gap-2">
           {Array.from({ length: level }).map((_, i) => (
@@ -144,7 +153,11 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
     <div className="grid grid-cols-1 gap-6">
       {/* 기본 과정 1~4 */}
       <div className="space-y-4">
-        <SectionBlock title="기본 과정" bgClass="bg-gray-50 border-gray-200">
+        <SectionBlock 
+          title="기본 과정" 
+          bgClass="bg-gray-50 border-gray-200"
+          isAchieved={achievements.basicTraining}
+        >
           {(Object.keys(TITLES) as (keyof StageData)[]).slice(0, 4).map((key, idx) => {
             const Comp = COMPONENTS[key];
             return (
@@ -166,7 +179,12 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
 
       {/* 성장 과정 5단계 */}
       <div className="space-y-4">
-        <SectionBlock title="성장 과정" bgClass="bg-emerald-50 border-emerald-200" level={2}>
+        <SectionBlock 
+          title="성장 과정" 
+          bgClass="bg-emerald-50 border-emerald-200" 
+          level={2}
+          isAchieved={achievements.standardProtocol}
+        >
           {(Object.keys(TITLES) as (keyof StageData)[]).slice(4, 5).map((key) => {
             const Comp = COMPONENTS[key];
             return (
@@ -189,7 +207,12 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
 
       {/* 전문가 과정 6단계 */}
       <div className="space-y-4">
-        <SectionBlock title="전문가 과정" bgClass="bg-violet-50 border-violet-200" level={3}>
+        <SectionBlock 
+          title="전문가 과정" 
+          bgClass="bg-violet-50 border-violet-200" 
+          level={3}
+          isAchieved={achievements.expertCourse}
+        >
           {(Object.keys(TITLES) as (keyof StageData)[]).slice(5).map((key) => {
             const Comp = COMPONENTS[key];
             return (

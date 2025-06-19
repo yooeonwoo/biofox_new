@@ -66,7 +66,7 @@ export default function AchievementCheckbox({
             <Star
               key={i}
               size={16}
-              className="fill-yellow-500 text-yellow-500"
+              className="fill-amber-400 text-amber-500 [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.2))]"
             />
           ))}
         </div>
