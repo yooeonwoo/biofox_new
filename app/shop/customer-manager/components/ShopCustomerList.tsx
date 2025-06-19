@@ -3,7 +3,6 @@
 import ShopCustomerCard from "./ShopCustomerCard";
 import { ShopCustomerData } from "../lib/types";
 import { Card } from "@/components/ui/card";
-import { Accordion } from "@/components/ui/accordion";
 
 interface Props {
   initialData: ShopCustomerData[];
@@ -20,7 +19,7 @@ export default function ShopCustomerList({ initialData }: Props) {
   }
 
   return (
-    <Accordion type="single" collapsible className="space-y-5">
+    <div className="space-y-5">
         {initialData.map((customer, idx) => (
             <ShopCustomerCard 
                 key={idx}
@@ -28,6 +27,6 @@ export default function ShopCustomerList({ initialData }: Props) {
                 cardNumber={idx + 1}
             />
         ))}
-    </Accordion>
+    </div>
   );
 } 
