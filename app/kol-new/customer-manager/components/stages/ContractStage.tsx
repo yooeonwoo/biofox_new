@@ -36,7 +36,7 @@ export default function ContractStage({ value, onChange }: Props) {
 
   return (
     <div className="stage-block flex flex-col gap-2 border border-gray-200 rounded-md p-3 text-xs">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {/* 구매 */}
         <div className="flex flex-col gap-1">
           <Button

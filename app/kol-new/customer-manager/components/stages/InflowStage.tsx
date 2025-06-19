@@ -55,7 +55,7 @@ export default function InflowStage({ value, onChange }: Props) {
       </div>
 
       {/* 세미나 & 방문 2열 */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 세미나 */}
         <div className="flex gap-2">
           <Button
@@ -70,7 +70,7 @@ export default function InflowStage({ value, onChange }: Props) {
             <div className="flex items-center gap-1">
               <span className="text-xs">날짜:</span>
               <Input
-                className="text-xs h-7 w-20"
+                className="text-xs h-7 flex-1 min-w-0"
                 value={current.seminarDate || ""}
                 onChange={(e) => onChange({ ...current, seminarDate: e.target.value })}
               />
@@ -78,7 +78,7 @@ export default function InflowStage({ value, onChange }: Props) {
             <div className="flex items-center gap-1">
               <span className="text-xs">횟수:</span>
               <Input
-                className="text-xs h-7 w-16"
+                className="text-xs h-7 flex-1 min-w-0"
                 value={current.seminarCount || ""}
                 onChange={(e) => onChange({ ...current, seminarCount: e.target.value })}
               />
@@ -100,7 +100,7 @@ export default function InflowStage({ value, onChange }: Props) {
             <div className="flex items-center gap-1">
               <span className="text-xs">날짜:</span>
               <Input
-                className="text-xs h-7 w-20"
+                className="text-xs h-7 flex-1 min-w-0"
                 value={current.visitDate || ""}
                 onChange={(e) => onChange({ ...current, visitDate: e.target.value })}
               />
@@ -108,7 +108,7 @@ export default function InflowStage({ value, onChange }: Props) {
             <div className="flex items-center gap-1">
               <span className="text-xs">횟수:</span>
               <Input
-                className="text-xs h-7 w-16"
+                className="text-xs h-7 flex-1 min-w-0"
                 value={current.visitCount || ""}
                 onChange={(e) => onChange({ ...current, visitCount: e.target.value })}
               />

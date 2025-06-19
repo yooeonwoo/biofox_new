@@ -1,31 +1,42 @@
-import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
-import { getClientRole } from "@/lib/auth";
-import { ReactNode } from "react";
-import KolSidebar from "@/components/layout/KolSidebar";
+"use client";
 
-export default async function KolNewLayout({ children }: { children: ReactNode }) {
-  const { userId } = auth();
-  if (!userId) {
-    redirect("/signin");
-  }
+import { ReactNode, useState } from "react";
+import KolHeader from "../components/layout/KolHeader";
+import KolSidebar from "@/app/components/layout/KolSidebar";
+import { useUser, useClerk } from "@clerk/nextjs";
 
-  const role = await getClientRole(userId);
-  if (role === "admin") {
-    redirect("/admin-dashboard/main");
-  }
-  if (role !== "kol" && role !== "admin") {
-    redirect("/");
-  }
+interface Props {
+  children: ReactNode;
+}
+
+export default function KolLayout({ children }: Props) {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (err) {
+      console.error("로그아웃 오류", err);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen bg-gray-100">
       <KolSidebar />
-      <main className="flex-1 min-w-0">
-        <div className="mx-auto h-full">
-          {children}
-        </div>
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <KolHeader
+          userName={user?.fullName || user?.username || undefined}
+          userImage={user?.imageUrl}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+          onSignOut={handleSignOut}
+        />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+          <div className="container mx-auto px-6 py-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

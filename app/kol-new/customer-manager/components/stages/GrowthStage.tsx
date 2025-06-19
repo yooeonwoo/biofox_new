@@ -108,7 +108,7 @@ export default function GrowthStage({ value, onChange }: Props) {
           </Button>
         </div>
 
-        <div className="flex gap-1 mb-4">
+        <div className="flex flex-wrap gap-1 mb-4">
           {Array.from({ length: 10 }).map((_, i) => (
             <button
               key={i}
@@ -131,7 +131,7 @@ export default function GrowthStage({ value, onChange }: Props) {
 
         <div className="space-y-2">
           {[0, 1].map((row) => (
-            <div key={row} className="flex gap-1 justify-between">
+            <div key={row} className="flex flex-wrap gap-1 justify-between">
               {Array.from({ length: 5 }).map((_, idx) => {
                 const customerIdx = row * 5 + idx;
                 return (
@@ -164,9 +164,9 @@ export default function GrowthStage({ value, onChange }: Props) {
             <span>{totalLearning.current}/{totalLearning.max}</span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {Object.entries(LEARNING_MAX).map(([subject, max]) => (
-            <div key={subject} className="flex-1">
+            <div key={subject} className="flex-1 min-w-[50px]">
               <div className="text-center mb-1">{subject}</div>
               <div
                 className="h-6 bg-gray-100 border border-gray-300 rounded relative cursor-pointer"
@@ -196,7 +196,7 @@ export default function GrowthStage({ value, onChange }: Props) {
           <span className="font-medium">평가</span>
           <span className="text-xs">평균: {averageScore}점</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {EVAL_ITEMS.map((item) => (
             <div key={item} className="flex-1">
               <div className="text-center mb-1">{item}</div>
@@ -224,7 +224,7 @@ export default function GrowthStage({ value, onChange }: Props) {
           const prev = arr[arr.length - 2] || last;
           const diff = Math.round(((last - prev) / prev) * 100);
           return (
-            <div className="grid grid-cols-2 gap-2 text-center text-[11px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-center text-[11px]">
               <div className="bg-blue-500 text-white rounded p-2">
                 평균 매출<br />
                 <span className="font-semibold text-sm">{avg}만원</span>
