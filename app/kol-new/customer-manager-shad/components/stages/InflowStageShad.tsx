@@ -62,7 +62,8 @@ export default function InflowStageShad({ value, onChange }: Props) {
   };
 
   return (
-    <div className="stage-block flex flex-col gap-4 text-xs bg-card">
+    <fieldset className="stage-block flex flex-col gap-4 text-xs bg-card">
+      <legend className="sr-only">유입 경로 선택</legend>
       <div className="flex flex-wrap gap-2">
         {INTRO_SOURCES.map(({ key, label }) => {
           const isActive = current.source === key;
@@ -124,6 +125,6 @@ export default function InflowStageShad({ value, onChange }: Props) {
             )
         })}
       </div>
-    </div>
+    </fieldset>
   );
 } 
