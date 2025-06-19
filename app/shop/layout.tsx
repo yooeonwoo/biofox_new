@@ -1,8 +1,8 @@
 "use client";
 
 import { ReactNode, useState } from "react";
-import KolHeader from "@/app/components/layout/KolHeader";
-import ShopSidebar from "./components/ShopSidebar";
+import ShopHeader from "./customer-manager/components/ShopHeader";
+import ShopSidebar from "./customer-manager/components/ShopSidebar";
 import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
@@ -22,7 +22,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
   
   return (
     <div className="flex flex-col min-h-screen">
-      <KolHeader 
+      <ShopHeader 
         userName={userName} 
         shopName={shopName} 
         mobileMenuOpen={mobileMenuOpen}
@@ -31,7 +31,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
       />
       <div className="flex flex-1">
         <ShopSidebar />
-        <main className="flex-1 p-6 bg-gray-50/50 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 bg-gray-50/50 overflow-y-auto">
             {children}
         </main>
       </div>

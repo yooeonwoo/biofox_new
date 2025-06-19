@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const menuItems = [
     { name: "셀프 성장 시스템", href: "/shop/customer-manager", icon: Users },
-    // { name: "대시보드", href: "/shop", icon: Home },
 ];
 
 export default function ShopSidebar() {

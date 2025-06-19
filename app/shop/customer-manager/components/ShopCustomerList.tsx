@@ -21,11 +21,12 @@ export default function ShopCustomerList({ initialData }: Props) {
   return (
     <div className="space-y-5">
         {initialData.map((customer, idx) => (
-            <ShopCustomerCard 
-                key={idx} 
-                customer={customer} 
-                cardNumber={idx + 1}
-            />
+            <div key={idx}>
+                <ShopCustomerCard 
+                    customer={customer} 
+                    cardNumber={idx + 1}
+                />
+            </div>
         ))}
     </div>
   );
