@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useContext, useEffect } from "react";
 import { InflowStageValue, IntroSource } from "@/lib/types/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "lucide-react";
+import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 
 const SOURCE_TYPES: Array<{
   key: "seminar" | "visit";
@@ -27,6 +28,27 @@ interface Props {
 
 export default function InflowStageShad({ value, onChange }: Props) {
   const current = value || {};
+  const context = useContext(ConnectionLineContext);
+
+  const refs = {
+    seminar: useRef<HTMLDivElement>(null),
+    visit: useRef<HTMLDivElement>(null),
+  };
+
+  useEffect(() => {
+    if (context) {
+      Object.entries(refs).forEach(([key, ref]) => {
+        context.registerButton(`inflow-${key}`, ref);
+      });
+    }
+    return () => {
+      if (context) {
+        Object.keys(refs).forEach(key => {
+          context.unregisterButton(`inflow-${key}`);
+        });
+      }
+    };
+  }, [context]);
 
   const setSource = (source?: "seminar" | "visit") => {
     onChange({ ...current, source });
@@ -69,7 +91,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
             const isActive = current.source === key;
 
             return (
-                <div key={key} className="flex flex-col p-3 border rounded-lg has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 gap-3">
+                <div key={key} ref={refs[key as keyof typeof refs]} className="flex flex-col p-3 border rounded-lg has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 gap-3">
                      <label 
                         htmlFor={`radio-inflow-${key}`} 
                         className="w-full flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600"

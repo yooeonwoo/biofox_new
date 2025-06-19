@@ -10,7 +10,7 @@ interface Props {
 
 export function ConnectionLineProvider({ cardRef, children }: Props) {
     const [buttonPositions, setButtonPositions] = useState<Record<string, ButtonPosition>>({});
-    const buttonRefs = useRef<Record<string, RefObject<HTMLButtonElement>>>({});
+    const buttonRefs = useRef<Record<string, RefObject<HTMLElement>>>({});
 
     const updateAllButtonPositions = useCallback(() => {
         if (!cardRef.current) return;
@@ -35,8 +35,10 @@ export function ConnectionLineProvider({ cardRef, children }: Props) {
         }
     }, [cardRef, buttonPositions]);
     
-    const registerButton = useCallback((key: string, ref: RefObject<HTMLButtonElement>) => {
-        buttonRefs.current[key] = ref;
+    const registerButton = useCallback((key: string, ref: RefObject<HTMLElement | null>) => {
+        if (ref.current) {
+            (buttonRefs.current as Record<string, RefObject<HTMLElement>>)[key] = ref as RefObject<HTMLElement>;
+        }
         // Schedule an update
         setTimeout(updateAllButtonPositions, 50);
     }, [updateAllButtonPositions]);

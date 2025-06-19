@@ -1,8 +1,10 @@
 "use client";
 
+import { useRef, useContext, useEffect } from "react";
 import { DeliveryStageValue } from "@/lib/types/customer";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "lucide-react";
+import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 
 const DELIVERY_TYPES: Array<{
     key: "ship" | "install" | "retarget";
@@ -23,6 +25,28 @@ interface Props {
  */
 export default function DeliveryStageShad({ value, onChange }: Props) {
   const current = value || {};
+  const context = useContext(ConnectionLineContext);
+
+  const refs = {
+    ship: useRef<HTMLDivElement>(null),
+    install: useRef<HTMLDivElement>(null),
+    retarget: useRef<HTMLDivElement>(null),
+  };
+
+  useEffect(() => {
+    if (context) {
+      Object.entries(refs).forEach(([key, ref]) => {
+        context.registerButton(`delivery-${key}`, ref);
+      });
+    }
+    return () => {
+      if (context) {
+        Object.keys(refs).forEach(key => {
+          context.unregisterButton(`delivery-${key}`);
+        });
+      }
+    };
+  }, [context]);
   
   const setType = (type?: "ship" | "install" | "retarget") => {
     onChange({ ...current, type });
@@ -39,12 +63,13 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
           const isActive = current.type === key;
 
           return (
-            <label 
-              key={key} 
-              htmlFor={`radio-delivery-${key}`} 
-              className="flex flex-col p-3 border rounded-lg cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400"
+            <div 
+                key={key} 
+                ref={refs[key as keyof typeof refs]}
+                className="flex flex-col p-3 border rounded-lg cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400"
             >
-              <div 
+              <label 
+                htmlFor={`radio-delivery-${key}`} 
                 className="w-full h-10 flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 mb-3"
               >
                   <input
@@ -56,7 +81,7 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
                     className="peer sr-only"
                   />
                   <span className="w-full text-center">{label}</span>
-              </div>
+              </label>
 
               {key === 'ship' && (
                 <div className="flex flex-col gap-2 mt-auto">
@@ -96,7 +121,7 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
               {key === 'retarget' && (
                   <div className="flex-grow"></div>
               )}
-            </label>
+            </div>
           );
         })}
       </div>

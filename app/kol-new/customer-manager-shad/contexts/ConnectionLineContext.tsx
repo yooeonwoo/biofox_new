@@ -8,7 +8,7 @@ export interface ButtonPosition {
 }
 
 export interface ConnectionLineContextType {
-  registerButton: (key: string, ref: RefObject<HTMLButtonElement | null>) => void;
+  registerButton: (key: string, ref: RefObject<HTMLElement | null>) => void;
   unregisterButton: (key: string) => void;
   buttonPositions: Record<string, ButtonPosition>;
 }

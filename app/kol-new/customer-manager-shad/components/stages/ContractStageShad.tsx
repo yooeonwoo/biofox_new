@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useContext, useEffect } from "react";
 import { ContractStageValue } from "@/lib/types/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DollarSign, Calendar, Eraser } from "lucide-react";
+import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 
 const SECTIONS_CONFIG: Array<{
   key: "purchase" | "deposit" | "reject";
@@ -23,6 +24,29 @@ interface Props {
 
 export default function ContractStageShad({ value, onChange }: Props) {
   const current = value || {};
+  const context = useContext(ConnectionLineContext);
+  
+  const refs = {
+    purchase: useRef<HTMLDivElement>(null),
+    deposit: useRef<HTMLDivElement>(null),
+    reject: useRef<HTMLDivElement>(null),
+  };
+
+  useEffect(() => {
+    if (context) {
+      Object.entries(refs).forEach(([key, ref]) => {
+        context.registerButton(`contract-${key}`, ref);
+      });
+    }
+    return () => {
+      if (context) {
+        Object.keys(refs).forEach(key => {
+          context.unregisterButton(`contract-${key}`);
+        });
+      }
+    };
+  }, [context]);
+
   const setField = (field: keyof ContractStageValue, val: any) => {
     onChange({ ...current, [field]: val });
   };
@@ -41,7 +65,7 @@ export default function ContractStageShad({ value, onChange }: Props) {
     }
 
     return (
-      <div key={key} className="flex flex-col md:flex-row items-stretch gap-3 p-3 rounded-lg border bg-card has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+      <div key={key} ref={refs[key as keyof typeof refs]} className="flex flex-col md:flex-row items-stretch gap-3 p-3 rounded-lg border bg-card has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
         <div className="w-full md:w-24 shrink-0">
             <input 
                 type="radio" 
