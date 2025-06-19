@@ -31,15 +31,6 @@ export default async function ShopCustomerManagerPage() {
   const customers = sampleCustomers;
 
   return (
-    <div className="min-h-screen bg-gray-100">
-        <header className="bg-white shadow-sm sticky top-0 z-10">
-            <div className="max-w-4xl mx-auto px-4 py-4">
-                 <h1 className="text-xl font-bold text-center">셀프 성장 시스템</h1>
-            </div>
-        </header>
-        <main className="max-w-4xl mx-auto py-5 px-4 sm:px-0">
-            <ShopCustomerList initialData={customers} />
-        </main>
-    </div>
+    <ShopCustomerList initialData={customers} />
   );
 } 
