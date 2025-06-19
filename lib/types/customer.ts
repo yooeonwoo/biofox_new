@@ -82,4 +82,16 @@ export interface CustomerProgress {
   achievements: Achievements;
   /** 마지막 수정 시각 (Supabase Nullable) */
   updatedAt: string | null;
+}
+
+export interface ContractStageValue {
+  type?: "purchase" | "deposit" | "reject";
+  purchaseDate?: string;
+  purchaseAmount?: string;
+  depositDate?: string;
+  depositAmount?: string;
+  rejectDate?: string;
+  rejectReason?: string;
+  rejectAd?: boolean;
+  memo?: string;
 } 
