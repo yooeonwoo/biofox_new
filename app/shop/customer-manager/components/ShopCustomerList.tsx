@@ -2,6 +2,7 @@
 
 import ShopCustomerCard from "./ShopCustomerCard";
 import { ShopCustomerData } from "../lib/types";
+import { Card } from "@/components/ui/card";
 
 interface Props {
   initialData: ShopCustomerData[];
@@ -11,9 +12,9 @@ export default function ShopCustomerList({ initialData }: Props) {
 
   if (!initialData || initialData.length === 0) {
     return (
-        <div className="text-center p-10 bg-gray-50 rounded-lg">
+        <Card className="text-center p-10 bg-gray-50 rounded-lg border-dashed">
             <p className="text-muted-foreground">등록된 고객이 없습니다.</p>
-        </div>
+        </Card>
     );
   }
 

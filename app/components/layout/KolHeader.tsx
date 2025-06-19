@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
 import { 
@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import KolMobileMenu from "./KolMobileMenu";
 import { useState } from "react";
 import ChangePasswordDialog from "@/components/account/ChangePasswordDialog";
+import { useAuth, UserButton } from "@clerk/nextjs";
 
 interface KolHeaderProps {
   userName?: string;
@@ -36,6 +37,7 @@ export default function KolHeader({
   onSignOut
 }: KolHeaderProps) {
   const userInitials = userName?.substring(0, 2) || "KL";
+  const { userId } = useAuth();
 
   // 프로필 표시 개선 함수
   const getDisplayName = () => {
