@@ -15,6 +15,8 @@ interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
   progress?: CustomerProgress;
   cardNumber: number;
+  isNew?: boolean;
+  onDelete?: () => void;
 }
 
 const defaultStageData: StageData = {} as StageData;
@@ -25,7 +27,7 @@ const defaultAchievements: Achievements = {
   expertCourse: false,
 };
 
-export default function CustomerCardShad({ customer, cardNumber }: Props) {
+export default function CustomerCardShad({ customer, cardNumber, isNew, onDelete }: Props) {
   const initialProgress: CustomerProgress =
     customer.customer_progress?.[0] || {
       id: "temp-" + customer.id,
@@ -100,6 +102,8 @@ export default function CustomerCardShad({ customer, cardNumber }: Props) {
           cardNumber={cardNumber}
           basicInfo={basicInfo}
           onBasicInfoChange={setBasicInfo}
+          isNew={isNew}
+          onDelete={onDelete}
         />
 
         {/* 스테이지 블록 */}

@@ -9,11 +9,15 @@ import { useUpdateCustomer } from "@/lib/hooks/customers";
 import { debounce } from "@/lib/utils";
 import { useUpdateCustomerInfo } from "@/lib/hooks/customer-info";
 import BasicInfoStage, { BasicInfoValue } from "./stages/BasicInfoStage";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
   progress?: CustomerProgress;
   cardNumber: number;
+  isNew?: boolean;
+  onDelete?: () => void;
 }
 
 const defaultStageData: StageData = {} as StageData;
@@ -24,7 +28,7 @@ const defaultAchievements: Achievements = {
   expertCourse: false,
 };
 
-export default function CustomerCard({ customer, cardNumber }: Props) {
+export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: Props) {
   const initialProgress: CustomerProgress =
     customer.customer_progress?.[0] || {
       id: "temp-" + customer.id,
@@ -97,6 +101,8 @@ export default function CustomerCard({ customer, cardNumber }: Props) {
         cardNumber={cardNumber}
         basicInfo={basicInfo}
         onBasicInfoChange={setBasicInfo}
+        isNew={isNew}
+        onDelete={onDelete}
       />
 
       <StageBlocks stageData={localProgress.stageData} onStageChange={handleStageChange} />

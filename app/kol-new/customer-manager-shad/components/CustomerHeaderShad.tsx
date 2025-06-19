@@ -3,8 +3,9 @@
 import { Customer, CustomerProgress, StageData } from "@/lib/types/customer";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
+import { Star, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   customer: Customer;
@@ -12,6 +13,8 @@ interface Props {
   cardNumber: number;
   basicInfo: any;
   onBasicInfoChange: (info: any) => void;
+  isNew?: boolean;
+  onDelete?: () => void;
 }
 
 function getCompletedCount(stageData: StageData): number {
@@ -28,7 +31,7 @@ function getCompletedCount(stageData: StageData): number {
   );
 }
 
-export default function CustomerHeaderShad({ customer, progress, cardNumber, basicInfo, onBasicInfoChange }: Props) {
+export default function CustomerHeaderShad({ customer, progress, cardNumber, basicInfo, onBasicInfoChange, isNew, onDelete }: Props) {
   const completed = getCompletedCount(progress?.stageData || ({} as StageData));
   const percent = (completed / 6) * 100;
 
@@ -46,6 +49,7 @@ export default function CustomerHeaderShad({ customer, progress, cardNumber, bas
           </div>
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">{customer.name}</h3>
+            {isNew && <Badge variant="destructive">신규</Badge>}
             {(() => {
               const ach = progress?.achievements;
               const level = ach?.expertCourse
@@ -69,9 +73,16 @@ export default function CustomerHeaderShad({ customer, progress, cardNumber, bas
             })()}
           </div>
         </div>
-        <div className="text-left sm:text-right space-y-1 w-full sm:w-auto">
-          {customer.manager && <div className="text-sm">담당자 : {customer.manager}</div>}
-          {customer.assignee && <div className="text-xs text-muted-foreground">배정자 : {customer.assignee}</div>}
+        <div className="flex items-center gap-2">
+          <div className="text-left sm:text-right space-y-1 w-full sm:w-auto">
+            {customer.manager && <div className="text-sm">담당자 : {customer.manager}</div>}
+            {customer.assignee && <div className="text-xs text-muted-foreground">배정자 : {customer.assignee}</div>}
+          </div>
+          {isNew && onDelete && (
+            <Button size="icon" variant="ghost" onClick={onDelete} className="text-red-500 hover:bg-red-100">
+              <Trash2 size={16} />
+            </Button>
+          )}
         </div>
       </div>
 
