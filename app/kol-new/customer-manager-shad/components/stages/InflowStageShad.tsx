@@ -69,10 +69,10 @@ export default function InflowStageShad({ value, onChange }: Props) {
             const isActive = current.source === key;
 
             return (
-                <div key={key} className="p-3 border rounded-lg has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                <div key={key} className="flex flex-col p-3 border rounded-lg has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 gap-3">
                      <label 
                         htmlFor={`radio-inflow-${key}`} 
-                        className="w-full h-full flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 mb-3"
+                        className="w-full flex items-center justify-center text-sm font-semibold border rounded-md cursor-pointer transition-colors hover:bg-muted/80 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600"
                     >
                         <input
                             type="radio"
