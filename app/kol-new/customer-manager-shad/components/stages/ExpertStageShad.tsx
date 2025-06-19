@@ -19,7 +19,7 @@ export default function ExpertStageShad({ value, onChange }: Props) {
 
   return (
     <div className="stage-block border rounded-md p-3 flex flex-col gap-2 text-xs bg-card">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {["매출업", "상담법", "마케팅"].map((t) => (
           <Button
             key={t}

@@ -39,7 +39,7 @@ export default function CustomerHeaderShad({ customer, progress, cardNumber, bas
   return (
     <div className="mb-4 rounded-lg border bg-muted/40 p-4">
       {/* Top row */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-y-3">
         <div className="flex items-center gap-3">
           <div className="size-8 rounded bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow">
             {cardNumber}
@@ -69,7 +69,7 @@ export default function CustomerHeaderShad({ customer, progress, cardNumber, bas
             })()}
           </div>
         </div>
-        <div className="text-right space-y-1">
+        <div className="text-left sm:text-right space-y-1 w-full sm:w-auto">
           {customer.manager && <div className="text-sm">담당자 : {customer.manager}</div>}
           {customer.assignee && <div className="text-xs text-muted-foreground">배정자 : {customer.assignee}</div>}
         </div>

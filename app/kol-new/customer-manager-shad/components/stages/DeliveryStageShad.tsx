@@ -58,13 +58,13 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
             ref={buttonRefs.ship}
             variant={current.type === "ship" ? "default" : "outline"}
             size="sm"
-            className="text-xs h-8 mb-2"
+            className="text-xs h-auto py-2 mb-2"
             onClick={() => setType(current.type === "ship" ? undefined : "ship")}
           >
             출고
           </Button>
           <div className="grid grid-cols-[auto,1fr] items-center gap-1 mb-1">
-            <label className="text-xs">날짜:</label>
+            <label className="text-xs shrink-0">날짜:</label>
             <Input
               type="date"
               placeholder="날짜"
@@ -74,7 +74,7 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
             />
           </div>
           <div className="grid grid-cols-[auto,1fr] items-center gap-1">
-            <label className="text-xs">패키지:</label>
+            <label className="text-xs shrink-0">패키지:</label>
             <Input
               placeholder="패키지"
               className="text-xs h-7 border-gray-200"
@@ -90,13 +90,13 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
             ref={buttonRefs.install}
             variant={current.type === "install" ? "default" : "outline"}
             size="sm"
-            className="text-xs h-16 mb-2"
+            className="text-xs h-auto py-2 mb-2"
             onClick={() => setType(current.type === "install" ? undefined : "install")}
           >
             설치/교육
           </Button>
           <div className="grid grid-cols-[auto,1fr] items-center gap-1">
-            <label className="text-xs">날짜:</label>
+            <label className="text-xs shrink-0">날짜:</label>
             <Input
               type="date"
               placeholder="날짜"
@@ -113,7 +113,7 @@ export default function DeliveryStageShad({ value, onChange }: Props) {
             ref={buttonRefs.retarget}
             variant={current.type === "retarget" ? "default" : "outline"}
             size="sm"
-            className="text-xs h-28"
+            className="text-xs h-full"
             onClick={() => setType(current.type === "retarget" ? undefined : "retarget")}
           >
             리타겟

@@ -68,7 +68,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
   return (
     <div className="stage-block flex flex-col gap-2 border rounded-md p-3 text-xs bg-card">
       {/* 상단 토글 버튼들 */}
-      <div className="flex gap-2 mb-2">
+      <div className="flex flex-wrap gap-2 mb-2">
         {(["cafe", "insta", "intro"] as const).map((k) => (
           <Button
             key={k}
@@ -98,7 +98,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
           </Button>
           <div className="flex flex-col gap-1 w-full">
             <div className="grid grid-cols-[auto,1fr] items-center gap-1">
-              <label htmlFor="seminar-date" className="text-xs">날짜:</label>
+              <label htmlFor="seminar-date" className="text-xs shrink-0">날짜:</label>
               <Input
                 id="seminar-date"
                 type="date"
@@ -108,7 +108,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
               />
             </div>
             <div className="grid grid-cols-[auto,1fr] items-center gap-1">
-              <label htmlFor="seminar-count" className="text-xs">횟수:</label>
+              <label htmlFor="seminar-count" className="text-xs shrink-0">횟수:</label>
               <Input
                 id="seminar-count"
                 type="number"
@@ -133,7 +133,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
           </Button>
           <div className="flex flex-col gap-1 w-full">
             <div className="grid grid-cols-[auto,1fr] items-center gap-1">
-              <label htmlFor="visit-date" className="text-xs">날짜:</label>
+              <label htmlFor="visit-date" className="text-xs shrink-0">날짜:</label>
               <Input
                 id="visit-date"
                 type="date"
@@ -143,7 +143,7 @@ export default function InflowStageShad({ value, onChange }: Props) {
               />
             </div>
             <div className="grid grid-cols-[auto,1fr] items-center gap-1">
-              <label htmlFor="visit-count" className="text-xs">횟수:</label>
+              <label htmlFor="visit-count" className="text-xs shrink-0">횟수:</label>
               <Input
                 id="visit-count"
                 type="number"

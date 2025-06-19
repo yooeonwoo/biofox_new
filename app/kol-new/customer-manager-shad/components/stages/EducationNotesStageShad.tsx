@@ -55,8 +55,8 @@ export default function EducationNotesStageShad({ value, onChange }: Props) {
       {/* 질문 그룹 */}
       <div className="p-3 border rounded-md bg-muted/20 space-y-3">
         {(["understanding", "cleanliness", "setting"] as const).map((field) => (
-          <div key={field} className="flex justify-between items-center gap-1">
-            <span className="text-left">
+          <div key={field} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-1">
+            <span className="text-left text-sm sm:text-xs">
               {field === "understanding"
                 ? "1. 설명을 잘 이해하는가?"
                 : field === "cleanliness"

@@ -168,13 +168,13 @@ export default function ContractStageShad({ value, onChange }: Props) {
               value={current.rejectReason || ""}
               onChange={(e) => setField("rejectReason", e.target.value)}
             />
-            <div className="flex items-center justify-end gap-1 mt-auto pt-1">
+            <div className="flex items-center justify-end gap-1.5 mt-auto pt-1 flex-wrap">
               <Checkbox
                 id={`ad-add-${BTN.reject.label}`}
                 checked={current.rejectAd}
                 onCheckedChange={(c) => onChange({ ...current, rejectAd: !!c })}
               />
-              <label htmlFor={`ad-add-${BTN.reject.label}`} className="text-xs font-normal">광고추가</label>
+              <label htmlFor={`ad-add-${BTN.reject.label}`} className="text-xs font-normal whitespace-nowrap">광고추가</label>
             </div>
           </div>
         </div>
