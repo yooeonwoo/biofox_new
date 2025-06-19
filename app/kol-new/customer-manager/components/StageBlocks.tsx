@@ -117,14 +117,14 @@ function SectionBlock({
   title: string;
   bgClass: string;
   children: React.ReactNode;
-  level?: 2 | 3;
+  level?: 1 | 2 | 3;
   isAchieved?: boolean;
 }) {
   const titleColorMap: Record<number, string> = {
     2: "text-emerald-800 border-emerald-500",
     3: "text-violet-800 border-violet-500",
   };
-  const titleStyle = level ? titleColorMap[level] : "text-gray-800 border-gray-500";
+  const titleStyle = level && level > 1 ? titleColorMap[level] : "text-gray-800 border-gray-500";
 
   return (
     <div
@@ -136,7 +136,10 @@ function SectionBlock({
       )}
     >
       {level && (
-        <div className="absolute top-4 right-4 text-4xl opacity-10 pointer-events-none select-none flex gap-2">
+        <div className={cn(
+          "absolute top-4 right-4 text-4xl pointer-events-none select-none flex gap-2 transition-opacity duration-300",
+          isAchieved ? "opacity-60" : "opacity-15"
+        )}>
           {Array.from({ length: level }).map((_, i) => (
             <span key={i}>⭐</span>
           ))}
@@ -157,6 +160,7 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
           title="기본 과정" 
           bgClass="bg-gray-50 border-gray-200"
           isAchieved={achievements.basicTraining}
+          level={1}
         >
           {(Object.keys(TITLES) as (keyof StageData)[]).slice(0, 4).map((key, idx) => {
             const Comp = COMPONENTS[key];
