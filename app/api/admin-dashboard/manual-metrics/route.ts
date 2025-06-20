@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     console.log('[API] Querying shops...');
     const { data: shops, error: shopsError } = await supabaseAdmin
       .from('shops')
-      .select('id, name')
+      .select('id, shop_name')
       .eq('kol_id', Number(kolId));
 
     if (shopsError) {
@@ -68,11 +68,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 전문점과 매출 데이터를 매핑
-    const shopMetrics = shops?.map((shop: { id: number; name: string }) => {
+    const shopMetrics = shops?.map((shop: { id: number; shop_name: string }) => {
       const salesMetric = shopSalesData.find(sale => sale.shop_id === shop.id);
       return {
         shop_id: shop.id,
-        shop_name: shop.name,
+        shop_name: shop.shop_name,
         total_sales: salesMetric?.total_sales || 0, // 데이터가 없으면 0으로 처리
       };
     }) || [];
