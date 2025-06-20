@@ -168,16 +168,18 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
             <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-blue-50/80 border-blue-200">
                 <Bell className="size-4 text-blue-600 shrink-0" />
                 <Label className="text-sm text-blue-800 shrink-0 font-semibold">리마인드</Label>
-                <Input value={reminderContent} onChange={(e) => setReminderContent(e.target.value)} placeholder="나중에 확인할 내용..." className="flex-1 min-w-0 bg-white border-0 shadow-none focus-visible:ring-0 h-8" />
+                <div className="flex-1 min-w-0 relative">
+                    <Input value={reminderContent} onChange={(e) => setReminderContent(e.target.value)} placeholder="나중에 확인할 내용..." className="bg-white border-0 shadow-none focus-visible:ring-0 h-8 pr-10" />
+                    <Dialog>
+                        <DialogTrigger asChild><Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 size-6 hover:bg-blue-100"><Maximize2 className="size-3" /></Button></DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader><DialogTitle>리마인드 내용</DialogTitle></DialogHeader>
+                            <Textarea value={reminderContent} onChange={(e) => setReminderContent(e.target.value)} className="min-h-[120px]" placeholder="나중에 확인할 내용을 자세히 입력하세요..." />
+                            <DialogFooter><DialogClose asChild><Button>확인</Button></DialogClose></DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
                 <DateTimePicker value={reminderDateTime} onChange={setReminderDateTime} />
-                <Dialog>
-                    <DialogTrigger asChild><Button variant="ghost" size="icon" className="size-8 shrink-0"><Maximize2 className="size-4" /></Button></DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader><DialogTitle>리마인드 내용</DialogTitle></DialogHeader>
-                        <Textarea value={reminderContent} onChange={(e) => setReminderContent(e.target.value)} className="min-h-[120px]" placeholder="나중에 확인할 내용을 자세히 입력하세요..." />
-                        <DialogFooter><DialogClose asChild><Button>확인</Button></DialogClose></DialogFooter>
-                    </DialogContent>
-                </Dialog>
                 <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 shrink-0" onClick={() => alert('리마인더는 일지 저장 시 함께 저장됩니다.')}>저장</Button>
             </div>
 
@@ -185,17 +187,19 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
             <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-green-50/80 border-green-200">
                 <Send className="size-4 text-green-600 shrink-0" />
                 <Label className="text-sm text-green-800 shrink-0 font-semibold">원장님</Label>
-                <Input value={ownerMessageContent} onChange={(e) => setOwnerMessageContent(e.target.value)} placeholder="원장님께 보낼 메시지" className="flex-1 min-w-0 bg-white border-0 shadow-none focus-visible:ring-0 h-8" />
-                <div className="flex items-center gap-2 ml-auto shrink-0">
-                    <DateTimePicker value={ownerMessageDateTime} onChange={setOwnerMessageDateTime} />
+                <div className="flex-1 min-w-0 relative">
+                    <Input value={ownerMessageContent} onChange={(e) => setOwnerMessageContent(e.target.value)} placeholder="원장님께 보낼 메시지" className="bg-white border-0 shadow-none focus-visible:ring-0 h-8 pr-10" />
                     <Dialog>
-                        <DialogTrigger asChild><Button variant="ghost" size="icon" className="size-8 shrink-0"><Maximize2 className="size-4" /></Button></DialogTrigger>
+                        <DialogTrigger asChild><Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 size-6 hover:bg-green-100"><Maximize2 className="size-3" /></Button></DialogTrigger>
                         <DialogContent>
                             <DialogHeader><DialogTitle>원장님 메시지 작성</DialogTitle></DialogHeader>
                             <Textarea value={ownerMessageContent} onChange={(e) => setOwnerMessageContent(e.target.value)} className="min-h-[120px]" placeholder="원장님께 보낼 메시지를 자세히 입력하세요..." />
                             <DialogFooter><DialogClose asChild><Button>확인</Button></DialogClose></DialogFooter>
                         </DialogContent>
                     </Dialog>
+                </div>
+                <div className="flex items-center gap-2 ml-auto shrink-0">
+                    <DateTimePicker value={ownerMessageDateTime} onChange={setOwnerMessageDateTime} />
                     <Button size="sm" variant="outline" className="h-8 bg-white gap-1.5 text-green-800 border-green-300 hover:bg-green-100 hover:text-green-900 shrink-0" onClick={() => handleOwnerMessageSend(false)}>
                         <Clock className="size-3" /> 예약
                     </Button>
