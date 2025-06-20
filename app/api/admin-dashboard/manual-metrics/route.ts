@@ -24,26 +24,38 @@ export async function GET(request: NextRequest) {
 
     if (kolMetricsError) throw kolMetricsError;
 
-    // KOL에 속한 전문점 목록과 해당 전문점의 해당 년월 매출 조회
+    // KOL에 속한 전문점 목록 조회
     const { data: shops, error: shopsError } = await supabase
       .from('shops')
-      .select(`
-        shop_id:id,
-        shop_name:name,
-        shop_sales_metrics (total_sales)
-      `)
-      .eq('kol_id', Number(kolId))
-      .eq('shop_sales_metrics.year_month', yearMonth);
-      // .is('shop_sales_metrics.year_month', null) // 만약 해당 월 데이터가 없어도 shop은 가져오고 싶다면
-      // 또는 left join을 명시적으로 사용해야 할 수 있음 (Supabase JS 라이브러리 제한 확인 필요)
+      .select('id, name')
+      .eq('kol_id', Number(kolId));
 
     if (shopsError) throw shopsError;
 
-    const shopMetrics = shops?.map((shop: { shop_id: number; shop_name: string; shop_sales_metrics: { total_sales: number }[] }) => ({
-      shop_id: shop.shop_id,
-      shop_name: shop.shop_name,
-      total_sales: shop.shop_sales_metrics[0]?.total_sales || 0, // 데이터가 없으면 0으로 처리
-    })) || [];
+    // 각 전문점의 해당 년월 매출 조회
+    const shopIds = shops?.map(shop => shop.id) || [];
+    let shopSalesData: any[] = [];
+
+    if (shopIds.length > 0) {
+      const { data: salesData, error: salesError } = await supabase
+        .from('shop_sales_metrics')
+        .select('shop_id, total_sales')
+        .in('shop_id', shopIds)
+        .eq('year_month', yearMonth);
+
+      if (salesError) throw salesError;
+      shopSalesData = salesData || [];
+    }
+
+    // 전문점과 매출 데이터를 매핑
+    const shopMetrics = shops?.map((shop: { id: number; name: string }) => {
+      const salesMetric = shopSalesData.find(sale => sale.shop_id === shop.id);
+      return {
+        shop_id: shop.id,
+        shop_name: shop.name,
+        total_sales: salesMetric?.total_sales || 0, // 데이터가 없으면 0으로 처리
+      };
+    }) || [];
 
     return NextResponse.json({ kolMetrics, shopMetrics });
 
