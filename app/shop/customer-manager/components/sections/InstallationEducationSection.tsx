@@ -56,20 +56,26 @@ export default function InstallationEducationSection({
       <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm space-y-4">
         <h4 className="text-md font-semibold text-gray-800 border-b pb-2">자가 평가</h4>
         <div className="space-y-3">
-          {selfAssessmentQuestions.map(q => (
-            <div key={q.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-md">
-              <span className="text-sm font-medium text-gray-700">{q.label}</span>
-              <div className="flex gap-1">
+          {selfAssessmentQuestions.map((q, index) => (
+            <div key={q.id} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg border border-gray-100">
+              <span className="text-sm font-medium text-gray-800 flex-1">
+                {index + 1}. {q.label.split('. ')[1] || q.label}
+              </span>
+              <div className="flex gap-1 ml-4">
                 {['상', '중', '하'].map((level) => (
-                  <Button
+                  <button
                     key={`${q.id}-${level}`}
-                    variant={activeButtons[q.id] === level ? 'default' : 'outline'}
-                    size="sm"
-                    className="text-xs h-6 w-10"
+                    className={`
+                      px-3 py-1 text-xs font-medium rounded-md border transition-all duration-200 min-w-[32px] h-7
+                      ${activeButtons[q.id] === level 
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                      }
+                    `}
                     onClick={() => onButtonClick(q.id, level)}
                   >
                     {level}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>

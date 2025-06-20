@@ -7,7 +7,7 @@ import { useUser, useAuth } from '@clerk/nextjs';
 // 아이콘 컴포넌트
 import { 
   LayoutDashboard, Users, 
-  LogOut, Menu, X, UserPlus, FileInput, BarChart, ChevronLeft, ChevronRight, Settings
+  LogOut, Menu, X, UserPlus, FileInput, BarChart, ChevronLeft, ChevronRight, Settings, FileEdit
 } from 'lucide-react';
 
 export default function AdminDashboardLayout({
@@ -92,6 +92,7 @@ export default function AdminDashboardLayout({
     { name: 'KOL 데이터 입력', href: '/admin-dashboard/kol-data-entry', icon: <FileInput size={20} /> },
     { name: 'KOL 현황', href: '/admin-dashboard/kol-dashboard', icon: <BarChart size={20} /> },
     { name: 'KOL 메트릭스 관리', href: '/admin-dashboard/kol-metrics-management', icon: <Settings size={20} /> },
+    { name: '수기 실적 입력', href: '/admin-dashboard/manual-metrics', icon: <FileEdit size={20} /> },
   ];
 
   // 로그아웃 함수

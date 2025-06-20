@@ -1,25 +1,19 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createBrowserClient, createServerClient } from '@supabase/ssr';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+// 일반 클라이언트 (익명 키 사용)
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 // 테스트나 서버 사이드 환경에서는 SERVICE_ROLE 키를 우선 사용해 RLS 제한을 우회
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// test 환경(jsdom) 또는 서버 사이드(Node)에서는 SERVICE_ROLE 키 사용
-const isTestEnv = typeof process !== 'undefined' && (process.env.VITEST || process.env.NODE_ENV === 'test');
-const useServiceKey = (typeof window === 'undefined' || isTestEnv) && supabaseServiceKey;
-
-// 브라우저에 노출되지 않는 안전한 키 선택 (SERVICE_ROLE 키가 있으면 사용, 없으면 익명키)
-const supabaseKey = useServiceKey ? supabaseServiceKey : (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '');
-
-// Supabase 클라이언트 (테스트/서버 → service key, 브라우저 → anon key)
-export const supabaseClient = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+// 서비스 역할 클라이언트 (서비스 키 사용)
+export const supabaseAdmin = supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : supabase; // 서비스 키가 없으면 일반 클라이언트 사용
 
 /**
  * API 요청 시 사용할 fetchOptions 
@@ -68,7 +62,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
  */
 export const signInWithEmail = async (email: string, password: string) => {
   try {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -89,7 +83,7 @@ export const signInWithEmail = async (email: string, password: string) => {
  */
 export const signOut = async () => {
   try {
-    const { error } = await supabaseClient.auth.signOut();
+    const { error } = await supabase.auth.signOut();
     
     if (error) {
       throw error;
@@ -108,7 +102,7 @@ export const signOut = async () => {
  */
 export const getCurrentUser = async () => {
   try {
-    const { data: { user }, error } = await supabaseClient.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) {
       throw error;
@@ -128,7 +122,7 @@ export const getCurrentUser = async () => {
 export const subscribeToAuthChanges = (
   callback: (event: any, session: any) => void
 ) => {
-  const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(callback);
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(callback);
   return () => subscription.unsubscribe();
 };
 
