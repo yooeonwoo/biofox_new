@@ -177,16 +177,9 @@ export default function ManualMetricsPage() {
               <SelectValue placeholder="KOL 선택" />
             </SelectTrigger>
             <SelectContent className="max-h-[200px] overflow-y-auto">
-              {kols.map((kol: { id: number; name: string; shop_name: string; shop_count: number }) => (
-                <SelectItem key={kol.id} value={String(kol.id)}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{kol.name} / {kol.shop_name}</span>
-                    {kol.shop_count > 1 && (
-                      <span className="text-xs text-muted-foreground">
-                        외 {kol.shop_count - 1}개 샵
-                      </span>
-                    )}
-                  </div>
+              {kols.map((kol: { id: number; kol_id: number; name: string; shop_name: string; shop_id: number }) => (
+                <SelectItem key={kol.id} value={String(kol.kol_id)}>
+                  <span className="font-medium">{kol.name} / {kol.shop_name}</span>
                 </SelectItem>
               ))}
             </SelectContent>

@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 
 export interface AdminKol {
   id: number;
+  kol_id: number;
   name: string;
   shop_name: string;
-  shop_count: number;
+  shop_id: number;
 }
 
 export function useAdminNewKols() {
