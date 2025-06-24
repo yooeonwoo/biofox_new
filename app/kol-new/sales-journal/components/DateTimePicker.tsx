@@ -51,7 +51,8 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
     selectedDate.setHours(currentHour);
     selectedDate.setMinutes(currentMinute);
     
-    const newDateTimeString = selectedDate.toISOString().slice(0, 16);
+    // ISO 문자열 전체(UTC)를 사용하여 타임존 손실을 방지
+    const newDateTimeString = selectedDate.toISOString();
     setDate(selectedDate);
     onChange(newDateTimeString);
   };
@@ -66,7 +67,8 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
       newDate.setMinutes(val);
     }
     
-    const newDateTimeString = newDate.toISOString().slice(0, 16);
+    // ISO 문자열 전체(UTC)를 사용하여 타임존 손실을 방지
+    const newDateTimeString = newDate.toISOString();
     setDate(newDate);
     onChange(newDateTimeString);
   }

@@ -9,6 +9,16 @@ import { toast } from '@/components/ui/use-toast';
 type PermissionState = 'default' | 'granted' | 'denied';
 
 export default function NotificationPermission() {
+  const [isClient, setIsClient] = useState(false);
+  // 클라이언트 여부 확인 (SSR hydration mismatch 방지)
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    // 서버 렌더링 시에는 아무것도 출력하지 않음
+    return null;
+  }
   const [permission, setPermission] = useState<PermissionState>('default');
   const [isLoading, setIsLoading] = useState(false);
 
