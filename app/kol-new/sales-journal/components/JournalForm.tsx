@@ -191,13 +191,13 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
             </div>
 
             {/* 일지 내용 */}
-            <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-gray-50/80">
-                <Label className="text-sm font-semibold text-gray-700 shrink-0">일지 내용</Label>
-                <Input 
+            <div className="flex items-start gap-2 p-1.5 pl-3 border rounded-lg bg-gray-50/80">
+                <Label className="text-sm font-semibold text-gray-700 shrink-0 pt-1">일지 내용</Label>
+                <Textarea 
                     value={content} 
                     onChange={(e) => setContent(e.target.value)} 
                     placeholder="영업 활동과 생각을 자유롭게 적어보세요..." 
-                    className="flex-1 min-w-0 bg-transparent border-0 shadow-none focus-visible:ring-0 h-8" 
+                    className="flex-1 min-w-0 bg-transparent border-0 shadow-none focus-visible:ring-0 min-h-[60px] resize-none" 
                 />
                 <Dialog>
                     <DialogTrigger asChild>
