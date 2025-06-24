@@ -8,6 +8,7 @@ import Link from 'next/link';
 import JournalList from './JournalList';
 import JournalForm from './JournalForm';
 import { Card } from '@/components/ui/card';
+import NotificationPermission from '@/components/NotificationPermission';
 
 
 interface Props {
@@ -122,6 +123,9 @@ export default function SalesJournalClient({
             </div>
 
             <div className="p-4 space-y-6">
+                {/* 브라우저 푸시 알림 권한 요청 UI */}
+                <NotificationPermission />
+                
                 {/* 새 일지 추가 폼 */}
                 {showForm && (
                      <JournalForm 

@@ -2,9 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Users, Store, PieChart } from 'lucide-react';
+import { BarChart3, Users, Store, PieChart, Bell } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { useUser } from '@clerk/nextjs';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "@/components/ui/use-toast";
 
 // 대시보드 카드 컴포넌트
 function DashboardCard({
@@ -53,6 +63,33 @@ function StatCard({ title, value, subtitle }: { title: string; value: string | n
   );
 }
 
+// KOL 타입 정의
+interface KolUser {
+  id: number;
+  clerk_id: string;
+  email: string;
+  name: string;
+  role: string;
+  kol?: {
+    id: number;
+    name: string;
+    shop_name: string;
+  };
+}
+
+// API 함수
+const fetchKolUsers = async (): Promise<KolUser[]> => {
+  const response = await fetch('/api/admin/users?role=kol', {
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error('KOL 목록을 불러오는데 실패했습니다.');
+  }
+  
+  return response.json();
+};
+
 // 메인 페이지 컴포넌트
 export default function AdminDashboardMainPage() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -61,6 +98,20 @@ export default function AdminDashboardMainPage() {
     shopsCount: 0,
     productsCount: 0,
     isLoading: true
+  });
+  
+  // 알림 보내기 다이얼로그 상태
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [targetType, setTargetType] = useState<'all' | 'individual'>('all');
+  const [selectedKols, setSelectedKols] = useState<number[]>([]);
+  const [notificationTitle, setNotificationTitle] = useState('');
+  const [notificationContent, setNotificationContent] = useState('');
+  
+  // KOL 목록 가져오기
+  const { data: kolUsers = [], isLoading: isLoadingKols } = useQuery({
+    queryKey: ['kolUsers'],
+    queryFn: fetchKolUsers,
+    enabled: isNotificationOpen && targetType === 'individual',
   });
 
   useEffect(() => {
@@ -108,9 +159,119 @@ export default function AdminDashboardMainPage() {
     fetchStats();
   }, [isLoaded, isSignedIn]);
 
+  // 폼 검증
+  const validateForm = () => {
+    if (!notificationTitle.trim() || notificationTitle.length > 255) {
+      toast({
+        title: "오류",
+        description: "제목은 1-255자 사이여야 합니다.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (!notificationContent.trim() || notificationContent.length > 1000) {
+      toast({
+        title: "오류",
+        description: "내용은 1-1000자 사이여야 합니다.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (targetType === 'individual' && selectedKols.length === 0) {
+      toast({
+        title: "오류",
+        description: "최소 1명 이상의 KOL을 선택해주세요.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
+  // 알림 전송
+  const handleSendNotification = async () => {
+    if (!validateForm()) return;
+    
+    try {
+      const response = await fetch('/api/admin/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          targetType,
+          selectedKols: targetType === 'individual' ? selectedKols : undefined,
+          title: notificationTitle.trim(),
+          content: notificationContent.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '알림 전송에 실패했습니다.');
+      }
+
+      // 성공 메시지
+      toast({
+        title: "알림 전송 완료",
+        description: `${data.count}명의 KOL에게 알림을 전송했습니다.`,
+      });
+      
+      // 다이얼로그 닫기
+      setIsNotificationOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('알림 전송 오류:', error);
+      toast({
+        title: "오류 발생",
+        description: error instanceof Error ? error.message : "알림 전송에 실패했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 폼 초기화
+  const resetForm = () => {
+    setTargetType('all');
+    setSelectedKols([]);
+    setNotificationTitle('');
+    setNotificationContent('');
+  };
+
+  // KOL 선택 토글
+  const toggleKolSelection = (kolId: number) => {
+    setSelectedKols(prev => {
+      if (prev.includes(kolId)) {
+        return prev.filter(id => id !== kolId);
+      } else {
+        return [...prev, kolId];
+      }
+    });
+  };
+
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    if (selectedKols.length === kolUsers.length) {
+      setSelectedKols([]);
+    } else {
+      setSelectedKols(kolUsers.map(user => user.id));
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">관리자 대시보드</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">관리자 대시보드</h1>
+        <Button onClick={() => setIsNotificationOpen(true)} className="gap-2">
+          <Bell className="h-4 w-4" />
+          알림 보내기
+        </Button>
+      </div>
       
       {/* 통계 요약 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -165,6 +326,123 @@ export default function AdminDashboardMainPage() {
           linkHref="/admin-dashboard/product-sales"
         />
       </div>
+
+      {/* 알림 보내기 다이얼로그 */}
+      <Dialog open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>알림 보내기</DialogTitle>
+            <DialogDescription>
+              KOL에게 알림을 보냅니다. 대상을 선택하고 내용을 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* 대상 선택 */}
+            <div className="space-y-2">
+              <Label htmlFor="target">대상 선택</Label>
+              <Select value={targetType} onValueChange={(value: 'all' | 'individual') => {
+                setTargetType(value);
+                setSelectedKols([]);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="대상을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 KOL</SelectItem>
+                  <SelectItem value="individual">개별 KOL 선택</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 개별 KOL 선택 */}
+            {targetType === 'individual' && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label>KOL 선택 ({selectedKols.length}명 선택됨)</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleSelectAll}
+                  >
+                    {selectedKols.length === kolUsers.length ? '전체 해제' : '전체 선택'}
+                  </Button>
+                </div>
+                <ScrollArea className="h-[200px] border rounded-md p-4">
+                  {isLoadingKols ? (
+                    <p className="text-sm text-muted-foreground text-center">KOL 목록을 불러오는 중...</p>
+                  ) : kolUsers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center">KOL이 없습니다.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {kolUsers.map((user) => (
+                        <div key={user.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`kol-${user.id}`}
+                            checked={selectedKols.includes(user.id)}
+                            onCheckedChange={() => toggleKolSelection(user.id)}
+                          />
+                          <label
+                            htmlFor={`kol-${user.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                          >
+                            {user.kol?.name || user.name || '이름 없음'} 
+                            {user.kol?.shop_name && <span className="text-muted-foreground ml-1">({user.kol.shop_name})</span>}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            )}
+
+            {/* 제목 입력 */}
+            <div className="space-y-2">
+              <Label htmlFor="title">제목</Label>
+              <Input
+                id="title"
+                placeholder="알림 제목을 입력하세요"
+                value={notificationTitle}
+                onChange={(e) => setNotificationTitle(e.target.value)}
+                maxLength={255}
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {notificationTitle.length}/255
+              </p>
+            </div>
+
+            {/* 내용 입력 */}
+            <div className="space-y-2">
+              <Label htmlFor="content">내용</Label>
+              <Textarea
+                id="content"
+                placeholder="알림 내용을 입력하세요"
+                value={notificationContent}
+                onChange={(e) => setNotificationContent(e.target.value)}
+                maxLength={1000}
+                rows={5}
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {notificationContent.length}/1000
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsNotificationOpen(false);
+              resetForm();
+            }}>
+              취소
+            </Button>
+            <Button onClick={handleSendNotification}>
+              알림 보내기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

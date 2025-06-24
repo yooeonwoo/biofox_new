@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { redirect } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { createClient } from '@supabase/supabase-js';
 import { 
   Bell,
   CheckCircle,
@@ -31,6 +33,7 @@ import KolFooter from "../../components/layout/KolFooter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DialogClose } from "@radix-ui/react-dialog";
 import KolMobileMenu from "../../components/layout/KolMobileMenu";
+import NotificationPermission from "@/components/NotificationPermission";
 
 // 알림 데이터 타입 정의
 interface Notification {
@@ -43,20 +46,64 @@ interface Notification {
   timeAgo?: string;
 }
 
+// API 함수들
+const fetchNotifications = async (): Promise<Notification[]> => {
+  const response = await fetch('/api/kol-new/notifications', {
+    credentials: 'include',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  
+  if (!response.ok) {
+    throw new Error('알림을 불러오는데 실패했습니다.');
+  }
+  
+  const data = await response.json();
+  
+  // 알림 데이터에 timeAgo 추가
+  return data.map((notification: Notification) => ({
+    ...notification,
+    timeAgo: formatDistanceToNow(new Date(notification.created_at), { 
+      addSuffix: true, 
+      locale: ko 
+    })
+  }));
+};
+
+const markAsReadAPI = async (id: number): Promise<void> => {
+  const response = await fetch(`/api/kol-new/notifications/${id}/read`, {
+    method: 'PUT',
+    credentials: 'include'
+  });
+  
+  if (!response.ok) {
+    throw new Error('알림 읽음 처리에 실패했습니다.');
+  }
+};
+
+const markAllAsReadAPI = async (): Promise<void> => {
+  const response = await fetch('/api/kol-new/notifications/read-all', {
+    method: 'PUT',
+    credentials: 'include'
+  });
+  
+  if (!response.ok) {
+    throw new Error('전체 알림 읽음 처리에 실패했습니다.');
+  }
+};
+
 export default function NotificationsPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const { signOut } = useClerk();
+  const queryClient = useQueryClient();
+  
   const [isKol, setIsKol] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [kolInfo, setKolInfo] = useState<{name: string, shopName: string} | null>(null);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -66,13 +113,69 @@ export default function NotificationsPage() {
     }
   }, [isLoaded, isSignedIn, user]);
 
-  // KOL 정보 및 알림 데이터 가져오기
+  // React Query로 알림 데이터 가져오기
+  const { 
+    data: notifications = [], 
+    isLoading: loading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: fetchNotifications,
+    enabled: isLoaded && isSignedIn && isKol === true,
+    staleTime: 5 * 60 * 1000, // 5분
+    cacheTime: 10 * 60 * 1000, // 10분
+    refetchInterval: 30 * 1000, // 30초마다 자동 갱신
+    refetchIntervalInBackground: false, // 백그라운드에서는 자동 갱신 안함
+  });
+
+  // 개별 알림 읽음 처리 mutation
+  const markAsReadMutation = useMutation({
+    mutationFn: markAsReadAPI,
+    onSuccess: () => {
+      // 성공 시 알림 목록 다시 가져오기
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      
+      toast({
+        title: "알림 읽음",
+        description: "알림이 읽음으로 표시되었습니다.",
+      });
+    },
+    onError: (error) => {
+      console.error('알림 읽음 처리 실패:', error);
+      toast({
+        title: "오류 발생",
+        description: "알림 읽음 처리에 실패했습니다.",
+      });
+    }
+  });
+
+  // 전체 알림 읽음 처리 mutation
+  const markAllAsReadMutation = useMutation({
+    mutationFn: markAllAsReadAPI,
+    onSuccess: () => {
+      // 성공 시 알림 목록 다시 가져오기
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      
+      toast({
+        title: "모든 알림 읽음",
+        description: "모든 알림이 읽음으로 표시되었습니다.",
+      });
+    },
+    onError: (error) => {
+      console.error('전체 알림 읽음 처리 실패:', error);
+      toast({
+        title: "오류 발생",
+        description: "전체 알림 읽음 처리에 실패했습니다.",
+      });
+    }
+  });
+
+  // KOL 정보 가져오기
   useEffect(() => {
     if (isLoaded && isSignedIn && isKol) {
       const fetchKolInfo = async () => {
         try {
-          setLoading(true);
-          
           // 대시보드 API를 사용하여 KOL 정보 가져오기
           const response = await fetch('/api/kol-new/dashboard', { 
             credentials: 'include',
@@ -89,172 +192,132 @@ export default function NotificationsPage() {
             name: data.kolInfo?.name || user?.firstName || user?.username || '사용자',
             shopName: data.kolInfo?.shop_name || '내 상점'
           });
+          
+          // 현재 사용자의 DB ID 저장 (Realtime 필터링용)
+          setCurrentUserId(data.userId);
         } catch (error) {
           console.error('KOL 정보 조회 중 오류:', error);
-          setError('KOL 정보를 불러오는데 실패했습니다.');
           
           // 에러 발생 시 기본 정보 설정
           setKolInfo({
             name: user?.firstName || user?.username || '사용자',
             shopName: '내 상점'
           });
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      const fetchNotifications = async () => {
-        try {
-          const response = await fetch('/api/kol-new/notifications', {
-            credentials: 'include',
-            headers: { 'Cache-Control': 'no-cache' }
-          });
-          
-          if (!response.ok) {
-            throw new Error('알림을 불러오는데 실패했습니다.');
-          }
-          
-          const notificationData = await response.json();
-          
-          // 알림 데이터에 timeAgo 추가
-          const processedNotifications = notificationData.map((notification: Notification) => ({
-            ...notification,
-            timeAgo: formatDistanceToNow(new Date(notification.created_at), { 
-              addSuffix: true, 
-              locale: ko 
-            })
-          }));
-          
-          setNotifications(processedNotifications);
-          setError(null);
-        } catch (error) {
-          console.error('알림 데이터 조회 중 오류:', error);
-          setError('알림을 불러오는데 실패했습니다.');
         }
       };
       
       fetchKolInfo();
-      fetchNotifications();
     }
   }, [isLoaded, isSignedIn, isKol, user]);
 
+  // Supabase Realtime 구독
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !isKol || !currentUserId) return;
+
+    // Supabase 클라이언트 생성
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Realtime 채널 생성 및 구독
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${currentUserId}` // 현재 사용자의 알림만 필터링
+        },
+        (payload) => {
+          console.log('새 알림 수신:', payload);
+          
+          // React Query 캐시 무효화 - 알림 목록 다시 가져오기
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          
+          // 브라우저 푸시 알림 표시 (권한이 허용된 경우)
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification(payload.new.title || '새 알림', {
+                body: payload.new.content || '새로운 알림을 확인해보세요.',
+                icon: '/favicon.ico', // 프로젝트 파비콘 사용
+                badge: '/favicon.ico',
+                tag: `notification-${payload.new.id}`, // 중복 방지
+                requireInteraction: false, // 자동으로 사라짐
+                silent: false,
+              });
+            } catch (error) {
+              console.error('브라우저 알림 표시 실패:', error);
+            }
+          }
+          
+          // 새 알림 토스트 메시지 (인앱 알림)
+          toast({
+            title: "새 알림이 도착했습니다",
+            description: payload.new.title || "새로운 알림을 확인해보세요.",
+            action: (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  // 새 알림을 바로 표시
+                  const newNotification = {
+                    ...payload.new,
+                    timeAgo: '방금 전'
+                  } as Notification;
+                  viewNotificationDetail(newNotification);
+                }}
+              >
+                보기
+              </Button>
+            ),
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime 구독 상태:', status);
+      });
+
+    // 컴포넌트 언마운트시 구독 해제
+    return () => {
+      console.log('Realtime 구독 해제');
+      supabase.removeChannel(channel);
+    };
+  }, [isLoaded, isSignedIn, isKol, currentUserId, queryClient, viewNotificationDetail]);
+
   // 개별 알림 읽음 처리
-  const markAsRead = async (id: number) => {
-    try {
-      const response = await fetch(`/api/kol-new/notifications/${id}/read`, {
-        method: 'PUT',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('알림 읽음 처리에 실패했습니다.');
-      }
-      
-      // 로컬 상태 업데이트
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === id ? { ...notification, read: true } : notification
-        )
-      );
-      
-      toast({
-        title: "알림 읽음",
-        description: "알림이 읽음으로 표시되었습니다.",
-      });
-    } catch (error) {
-      console.error('알림 읽음 처리 실패:', error);
-      toast({
-        title: "오류 발생",
-        description: "알림 읽음 처리에 실패했습니다.",
-      });
-    }
+  const markAsRead = (id: number) => {
+    markAsReadMutation.mutate(id);
   };
 
   // 전체 알림 읽음 처리
-  const markAllAsRead = async () => {
-    try {
-      const response = await fetch('/api/kol-new/notifications/read-all', {
-        method: 'PUT',
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('전체 알림 읽음 처리에 실패했습니다.');
-      }
-      
-      // 로컬 상태 업데이트
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, read: true }))
-      );
-      
-      toast({
-        title: "모든 알림 읽음",
-        description: "모든 알림이 읽음으로 표시되었습니다.",
-      });
-    } catch (error) {
-      console.error('전체 알림 읽음 처리 실패:', error);
-      toast({
-        title: "오류 발생",
-        description: "전체 알림 읽음 처리에 실패했습니다.",
-      });
-    }
+  const markAllAsRead = () => {
+    markAllAsReadMutation.mutate();
   };
 
   // 데이터 새로고침
   const refreshData = async () => {
-    setRefreshing(true);
+    const { isFetching } = await refetch();
     
-    try {
-      const response = await fetch('/api/kol-new/notifications', {
-        credentials: 'include',
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      
-      if (!response.ok) {
-        throw new Error('알림을 새로고침하는데 실패했습니다.');
-      }
-      
-      const notificationData = await response.json();
-      
-      // 알림 데이터에 timeAgo 추가
-      const processedNotifications = notificationData.map((notification: Notification) => ({
-        ...notification,
-        timeAgo: formatDistanceToNow(new Date(notification.created_at), { 
-          addSuffix: true, 
-          locale: ko 
-        })
-      }));
-      
-      setNotifications(processedNotifications);
-      setError(null);
-      
+    if (!isFetching) {
       toast({
         title: "새로고침 완료",
         description: "알림 데이터가 업데이트되었습니다.",
       });
-    } catch (error) {
-      console.error('데이터 새로고침 실패:', error);
-      setError('알림 데이터를 새로고침하는데 실패했습니다.');
-      
-      toast({
-        title: "오류 발생",
-        description: "데이터를 새로고침하는데 실패했습니다.",
-      });
-    } finally {
-      setRefreshing(false);
     }
   };
 
   // 알림 상세보기
-  const viewNotificationDetail = (notification: Notification) => {
+  const viewNotificationDetail = useCallback((notification: Notification) => {
     setSelectedNotification(notification);
     setIsDetailOpen(true);
     
     // 읽지 않은 알림인 경우 읽음으로 표시
     if (!notification.read) {
-      markAsRead(notification.id);
+      markAsReadMutation.mutate(notification.id);
     }
-  };
+  }, [markAsReadMutation]);
 
   // 필터링된 알림 목록
   const filteredNotifications = notifications
@@ -305,6 +368,9 @@ export default function NotificationsPage() {
         <p className="text-sm text-muted-foreground">중요한 알림과 업데이트를 확인하세요.</p>
       </div>
 
+      {/* 브라우저 푸시 알림 권한 요청 */}
+      <NotificationPermission />
+
       {/* 검색 및 필터 영역 */}
       <div className="mb-6 flex flex-col space-y-4">
         <div className="relative w-full">
@@ -332,15 +398,15 @@ export default function NotificationsPage() {
               variant="outline" 
               size="icon"
               onClick={refreshData}
-              disabled={refreshing || loading}
+              disabled={loading}
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
             
             <Button 
               variant="outline"
               onClick={markAllAsRead}
-              disabled={!notifications.some(n => !n.read)}
+              disabled={!notifications.some(n => !n.read) || markAllAsReadMutation.isLoading}
               className="whitespace-nowrap flex-1 sm:flex-initial"
             >
               <CheckCircle className="mr-1 h-4 w-4" />
@@ -368,11 +434,11 @@ export default function NotificationsPage() {
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12">
               <AlertCircle className="h-8 w-8 text-destructive" />
-              <p className="mt-4 text-sm text-destructive">{error}</p>
+              <p className="mt-4 text-sm text-destructive">{error instanceof Error ? error.message : '알림을 불러오는데 실패했습니다.'}</p>
               <Button 
                 className="mt-4"
                 variant="outline"
-                onClick={refreshData}
+                onClick={() => refetch()}
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 다시 시도

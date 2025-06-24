@@ -6,6 +6,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // 일반 클라이언트 (익명 키 사용)
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+// alias to support legacy imports expecting 'supabaseClient'
+export const supabaseClient: SupabaseClient = supabase;
 
 // 테스트나 서버 사이드 환경에서는 SERVICE_ROLE 키를 우선 사용해 RLS 제한을 우회
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

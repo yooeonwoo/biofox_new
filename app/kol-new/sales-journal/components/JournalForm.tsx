@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { JournalEntryData } from '../lib/types';
 import { Button } from '@/components/ui/button';
+import { toast } from "@/components/ui/use-toast";
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -39,6 +40,7 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
     
     const [isAddingNewShop, setIsAddingNewShop] = useState(false);
     const [newShopInput, setNewShopInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleShopSelect = (value: string) => {
         if (value === 'add-new') {
@@ -60,39 +62,106 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
         }
     };
 
-    const handleSaveClick = () => {
-        if (!content.trim() || !shopName) {
-            alert('샵 이름과 일지 내용을 입력해주세요.');
+    const handleSaveClick = async () => {
+        // 기존 검증 로직 유지
+        if (!date || !shopName.trim() || !content.trim()) {
+            toast({
+                title: "오류",
+                description: "날짜, 샵명, 내용은 필수입니다.",
+                variant: "destructive",
+            });
             return;
         }
 
-        const reminder = (reminderContent.trim() && reminderDateTime) ? { content: reminderContent, dateTime: reminderDateTime } : undefined;
-        const ownerMessage = (ownerMessageContent.trim()) ? { content: ownerMessageContent, dateTime: ownerMessageDateTime, sendNow: !ownerMessageDateTime } : undefined;
+        setIsLoading(true);
+        
+        try {
+            // 리마인드 데이터 준비
+            const reminder = (reminderContent.trim() && reminderDateTime) ? {
+                content: reminderContent.trim(),
+                dateTime: reminderDateTime
+            } : undefined;
 
-        const newEntryData: Omit<JournalEntryData, 'id' | 'createdAt' | 'updatedAt'> = {
-            date: format(date || new Date(), 'yyyy-MM-dd'),
-            shopName,
-            content,
-            specialNotes: shopSpecialNotes[shopName] || '',
-            reminder,
-            ownerMessage,
-        };
-        onSave(newEntryData);
+            // 원장 메시지 데이터 준비
+            const ownerMessage = (ownerMessageContent.trim()) ? {
+                content: ownerMessageContent.trim(),
+                dateTime: ownerMessageDateTime || '',
+                sendNow: !ownerMessageDateTime
+            } : undefined;
+
+            const response = await fetch('/api/kol-new/sales-journal', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    date: format(date, 'yyyy-MM-dd'),
+                    shopName: shopName.trim(),
+                    content: content.trim(),
+                    specialNotes: shopSpecialNotes[shopName] || undefined,
+                    reminder,
+                    ownerMessage,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || '저장에 실패했습니다.');
+            }
+
+            // 성공 처리
+            toast({
+                title: "저장 완료",
+                description: "영업일지가 성공적으로 저장되었습니다.",
+            });
+
+            // 기존 onSave 호출 (상위 컴포넌트 알림용)
+            const savedData: Omit<JournalEntryData, 'id' | 'createdAt' | 'updatedAt'> = {
+                date: format(date, 'yyyy-MM-dd'),
+                shopName: shopName.trim(),
+                content: content.trim(),
+                specialNotes: shopSpecialNotes[shopName] || '',
+                reminder,
+                ownerMessage,
+            };
+            onSave(savedData);
+
+        } catch (error) {
+            console.error('영업일지 저장 오류:', error);
+            toast({
+                title: "저장 실패",
+                description: error instanceof Error ? error.message : "저장 중 오류가 발생했습니다.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleOwnerMessageSend = (sendNow: boolean) => {
         if (!ownerMessageContent.trim()) {
-            alert('메시지 내용을 입력해주세요.');
+            toast({
+                title: "오류",
+                description: "메시지 내용을 입력해주세요.",
+                variant: "destructive",
+            });
             return;
         }
         if (!sendNow && !ownerMessageDateTime) {
-            alert('예약 발송 시간을 설정해주세요.');
+            toast({
+                title: "오류", 
+                description: "예약 발송 시간을 설정해주세요.",
+                variant: "destructive",
+            });
             return;
         }
 
-        const message = `[원장님 메시지]\n내용: ${ownerMessageContent}\n${sendNow ? '즉시 발송' : `예약 시간: ${formatDateTime(ownerMessageDateTime)}`}`;
-        alert(message);
-        // TODO: 실제 발송 로직
+        toast({
+            title: "안내",
+            description: "원장님 메시지는 영업일지 저장 시 함께 전송됩니다.",
+        });
     }
     
     const formatDateTime = (dateTimeString: string) => {
@@ -180,7 +249,16 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                     </Dialog>
                 </div>
                 <DateTimePicker value={reminderDateTime} onChange={setReminderDateTime} />
-                <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 shrink-0" onClick={() => alert('리마인더는 일지 저장 시 함께 저장됩니다.')}>저장</Button>
+                <Button 
+                    size="sm" 
+                    className="h-8 bg-blue-600 hover:bg-blue-700 shrink-0" 
+                    onClick={() => toast({
+                        title: "안내",
+                        description: "리마인더는 영업일지 저장 시 함께 저장됩니다.",
+                    })}
+                >
+                    저장
+                </Button>
             </div>
 
             {/* 원장님 메시지 */}
@@ -210,8 +288,13 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
             </div>
             
             <div className="flex justify-end gap-2 pt-4">
-                <Button variant="ghost" onClick={onCancel}>취소</Button>
-                <Button onClick={handleSaveClick} disabled={!content.trim() || !shopName}>일지 저장</Button>
+                <Button variant="ghost" onClick={onCancel} disabled={isLoading}>취소</Button>
+                <Button 
+                    onClick={handleSaveClick} 
+                    disabled={isLoading || !content.trim() || !shopName}
+                >
+                    {isLoading ? "저장 중..." : "일지 저장"}
+                </Button>
             </div>
         </div>
     );
