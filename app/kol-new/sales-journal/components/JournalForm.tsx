@@ -89,6 +89,17 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                 sendNow: !ownerMessageDateTime
             } : undefined;
 
+            // 디버그: 전송할 데이터 확인
+            const payload = {
+                    date: format(date, 'yyyy-MM-dd'),
+                    shopName: shopName.trim(),
+                    content: content.trim(),
+                    specialNotes: shopSpecialNotes[shopName] || undefined,
+                    reminder,
+                    ownerMessage,
+                } as const;
+            console.log('전송할 데이터:', payload);
+
             const response = await fetch('/api/kol-new/sales-journal', {
                 method: 'POST',
                 headers: {
