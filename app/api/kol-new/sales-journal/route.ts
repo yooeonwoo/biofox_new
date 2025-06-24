@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
     // 2. 요청 본문 파싱
     const body: SalesJournalRequest = await req.json();
     console.log('SalesJournal API 요청 본문:', body);
-    const { date, shopName, content, specialNotes, reminder, ownerMessage } = body;
+    // 알림 기능 비활성화(MVP)
+    const { date, shopName, content, specialNotes, reminder: _reminder, ownerMessage: _ownerMessage } = body;
 
     // 3. 요청 데이터 검증
     if (!date || !shopName?.trim() || !content?.trim()) {
@@ -115,6 +116,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // TODO: MVP 이후 알림 기능 재활성화
+    /*
     // 6. 리마인드 알림 처리
     if (reminder && reminder.content?.trim() && reminder.dateTime) {
       const reminderDateTime = new Date(reminder.dateTime);
@@ -170,9 +173,10 @@ export async function POST(req: NextRequest) {
         console.error('원장 메시지 저장 실패:', messageError);
         // 원장 메시지 실패는 전체 실패로 처리하지 않음
       }
-    }
+     }
+     */
 
-    // 8. 성공 응답
+     // 8. 성공 응답
     return NextResponse.json({
       success: true,
       data: journalData,
