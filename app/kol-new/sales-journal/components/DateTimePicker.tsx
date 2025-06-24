@@ -27,6 +27,13 @@ interface DateTimePickerProps {
 }
 
 export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
+  const [isClient, setIsClient] = React.useState(false);
+  React.useEffect(() => setIsClient(true), []);
+
+  if (!isClient) {
+    return null;
+  }
+
   const [date, setDate] = React.useState<Date | undefined>(value ? new Date(value) : undefined);
 
   React.useEffect(() => {
