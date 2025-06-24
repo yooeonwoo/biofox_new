@@ -9,14 +9,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Plus, Bell, Send, Clock, Maximize2, CalendarIcon } from 'lucide-react';
+import { Plus, Maximize2, CalendarIcon } from 'lucide-react'; // Bell, Send, Clock 아이콘 사용 중지
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { DateTimePicker } from './DateTimePicker';
+// TODO: MVP 알림 기능 비활성화
+// import { DateTimePicker } from './DateTimePicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+
+// TODO: MVP 알림 기능 비활성화: 더미 컴포넌트 정의로 타입 에러 방지
+const Bell: React.FC<any> = () => null;
+const Send: React.FC<any> = () => null;
+const Clock: React.FC<any> = () => null;
+const DateTimePicker: React.FC<any> = () => null;
 
 interface JournalFormProps {
     managedShops: string[];
@@ -76,18 +83,19 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
         setIsLoading(true);
         
         try {
-            // 리마인드 데이터 준비
+            // TODO: MVP 이후 알림 기능 재활성화 - 리마인드/원장 메시지 비활성화
+            /*
             const reminder = (reminderContent.trim() && reminderDateTime) ? {
                 content: reminderContent.trim(),
                 dateTime: reminderDateTime
             } : undefined;
 
-            // 원장 메시지 데이터 준비
             const ownerMessage = (ownerMessageContent.trim()) ? {
                 content: ownerMessageContent.trim(),
                 dateTime: ownerMessageDateTime || '',
                 sendNow: !ownerMessageDateTime
             } : undefined;
+            */
 
             // 디버그: 전송할 데이터 확인
             const payload = {
@@ -95,9 +103,7 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                     shopName: shopName.trim(),
                     content: content.trim(),
                     specialNotes: shopSpecialNotes[shopName] || undefined,
-                    reminder,
-                    ownerMessage,
-                } as const;
+                } as const; // TODO: 알림 필드 제거
             console.log('전송할 데이터:', payload);
 
             const response = await fetch('/api/kol-new/sales-journal', {
@@ -106,14 +112,7 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
-                body: JSON.stringify({
-                    date: format(date, 'yyyy-MM-dd'),
-                    shopName: shopName.trim(),
-                    content: content.trim(),
-                    specialNotes: shopSpecialNotes[shopName] || undefined,
-                    reminder,
-                    ownerMessage,
-                }),
+                body: JSON.stringify(payload),
             });
 
             const data = await response.json();
@@ -133,9 +132,7 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                 date: format(date, 'yyyy-MM-dd'),
                 shopName: shopName.trim(),
                 content: content.trim(),
-                specialNotes: shopSpecialNotes[shopName] || '',
-                reminder,
-                ownerMessage,
+                specialNotes: shopSpecialNotes[shopName] || ''
             };
             onSave(savedData);
 
@@ -244,10 +241,7 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                 </Dialog>
             </div>
             
-            {/* 리마인드 */}
-            <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-blue-50/80 border-blue-200">
-                <Bell className="size-4 text-blue-600 shrink-0" />
-                <Label className="text-sm text-blue-800 shrink-0 font-semibold">리마인드</Label>
+            <div className="flex justify-end gap-2 pt-4">
                 <div className="flex-1 min-w-0 relative">
                     <Input value={reminderContent} onChange={(e) => setReminderContent(e.target.value)} placeholder="나중에 확인할 내용..." className="bg-white border-0 shadow-none focus-visible:ring-0 h-8 pr-10" />
                     <Dialog>
@@ -272,7 +266,8 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                 </Button>
             </div>
 
-            {/* 원장님 메시지 */}
+            /* TODO: MVP 알림 기능 비활성화 - 원장님 메시지 UI 시작
+{/* 원장님 메시지 */}
             <div className="flex items-center gap-2 p-1.5 pl-3 border rounded-lg bg-green-50/80 border-green-200">
                 <Send className="size-4 text-green-600 shrink-0" />
                 <Label className="text-sm text-green-800 shrink-0 font-semibold">원장님</Label>
@@ -297,8 +292,8 @@ export default function JournalForm({ managedShops, shopSpecialNotes, onSave, on
                     </Button>
                 </div>
             </div>
-            
-            <div className="flex justify-end gap-2 pt-4">
+
+             <div className="flex justify-end gap-2 pt-4">
                 <Button variant="ghost" onClick={onCancel} disabled={isLoading}>취소</Button>
                 <Button 
                     onClick={handleSaveClick} 
