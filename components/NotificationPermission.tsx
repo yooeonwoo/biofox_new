@@ -10,24 +10,26 @@ type PermissionState = 'default' | 'granted' | 'denied';
 
 export default function NotificationPermission() {
   const [isClient, setIsClient] = useState(false);
-  // 클라이언트 여부 확인 (SSR hydration mismatch 방지)
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    // 서버 렌더링 시에는 아무것도 출력하지 않음
-    return null;
-  }
   const [permission, setPermission] = useState<PermissionState>('default');
   const [isLoading, setIsLoading] = useState(false);
 
+  // 클라이언트 최초 마운트 시 SSR-안전 처리
   useEffect(() => {
-    // 브라우저가 알림을 지원하는지 확인
+    setIsClient(true);
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setPermission(Notification.permission as PermissionState);
     }
   }, []);
+
+  // 서버사이드 렌더링 단계에서는 아무것도 렌더링하지 않아 hydration 오류 방지
+  if (!isClient) {
+    return null;
+  }
+
+  // 알림 API를 지원하지 않는 브라우저에서는 컴포넌트를 렌더링하지 않음
+  if (!('Notification' in window)) {
+    return null;
+  }
 
   const requestPermission = async () => {
     if (!('Notification' in window)) {
