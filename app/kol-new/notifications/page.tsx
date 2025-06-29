@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
 import { redirect } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@supabase/supabase-js';
@@ -92,8 +91,15 @@ const markAllAsReadAPI = async (): Promise<void> => {
 };
 
 export default function NotificationsPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const { signOut } = useClerk();
+  // 임시 사용자 정보 (로컬 개발용)
+  const tempUser = {
+    isLoaded: true,
+    isSignedIn: true,
+    role: "kol",
+    firstName: "테스트",
+    username: "testuser"
+  };
+
   const queryClient = useQueryClient();
   
   const [isKol, setIsKol] = useState<boolean | null>(null);
@@ -107,11 +113,10 @@ export default function NotificationsPage() {
 
   // 사용자 역할 확인
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      const userRole = user.publicMetadata?.role as string || "kol";
-      setIsKol(userRole === "kol");
+    if (tempUser.isLoaded && tempUser.isSignedIn) {
+      setIsKol(tempUser.role === "kol");
     }
-  }, [isLoaded, isSignedIn, user]);
+  }, []);
 
   // React Query로 알림 데이터 가져오기
   const { 
@@ -122,7 +127,7 @@ export default function NotificationsPage() {
   } = useQuery({
     queryKey: ['notifications'],
     queryFn: fetchNotifications,
-    enabled: isLoaded && isSignedIn && isKol === true,
+    enabled: tempUser.isLoaded && tempUser.isSignedIn && isKol === true,
     staleTime: 5 * 60 * 1000, // 5분
     cacheTime: 10 * 60 * 1000, // 10분
     refetchInterval: 30 * 1000, // 30초마다 자동 갱신
@@ -173,7 +178,7 @@ export default function NotificationsPage() {
 
   // KOL 정보 가져오기
   useEffect(() => {
-    if (isLoaded && isSignedIn && isKol) {
+    if (tempUser.isLoaded && tempUser.isSignedIn && isKol) {
       const fetchKolInfo = async () => {
         try {
           // 대시보드 API를 사용하여 KOL 정보 가져오기
@@ -189,8 +194,8 @@ export default function NotificationsPage() {
           const data = await response.json();
           
           setKolInfo({
-            name: data.kolInfo?.name || user?.firstName || user?.username || '사용자',
-            shopName: data.kolInfo?.shop_name || '내 상점'
+            name: data.kolInfo?.name || tempUser?.firstName || tempUser?.username || '테스트 사용자',
+            shopName: data.kolInfo?.shop_name || '테스트 샵'
           });
           
           // 현재 사용자의 DB ID 저장 (Realtime 필터링용)
@@ -200,19 +205,19 @@ export default function NotificationsPage() {
           
           // 에러 발생 시 기본 정보 설정
           setKolInfo({
-            name: user?.firstName || user?.username || '사용자',
-            shopName: '내 상점'
+            name: tempUser?.firstName || tempUser?.username || '테스트 사용자',
+            shopName: '테스트 샵'
           });
         }
       };
       
       fetchKolInfo();
     }
-  }, [isLoaded, isSignedIn, isKol, user]);
+  }, [tempUser.isLoaded, tempUser.isSignedIn, isKol]);
 
   // Supabase Realtime 구독
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !isKol || !currentUserId) return;
+    if (!tempUser.isLoaded || !tempUser.isSignedIn || !isKol || !currentUserId) return;
 
     // Supabase 클라이언트 생성
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -284,7 +289,7 @@ export default function NotificationsPage() {
       console.log('Realtime 구독 해제');
       supabase.removeChannel(channel);
     };
-  }, [isLoaded, isSignedIn, isKol, currentUserId, queryClient, viewNotificationDetail]);
+  }, [tempUser.isLoaded, tempUser.isSignedIn, isKol, currentUserId, queryClient, viewNotificationDetail]);
 
   // 개별 알림 읽음 처리
   const markAsRead = (id: number) => {
@@ -334,14 +339,16 @@ export default function NotificationsPage() {
   // 로그아웃 함수
   const handleSignOut = async () => {
     try {
-      await signOut();
+      // 임시 로그아웃 처리
+      console.log('로그아웃 처리');
+      window.location.href = '/';
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
   };
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!isLoaded || isKol === null) {
+  if (!tempUser.isLoaded || isKol === null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -498,55 +505,39 @@ export default function NotificationsPage() {
                       )}
                     </div>
                   </div>
+                  <div className="flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!notification.read) {
+                          markAsRead(notification.id);
+                        }
+                      }}
+                    >
+                      {notification.read ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </CardContent>
-        {filteredNotifications.length > 0 && (
-          <CardFooter className="flex justify-between">
-            <div className="text-sm text-muted-foreground">
-              마지막 업데이트: {new Date().toLocaleDateString('ko-KR')}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              전체 {notifications.length}개, 안 읽음 {notifications.filter(n => !n.read).length}개
-            </div>
-          </CardFooter>
-        )}
       </Card>
 
-      {/* 알림 상세 보기 다이얼로그 */}
+      {/* 알림 상세 모달 */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="sm:max-w-md bg-white backdrop-blur-sm">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{selectedNotification?.title}</DialogTitle>
+            <DialogDescription>
+              {selectedNotification?.timeAgo}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="py-4">
             <p className="text-sm">{selectedNotification?.content}</p>
-            <Separator />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>
-                <Clock className="mr-1 inline-block h-3 w-3" />
-                {selectedNotification && format(new Date(selectedNotification.created_at), 'yyyy년 MM월 dd일 HH:mm', { locale: ko })}
-              </span>
-              <span>
-                {selectedNotification?.read ? (
-                  <>
-                    <Eye className="mr-1 inline-block h-3 w-3" />
-                    읽음
-                  </>
-                ) : (
-                  <>
-                    <EyeOff className="mr-1 inline-block h-3 w-3" />
-                    읽지 않음
-                  </>
-                )}
-              </span>
-            </div>
           </div>
-          <DialogClose asChild>
-            <Button>확인</Button>
-          </DialogClose>
         </DialogContent>
       </Dialog>
     </div>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -96,7 +95,14 @@ const SkinTypes: React.FC<SkinTypesProps> = ({
 };
 
 export default function ClinicalPhotosPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  // 임시 사용자 정보 (로컬 개발용)
+  const tempUser = {
+    isLoaded: true,
+    isSignedIn: true,
+    role: "kol",
+    publicMetadata: { role: "kol" }
+  };
+
   const [isKol, setIsKol] = useState<boolean | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [cases, setCases] = useState<ClinicalCase[]>([]);
@@ -104,12 +110,12 @@ export default function ClinicalPhotosPage() {
 
   // 사용자 역할 확인
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      const userRole = user.publicMetadata?.role as string || "kol";
+    if (tempUser.isLoaded && tempUser.isSignedIn) {
+      const userRole = tempUser.publicMetadata?.role as string || "kol";
       setIsKol(userRole === "kol" || userRole === "test");
       setLoading(false);
     }
-  }, [isLoaded, isSignedIn, user]);
+  }, []);
 
   // 케이스 목록 조회
   useEffect(() => {
@@ -139,7 +145,7 @@ export default function ClinicalPhotosPage() {
     ? Math.round((customerCases.filter(c => c.status === 'completed').length / customerCases.length) * 100)
     : 0;
 
-  if (!isLoaded || isKol === null || loading) {
+  if (!tempUser.isLoaded || isKol === null || loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { redirect } from 'next/navigation';
-import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { 
   Search, 
@@ -97,8 +96,14 @@ const formatToManUnit = (value: number): string => {
 };
 
 export default function StoresPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const { signOut } = useClerk();
+  // 임시 사용자 정보 (로컬 개발용)
+  const tempUser = {
+    isLoaded: true,
+    isSignedIn: true,
+    role: "kol",
+    publicMetadata: { role: "kol" }
+  };
+
   const [isKol, setIsKol] = useState<boolean | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [shopsData, setShopsData] = useState<ShopData[]>([]);
@@ -135,15 +140,15 @@ export default function StoresPage() {
 
   // 사용자 역할 확인
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      const userRole = user.publicMetadata?.role as string || "kol";
+    if (tempUser.isLoaded && tempUser.isSignedIn) {
+      const userRole = tempUser.publicMetadata?.role as string || "kol";
       setIsKol(userRole === "kol");
     }
-  }, [isLoaded, isSignedIn, user]);
+  }, []);
 
   // 데이터 로드
   useEffect(() => {
-    if (isLoaded && isSignedIn && isKol) {
+    if (tempUser.isLoaded && tempUser.isSignedIn && isKol) {
       const fetchData = async () => {
         try {
           setLoading(true);
@@ -273,19 +278,21 @@ export default function StoresPage() {
       };
       fetchData();
     }
-  }, [isLoaded, isSignedIn, isKol]);
+  }, [tempUser.isLoaded, tempUser.isSignedIn, isKol]);
 
   // 로그아웃 함수
   const handleSignOut = async () => {
     try {
-      await signOut();
+      // 임시 로그아웃 처리
+      console.log('로그아웃 처리');
+      window.location.href = '/';
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
   };
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!isLoaded || isKol === null) {
+  if (!tempUser.isLoaded || isKol === null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
