@@ -1,66 +1,155 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Store, Users, FileText, Bell, ShoppingBag, Camera } from "lucide-react";
-import { Separator } from "../../../components/ui/separator";
-import { FoxLogo } from "../../../components/ui/fox-logo";
-import { useUser } from "@clerk/nextjs";
+import { usePathname } from 'next/navigation';
+import { Home, Store, Users, BarChart3, Bell, FileText, ShoppingBag, Camera } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { FoxLogo } from "@/components/ui/fox-logo";
 
-export default function KolSidebar() {
-  const { user } = useUser();
-  const userRole = user?.publicMetadata?.role as string || "kol";
-  const isTestRole = userRole === "test";
+interface KolSidebarProps {
+  className?: string;
+}
+
+export default function KolSidebar({ className }: KolSidebarProps) {
+  const pathname = usePathname();
+  
+  // 임시 사용자 정보 (로컬 개발용)
+  const tempUser = {
+    role: "kol"
+  };
+  
+  const isTestRole = tempUser.role === "test";
+
+  const navigation = [
+    {
+      name: '대시보드',
+      href: '/kol-new',
+      icon: Home,
+      current: pathname === '/kol-new',
+      show: !isTestRole
+    },
+    {
+      name: '전문점 관리',
+      href: '/kol-new/stores',
+      icon: Store,
+      current: pathname.startsWith('/kol-new/stores'),
+      show: !isTestRole
+    },
+    {
+      name: '고객 관리',
+      href: '/kol-new/customer-manager',
+      icon: Users,
+      current: pathname.startsWith('/kol-new/customer-manager'),
+      show: !isTestRole
+    },
+    {
+      name: '임상사진',
+      href: '/kol-new/clinical-photos',
+      icon: Camera,
+      current: pathname.startsWith('/kol-new/clinical-photos'),
+      show: true
+    },
+    {
+      name: '영업일지',
+      href: '/kol-new/sales-journal',
+      icon: FileText,
+      current: pathname.startsWith('/kol-new/sales-journal'),
+      show: !isTestRole
+    },
+    {
+      name: '알림',
+      href: '/kol-new/notifications',
+      icon: Bell,
+      current: pathname.startsWith('/kol-new/notifications'),
+      show: !isTestRole
+    }
+  ];
+
+  const externalLinks = [
+    {
+      name: '전문가몰',
+      href: 'https://biofoxpro.co.kr/',
+      icon: ShoppingBag,
+      external: true
+    },
+    {
+      name: '폭시',
+      href: 'https://ad.biofoxi.com/',
+      icon: FoxLogo,
+      external: true
+    }
+  ];
+
   return (
-    <aside className="hidden border-r bg-white shadow-sm md:block md:w-52">
-      <div className="flex h-full flex-col p-3 md:p-4">
-        <div className="mb-5">
-          <p className="px-2 text-xs font-medium text-muted-foreground">메뉴</p>
-          <nav className="mt-2 space-y-1">
-            {!isTestRole && (
-              <>
-                <Link href="/kol-new" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
-                  <Home className="mr-2 h-4 w-4 text-primary" />
-                  <span>대시보드</span>
-                </Link>
-                <Link href="/kol-new/stores" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
-                  <Store className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span>전문점 관리</span>
-                </Link>
-                <Link href="/kol-new/customer-manager" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
-                  <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span>고객 관리</span>
-                </Link>
-              </>
-            )}
-            <Link href="/kol-new/clinical-photos" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
-              <Camera className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>임상사진</span>
-            </Link>
-            <a href="https://biofoxpro.co.kr/" target="_blank" rel="noopener noreferrer" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
-              <ShoppingBag className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>전문가몰</span>
-            </a>
-            <a href="https://ad.biofoxi.com/" target="_blank" rel="noopener noreferrer" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
-              <FoxLogo className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>폭시</span>
-            </a>
-          </nav>
+    <div className={cn(
+      "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col",
+      className
+    )}>
+      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4 border-r border-gray-200">
+        <div className="flex h-16 shrink-0 items-center">
+          <img 
+            className="h-8 w-auto" 
+            src="/images/biofox-logo.png" 
+            alt="BIOFOX" 
+          />
+          <span className="ml-2 text-xl font-bold text-gray-900">BIOFOX</span>
         </div>
-        {!isTestRole && (
-          <>
-            <Separator className="my-3" />
-            <div>
-              <p className="px-2 text-xs font-medium text-muted-foreground">시스템</p>
-              <nav className="mt-2 space-y-1">
-                <Link href="/kol-new/notifications" className="flex items-center rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted">
-                  <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span>알림</span>
-                </Link>
-              </nav>
-            </div>
-          </>
-        )}
+        
+        <nav className="flex flex-1 flex-col">
+          <ul role="list" className="flex flex-1 flex-col gap-y-7">
+            <li>
+              <ul role="list" className="-mx-2 space-y-1">
+                {navigation.filter(item => item.show).map((item) => (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        item.current
+                          ? 'bg-gray-50 text-blue-600'
+                          : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50',
+                        'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6'
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          item.current ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600',
+                          'h-6 w-6 shrink-0'
+                        )}
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </li>
+            
+            <li className="mt-auto">
+              <div className="text-xs font-semibold leading-6 text-gray-400 mb-2">
+                외부 링크
+              </div>
+              <ul role="list" className="-mx-2 space-y-1">
+                {externalLinks.map((item) => (
+                  <li key={item.name}>
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-700 hover:text-blue-600 hover:bg-gray-50 group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
+                    >
+                      <item.icon
+                        className="text-gray-400 group-hover:text-blue-600 h-6 w-6 shrink-0"
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          </ul>
+        </nav>
       </div>
-    </aside>
+    </div>
   );
 } 
