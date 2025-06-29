@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { auth } from '@clerk/nextjs/server';
 import { getCurrentDate, getPreviousMonth, getMonthsBetween, getCurrentYearMonth } from '@/lib/date-utils';
+
+// 로컬 개발환경용 임시 KOL 정보
+const getTempKolData = () => ({
+  id: 1,
+  name: '테스트 사용자',
+  shop_name: '테스트 샵',
+  userId: 'temp-user-id'
+});
 
 // KOL 월별 매출 데이터 API 라우트
 export async function GET(request: NextRequest) {
   try {
-    // 인증 확인
-    const { userId } = await auth();
+    // 로컬 개발환경용 임시 인증
+    const { userId } = getTempKolData();
     if (!userId) {
       return NextResponse.json(
         { error: '인증되지 않은 요청입니다.' },

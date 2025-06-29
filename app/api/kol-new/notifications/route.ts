@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { serverSupabase as supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+
+// 로컬 개발환경용 임시 KOL 정보
+const getTempKolData = () => ({
+  id: 1,
+  name: '테스트 사용자',
+  shop_name: '테스트 샵',
+  userId: 'temp-user-id'
+});
 
 // GET: 로그인한 KOL의 알림 목록 조회
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = getTempKolData();
 
     if (!userId) {
       return NextResponse.json(
