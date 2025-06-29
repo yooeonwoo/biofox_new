@@ -1,41 +1,55 @@
 import { Suspense } from 'react';
-import { auth } from '@clerk/nextjs/server';
 import { supabase } from '@/lib/supabase';
-import { getCurrentDate, getPreviousMonth } from '@/lib/date-utils';
-import { getAuthenticatedKol } from '@/lib/auth-cache';
+import { getCurrentDate, getPreviousMonth, getCurrentYearMonth } from '@/lib/date-utils';
 import ClientDashboard from './ClientDashboard';
 
 // 🚀 서버 컴포넌트에서 데이터 페칭 - SSR 성능 최적화
 
 interface ServerDashboardData {
-  dashboard: any;
-  shops: any;
-  activities: any;
+  sales: {
+    currentMonth: number;
+    previousMonth: number;
+    growth: number;
+  };
+  allowance: {
+    currentMonth: number;
+    previousMonth: number;
+    growth: number;
+  };
+  shops: {
+    total: number;
+    ordering: number;
+    notOrdering: number;
+  };
+  recentActivities: any[];
+  shops_list: any[];
 }
 
 async function fetchDashboardDataOnServer(): Promise<ServerDashboardData | null> {
   try {
-    // 서버에서 인증 확인
-    const { userId } = await auth();
-    if (!userId) {
-      console.log('서버 컴포넌트: 인증되지 않은 사용자');
-      return null;
-    }
+    // 로컬 개발환경용 임시 KOL 정보
+    const tempKol = {
+      id: 1,
+      name: '테스트 사용자',
+      shopName: '테스트 샵',
+      userId: 'temp-user-id'
+    };
 
     console.log('서버 컴포넌트: 대시보드 데이터 페칭 시작');
 
-    // 캐시된 인증 정보 가져오기
-    const { user: userData, kol: kolData } = await getAuthenticatedKol();
-
     // 현재 월과 이전 월 계산
     const currentDate = getCurrentDate();
-    const currentMonth = currentDate.substring(0, 7);
+    const currentMonth = getCurrentYearMonth();
     const previousMonth = getPreviousMonth(currentDate);
 
-    // 🚀 서버에서 병렬로 모든 데이터 조회
+    // 레거시 호환성을 위한 YYYYMM 형식
+    const currentMonthCompact = currentMonth.replace('-', '');
+    const previousMonthCompact = previousMonth.replace('-', '');
+
+    // 병렬 데이터 페칭
     const [
-      shopsData,
-      activitiesData
+      { data: shops, error: shopsError },
+      { data: journalData, error: journalError },
     ] = await Promise.all([
       // 전문점 데이터
       supabase
@@ -50,142 +64,143 @@ async function fetchDashboardDataOnServer(): Promise<ServerDashboardData | null>
           is_owner_kol,
           is_self_shop
         `)
-        .eq('kol_id', kolData.id),
+        .eq('kol_id', tempKol.id),
       
       // 영업 일지 데이터
       supabase
-        .from('sales_activities')
+        .from('sales_journal')
         .select(`
           id,
-          shop_id,
+          shop_name,
+          activity_type,
+          activity_content,
           activity_date,
-          content,
           created_at
         `)
-        .eq('kol_id', kolData.id)
+        .eq('kol_id', tempKol.id)
         .order('activity_date', { ascending: false })
         .limit(10)
     ]);
 
     // 우선순위 로직으로 대시보드 메트릭 조회 - 표준 형식 우선
     let dashboardMetrics = null;
-    const currentMonthCompact = currentMonth.replace('-', ''); // "202505"
     
     // 1단계: 표준 형식(YYYY-MM) 먼저 시도
     const { data: standardCurrentData, error: standardCurrentError } = await supabase
       .from('kol_dashboard_metrics')
       .select('*')
-      .eq('kol_id', kolData.id)
+      .eq('kol_id', tempKol.id)
       .eq('year_month', currentMonth)
       .maybeSingle();
 
     if (standardCurrentError && standardCurrentError.code !== 'PGRST116') {
-      console.error('서버: 표준 형식 대시보드 메트릭 조회 오류:', standardCurrentError);
+      console.error('표준 형식 대시보드 메트릭 조회 오류:', standardCurrentError);
     }
 
     if (standardCurrentData) {
       dashboardMetrics = standardCurrentData;
-      console.log(`서버: 표준 형식 데이터 사용: ${currentMonth} for KOL ${kolData.id}`);
+      console.log(`서버: 표준 형식 데이터 사용: ${currentMonth} for KOL ${tempKol.id}`);
     } else {
       // 2단계: 레거시 형식(YYYYMM) 시도
       const { data: legacyCurrentData, error: legacyCurrentError } = await supabase
         .from('kol_dashboard_metrics')
         .select('*')
-        .eq('kol_id', kolData.id)
+        .eq('kol_id', tempKol.id)
         .eq('year_month', currentMonthCompact)
         .maybeSingle();
 
       if (legacyCurrentError && legacyCurrentError.code !== 'PGRST116') {
-        console.error('서버: 레거시 형식 대시보드 메트릭 조회 오류:', legacyCurrentError);
+        console.error('레거시 형식 대시보드 메트릭 조회 오류:', legacyCurrentError);
       }
 
       if (legacyCurrentData) {
         dashboardMetrics = legacyCurrentData;
-        console.log(`서버: 레거시 형식 데이터 사용: ${currentMonthCompact} for KOL ${kolData.id}`);
+        console.log(`서버: 레거시 형식 데이터 사용: ${currentMonthCompact} for KOL ${tempKol.id}`);
       } else {
-        console.log(`서버: 대시보드 메트릭 데이터 없음: ${currentMonth}/${currentMonthCompact} for KOL ${kolData.id}`);
+        console.log(`서버: 대시보드 메트릭 데이터 없음: ${currentMonth}/${currentMonthCompact} for KOL ${tempKol.id}`);
       }
     }
 
     // 우선순위 로직으로 이전 월 데이터 조회 - 표준 형식 우선
     let previousMonthData = null;
-    const previousMonthCompact = previousMonth.replace('-', ''); // "202504"
     
     // 1단계: 표준 형식(YYYY-MM) 먼저 시도
     const { data: standardPrevData, error: standardPrevError } = await supabase
       .from('kol_dashboard_metrics')
       .select('monthly_sales, monthly_commission')
-      .eq('kol_id', kolData.id)
+      .eq('kol_id', tempKol.id)
       .eq('year_month', previousMonth)
       .maybeSingle();
 
     if (standardPrevError && standardPrevError.code !== 'PGRST116') {
-      console.error('서버: 표준 형식 이전 월 데이터 조회 오류:', standardPrevError);
+      console.error('표준 형식 이전 월 데이터 조회 오류:', standardPrevError);
     }
 
     if (standardPrevData) {
       previousMonthData = standardPrevData;
-      console.log(`서버: 표준 형식 이전 월 데이터 사용: ${previousMonth} for KOL ${kolData.id}`);
+      console.log(`서버: 표준 형식 이전 월 데이터 사용: ${previousMonth} for KOL ${tempKol.id}`);
     } else {
       // 2단계: 레거시 형식(YYYYMM) 시도
       const { data: legacyPrevData, error: legacyPrevError } = await supabase
         .from('kol_dashboard_metrics')
         .select('monthly_sales, monthly_commission')
-        .eq('kol_id', kolData.id)
+        .eq('kol_id', tempKol.id)
         .eq('year_month', previousMonthCompact)
         .maybeSingle();
 
       if (legacyPrevError && legacyPrevError.code !== 'PGRST116') {
-        console.error('서버: 레거시 형식 이전 월 데이터 조회 오류:', legacyPrevError);
+        console.error('레거시 형식 이전 월 데이터 조회 오류:', legacyPrevError);
       }
 
       if (legacyPrevData) {
         previousMonthData = legacyPrevData;
-        console.log(`서버: 레거시 형식 이전 월 데이터 사용: ${previousMonthCompact} for KOL ${kolData.id}`);
+        console.log(`서버: 레거시 형식 이전 월 데이터 사용: ${previousMonthCompact} for KOL ${tempKol.id}`);
       } else {
-        console.log(`서버: 이전 월 데이터 없음: ${previousMonth}/${previousMonthCompact} for KOL ${kolData.id}`);
+        console.log(`서버: 이전 월 데이터 없음: ${previousMonth}/${previousMonthCompact} for KOL ${tempKol.id}`);
       }
     }
 
     // 오류 처리
-    if (shopsData.error) {
-      console.error('서버 컴포넌트: 전문점 데이터 조회 오류:', shopsData.error);
+    if (shopsError) {
+      console.error('전문점 데이터 조회 오류:', shopsError);
     }
-    if (activitiesData.error) {
-      console.error('서버 컴포넌트: 영업 일지 조회 오류:', activitiesData.error);
+    if (journalError) {
+      console.error('영업 일지 데이터 조회 오류:', journalError);
     }
 
-    // 대시보드 데이터 구성
+    // 기본값 설정
+    const monthlySales = dashboardMetrics?.monthly_sales || 0;
+    const monthlyCommission = dashboardMetrics?.monthly_commission || 0;
+    const previousMonthSales = previousMonthData?.monthly_sales || 0;
+    const previousMonthCommission = previousMonthData?.monthly_commission || 0;
+    const totalShops = dashboardMetrics?.total_shops_count || 0;
+    const activeOrderingShops = dashboardMetrics?.active_shops_count || 0;
+
     const serverData: ServerDashboardData = {
-      kol: {
-        id: kolData.id,
-        name: kolData.name,
-        shopName: kolData.shop_name
-      },
       sales: {
-        currentMonth: dashboardMetrics?.monthly_sales || 0,
-        previousMonth: previousMonthData?.monthly_sales || 0,
-        growth: (dashboardMetrics?.monthly_sales || 0) - (previousMonthData?.monthly_sales || 0)
+        currentMonth: monthlySales,
+        previousMonth: previousMonthSales,
+        growth: monthlySales - previousMonthSales
       },
       allowance: {
-        currentMonth: dashboardMetrics?.monthly_commission || 0,
-        previousMonth: previousMonthData?.monthly_commission || 0,
-        growth: (dashboardMetrics?.monthly_commission || 0) - (previousMonthData?.monthly_commission || 0)
+        currentMonth: monthlyCommission,
+        previousMonth: previousMonthCommission,
+        growth: monthlyCommission - previousMonthCommission
       },
       shops: {
-        total: dashboardMetrics?.total_shops_count || 0,
-        ordering: dashboardMetrics?.active_shops_count || 0,
-        notOrdering: (dashboardMetrics?.total_shops_count || 0) - (dashboardMetrics?.active_shops_count || 0)
+        total: totalShops,
+        ordering: activeOrderingShops,
+        notOrdering: totalShops - activeOrderingShops
       },
-      shopsData: shopsData.data || [],
-      activitiesData: activitiesData.data || []
+      recentActivities: journalData || [],
+      shops_list: shops || []
     };
 
-    console.log('서버 컴포넌트: 데이터 페칭 완료');
+    console.log('서버 컴포넌트: 대시보드 데이터 페칭 완료');
     return serverData;
 
   } catch (error) {
-    console.error('서버 컴포넌트: 데이터 페칭 오류:', error);
+    console.error('서버 대시보드 데이터 페칭 오류:', error);
     return null;
   }
 }
@@ -206,9 +221,9 @@ function DashboardLoading() {
 
 // 메인 서버 컴포넌트
 export default async function ServerDashboard() {
-  const serverData = await fetchDashboardDataOnServer();
+  const initialData = await fetchDashboardDataOnServer();
 
-  if (!serverData) {
+  if (!initialData) {
     // 서버에서 데이터를 가져올 수 없는 경우 클라이언트 전용 모드로 fallback
     return (
       <Suspense fallback={<DashboardLoading />}>
@@ -219,7 +234,7 @@ export default async function ServerDashboard() {
 
   return (
     <Suspense fallback={<DashboardLoading />}>
-      <ClientDashboard initialData={serverData} />
+      <ClientDashboard initialData={initialData} />
     </Suspense>
   );
 }

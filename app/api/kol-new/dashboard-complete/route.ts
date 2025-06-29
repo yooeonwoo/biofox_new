@@ -1,15 +1,25 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getCurrentDate, getPreviousMonth, getCurrentYearMonth } from '@/lib/date-utils';
-import { getAuthenticatedKol } from '@/lib/auth-cache';
 
 // 🚀 통합 대시보드 API - 모든 데이터를 한 번에 로드하여 성능 최적화
 export async function GET() {
   try {
     console.log('통합 대시보드 API 요청 시작');
 
-    // 🚀 캐시된 인증 확인 (중복 인증 로직 제거)
-    const { user: userData, kol: kolData } = await getAuthenticatedKol();
+    // 로컬 개발환경용 임시 KOL 정보
+    const kolData = {
+      id: 1,
+      name: '테스트 사용자',
+      shop_name: '테스트 샵',
+      userId: 'temp-user-id'
+    };
+
+    const userData = {
+      id: 'temp-user-id',
+      email: 'test@example.com',
+      role: 'kol'
+    };
 
     // 현재 월과 이전 월 계산 - YYYY-MM 형식으로 통일
     const currentDate = getCurrentDate();
@@ -176,8 +186,6 @@ export async function GET() {
         }
       };
     });
-
-
 
     // 통합 응답 데이터 구성
     const completeData = {
