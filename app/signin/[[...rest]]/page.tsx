@@ -14,49 +14,25 @@ export const viewport = {
 
 export default function SignInPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8" style={{ 
-      background: 'linear-gradient(to bottom right, white, rgba(192, 166, 227, 0.1))' 
-    }}>
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="mb-6">
-            <h1 className="text-4xl font-bold" style={{ 
-              backgroundImage: 'linear-gradient(to right, #6D28D9, #8B5CF6)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              BIOFOX KOL
-            </h1>
-          </Link>
-          
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            로그인
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            현재 로컬 개발 모드입니다. 
+          </p>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <SignIn 
-            appearance={{
-              elements: {
-                formButtonPrimary: "bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded transition-colors",
-                card: "shadow-none bg-transparent",
-                headerTitle: "text-xl font-semibold text-gray-800",
-                headerSubtitle: "text-gray-600",
-                socialButtonsBlockButton: "border border-gray-300 hover:border-purple-400 transition-colors",
-                socialButtonsBlockButtonText: "text-gray-700",
-                formFieldLabel: "text-gray-700 font-medium",
-                formFieldInput: "border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded px-3 py-2",
-                footerActionLink: "text-purple-600 hover:text-purple-700",
-                identityPreviewText: "text-gray-700",
-                identityPreviewEditButton: "text-purple-600 hover:text-purple-700",
-                rootBox: "w-full",
-                footer: "pb-0",
-                main: "p-0"
-              },
-            }}
-            path="/signin"
-            routing="path"
-            signUpUrl="/signup"
-            fallbackRedirectUrl="/dashboard"
-          />
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <div className="text-center">
+            <p className="text-lg text-gray-700 mb-4">
+              인증이 비활성화되어 있습니다.
+            </p>
+            <p className="text-sm text-gray-500">
+              모든 페이지에 자유롭게 접근할 수 있습니다.
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useUser, useAuth } from '@clerk/nextjs';
+// TODO: Supabase 인증으로 교체 예정
 
 // 아이콘 컴포넌트
 import { 
@@ -19,8 +19,7 @@ export default function AdminDashboardLayout({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { isLoaded, isSignedIn, user } = useUser();
-  const { signOut } = useAuth();
+  // TODO: Supabase 인증으로 교체 예정
   
   // 사이드바 상태를 localStorage에서 로드
   useEffect(() => {
@@ -31,35 +30,20 @@ export default function AdminDashboardLayout({
   }, []);
 
   useEffect(() => {
+    // TODO: Supabase 관리자 인증 로직 구현
     async function checkAdmin() {
       try {
-        // Clerk이 로드되었고 사용자가 로그인했는지 확인
-        if (!isLoaded) return;
-        
-        if (!isSignedIn || !user) {
-          window.location.href = '/signin';
-          return;
-        }
-        
-        // 사용자 역할 확인 (메타데이터에서 역할 정보 가져오기)
-        const userRole = user.publicMetadata?.role as string;
-        
-        if (userRole !== 'admin') {
-          window.location.href = '/';
-          return;
-        }
-        
+        // 임시로 관리자 권한 부여
         setIsAdmin(true);
+        setIsLoading(false);
       } catch (error) {
         console.error('권한 확인 중 오류 발생:', error);
-        window.location.href = '/';
-      } finally {
         setIsLoading(false);
       }
     }
     
     checkAdmin();
-  }, [isLoaded, isSignedIn, user]);
+  }, []);
 
   // 사이드바 토글 함수
   const toggleSidebar = () => {
@@ -95,11 +79,11 @@ export default function AdminDashboardLayout({
     { name: '수기 실적 입력', href: '/admin-dashboard/manual-metrics', icon: <FileEdit size={20} /> },
   ];
 
-  // 로그아웃 함수
+  // TODO: Supabase 로그아웃 함수 구현
   const handleLogout = () => {
-    signOut(() => {
-      window.location.href = '/';
-    });
+    // TODO: Supabase 로그아웃 로직 구현
+    console.log('로그아웃 시도');
+    window.location.href = '/';
   };
 
   return (

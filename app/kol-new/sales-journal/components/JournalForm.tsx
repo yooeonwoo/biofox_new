@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { JournalEntryData } from '../lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from "@/components/ui/use-toast";
@@ -31,9 +31,17 @@ interface JournalFormProps {
 }
 
 export default function JournalForm({ managedShops, shopSpecialNotes, onSave, onCancel, onAddShop }: JournalFormProps) {
-    const [date, setDate] = useState<Date | undefined>(new Date());
+    // Hydration 오류 방지를 위한 클라이언트 상태 확인
+    const [isClient, setIsClient] = useState(false);
+    const [date, setDate] = useState<Date | undefined>(undefined);
     const [shopName, setShopName] = useState('');
     const [content, setContent] = useState('');
+    
+    // 클라이언트에서만 Date 초기화
+    useEffect(() => {
+        setIsClient(true);
+        setDate(new Date());
+    }, []);
     
     // TODO: MVP 알림 기능 비활성화 - 상태 유지하되 UI에서 제외
     const [reminderContent, setReminderContent] = useState('');

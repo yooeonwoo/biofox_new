@@ -8,50 +8,25 @@ export const metadata = {
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8" style={{ 
-      background: 'linear-gradient(to bottom right, white, rgba(192, 166, 227, 0.1))' 
-    }}>
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="mb-6">
-            <h1 className="text-4xl font-bold" style={{ 
-              backgroundImage: 'linear-gradient(to right, #6D28D9, #8B5CF6)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              BIOFOX KOL
-            </h1>
-          </Link>
-          <p className="text-center text-gray-600 mt-2">
-            KOL 및 전문점 관리 시스템
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            회원가입
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            현재 로컬 개발 모드입니다.
           </p>
         </div>
-        
-        <div className="card-gradient">
-          <SignUp 
-            appearance={{
-              elements: {
-                formButtonPrimary: "btn-primary",
-                card: "shadow-none bg-transparent",
-                headerTitle: "text-xl font-semibold",
-                headerSubtitle: "text-gray-500",
-                socialButtonsBlockButton: "border border-solid hover:border-[#C0A6E3]",
-                socialButtonsBlockButtonText: "text-gray-600",
-                formFieldLabel: "text-gray-700",
-                formFieldInput: "border-solid focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]",
-                footerActionLink: "text-[#6D28D9] hover:text-[#8B5CF6]",
-                identityPreviewText: "text-gray-700",
-                identityPreviewEditButton: "text-[#6D28D9] hover:text-[#8B5CF6]",
-                rootBox: "w-full",
-                footer: "pb-0",
-                main: "p-0 sm:p-0"
-              },
-            }}
-            afterSignUpUrl="/dashboard"
-            signInUrl="/signin"
-            developmentMode={false}
-          />
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <div className="text-center">
+            <p className="text-lg text-gray-700 mb-4">
+              인증이 비활성화되어 있습니다.
+            </p>
+            <p className="text-sm text-gray-500">
+              모든 페이지에 자유롭게 접근할 수 있습니다.
+            </p>
+          </div>
         </div>
       </div>
     </div>

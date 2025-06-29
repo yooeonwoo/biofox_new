@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
-import { useUser, useClerk } from '@clerk/nextjs';
+// TODO: Supabase 인증으로 교체 예정
 import Link from 'next/link';
 import { 
   CoinsIcon,
@@ -47,9 +47,8 @@ const formatToManUnit = (value: number): string => {
 };
 
 export default function ClientDashboard({ initialData }: ClientDashboardProps) {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const { signOut } = useClerk();
-  const [isKol, setIsKol] = useState<boolean | null>(null);
+  // TODO: Supabase 인증으로 교체 예정
+  const [isKol, setIsKol] = useState<boolean | null>(true); // 임시로 KOL로 설정
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // 🚀 React Query 사용 - 서버 데이터가 있으면 초기값으로 사용
@@ -60,29 +59,21 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
     refetch 
   } = useDashboardData(initialData);
 
-  // 사용자 역할 확인
+  // TODO: Supabase 인증 로직 구현
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      try {
-        const userRole = user.publicMetadata?.role as string || "kol";
-        console.log('사용자 역할:', userRole);
-        setIsKol(userRole === "kol");
-      } catch (err) {
-        console.error('사용자 역할 확인 중 오류:', err);
-        setIsKol(true);
-      }
-    }
-  }, [isLoaded, isSignedIn, user]);
+    setIsKol(true); // 임시로 KOL로 설정
+  }, []);
 
   // 🚀 서버 데이터와 클라이언트 데이터 결합
   const finalData = dashboardCompleteData || initialData;
   const dashboardData = finalData?.dashboard;
   const shopsData = finalData?.shops?.shops || [];
 
-  // 로그아웃 함수
+  // TODO: Supabase 로그아웃 함수 구현
   const handleSignOut = async () => {
     try {
-      await signOut();
+      // TODO: Supabase 로그아웃 로직 구현
+      console.log('로그아웃 시도');
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
@@ -94,7 +85,7 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
   };
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!isLoaded || isKol === null) {
+  if (isKol === null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">

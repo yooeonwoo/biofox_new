@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+// TODO: Supabase 인증으로 교체 예정
 import Link from 'next/link';
 import { 
   CoinsIcon,
@@ -97,8 +97,8 @@ interface ActivityData {
 }
 
 export default function KolNewPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const [isKol, setIsKol] = useState<boolean | null>(null);
+  // TODO: Supabase 인증으로 교체 예정
+  const [isKol, setIsKol] = useState<boolean | null>(true); // 임시로 KOL로 설정
   
   const { 
     data: dashboardCompleteData, 
@@ -108,15 +108,9 @@ export default function KolNewPage() {
   } = useDashboardData();
 
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      const userRole = user.publicMetadata?.role as string || "kol";
-      if (userRole === "test") {
-        window.location.href = "/kol-new/clinical-photos";
-        return;
-      }
-      setIsKol(userRole === "kol");
-    }
-  }, [isLoaded, isSignedIn, user]);
+    // TODO: Supabase 인증 로직 구현
+    setIsKol(true); // 임시로 KOL로 설정
+  }, []);
 
   const dashboardData = dashboardCompleteData?.dashboard;
   const shopsData = dashboardCompleteData?.shops?.shops || [];
@@ -125,7 +119,7 @@ export default function KolNewPage() {
     refetch();
   };
 
-  if (!isLoaded || isKol === null || loading) {
+  if (isKol === null || loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
