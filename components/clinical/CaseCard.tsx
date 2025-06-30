@@ -489,6 +489,114 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 })}
               </div>
             </div>
+            
+            {/* 블록 5: 고객 피부타입 */}
+            <div className="space-y-2 legacy-section">
+              <div className="flex items-center gap-2">
+                <Label className="legacy-section-header">고객 피부타입</Label>
+                <span className="legacy-round-badge">
+                  {(currentRounds[case_.id] || 1) === 1 ? 'Before' : `${(currentRounds[case_.id] || 1) - 1}회차`}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-2">
+                {SYSTEM_OPTIONS.skinTypes.map((skinType) => {
+                  const currentRound = currentRounds[case_.id] || 1;
+                  const currentRoundInfo = case_.roundCustomerInfo[currentRound] || { 
+                    treatmentType: '', 
+                    products: [], 
+                    skinTypes: [], 
+                    memo: '', 
+                    date: '' 
+                  };
+                  
+                  // 현재 회차의 피부타입 데이터에서 선택 상태 확인
+                  const isSelected = currentRoundInfo.skinTypes.includes(skinType.value);
+                  
+                  return (
+                    <label key={skinType.value} className={`
+                      flex items-center space-x-1 p-1.5 rounded-lg text-xs
+                      border border-transparent cursor-pointer
+                      hover:bg-soksok-light-blue/20
+                      transition-all duration-150
+                      ${isSelected
+                        ? 'bg-biofox-blue-violet/10 border-biofox-blue-violet/30'
+                        : ''
+                      }
+                    `}>
+                      <Checkbox
+                        id={`skintype-${case_.id}-${currentRound}-${skinType.value}`}
+                        checked={isSelected}
+                        onCheckedChange={async (checked) => {
+                          if (checked === 'indeterminate') return;
+                          const isChecked = Boolean(checked);
+                          let updatedSkinTypes: string[] = [];
+                          // prev 기반으로 상태 계산하여 stale 문제 해결
+                          setCases(prev => prev.map(c => {
+                            if (c.id !== case_.id) return c;
+                            const prevRound = c.roundCustomerInfo[currentRound] || { treatmentType:'', products:[], skinTypes:[], memo:'', date:'' };
+                            updatedSkinTypes = isChecked ? [...prevRound.skinTypes, skinType.value] : prevRound.skinTypes.filter(s=>s!==skinType.value);
+                            return { ...c, roundCustomerInfo: { ...c.roundCustomerInfo, [currentRound]: { ...prevRound, skinTypes: updatedSkinTypes } } };
+                          }));
+                          
+                          // 백그라운드에서 저장
+                          try {
+                            await handleRoundCustomerInfoUpdate(case_.id, currentRound, { skinTypes: updatedSkinTypes });
+                            // boolean 필드 동기화 - 피부타입
+                            const booleanUpdates = {
+                              skinRedSensitive: updatedSkinTypes.includes('red_sensitive'),
+                              skinPigment: updatedSkinTypes.includes('pigment'),
+                              skinPore: updatedSkinTypes.includes('pore'),
+                              skinTrouble: updatedSkinTypes.includes('acne_trouble'),
+                              skinWrinkle: updatedSkinTypes.includes('wrinkle'),
+                              skinEtc: updatedSkinTypes.includes('other'),
+                            };
+
+                            await updateCaseCheckboxes(case_.id, booleanUpdates);
+                          } catch (error) {
+                            console.error('피부타입 선택 저장 실패:', error);
+                            // 실패 시 상태 되돌리기
+                            const revertedSkinTypes = isChecked
+                              ? currentRoundInfo.skinTypes.filter(s => s !== skinType.value)
+                              : [...currentRoundInfo.skinTypes, skinType.value];
+                            
+                            setCases(prev => prev.map(c => 
+                              c.id === case_.id 
+                                ? { 
+                                    ...c, 
+                                    roundCustomerInfo: {
+                                      ...c.roundCustomerInfo,
+                                      [currentRound]: {
+                                        ...currentRoundInfo,
+                                        skinTypes: revertedSkinTypes
+                                      }
+                                    }
+                                  }
+                                : c
+                            ));
+                          }
+                        }}
+                        className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
+                      />
+                      <span className="text-xs leading-tight">{skinType.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* 블록 6: 특이사항 */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">특이사항</Label>
+              <Textarea
+                value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || ''}
+                onChange={(e) => {
+                  const currentRound = currentRounds[case_.id] || 1;
+                  handleRoundCustomerInfoUpdate(case_.id, currentRound, { memo: e.target.value });
+                }}
+                placeholder="해당 회차에 관련한 권한 특이사항을 입력해주세요."
+                className="min-h-[100px] resize-none border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
+              />
+            </div>
           </CardContent>
         </div>
       </Card>

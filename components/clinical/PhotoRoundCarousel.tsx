@@ -58,7 +58,8 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
     }
     
     // 완료 상태일 때는 기존 회차만, 진행 중일 때는 추가 회차 생성
-    const maxExistingRound = existingRounds.size > 0 ? Math.max(...Array.from(existingRounds)) : 1;
+    const existingRoundsArray = Array.from(existingRounds);
+    const maxExistingRound = existingRoundsArray.length > 0 ? Math.max(...existingRoundsArray) : 1;
     const maxRoundToShow = isCompleted 
       ? maxExistingRound 
       : maxExistingRound + 10; // 기존 회차에서 10회차 더 생성
@@ -273,15 +274,15 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
       />
 
       {/* 회차 제목들 */}
-      <div className="flex justify-between mb-2">
+      <div className="flex justify-between mb-2 relative z-30">
         <div className="flex-1 text-center">
-          <h3 className="text-xs font-medium text-gray-700">
+          <h3 className="text-xs font-medium text-gray-700 bg-white/90 px-2 py-1 rounded shadow-sm">
             {getRoundName(currentRound)}
           </h3>
         </div>
         {!isCompleted && visibleSlots[3] && (
           <div style={{width: 'calc(25% - 8px)'}} className="text-center">
-            <h3 className="text-xs font-medium text-gray-400">
+            <h3 className="text-xs font-medium text-gray-400 bg-white/90 px-2 py-1 rounded shadow-sm">
               {getRoundName(visibleSlots[3].roundDay)}
             </h3>
           </div>
@@ -295,7 +296,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
           <Button
             variant="default"
             size="sm"
-            className="legacy-btn absolute left-0 top-1/2 transform -translate-y-1/2 z-10 shadow-xl hover:scale-110 h-8 w-8 p-0"
+            className="legacy-btn absolute left-0 top-1/2 transform -translate-y-1/2 z-20 shadow-xl hover:scale-110 h-8 w-8 p-0"
             onClick={goToPrevRound}
             disabled={uploading}
           >
@@ -428,7 +429,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
           <Button
             variant="default"
             size="sm"
-            className="legacy-btn absolute right-0 top-1/2 transform -translate-y-1/2 z-10 shadow-xl hover:scale-110 h-8 w-8 p-0"
+            className="legacy-btn absolute right-0 top-1/2 transform -translate-y-1/2 z-20 shadow-xl hover:scale-110 h-8 w-8 p-0"
             onClick={goToNextRound}
             disabled={uploading}
           >
@@ -455,10 +456,11 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
     prevProps.isCompleted === nextProps.isCompleted &&
     prevProps.photos.length === nextProps.photos.length &&
     prevProps.photos.every((photo, index) => {
-      const nextPhoto = nextProps.photos[index];
-      return photo.id === nextPhoto?.id && 
-             photo.uploaded === nextPhoto?.uploaded &&
-             photo.imageUrl === nextPhoto?.imageUrl;
+      const nextPhoto = nextProps.photos?.[index];
+      return nextPhoto && 
+             photo.id === nextPhoto.id && 
+             photo.uploaded === nextPhoto.uploaded &&
+             photo.imageUrl === nextPhoto.imageUrl;
     })
   );
 });
