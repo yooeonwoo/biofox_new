@@ -80,10 +80,19 @@ export const clinicalPhotosAPI = {
 
   // 동의서 관리
   consent: {
-    // 동의서 업로드
-    async upload(caseId: number, file: File): Promise<string> {
+    // 동의서 업로드 (기존 및 회차별 버전)
+    async upload(caseId: number, roundIdOrFile: string | File, file?: File): Promise<string> {
       const { uploadConsentImage } = await import('@/lib/clinical-photos-api');
-      return uploadConsentImage(caseId, file);
+      
+      // 오버로드 처리: roundId가 제공된 경우와 아닌 경우 구분
+      if (typeof roundIdOrFile === 'string' && file) {
+        // 새로운 시그니처: (caseId, roundId, file)
+        // 현재는 roundId를 사용하지 않지만 향후 확장을 위해 준비
+        return uploadConsentImage(caseId, file);
+      } else {
+        // 기존 시그니처: (caseId, file)
+        return uploadConsentImage(caseId, roundIdOrFile as File);
+      }
     }
   },
 

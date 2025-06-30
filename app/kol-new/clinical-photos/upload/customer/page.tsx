@@ -24,6 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PhotoRoundCarousel from "../../components/PhotoRoundCarousel";
 import CaseStatusTabs from "../../components/CaseStatusTabs";
 import { PhotoUploader } from '@/components/clinical/PhotoUploader';
+import { ConsentUploader } from '@/components/clinical/ConsentUploader';
 
 // 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 
@@ -35,7 +36,7 @@ export default function CustomerClinicalUploadPage() {
   // 케이스 관리 상태
   const [cases, setCases] = useState<ClinicalCase[]>([]);
   const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
-  const [consentViewModal, setConsentViewModal] = useState<{ isOpen: boolean; imageUrl?: string }>({ isOpen: false });
+
   const [hasUnsavedNewCustomer, setHasUnsavedNewCustomer] = useState(false);
   const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
   
@@ -547,180 +548,9 @@ export default function CustomerClinicalUploadPage() {
     }
   };
 
-  // 동의서 업로드 상태 관리
-  const [consentUploading, setConsentUploading] = useState<{ [caseId: string]: boolean }>({});
 
-  // 동의서 업로드 핸들러
-  const handleConsentUpload = (caseId: string) => {
-    // 이미 업로드 중이면 무시
-    if (consentUploading[caseId]) {
-      return;
-    }
 
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        // 파일 유효성 검사
-        const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-          alert('JPEG, PNG, WebP 형식의 이미지만 업로드 가능합니다.');
-          return;
-        }
 
-        // 파일 크기 제한 (10MB)
-        const maxSize = 10 * 1024 * 1024;
-        if (file.size > maxSize) {
-          alert('파일 크기는 10MB 이하여야 합니다.');
-          return;
-        }
-
-        // 업로드 시작
-        setConsentUploading(prev => ({ ...prev, [caseId]: true }));
-
-        try {
-          // 새 고객인 경우 임시 처리
-          if (isNewCustomer(caseId)) {
-            const imageUrl = URL.createObjectURL(file);
-            
-            // 해당 케이스의 동의서 업데이트 (새 고객)
-            setCases(prev => prev.map(case_ => 
-              case_.id === caseId 
-                ? { ...case_, consentImageUrl: imageUrl, consentReceived: true }
-                : case_
-            ));
-            console.log('동의서가 임시로 저장되었습니다. 고객 정보를 저장하면 실제 업로드됩니다.');
-            return;
-          }
-          
-          // 실제 케이스의 경우 Supabase에 업로드
-          const { uploadConsentImage, fetchCase } = await import('@/lib/clinical-photos-api');
-          const imageUrl = await uploadConsentImage(parseInt(caseId), file);
-          
-          // 업로드 성공 후 해당 케이스 정보를 데이터베이스에서 다시 불러오기
-          try {
-            const updatedCase = await fetchCase(parseInt(caseId));
-            if (updatedCase) {
-              setCases(prev => prev.map(case_ => 
-                case_.id === caseId 
-                  ? { 
-                      ...case_, 
-                      consentImageUrl: updatedCase.consentImageUrl, 
-                      consentReceived: updatedCase.consentReceived 
-                    }
-                  : case_
-              ));
-              console.log('동의서 정보를 데이터베이스에서 새로고침했습니다.');
-            } else {
-              // 케이스 조회 실패 시 기존 방식으로 업데이트
-              setCases(prev => prev.map(case_ => 
-                case_.id === caseId 
-                  ? { ...case_, consentImageUrl: undefined, consentReceived: false }
-                  : case_
-              ));
-            }
-          } catch (refreshError) {
-            console.error('동의서 정보 새로고침 실패:', refreshError);
-            // 새로고침 실패 시 기존 방식으로 로컬 업데이트
-            setCases(prev => prev.map(case_ => 
-              case_.id === caseId 
-                ? { ...case_, consentImageUrl: undefined, consentReceived: false }
-                : case_
-            ));
-          }
-          
-          console.log('동의서가 성공적으로 업로드되었습니다.');
-          toast.success('동의서가 성공적으로 업로드되었습니다.');
-        } catch (error) {
-          console.error('동의서 업로드 실패:', error);
-          alert(`동의서 업로드에 실패했습니다: ${(error as any).message || '알 수 없는 오류'}`);
-          
-          // 에러 발생 시 동의 상태 되돌리기
-          setCases(prev => prev.map(case_ => 
-            case_.id === caseId 
-              ? { ...case_, consentReceived: false, consentImageUrl: undefined }
-              : case_
-          ));
-        } finally {
-          // 업로드 완료
-          setConsentUploading(prev => ({ ...prev, [caseId]: false }));
-        }
-      }
-    };
-    input.click();
-  };
-
-  // 동의서 삭제 핸들러
-  const handleConsentDelete = async (caseId: string) => {
-    try {
-      // 새 고객이 아닌 경우에만 실제 API 호출
-      if (!isNewCustomer(caseId)) {
-        // 동의서 파일 삭제 API 호출
-        const response = await fetch(`/api/kol-new/clinical-photos/consent/${caseId}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || '동의서 삭제에 실패했습니다.');
-        }
-        
-        // 삭제 성공 후 해당 케이스 정보를 데이터베이스에서 다시 불러오기
-        try {
-          const { fetchCase } = await import('@/lib/clinical-photos-api');
-          const updatedCase = await fetchCase(parseInt(caseId));
-          if (updatedCase) {
-            setCases(prev => prev.map(case_ => 
-              case_.id === caseId 
-                ? { 
-                    ...case_, 
-                    consentImageUrl: undefined, 
-                    consentReceived: false 
-                  }
-                : case_
-            ));
-            console.log('동의서 정보를 데이터베이스에서 새로고침했습니다.');
-          } else {
-            // 케이스 조회 실패 시 기존 방식으로 업데이트
-            setCases(prev => prev.map(case_ => 
-              case_.id === caseId 
-                ? { ...case_, consentImageUrl: undefined, consentReceived: false }
-                : case_
-            ));
-          }
-        } catch (refreshError) {
-          console.error('동의서 정보 새로고침 실패:', refreshError);
-          // 새로고침 실패 시 기존 방식으로 로컬 업데이트
-          setCases(prev => prev.map(case_ => 
-            case_.id === caseId 
-              ? { ...case_, consentImageUrl: undefined, consentReceived: false }
-              : case_
-          ));
-        }
-      } else {
-        // 새 고객의 경우 로컬 상태만 업데이트
-        setCases(prev => prev.map(case_ => 
-          case_.id === caseId 
-            ? { ...case_, consentImageUrl: undefined, consentReceived: false }
-            : case_
-        ));
-      }
-      
-      console.log('동의서가 성공적으로 삭제되었습니다.');
-      toast.success('동의서가 성공적으로 삭제되었습니다.');
-    } catch (error) {
-      console.error('동의서 삭제 실패:', error);
-      toast.error(`동의서 삭제에 실패했습니다: ${(error as any).message || '알 수 없는 오류'}`);
-    }
-  };
-
-  // 동의서 보기 핸들러
-  const handleConsentView = (imageUrl: string) => {
-    setConsentViewModal({ isOpen: true, imageUrl });
-  };
 
   // 사진 업로드 핸들러
   const handlePhotoUpload = async (caseId: string, roundDay: number, angle: string, file?: File): Promise<void> => {
@@ -1733,94 +1563,27 @@ export default function CustomerClinicalUploadPage() {
                         </AlertDialog>
                       </div>
 
-                      {/* 두 번째 줄: 동의서 상태 메타정보 */}
-                      {case_.consentReceived && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
-                          {case_.consentImageUrl ? (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <button className="text-xs text-purple-700 bg-biofox-lavender/20 px-2 py-1 rounded-full hover:bg-biofox-lavender/30 transition-colors flex items-center gap-1">
-                                  📎 동의서 업로드됨
-                                </button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-sm">
-                                <DialogHeader>
-                                  <DialogTitle>동의서 보기</DialogTitle>
-                                  <DialogDescription>
-                                    {case_.customerName}님의 동의서
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <img
-                                    src={case_.consentImageUrl}
-                                    alt="동의서"
-                                    className="w-full h-auto max-h-96 object-contain rounded-lg border"
-                                  />
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleConsentUpload(case_.id)}
-                                      disabled={consentUploading[case_.id]}
-                                      className="flex items-center gap-1"
-                                    >
-                                      {consentUploading[case_.id] ? (
-                                        <>
-                                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
-                                          업로드 중...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Edit className="h-3 w-3" />
-                                          수정
-                                        </>
-                                      )}
-                                    </Button>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => {
-                                        handleConsentDelete(case_.id);
-                                      }}
-                                      className="flex items-center gap-1"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                      삭제
-                                    </Button>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <button 
-                                className="text-xs text-biofox-blue-violet bg-soksok-light-blue px-2 py-1 rounded-full hover:bg-soksok-light-blue/80 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={() => handleConsentUpload(case_.id)}
-                                disabled={consentUploading[case_.id]}
-                              >
-                                {consentUploading[case_.id] ? (
-                                  <>
-                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
-                                    업로드 중...
-                                  </>
-                                ) : (
-                                  <>
-                                    📎 동의서 업로드
-                                  </>
-                                )}
-                              </button>
-                              {!consentUploading[case_.id] && (
-                                <span className="text-xs text-orange-600">
-                                  ⚠️ 업로드 필요
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
+
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* 블록 1: 임상사진 업로드 */}
+                      {/* 블록 1: 동의서 업로드 */}
+                      {case_.consentReceived && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-gray-900">동의서 업로드</h3>
+                          </div>
+                          
+                          <ConsentUploader
+                            caseId={case_.id}
+                            roundId={(currentRounds[case_.id] || 1).toString()}
+                            onUploaded={() => refreshCases()}
+                            disabled={case_.status === 'completed'}
+                            className="max-w-md"
+                          />
+                        </div>
+                      )}
+
+                      {/* 블록 2: 임상사진 업로드 */}
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-medium text-gray-900">임상사진 업로드</h3>

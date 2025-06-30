@@ -6,6 +6,13 @@ export const isImage = (file: File): boolean => {
 };
 
 /**
+ * 파일이 PDF인지 확인
+ */
+export const isPdf = (file: File): boolean => {
+  return file.type === 'application/pdf';
+};
+
+/**
  * 파일 크기를 MB 단위로 반환
  */
 export const getFileSizeMB = (file: File): string => {
