@@ -163,14 +163,16 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
     const slots: PhotoSlot[] = [];
     
     // 현재 회차의 3개 (정면, 좌측, 우측)
-    if (photosByRound[currentRound]) {
-      slots.push(...photosByRound[currentRound]);
+    const currentRoundSlots = photosByRound[currentRound];
+    if (currentRoundSlots) {
+      slots.push(...currentRoundSlots);
     }
     
     // 다음 회차의 정면 1개 (완료 상태가 아닐 때만)
     const nextRound = currentRound + 1;
-    if (!isCompleted && photosByRound[nextRound]) {
-      const nextRoundFront = photosByRound[nextRound].find(slot => slot.angle === 'front');
+    const nextRoundSlots = photosByRound[nextRound];
+    if (!isCompleted && nextRoundSlots) {
+      const nextRoundFront = nextRoundSlots.find(slot => slot.angle === 'front');
       if (nextRoundFront) {
         slots.push(nextRoundFront);
       }
@@ -197,6 +199,8 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
     
     for (const round of roundDays) {
       const roundSlots = photosByRound[round];
+      if (!roundSlots) continue;
+      
       const allAnglesUploaded = ['front', 'left', 'right'].every(angle => {
         const slot = roundSlots.find(s => s.angle === angle);
         return slot && slot.uploaded;
@@ -217,6 +221,8 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
     // 순서: 1회차 정면 → 1회차 좌측 → 1회차 우측 → 2회차 정면 → 2회차 좌측 → ...
     for (const round of roundDays) {
       const roundSlots = photosByRound[round];
+      if (!roundSlots) continue;
+      
       const angles = ['front', 'left', 'right'] as const;
       
       for (const angle of angles) {
@@ -262,6 +268,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
         onChange={handleFileSelect}
         className="hidden"
         disabled={uploading}
+        aria-label="사진 파일 선택"
       />
 
       {/* 회차 제목들 */}
@@ -287,7 +294,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
           <Button
             variant="default"
             size="sm"
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-biofox-blue-violet hover:bg-biofox-blue-violet/80 text-white shadow-xl border-2 border-biofox-blue-violet/30 hover:border-biofox-blue-violet/50 transition-all duration-200 hover:scale-110 h-8 w-8 p-0"
+            className="legacy-btn absolute left-0 top-1/2 transform -translate-y-1/2 z-10 shadow-xl hover:scale-110 h-8 w-8 p-0"
             onClick={goToPrevRound}
             disabled={uploading}
           >
@@ -420,7 +427,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
           <Button
             variant="default"
             size="sm"
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-biofox-blue-violet hover:bg-biofox-blue-violet/80 text-white shadow-xl border-2 border-biofox-blue-violet/30 hover:border-biofox-blue-violet/50 transition-all duration-200 hover:scale-110 h-8 w-8 p-0"
+            className="legacy-btn absolute right-0 top-1/2 transform -translate-y-1/2 z-10 shadow-xl hover:scale-110 h-8 w-8 p-0"
             onClick={goToNextRound}
             disabled={uploading}
           >
@@ -448,9 +455,10 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
     prevProps.photos.length === nextProps.photos.length &&
     prevProps.photos.every((photo, index) => {
       const nextPhoto = nextProps.photos[index];
-      return photo.id === nextPhoto?.id && 
-             photo.uploaded === nextPhoto?.uploaded &&
-             photo.imageUrl === nextPhoto?.imageUrl;
+      return nextPhoto && 
+             photo.id === nextPhoto.id && 
+             photo.uploaded === nextPhoto.uploaded &&
+             photo.imageUrl === nextPhoto.imageUrl;
     })
   );
 });

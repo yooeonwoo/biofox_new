@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ───── legacy 레이아웃 레이어 ───── */
+@import "../styles/legacy.css";
+
 @layer base {
   :root {
     --background: 0 0% 100%;

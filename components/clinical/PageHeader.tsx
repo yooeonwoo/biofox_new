@@ -27,7 +27,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         <div className="flex flex-col items-center gap-1">
           <Button 
             onClick={onAddCustomer}
-            className="flex items-center gap-2 bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white shadow-sm hover:shadow-md transition-all duration-200"
+            className="legacy-btn flex items-center gap-2"
             size="sm"
             disabled={hasUnsavedNewCustomer}
           >

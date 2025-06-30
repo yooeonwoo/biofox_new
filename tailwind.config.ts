@@ -53,6 +53,13 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        'biofox-blue-violet': '#8B5CF6',      /* violet-600 */
+        'biofox-dark-blue-violet': '#7C3AED', /* violet-700 */
+        'biofox-lavender': '#C4B5FD',          /* violet-300 */
+        'soksok-light-blue': '#DBEAFE',        /* blue-100  */
+      },
+      spacing: {
+        '7.5': '1.875rem', /* 30px → 예전 카드 패딩 */
       },
       borderRadius: {
         lg: "var(--radius)",

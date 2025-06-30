@@ -96,7 +96,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
     >
       <Card 
         data-case-id={case_.id}
-        className={`relative overflow-hidden border transition-all duration-200 shadow-sm hover:shadow-md rounded-xl ${
+        className={`legacy-card relative overflow-hidden border transition-all duration-200 shadow-sm hover:shadow-md rounded-xl ${
           case_.status === 'completed' 
             ? 'bg-gradient-to-r from-biofox-lavender/5 to-biofox-lavender/10 border-biofox-lavender/30' 
             : 'bg-white hover:bg-gray-50/50 border-gray-100'
@@ -275,11 +275,11 @@ export const CaseCard: React.FC<CaseCardProps> = ({
             </div>
             
             {/* 블록 3: 고객 정보 */}
-            <div className="space-y-3 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
+            <div className="space-y-3 legacy-section">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium text-blue-700">고객 정보</h3>
-                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40">
+                  <h3 className="legacy-section-header">고객 정보</h3>
+                  <span className="legacy-round-badge">
                     {(currentRounds[case_.id] || 1) === 1 ? 'Before' : `${(currentRounds[case_.id] || 1) - 1}회차`}
                   </span>
                 </div>
@@ -414,10 +414,10 @@ export const CaseCard: React.FC<CaseCardProps> = ({
             </div>
             
             {/* 블록 4: 홈케어 제품 */}
-            <div className="space-y-2 border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20">
+            <div className="space-y-2 legacy-section">
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium text-blue-700">홈케어 제품</Label>
-                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40">
+                <Label className="legacy-section-header">홈케어 제품</Label>
+                <span className="legacy-round-badge">
                   {(currentRounds[case_.id] || 1) === 1 ? 'Before' : `${(currentRounds[case_.id] || 1) - 1}회차`}
                 </span>
               </div>
