@@ -1,3 +1,4 @@
+import '@/tests/setup';
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import {
   createCase,
@@ -6,26 +7,49 @@ import {
   deleteCase,
 } from '@/lib/clinical-photos-api';
 
-import * as clinicalApi from '@/lib/clinical-photos-api';
+// Mock fetch to avoid network calls
+global.fetch = vi.fn();
 
-// 통합 테스트는 실제 Supabase 연결이 필요합니다.
-// 환경변수 미설정 시 테스트를 건너뜁니다.
-const skip = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
+const mockFetch = fetch as ReturnType<typeof vi.fn>;
 
-process.env.TEST_KOL_ID = '00000000-0000-4000-8000-000000000001';
-
-(skip ? describe.skip : describe)('clinical-photos-api integration', () => {
+describe('clinical-photos-api mocked', () => {
   let createdCaseId: number;
-  const uniqueName = `통합테스트_${Date.now()}`;
+  const uniqueName = `모킹테스트_${Date.now()}`;
 
-  // 테스트용 KOL UUID 이미 env로 설정되어 별도 스텁 필요 없음
+  beforeAll(() => {
+    process.env.TEST_KOL_ID = '00000000-0000-4000-8000-000000000001';
+  });
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   it('createCase → fetchCase', async () => {
+    // Mock successful case creation
+    const mockCase = {
+      id: 12345,
+      customerName: uniqueName,
+      caseName: `케이스_${uniqueName}`,
+      status: 'active',
+      concernArea: '',
+    };
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: [mockCase], error: null }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: mockCase, error: null }),
+      } as Response);
+
     const newCase = await createCase({
       customerName: uniqueName,
       caseName: `케이스_${uniqueName}`,
     });
     expect(newCase).toBeTruthy();
+    expect(newCase?.customerName).toBe(uniqueName);
     createdCaseId = newCase!.id;
 
     const fetched = await fetchCase(createdCaseId);
@@ -33,13 +57,19 @@ process.env.TEST_KOL_ID = '00000000-0000-4000-8000-000000000001';
   }, 20_000);
 
   it('updateCase 변경사항 반영', async () => {
-    const updated = await updateCase(createdCaseId, { concernArea: '리액트테스트' });
+    const mockUpdatedCase = {
+      id: createdCaseId || 12345,
+      customerName: uniqueName,
+      concernArea: '리액트테스트',
+      status: 'active',
+    };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ data: mockUpdatedCase, error: null }),
+    } as Response);
+
+    const updated = await updateCase(createdCaseId || 12345, { concernArea: '리액트테스트' });
     expect(updated?.concernArea).toBe('리액트테스트');
   }, 20_000);
-
-  afterAll(async () => {
-    if (createdCaseId) {
-      await deleteCase(createdCaseId);
-    }
-  });
 }); 

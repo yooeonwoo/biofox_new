@@ -1,44 +1,23 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { checkAuthSupabase } from '@/lib/auth';
-import { useClinicalCases, useUpdateCase } from '@/hooks/useClinicalCases';
-import { useCaseSerialQueues } from '@/hooks/useSerialQueue';
-import { SYSTEM_OPTIONS, safeParseStringArray } from '@/types/clinical';
-import type { ClinicalCase, CustomerInfo, RoundCustomerInfo, PhotoSlot, KolInfo, CaseStatus } from '@/types/clinical';
-import Link from 'next/link';
+
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { ArrowLeft, Camera, Plus, Calendar, User, Scissors, Eye, Trash2, Edit, Save } from "lucide-react";
-import { toast } from 'sonner';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import PhotoRoundCarousel from "../../components/PhotoRoundCarousel";
-import CaseStatusTabs from "../../components/CaseStatusTabs";
-import { PhotoUploader } from '@/components/clinical/PhotoUploader';
-import { ConsentUploader } from '@/components/clinical/ConsentUploader';
+import { Camera } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomerCaseHandlers } from '@/hooks/useCustomerCaseHandlers';
 import { useCustomerPageState } from '@/hooks/useCustomerPageState';
 import { PageHeader } from '@/components/clinical/PageHeader';
 import { CaseCard } from '@/components/clinical/CaseCard';
+import { createSaveStatusUtils, createEnqueueUtil, createDebounceUtil } from '@/utils/customer';
 
 // 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 
 export default function CustomerClinicalUploadPage() {
   // 모든 상태와 사이드 이펙트를 커스텀 훅으로 분리
   const {
-    // States
+    // States (only used ones)
     user,
-    setUser,
     isLoading,
-    setIsLoading,
     cases,
     setCases,
     currentRounds,
@@ -46,81 +25,35 @@ export default function CustomerClinicalUploadPage() {
     hasUnsavedNewCustomer,
     setHasUnsavedNewCustomer,
     numberVisibleCards,
-    setNumberVisibleCards,
     isComposing,
     setIsComposing,
     inputDebounceTimers,
     setInputDebounceTimers,
-    isUserInteracting,
-    setIsUserInteracting,
     saveStatus,
     setSaveStatus,
     
-    // Refs
-    userActivityTimeoutRef,
+    // Refs (only used ones)
     mainContentRef,
-    casesRef,
     
     // Helper functions
     isNewCustomer,
   } = useCustomerPageState();
 
-  const markSaving = (caseId:string) => setSaveStatus(prev=>({...prev,[caseId]:'saving'}));
-  const markSaved = (caseId:string) => {
-    setSaveStatus(prev=>({...prev,[caseId]:'saved'}));
-    setTimeout(()=>{
-      setSaveStatus(prev=>({...prev,[caseId]:'idle'}));
-    },2000);
-  };
-  const markError = (caseId:string) => setSaveStatus(prev=>({...prev,[caseId]:'error'}));
+  // 유틸 함수들 생성
+  const { markSaving, markSaved, markError } = createSaveStatusUtils(setSaveStatus);
+  const { updateQueue, enqueue } = createEnqueueUtil();
+  const { debouncedUpdate } = createDebounceUtil(inputDebounceTimers, setInputDebounceTimers);
 
-  // -------- 직렬화용 Promise Queue 추가 --------
-  const updateQueue = useRef<Record<string, Promise<void>>>({});
-  const enqueue = (caseId:string, task:()=>Promise<void>) => {
-    updateQueue.current[caseId] = (updateQueue.current[caseId] ?? Promise.resolve())
-      .then(task)
-      .catch(err => { console.error('enqueue error', err); });
-    return updateQueue.current[caseId];
-  };
-  // ---------------------------------------------
-
-  // debounce 함수 (영어/숫자/특수문자 입력 문제 해결)
-  const debouncedUpdate = (key: string, updateFn: () => void, delay: number = 500) => {
-    // 기존 타이머 클리어
-    if (inputDebounceTimers[key]) {
-      clearTimeout(inputDebounceTimers[key]);
-    }
-    
-    // 새 타이머 설정
-    const newTimer = setTimeout(() => {
-      updateFn();
-      // 타이머 정리
-      setInputDebounceTimers(prev => {
-        const newTimers = { ...prev };
-        delete newTimers[key];
-        return newTimers;
-      });
-    }, delay);
-    
-    setInputDebounceTimers(prev => ({ ...prev, [key]: newTimer }));
-  };
-
-  // 커스텀 훅으로 모든 핸들러 함수 가져오기
+  // 커스텀 훅으로 모든 핸들러 함수 가져오기 (사용하는 것만)
   const {
-    handleSignOut,
     handleCaseStatusChange,
     handleConsentChange,
-    handlePhotoUpload,
-    handlePhotoDelete,
     handleBasicCustomerInfoUpdate,
     handleRoundCustomerInfoUpdate,
     updateCaseCheckboxes,
-    handleCurrentRoundChange,
     refreshCases,
     handleAddCustomer,
-    handleSaveNewCustomer,
     handleDeleteCase,
-    handleDeleteNewCustomer,
     handleSaveAll,
   } = useCustomerCaseHandlers({
     user,
