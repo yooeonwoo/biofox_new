@@ -25,5 +25,5 @@
     "baseUrl": "."
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "mcp/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["legacy_ui/**/*", "node_modules", ".next"]
 }

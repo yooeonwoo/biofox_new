@@ -50,6 +50,14 @@ const nextConfig = {
         fs: false,
       };
     }
+    
+    // legacy_ui 폴더의 파일들은 빌드에서 제외
+    config.module.rules.push({
+      test: /\.tsx?$/,
+      include: /legacy_ui/,
+      loader: 'null-loader'
+    });
+    
     return config;
   },
 };
