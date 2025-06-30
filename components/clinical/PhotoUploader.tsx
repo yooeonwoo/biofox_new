@@ -6,9 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useUploadPhoto } from '@/src/hooks/useClinicalCases';
-import { useCaseSerialQueues } from '@/src/hooks/useSerialQueue';
-import { isImage, getFileSizeMB } from '@/src/utils/file';
+import { useUploadPhoto } from '@/hooks/useClinicalCases';
+import { useCaseSerialQueues } from '@/hooks/useSerialQueue';
+import { isImage, getFileSizeMB } from '@/utils/file';
 
 interface PhotoUploaderProps {
   caseId: string;

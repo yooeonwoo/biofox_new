@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { checkAuthSupabase } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -10,16 +10,17 @@ const supabase = createClient(
 // GET: 임상 케이스 목록 조회
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const authResult = await checkAuthSupabase();
+    if (!authResult.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = authResult.user.id;
 
     // 사용자의 KOL 정보 조회
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("id")
-      .eq("clerk_id", userId)
+      .eq("id", userId)
       .single();
 
     if (userError || !userData) {
@@ -116,16 +117,17 @@ export async function GET(request: NextRequest) {
 // POST: 새 임상 케이스 생성
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const authResult = await checkAuthSupabase();
+    if (!authResult.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = authResult.user.id;
 
     // 사용자의 KOL 정보 조회
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("id")
-      .eq("clerk_id", userId)
+      .eq("id", userId)
       .single();
 
     if (userError || !userData) {

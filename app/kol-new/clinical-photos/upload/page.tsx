@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { redirect, useRouter } from 'next/navigation';
-import { useUser, useClerk } from '@clerk/nextjs';
 
 interface KolInfo {
   id: number;
@@ -28,8 +27,9 @@ import { DialogTitle } from "@/components/ui/dialog";
 import KolMobileMenu from "../../../components/layout/KolMobileMenu";
 
 export default function ClinicalPhotosUploadPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const { signOut } = useClerk();
+  const [user, setUser] = useState<any>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const router = useRouter();
   const [isKol, setIsKol] = useState<boolean | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -45,22 +45,36 @@ export default function ClinicalPhotosUploadPage() {
     consentDate: ''
   });
 
-  // 사용자 역할 확인
+  // 사용자 인증 확인
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
+    async function checkAuth() {
       try {
-        const userRole = user.publicMetadata?.role as string || "kol";
-        console.log('사용자 역할:', userRole);
-        // test 역할과 kol 역할 모두 임상사진 페이지 접근 허용
-        setIsKol(userRole === "kol" || userRole === "test");
-        setLoading(false);
-      } catch (err) {
-        console.error('사용자 역할 확인 중 오류:', err);
-        setIsKol(true);
+        const response = await fetch('/api/user', {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+          setIsSignedIn(true);
+          const userRole = userData.role || "kol";
+          console.log('사용자 역할:', userRole);
+          // test 역할과 kol 역할 모두 임상사진 페이지 접근 허용
+          setIsKol(userRole === "kol" || userRole === "test");
+        } else {
+          setIsSignedIn(false);
+          setIsKol(false);
+        }
+      } catch (error) {
+        console.error('인증 확인 오류:', error);
+        setIsSignedIn(false);
+        setIsKol(false);
+      } finally {
+        setIsLoaded(true);
         setLoading(false);
       }
     }
-  }, [isLoaded, isSignedIn, user]);
+    checkAuth();
+  }, []);
 
   // 대시보드 데이터 로드
   useEffect(() => {
@@ -103,7 +117,11 @@ export default function ClinicalPhotosUploadPage() {
   // 로그아웃 함수
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      window.location.href = '/';
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }

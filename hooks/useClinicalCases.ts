@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { clinicalPhotosAPI } from '@/src/services/clinicalPhotos';
+import { clinicalPhotosAPI } from '@/services/clinicalPhotos';
 import type { ClinicalCase } from '@/lib/clinical-photos';
 import { toast } from 'sonner';
 

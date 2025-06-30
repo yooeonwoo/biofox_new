@@ -121,20 +121,38 @@ export default function StoresPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isLoadingShopDetail, setIsLoadingShopDetail] = useState(false);
 
-  // 필터링 로직: 현재는 모든 샵을 표시하지만, 향후 조건 추가 시 여기서 처리
+  // 전문점 정렬 및 필터링 로직
   const filteredShops = useMemo(() => {
-    return shopsData; // 향후 필터 조건 적용 가능
+    return shopsData
+      .slice() // 원본 배열 보존
+      .sort((a, b) => {
+        // 1순위: 당월 매출 (내림차순)
+        const aSales = a.sales.total || 0;
+        const bSales = b.sales.total || 0;
+        
+        if (aSales !== bSales) {
+          return bSales - aSales; // 매출 많은 순
+        }
+        
+        // 2순위: 당월 수당 (내림차순)
+        const aCommission = a.sales.commission || 0;
+        const bCommission = b.sales.commission || 0;
+        
+        if (aCommission !== bCommission) {
+          return bCommission - aCommission; // 수당 많은 순
+        }
+        
+        // 3순위: 전문점명 (오름차순)
+        return a.shop_name.localeCompare(b.shop_name);
+      });
   }, [shopsData]);
 
-  // 당월 매출 기준 바 차트 데이터 (memoized)
+  // 당월 매출 기준 바 차트 데이터 (이미 정렬된 filteredShops 사용)
   const currentMonthBarData = useMemo(() => {
-    return filteredShops
-      .slice() // 원본 배열 보존
-      .sort((a, b) => b.sales.total - a.sales.total)
-      .map(shop => ({
-        name: shop.shop_name,
-        매출: shop.sales.total
-      }));
+    return filteredShops.map(shop => ({
+      name: shop.shop_name,
+      매출: shop.sales.total
+    }));
   }, [filteredShops]);
 
 

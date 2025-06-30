@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { checkAuthSupabase } from "@/lib/auth";
 import { SalesJournalClient } from "./components";
 import { JournalEntryData } from "./lib/types";
 import { cookies } from "next/headers";
@@ -47,7 +47,8 @@ const mockEntries: JournalEntryData[] = [
 ];
 
 export default async function SalesJournalPage() {
-  const { userId } = await auth();
+  const authResult = await checkAuthSupabase();
+  const userId = authResult.user?.id;
   if (!userId) {
     return <div className="p-6 text-center">로그인이 필요합니다.</div>;
   }
@@ -55,7 +56,8 @@ export default async function SalesJournalPage() {
   // 백엔드 구현 전까지 KOL ID 65로 고정
   const kolId = 65; 
 
-  const supabase = supabaseServer(cookies());
+  const cookieStore = await cookies();
+  const supabase = supabaseServer(cookieStore);
 
   // TODO: 추후 실제 API를 통해 KOL의 담당 샵 목록과 특이사항을 가져오도록 수정
   const { data: shops } = await supabase

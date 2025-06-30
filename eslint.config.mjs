@@ -1,9 +1,8 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
-import storybook from "eslint-plugin-storybook";
-
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { FlatCompat } from "@eslint/eslintrc";
+import storybook from "eslint-plugin-storybook";
 import globals from "globals";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,25 +12,54 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-const eslintConfig = [...compat.extends("next/core-web-vitals", "next/typescript"), {
-  languageOptions: {
-    globals: {
-      ...globals.browser,
-      ...globals.node,
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
+  {
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    rules: {
+      // TypeScript 관련 기본 룰 (점진적 적용)
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/explicit-function-return-type": "off",
+      
+      // React 관련 룰
+      "react-hooks/exhaustive-deps": "warn",
+      "react/no-unescaped-entities": "off",
+      "react/prop-types": "off",
+      "react/react-in-jsx-scope": "off",
+      "react/jsx-uses-react": "off",
+      "react/jsx-props-no-spreading": "off",
+      
+      // 일반적인 코드 품질 룰 (완화)
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-debugger": "error",
+      "prefer-const": "warn",
+      "no-var": "warn",
+      "object-shorthand": "warn",
+      "prefer-template": "warn",
+    }
+  },
+  {
+    files: ["mcp/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-var-requires": "off",
+      "no-console": "off",
     },
   },
-  rules: {
-    // 빌드 과정에서 경고만 표시하고 오류로 취급하지 않도록 설정
-    "@typescript-eslint/no-unused-vars": "warn",
-    "@typescript-eslint/no-explicit-any": "warn",
-    "react-hooks/exhaustive-deps": "warn",
-    "react/no-unescaped-entities": "off",
-  }
-}, {
-  files: ["mcp/**/*.ts"],
-  rules: {
-    "@typescript-eslint/no-var-requires": "off",
+  {
+    files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-console": "off",
+    },
   },
-}, ...storybook.configs["flat/recommended"]];
+  ...storybook.configs["flat/recommended"]
+];
 
 export default eslintConfig;

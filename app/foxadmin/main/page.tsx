@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, Users, Store, PieChart } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
-import { useUser } from '@clerk/nextjs';
 
 // 대시보드 카드 컴포넌트
 function DashboardCard({
@@ -55,7 +54,9 @@ function StatCard({ title, value, subtitle }: { title: string; value: string | n
 
 // 메인 페이지 컴포넌트
 export default function AdminDashboardMainPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const [user, setUser] = useState<any>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [stats, setStats] = useState({
     kolsCount: 0,
     shopsCount: 0,
@@ -63,8 +64,32 @@ export default function AdminDashboardMainPage() {
     isLoading: true
   });
 
+  // 사용자 인증 확인
   useEffect(() => {
-    // Clerk 로딩 및 인증 확인
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/user', {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+          setIsSignedIn(true);
+        } else {
+          setIsSignedIn(false);
+        }
+      } catch (error) {
+        console.error('인증 확인 오류:', error);
+        setIsSignedIn(false);
+      } finally {
+        setIsLoaded(true);
+      }
+    }
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    // 인증 확인 후 통계 로드
     if (!isLoaded || !isSignedIn) return;
 
     async function fetchStats() {

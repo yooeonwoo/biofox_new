@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { checkAuthSupabase } from '@/lib/auth';
 import { serverSupabase as supabase } from '@/lib/supabase';
 
 // POST: 관리자가 KOL에게 알림 전송
 export async function POST(req: NextRequest) {
   try {
     // 1. 관리자 권한 체크
-    const { userId } = await auth();
+    const authResult = await checkAuthSupabase();
+    const userId = authResult.user?.id;
 
     if (!userId) {
       return NextResponse.json(
@@ -15,11 +16,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Clerk ID로 사용자 정보 조회
+    // 사용자 정보 조회
     const { data: userInfo, error: userError } = await supabase
       .from('users')
       .select('id, role')
-      .eq('clerk_id', userId)
+      .eq('id', userId)
       .single();
 
     if (userError || !userInfo) {

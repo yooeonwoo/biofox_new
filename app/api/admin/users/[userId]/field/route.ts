@@ -3,7 +3,7 @@
  * 인라인 편집을 위한 개별 필드 업데이트 기능을 제공합니다.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { checkAuthSupabase } from "@/lib/auth";
 import { serverSupabase as supabase } from "@/lib/supabase";
 
 interface UpdateFieldRequest {
@@ -23,8 +23,8 @@ export async function PATCH(
     console.log("=== 사용자 필드 업데이트 API 시작 ===");
     
     // 관리자 권한 확인
-    const user = await currentUser();
-    if (!user) {
+    const authResult = await checkAuthSupabase(['admin']);
+    if (!authResult.user) {
       return NextResponse.json(
         { error: "인증이 필요합니다." },
         { status: 401 }
@@ -90,25 +90,6 @@ export async function PATCH(
         );
       }
 
-      // Clerk 사용자 정보도 업데이트 (이메일이나 이름 변경시)
-      if ((field === 'email' || field === 'name') && !updatedUser.clerk_id.startsWith('pending_')) {
-        try {
-          const { updateUser: clerkUpdateUser } = await import("../../../../../../lib/clerk/admin");
-          
-          const updateData: any = {};
-          if (field === 'email') {
-            updateData.email_address = [value];
-          } else if (field === 'name') {
-            updateData.first_name = value;
-          }
-
-          await clerkUpdateUser(updatedUser.clerk_id, updateData);
-          console.log(`Clerk 사용자 ${field} 업데이트 성공:`, updatedUser.clerk_id);
-        } catch (clerkError) {
-          console.error(`Clerk 사용자 ${field} 업데이트 실패:`, clerkError);
-          // Clerk 업데이트 실패해도 DB 업데이트는 유지
-        }
-      }
 
       console.log("사용자 정보 업데이트 성공:", updatedUser);
 

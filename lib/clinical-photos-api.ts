@@ -54,35 +54,29 @@ async function getCurrentKolId(): Promise<string> {
       throw new Error('KOL 정보를 가져올 수 없는 환경입니다. TEST_KOL_ID 환경 변수를 설정했는지 확인하세요.');
     }
 
-    // Clerk 사용자 ID 및 이메일 가져오기
+    // 사용자 정보 가져오기
     const userResp = await fetch('/api/user');
     if (!userResp.ok) throw new Error('사용자 정보를 가져올 수 없습니다');
     const userJson = await userResp.json();
-    const clerkUserId: string | undefined = userJson.userId;
+    const userId: string | undefined = userJson.id;
     const userEmail: string | undefined = userJson.email;
 
-    // 1) Clerk ID -> Supabase users -> kols 경로로 숫자형 KOL ID 조회 시도
-    if (clerkUserId) {
-      const { data: userRow, error: userErr } = await supabaseClient
-        .from('users')
+    // 1) user_id로 직접 KOL ID 조회
+    if (userId) {
+      const { data: kolRow, error: kolErr } = await supabaseClient
+        .from('kols')
         .select('id')
-        .eq('clerk_id', clerkUserId)
+        .eq('user_id', Number(userId))
         .maybeSingle();
 
-      if (userErr) throw userErr;
-
-      if (userRow?.id) {
-        const { data: kolRow, error: kolErr } = await supabaseClient
-          .from('kols')
-          .select('id')
-          .eq('user_id', userRow.id)
-          .maybeSingle();
-
-        if (kolErr) throw kolErr;
-        if (kolRow?.id) {
-          // 숫자형이지만 문자열로 반환하여 타입 변경 최소화
-          return String(kolRow.id);
-        }
+      if (kolErr) {
+        console.error('KOL 조회 오류:', kolErr);
+        throw new Error('KOL 정보를 찾을 수 없습니다');
+      }
+      
+      if (kolRow?.id) {
+        // 숫자형이지만 문자열로 반환하여 타입 변경 최소화
+        return String(kolRow.id);
       }
     }
 

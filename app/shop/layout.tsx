@@ -3,17 +3,22 @@
 import { ReactNode, useState } from "react";
 import ShopHeader from "./customer-manager/components/ShopHeader";
 import ShopSidebar from "./customer-manager/components/ShopSidebar";
-import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function ShopLayout({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { signOut } = useClerk();
   const router = useRouter();
 
   const handleSignOut = async () => {
-    await signOut();
-    router.push('/');
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      router.push('/');
+    } catch (error) {
+      console.error('로그아웃 중 오류가 발생했습니다:', error);
+    }
   };
 
   // TODO: 실제 유저 데이터 연동 필요

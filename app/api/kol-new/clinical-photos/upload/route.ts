@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { checkAuthSupabase } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -8,29 +8,14 @@ const supabase = createClient(
 );
 
 // KOL ID를 가져오는 함수 (Supabase 클라이언트 사용)
-async function getKolIdForUser(clerkUserId: string): Promise<number> {
+async function getKolIdForUser(userId: number): Promise<number> {
   try {
-    // 먼저 users 테이블에서 사용자 ID 찾기
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('clerk_id', clerkUserId)
-      .single();
     
-    if (userError) {
-      console.error('User query error:', userError);
-      throw userError;
-    }
-    
-    if (!userData) {
-      throw new Error('사용자 정보를 찾을 수 없습니다.');
-    }
-    
-    // 그 다음 kols 테이블에서 KOL ID 찾기
+    // users 테이블에서 KOL ID 찾기
     const { data: kolData, error: kolError } = await supabase
       .from('kols')
       .select('id')
-      .eq('user_id', userData.id)
+      .eq('user_id', userId)
       .single();
     
     if (kolError) {
@@ -54,7 +39,8 @@ export async function POST(request: NextRequest) {
   try {
     console.log("Upload API called");
     
-    const { userId } = await auth();
+    const authResult = await checkAuthSupabase();
+    const userId = authResult.user?.id;
     if (!userId) {
       console.log("Unauthorized - no userId");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

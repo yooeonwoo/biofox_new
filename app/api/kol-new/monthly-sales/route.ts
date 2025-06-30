@@ -1,26 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getCurrentDate, getPreviousMonth, getMonthsBetween, getCurrentYearMonth } from '@/lib/date-utils';
-
-// 로컬 개발환경용 임시 KOL 정보
-const getTempKolData = () => ({
-  id: 1,
-  name: '테스트 사용자',
-  shop_name: '테스트 샵',
-  userId: 'temp-user-id'
-});
+import { checkAuthSupabase } from '@/lib/auth';
 
 // KOL 월별 매출 데이터 API 라우트
 export async function GET(request: NextRequest) {
   try {
-    // 로컬 개발환경용 임시 인증
-    const { userId } = getTempKolData();
-    if (!userId) {
+    // 사용자 인증 확인
+    const { user } = await checkAuthSupabase(['kol', 'admin']);
+    if (!user) {
       return NextResponse.json(
         { error: '인증되지 않은 요청입니다.' },
         { status: 401 }
       );
     }
+    
+    const userId = user.id;
 
     // 쿼리 파라미터에서 KOL ID 가져오기
     const url = new URL(request.url);
@@ -35,7 +30,7 @@ export async function GET(request: NextRequest) {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, name, email')
-        .eq('clerk_id', userId)
+        .eq('id', userId)
         .single();
 
       if (userError || !userData) {
@@ -73,12 +68,12 @@ export async function GET(request: NextRequest) {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, role')
-          .eq('clerk_id', userId)
+          .eq('id', userId)
           .single();
         
         if (!userError && userData) {
           // 관리자가 아니고, 본인 KOL 데이터가 아닌 경우 접근 거부
-          if (userData.role !== '본사관리자') {
+          if (userData.role !== 'admin') {
             const { data: kolData, error: kolError } = await supabase
               .from('kols')
               .select('id')
@@ -112,65 +107,77 @@ export async function GET(request: NextRequest) {
       kolId
     });
 
-    // KOL 월별 요약 데이터 조회 - 표준 YYYY-MM 형식 우선, 레거시 YYYYMM 형식 호환
-    const monthRangeCompact = monthRange.map(month => month.replace('-', ''));
-    
-    console.log('월별 수당 API - 검색 형식:', {
-      standardFormat: monthRange,
-      legacyFormat: monthRangeCompact
+    // KOL 월별 요약 데이터 조회 - 표준 YYYY-MM 형식 우선 검색
+    console.log('월별 수당 API - 검색 범위:', {
+      kolId,
+      monthRange,
+      startDate,
+      currentDate
     });
     
-    // 표준 형식과 레거시 형식 모두 조회하여 우선순위에 따라 처리
-    const { data: summaryData, error: summaryError } = await supabase
+    // 1차: 표준 형식(YYYY-MM) 데이터 조회
+    const { data: standardData, error: standardError } = await supabase
       .from('kol_dashboard_metrics')
       .select('year_month, monthly_commission')
       .eq('kol_id', kolId)
-      .or(`year_month.in.(${monthRange.join(',')}),year_month.in.(${monthRangeCompact.join(',')})`)
+      .in('year_month', monthRange)
       .order('year_month', { ascending: true });
 
-    if (summaryError) {
-      console.error('KOL 월별 요약 데이터 조회 에러:', summaryError);
+    if (standardError) {
+      console.error('KOL 월별 요약 데이터 조회 에러:', standardError);
       return NextResponse.json(
         { error: '월별 데이터를 조회하는 중 오류가 발생했습니다.' },
         { status: 500 }
       );
     }
 
-    console.log('월별 수당 API - DB 조회 결과:', {
-      resultCount: summaryData?.length || 0,
-      summaryData
-    });
-
-    // 데이터가 없는 경우 빈 배열이지만 월별 구조는 유지
-    if (!summaryData || summaryData.length === 0) {
-      console.log('월별 수당 API - 데이터 없음, 빈 월별 구조 생성');
+    // 2차: 표준 형식에서 찾지 못한 월에 대해 레거시 형식(YYYYMM) 조회
+    const foundMonths = new Set(standardData?.map(item => item.year_month) || []);
+    const missingMonths = monthRange.filter(month => !foundMonths.has(month));
+    const legacyMonths = missingMonths.map(month => month.replace('-', ''));
+    
+    let legacyData: any[] = [];
+    if (legacyMonths.length > 0) {
+      const { data: legacyResult, error: legacyError } = await supabase
+        .from('kol_dashboard_metrics')
+        .select('year_month, monthly_commission')
+        .eq('kol_id', kolId)
+        .in('year_month', legacyMonths)
+        .order('year_month', { ascending: true });
       
-      // 빈 월별 데이터 구조 생성
-      const emptyMonthlyData = monthRange.map(yearMonth => ({
-        month: yearMonth.substring(5) + '월', // 'MM월' 형식으로 변환
-        allowance: 0
-      }));
-      
-      console.log('월별 수당 API - 빈 데이터 응답:', emptyMonthlyData);
-      return NextResponse.json(emptyMonthlyData);
+      if (legacyError) {
+        console.error('레거시 형식 데이터 조회 에러:', legacyError);
+      } else {
+        legacyData = legacyResult || [];
+      }
     }
 
-    // 결과 데이터 가공 - 중복 데이터 처리 및 우선순위 적용
+    // 표준 데이터와 레거시 데이터 병합
+    const allData = [...(standardData || []), ...legacyData];
+    
+    console.log('월별 수당 API - DB 조회 결과:', {
+      standardCount: standardData?.length || 0,
+      legacyCount: legacyData.length,
+      totalCount: allData.length,
+      standardData,
+      legacyData
+    });
+
+    // 결과 데이터 가공
     const monthlyData = monthRange.map(yearMonth => {
-      // 표준 형식과 레거시 형식 모두 검색하여 우선순위 적용
-      const yearMonthCompact = yearMonth.replace('-', '');
+      // 표준 형식 우선 검색
+      let selectedData = standardData?.find(item => item.year_month === yearMonth);
       
-      // 같은 월의 데이터가 여러 형식으로 있을 경우 표준 형식 우선
-      const standardData = summaryData.find(item => item.year_month === yearMonth);
-      const legacyData = summaryData.find(item => item.year_month === yearMonthCompact);
-      
-      let selectedData = null;
-      if (standardData) {
-        selectedData = standardData;
+      // 표준 형식에 없으면 레거시 형식에서 검색
+      if (!selectedData) {
+        const yearMonthCompact = yearMonth.replace('-', '');
+        selectedData = legacyData.find(item => item.year_month === yearMonthCompact);
+        
+        if (selectedData) {
+          console.log(`월별 수당 - 레거시 형식 사용: ${yearMonth} -> ${yearMonthCompact}`);
+        }
+      } else {
         console.log(`월별 수당 - 표준 형식 사용: ${yearMonth}`);
-      } else if (legacyData) {
-        selectedData = legacyData;
-        console.log(`월별 수당 - 레거시 형식 사용: ${yearMonthCompact}`);
       }
       
       return {

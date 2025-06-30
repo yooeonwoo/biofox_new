@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { checkAuthSupabase } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -13,10 +13,11 @@ export async function GET(
   { params }: { params: { caseId: string } }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const authResult = await checkAuthSupabase();
+    if (!authResult.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = authResult.user.id;
 
     const caseId = parseInt(params.caseId);
 
@@ -58,10 +59,11 @@ export async function POST(
   { params }: { params: { caseId: string } }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const authResult = await checkAuthSupabase();
+    if (!authResult.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = authResult.user.id;
 
     const caseId = parseInt(params.caseId);
     const body = await request.json();
@@ -70,7 +72,7 @@ export async function POST(
     const { data: userData } = await supabase
       .from("users")
       .select("id")
-      .eq("clerk_id", userId)
+      .eq("id", userId)
       .single();
 
     const { data: kolData } = await supabase
@@ -154,10 +156,11 @@ export async function DELETE(
   { params }: { params: { caseId: string } }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const authResult = await checkAuthSupabase();
+    if (!authResult.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = authResult.user.id;
 
     const caseId = parseInt(params.caseId);
     const { searchParams } = new URL(request.url);

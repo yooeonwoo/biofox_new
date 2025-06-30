@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import type { ClinicalCase as DomainClinicalCase, PhotoSlot as DomainPhotoSlot, CustomerInfo, RoundCustomerInfo } from '@/src/types/clinical';
+import type { ClinicalCase as DomainClinicalCase, PhotoSlot as DomainPhotoSlot, CustomerInfo, RoundCustomerInfo } from '@/types/clinical';
 import type { ClinicalCase as APIClinicalCase, PhotoSlot as APIPhotoSlot } from '@/lib/clinical-photos';
-import { safeParseStringArray } from '@/src/types/clinical';
+import { safeParseStringArray } from '@/types/clinical';
 
 // API 응답 스키마 정의
 const apiPhotoSlotSchema = z.object({

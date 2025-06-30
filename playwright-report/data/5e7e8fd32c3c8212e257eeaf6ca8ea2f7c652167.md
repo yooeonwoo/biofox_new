@@ -1,0 +1,71 @@
+# Page snapshot
+
+```yaml
+- complementary:
+  - link "BIOFOX BIOFOX":
+    - /url: /kol-new
+    - img "BIOFOX"
+    - text: BIOFOX
+  - navigation:
+    - list:
+      - listitem:
+        - link "대시보드":
+          - /url: /kol-new
+          - img
+          - text: 대시보드
+      - listitem:
+        - link "전문점 관리":
+          - /url: /kol-new/stores
+          - img
+          - text: 전문점 관리
+      - listitem:
+        - link "고객 관리":
+          - /url: /kol-new/customer-manager
+          - img
+          - text: 고객 관리
+      - listitem:
+        - link "임상사진":
+          - /url: /kol-new/clinical-photos
+          - img
+          - text: 임상사진
+      - listitem:
+        - link "영업일지":
+          - /url: /kol-new/sales-journal
+          - img
+          - text: 영업일지
+      - listitem:
+        - link "알림":
+          - /url: /kol-new/notifications
+          - img
+          - text: 알림
+    - text: 외부 링크
+    - list:
+      - listitem:
+        - link "전문가몰":
+          - /url: https://biofoxpro.co.kr/
+          - img
+          - text: 전문가몰
+      - listitem:
+        - link "폭시":
+          - /url: https://ad.biofoxi.com/
+          - img
+          - text: 폭시
+- banner:
+  - button:
+    - img
+  - button:
+    - img
+- main:
+  - heading "데이터 로딩 중..." [level=3]
+  - paragraph: 대시보드 정보를 불러오는 중입니다.
+- contentinfo:
+  - text: © 2025 BioFox CRM. All rights reserved.
+  - link "이용약관":
+    - /url: "#"
+  - link "개인정보처리방침":
+    - /url: "#"
+  - link "고객지원":
+    - /url: "#"
+- region "Notifications (F8)":
+  - list
+```

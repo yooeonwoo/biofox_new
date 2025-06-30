@@ -1,31 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-
-// 로컬 개발환경용 임시 KOL 정보
-const getTempKolData = () => ({
-  id: 1,
-  name: '테스트 사용자',
-  shop_name: '테스트 샵',
-  userId: 'temp-user-id'
-});
+import { checkAuthSupabase } from '@/lib/auth';
 
 // GET: 로그인한 KOL의 알림 목록 조회
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = getTempKolData();
-
-    if (!userId) {
+    // 사용자 인증 확인
+    const { user } = await checkAuthSupabase(['kol', 'admin']);
+    if (!user) {
       return NextResponse.json(
         { error: '인증되지 않은 사용자입니다.' },
         { status: 401 }
       );
     }
+    
+    const userId = user.id;
 
-    // Clerk ID → users 테이블 PK 조회
+    // 사용자 정보 조회
     const { data: userInfo, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('clerk_id', userId)
+      .eq('id', userId)
       .single();
 
     if (userError || !userInfo) {

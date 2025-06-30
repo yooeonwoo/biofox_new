@@ -1,4 +1,3 @@
-import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
 
 export const metadata = {

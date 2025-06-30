@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { auth } from '@clerk/nextjs/server';
+import { checkAuthSupabase } from '@/lib/auth';
 
 // KOL 태스크 목록 API 라우트
 export async function GET() {
   try {
     // 인증 확인
-    const { userId } = await auth();
+    const authResult = await checkAuthSupabase();
+    const userId = authResult.user?.id;
     if (!userId) {
       return NextResponse.json(
         { error: '인증되지 않은 요청입니다.' },
@@ -18,7 +19,7 @@ export async function GET() {
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('clerk_id', userId)
+      .eq('id', userId)
       .single();
 
     if (userError || !userData) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { checkAuthSupabase } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -13,10 +13,11 @@ export async function DELETE(
   { params }: { params: { caseId: string } }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const authResult = await checkAuthSupabase();
+    if (!authResult.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = authResult.user.id;
 
     const caseId = params.caseId;
     

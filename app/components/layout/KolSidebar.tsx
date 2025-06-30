@@ -2,15 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Store, Users, BarChart3, Bell, FileText, ShoppingBag, Camera } from "lucide-react";
+import { useState } from 'react';
+import { Home, Store, Users, BarChart3, Bell, FileText, ShoppingBag, Camera, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FoxLogo } from "@/components/ui/fox-logo";
 
 interface KolSidebarProps {
   className?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function KolSidebar({ className }: KolSidebarProps) {
+export default function KolSidebar({ className, isOpen = false, onClose }: KolSidebarProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const pathname = usePathname();
   
   // 임시 사용자 정보 (로컬 개발용)
@@ -81,75 +86,192 @@ export default function KolSidebar({ className }: KolSidebarProps) {
   ];
 
   return (
-    <div className={cn(
-      "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col",
-      className
-    )}>
-      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4 border-r border-gray-200">
-        <div className="flex h-16 shrink-0 items-center">
-          <img 
-            className="h-8 w-auto" 
-            src="/images/biofox-logo.png" 
-            alt="BIOFOX" 
-          />
-          <span className="ml-2 text-xl font-bold text-gray-900">BIOFOX</span>
+    <>
+      {/* 모바일 오버레이 배경 */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* 사이드바 본체 */}
+      <aside className={cn(
+        // 모바일: 오버레이 (고정 위치)
+        "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300",
+        isOpen ? "translate-x-0" : "-translate-x-full",
+        "md:hidden", // 태블릿 이상에서 숨김
+        
+        // 공통 스타일
+        "flex flex-col bg-white border-r border-gray-200 shadow-lg",
+        className
+      )}
+      >
+        {/* 모바일 전용 콘텐츠 */}
+        {/* 닫기 버튼 (모바일) */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">메뉴</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
         
-        <nav className="flex flex-1 flex-col">
-          <ul role="list" className="flex flex-1 flex-col gap-y-7">
-            <li>
-              <ul role="list" className="-mx-2 space-y-1">
-                {navigation.filter(item => item.show).map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        item.current
-                          ? 'bg-gray-50 text-blue-600'
-                          : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50',
-                        'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6'
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          item.current ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600',
-                          'h-6 w-6 shrink-0'
-                        )}
-                        aria-hidden="true"
-                      />
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </li>
-            
-            <li className="mt-auto">
-              <div className="text-xs font-semibold leading-6 text-gray-400 mb-2">
-                외부 링크
-              </div>
-              <ul role="list" className="-mx-2 space-y-1">
-                {externalLinks.map((item) => (
-                  <li key={item.name}>
-                    <a
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-gray-700 hover:text-blue-600 hover:bg-gray-50 group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
-                    >
-                      <item.icon
-                        className="text-gray-400 group-hover:text-blue-600 h-6 w-6 shrink-0"
-                        aria-hidden="true"
-                      />
-                      {item.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </li>
+        {/* 모바일 네비게이션 */}
+        <nav className="flex-1 px-4 py-4 overflow-y-auto">
+          <ul role="list" className="space-y-1">
+            {navigation.filter(item => item.show).map((item) => (
+              <li key={item.name}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-gray-50",
+                    item.current
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-700 hover:text-blue-600'
+                  )}
+                  onClick={onClose} // 링크 클릭시 메뉴 닫기
+                >
+                  <item.icon className={cn(
+                    "h-5 w-5 flex-shrink-0",
+                    item.current ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600'
+                  )} />
+                  <span className="font-medium">{item.name}</span>
+                </Link>
+              </li>
+            ))}
           </ul>
+          
+          {/* 외부 링크 */}
+          <div className="mt-8">
+            <div className="text-xs font-semibold leading-6 text-gray-400 mb-2 px-3">
+              외부 링크
+            </div>
+            <ul role="list" className="space-y-1">
+              {externalLinks.map((item) => (
+                <li key={item.name}>
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-gray-50 text-gray-700 hover:text-blue-600"
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                    <span className="font-medium">{item.name}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </nav>
-      </div>
-    </div>
+      </aside>
+      
+      {/* 데스크탑/태블릿 사이드바 (일반 레이아웃용) */}
+      <aside className={cn(
+        "hidden md:flex flex-col h-full bg-white border-r border-gray-200",
+        // 태블릿: 축소/확장
+        "md:transition-all md:duration-300",
+        isExpanded ? "md:w-72" : "md:w-20",
+        // 데스크탑: 전체 너비
+        "lg:w-72"
+      )}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+      >
+        {/* 로고/브랜드 영역 */}
+        <div className="flex h-16 items-center px-6 border-b border-gray-100">
+          <Link href="/kol-new" className="flex items-center gap-2">
+            <img 
+              className="h-8 w-auto flex-shrink-0" 
+              src="/images/biofox-logo.png" 
+              alt="BIOFOX" 
+            />
+            <span className={cn(
+              "text-xl font-bold text-gray-900 transition-opacity duration-300",
+              !isExpanded && "md:opacity-0 lg:opacity-100"
+            )}>
+              BIOFOX
+            </span>
+          </Link>
+        </div>
+        
+        {/* 네비게이션 메뉴 */}
+        <nav className="flex-1 px-4 py-4 overflow-y-auto">
+          <ul role="list" className="space-y-1">
+            {navigation.filter(item => item.show).map((item) => (
+              <li key={item.name}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-gray-50 group relative",
+                    item.current
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-700 hover:text-blue-600'
+                  )}
+                >
+                  <item.icon className={cn(
+                    "h-5 w-5 flex-shrink-0",
+                    item.current ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600'
+                  )} />
+                  <span className={cn(
+                    "transition-opacity duration-300 font-medium",
+                    !isExpanded && "md:hidden lg:block"
+                  )}>
+                    {item.name}
+                  </span>
+                  
+                  {/* 태블릿 툴팁 */}
+                  {!isExpanded && (
+                    <div className="absolute left-full ml-2 hidden rounded-md bg-gray-900 text-white px-2 py-1 text-sm md:group-hover:block lg:hidden whitespace-nowrap z-50">
+                      {item.name}
+                    </div>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          
+          {/* 외부 링크 섹션 */}
+          <div className="mt-8">
+            <div className={cn(
+              "text-xs font-semibold leading-6 text-gray-400 mb-2 px-3 transition-opacity duration-300",
+              !isExpanded && "md:opacity-0 lg:opacity-100"
+            )}>
+              외부 링크
+            </div>
+            <ul role="list" className="space-y-1">
+              {externalLinks.map((item) => (
+                <li key={item.name}>
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-gray-50 text-gray-700 hover:text-blue-600 group relative"
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                    <span className={cn(
+                      "transition-opacity duration-300 font-medium",
+                      !isExpanded && "md:hidden lg:block"
+                    )}>
+                      {item.name}
+                    </span>
+                    
+                    {/* 태블릿 툴팁 */}
+                    {!isExpanded && (
+                      <div className="absolute left-full ml-2 hidden rounded-md bg-gray-900 text-white px-2 py-1 text-sm md:group-hover:block lg:hidden whitespace-nowrap z-50">
+                        {item.name}
+                      </div>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </nav>
+      </aside>
+    </>
   );
 } 

@@ -1,26 +1,29 @@
-import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { supabaseServer } from "@/lib/supabase-client";
 import CustomerList from "./components/CustomerList";
+import { checkAuthSupabase } from "@/lib/auth";
 
 export const revalidate = 0; // 항상 최신 데이터를 가져오기 위해 ISR 끔
 
 export default async function CustomerManagerPage() {
-  const { userId } = await auth();
-  if (!userId) {
+  const authResult = await checkAuthSupabase();
+  if (!authResult.user) {
     return <div className="p-6 text-center">로그인이 필요합니다.</div>;
   }
+  
+  const userId = authResult.user.id;
 
-  const supabase = supabaseServer(cookies());
+  const cookieStore = await cookies();
+  const supabase = supabaseServer(cookieStore);
 
-  // 1) Clerk ID -> 내부 users 테이블 ID 조회
+  // 1) 사용자 정보 조회
   const {
     data: userRecord,
     error: userError,
   } = await supabase
     .from("users")
     .select("id, name")
-    .eq("clerk_id", userId)
+    .eq("id", userId)
     .single();
 
   if (userError || !userRecord) {

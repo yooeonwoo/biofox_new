@@ -3,10 +3,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { checkAuthSupabase } from '@/lib/auth';
-import { useClinicalCases, useUpdateCase } from '@/src/hooks/useClinicalCases';
-import { useCaseSerialQueues } from '@/src/hooks/useSerialQueue';
-import { SYSTEM_OPTIONS, safeParseStringArray } from '@/src/types/clinical';
-import type { ClinicalCase, CustomerInfo, RoundCustomerInfo, PhotoSlot, KolInfo, CaseStatus } from '@/src/types/clinical';
+import { useClinicalCases, useUpdateCase } from '@/hooks/useClinicalCases';
+import { useCaseSerialQueues } from '@/hooks/useSerialQueue';
+import { SYSTEM_OPTIONS, safeParseStringArray } from '@/types/clinical';
+import type { ClinicalCase, CustomerInfo, RoundCustomerInfo, PhotoSlot, KolInfo, CaseStatus } from '@/types/clinical';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { ArrowLeft, Camera, Plus, Calendar, User, Scissors, Eye, Trash2, Edit, Save } from "lucide-react";
@@ -23,7 +23,7 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogDescrip
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import PhotoRoundCarousel from "../../components/PhotoRoundCarousel";
 import CaseStatusTabs from "../../components/CaseStatusTabs";
-import { PhotoUploader } from '@/src/components/clinical/PhotoUploader';
+import { PhotoUploader } from '@/components/clinical/PhotoUploader';
 
 // 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 

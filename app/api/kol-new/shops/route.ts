@@ -1,18 +1,49 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { checkAuthSupabase } from '@/lib/auth';
+import { cookies } from 'next/headers';
+import { supabaseServer } from '@/lib/supabase-client';
 import { getCurrentYearMonth } from '@/lib/date-utils';
 
 export async function GET() {
   try {
-    console.log('============ 전문점 API 요청 시작 ============');
-
-    // 로컬 개발환경용 임시 KOL 정보
-    const tempKol = {
-      id: 1,
-      name: '테스트 사용자',
-      shopName: '테스트 샵',
-      userId: 'temp-user-id'
-    };
+    console.log('=== Shops API 시작 ===');
+    
+    // 1. 인증 체크
+    const { user } = await checkAuthSupabase(['kol', 'admin']);
+    if (!user) {
+      return NextResponse.json({ error: '인증 필요' }, { status: 401 });
+    }
+    
+    console.log('현재 사용자:', {
+      id: user.id,
+      name: user.name,
+      role: user.role
+    });
+    
+    // 2. Supabase 연결
+    const cookieStore = await cookies();
+    const supabase = supabaseServer(cookieStore);
+    
+    // 3. 실제 KOL 정보 조회
+    const { data: kolInfo, error: kolError } = await supabase
+      .from('kols')
+      .select('id, name, shop_name, user_id')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (kolError || !kolInfo) {
+      console.error('KOL 정보 조회 실패:', kolError);
+      return NextResponse.json(
+        { error: 'KOL 정보를 찾을 수 없습니다' },
+        { status: 404 }
+      );
+    }
+    
+    console.log('조회된 KOL 정보:', {
+      id: kolInfo.id,
+      name: kolInfo.name,
+      shop_name: kolInfo.shop_name
+    });
 
     // 현재 월 계산 - YYYY-MM 형식으로 통일
     const currentMonth = getCurrentYearMonth(); // "2025-05"
@@ -21,12 +52,12 @@ export async function GET() {
     console.log(`📅 현재 월 정보:`, {
       currentMonth,
       currentMonthCompact,
-      kolId: tempKol.id,
-      kolName: tempKol.name
+      kolId: kolInfo.id,
+      kolName: kolInfo.name
     });
     
-    // KOL이 관리하는 전문점 정보 조회 (shops 테이블 직접 사용)
-    console.log(`🏪 전문점 조회 시작: KOL ID=${tempKol.id} (${tempKol.name})`);
+    // 4. 해당 KOL의 전문점 목록 조회
+    console.log(`🏪 전문점 조회 시작: KOL ID=${kolInfo.id} (${kolInfo.name})`);
     
     const { data: shops, error: shopsError } = await supabase
       .from('shops')
@@ -42,10 +73,12 @@ export async function GET() {
           total_sales,
           product_sales,
           device_sales,
+          commission,
           year_month
         )
       `)
-      .eq('kol_id', tempKol.id);
+      .eq('kol_id', kolInfo.id)
+      .order('created_at', { ascending: false });
 
     console.log(`🏪 전문점 조회 응답:`, {
       shopCount: shops?.length || 0,
@@ -54,17 +87,17 @@ export async function GET() {
     });
 
     if (shopsError) {
-      console.error(`❌ 전문점 조회 오류(kol_id=${tempKol.id}):`, shopsError);
+      console.error(`❌ 전문점 조회 오류(kol_id=${kolInfo.id}):`, shopsError);
       return NextResponse.json(
         { error: `전문점 정보를 조회하는 중 오류가 발생했습니다: ${shopsError.message}` },
         { status: 500 }
       );
     }
 
-    console.log(`✅ 전문점 조회 성공: KOL ID=${tempKol.id}, 전문점 수=${shops?.length || 0}`);
+    console.log(`✅ 전문점 조회 성공: KOL ID=${kolInfo.id}, 전문점 수=${shops?.length || 0}`);
 
     if (!shops || shops.length === 0) {
-      console.log(`⚠️ 전문점 데이터 없음(kol_id=${tempKol.id})`);
+      console.log(`⚠️ 전문점 데이터 없음(kol_id=${kolInfo.id})`);
       return NextResponse.json({ shops: [], meta: { totalShopsCount: 0, activeShopsCount: 0 } });
     }
 
@@ -108,7 +141,8 @@ export async function GET() {
           total: currentMonthSales?.total_sales || 0,
           product: currentMonthSales?.product_sales || 0,
           device: currentMonthSales?.device_sales || 0,
-          hasOrdered
+          hasOrdered,
+          commission: currentMonthSales?.commission || 0
         }
       };
     });
@@ -131,7 +165,7 @@ export async function GET() {
       }
     };
 
-    console.log('============ 전문점 API 응답 완료 ============');
+    console.log('=== Shops API 응답 완료 ===');
     return NextResponse.json(responseData);
 
   } catch (error) {
@@ -145,4 +179,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}
