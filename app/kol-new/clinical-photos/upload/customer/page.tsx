@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { checkAuthSupabase } from '@/lib/auth';
 import { useClinicalCases, useUpdateCase } from '@/hooks/useClinicalCases';
 import { useCaseSerialQueues } from '@/hooks/useSerialQueue';
@@ -26,32 +25,43 @@ import CaseStatusTabs from "../../components/CaseStatusTabs";
 import { PhotoUploader } from '@/components/clinical/PhotoUploader';
 import { ConsentUploader } from '@/components/clinical/ConsentUploader';
 import { useCustomerCaseHandlers } from '@/hooks/useCustomerCaseHandlers';
+import { useCustomerPageState } from '@/hooks/useCustomerPageState';
 
 // 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 
 export default function CustomerClinicalUploadPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // 케이스 관리 상태
-  const [cases, setCases] = useState<ClinicalCase[]>([]);
-  const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
-
-  const [hasUnsavedNewCustomer, setHasUnsavedNewCustomer] = useState(false);
-  const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
-  
-  // IME 상태 관리 (한글 입력 문제 해결) 및 debounce
-  const [isComposing, setIsComposing] = useState(false);
-  const [inputDebounceTimers, setInputDebounceTimers] = useState<{[key: string]: NodeJS.Timeout}>({});
-  const mainContentRef = useRef<HTMLElement>(null);
-  const casesRef = useRef<ClinicalCase[]>([]);
-
-  // 사용자 상호작용 상태 추적 (Focus State + User Activity)
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
-  const userActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [saveStatus, setSaveStatus] = useState<{[caseId:string]: 'idle' | 'saving' | 'saved' | 'error'}>({});
+  // 모든 상태와 사이드 이펙트를 커스텀 훅으로 분리
+  const {
+    // States
+    user,
+    setUser,
+    isLoading,
+    setIsLoading,
+    cases,
+    setCases,
+    currentRounds,
+    setCurrentRounds,
+    hasUnsavedNewCustomer,
+    setHasUnsavedNewCustomer,
+    numberVisibleCards,
+    setNumberVisibleCards,
+    isComposing,
+    setIsComposing,
+    inputDebounceTimers,
+    setInputDebounceTimers,
+    isUserInteracting,
+    setIsUserInteracting,
+    saveStatus,
+    setSaveStatus,
+    
+    // Refs
+    userActivityTimeoutRef,
+    mainContentRef,
+    casesRef,
+    
+    // Helper functions
+    isNewCustomer,
+  } = useCustomerPageState();
 
   const markSaving = (caseId:string) => setSaveStatus(prev=>({...prev,[caseId]:'saving'}));
   const markSaved = (caseId:string) => {
@@ -71,9 +81,6 @@ export default function CustomerClinicalUploadPage() {
     return updateQueue.current[caseId];
   };
   // ---------------------------------------------
-
-  // 새 고객 여부 확인 함수
-  const isNewCustomer = (caseId: string) => caseId.startsWith('new-customer-');
 
   // debounce 함수 (영어/숫자/특수문자 입력 문제 해결)
   const debouncedUpdate = (key: string, updateFn: () => void, delay: number = 500) => {
@@ -130,379 +137,15 @@ export default function CustomerClinicalUploadPage() {
     setHasUnsavedNewCustomer,
   });
 
-  // 사용자 인증 확인
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { user } = await checkAuthSupabase(['kol', 'test']);
-        if (!user) {
-          router.push('/signin');
-          return;
-        }
-        setUser(user);
-      } catch (error) {
-        console.error('인증 확인 중 오류:', error);
-        router.push('/signin');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    checkAuth();
-  }, [router]);
 
-  // 사용자 상호작용 감지 훅
-  useEffect(() => {
-    const interactiveElements = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
-    
-    const checkFocusState = () => {
-      const activeElement = document.activeElement;
-      const isInputFocused = !!(activeElement &&
-        interactiveElements.includes(activeElement.tagName) &&
-        activeElement !== document.body);
-      
-      console.log('포커스 상태 변경:', { 
-        activeElement: activeElement?.tagName, 
-        isInputFocused,
-        id: activeElement?.id || 'no-id'
-      });
-      
-      setIsUserInteracting(isInputFocused);
-    };
 
-    // 사용자 활동 감지 (마우스, 키보드, 터치)
-    const handleUserActivity = (event: Event) => {
-      // 특정 이벤트 타입에 대해서만 상호작용으로 간주
-      const interactionEvents = ['mousedown', 'keydown', 'touchstart', 'input', 'change'];
-      if (!interactionEvents.includes(event.type)) return;
 
-      console.log('사용자 활동 감지:', event.type);
-      setIsUserInteracting(true);
-      
-      // 기존 타이머 클리어
-      if (userActivityTimeoutRef.current) {
-        clearTimeout(userActivityTimeoutRef.current);
-      }
-      
-      // 활동 후 500ms 경과 시 상호작용 상태 해제
-      userActivityTimeoutRef.current = setTimeout(() => {
-        // 여전히 포커스된 요소가 있는지 재확인
-        const activeElement = document.activeElement;
-        const isInputFocused = !!(activeElement &&
-          interactiveElements.includes(activeElement.tagName) &&
-          activeElement !== document.body);
-          
-        if (!isInputFocused) {
-          console.log('사용자 활동 타임아웃 - 상호작용 상태 해제');
-          setIsUserInteracting(false);
-        }
-      }, 500);
-    };
 
-    // 이벤트 리스너 등록
-    document.addEventListener('focusin', checkFocusState);
-    document.addEventListener('focusout', checkFocusState);
-    document.addEventListener('mousedown', handleUserActivity);
-    document.addEventListener('keydown', handleUserActivity);
-    document.addEventListener('touchstart', handleUserActivity);
-    document.addEventListener('input', handleUserActivity);
-    document.addEventListener('change', handleUserActivity);
 
-    // 초기 포커스 상태 확인
-    checkFocusState();
 
-    return () => {
-      document.removeEventListener('focusin', checkFocusState);
-      document.removeEventListener('focusout', checkFocusState);
-      document.removeEventListener('mousedown', handleUserActivity);
-      document.removeEventListener('keydown', handleUserActivity);
-      document.removeEventListener('touchstart', handleUserActivity);
-      document.removeEventListener('input', handleUserActivity);
-      document.removeEventListener('change', handleUserActivity);
-      
-      if (userActivityTimeoutRef.current) {
-        clearTimeout(userActivityTimeoutRef.current);
-      }
-    };
-  }, []);
 
-  // 임시저장된 새 고객 데이터 로드
-  useEffect(() => {
-    if (typeof window !== 'undefined' && user) {
-      const savedNewCustomer = localStorage.getItem('unsavedNewCustomer');
-      if (savedNewCustomer) {
-        try {
-          const parsedCase = JSON.parse(savedNewCustomer);
-          // 기존 케이스에 새 고객이 이미 있는지 확인
-          setCases(prev => {
-            const hasExistingNewCustomer = prev.some(case_ => isNewCustomer(case_.id));
-            if (hasExistingNewCustomer) {
-              return prev; // 이미 새 고객이 있으면 추가하지 않음
-            }
-            return [parsedCase, ...prev];
-          });
-          setCurrentRounds(prev => ({ ...prev, [parsedCase.id]: 1 }));
-          setHasUnsavedNewCustomer(true);
-        } catch (error) {
-          console.error('Failed to parse saved new customer:', error);
-          localStorage.removeItem('unsavedNewCustomer');
-        }
-      }
-    }
-  }, [user]);
 
-  // 새 고객 데이터 변경 시 localStorage에 저장
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (hasUnsavedNewCustomer) {
-        const newCustomerCase = cases.find(case_ => isNewCustomer(case_.id));
-        if (newCustomerCase) {
-          localStorage.setItem('unsavedNewCustomer', JSON.stringify(newCustomerCase));
-        } else {
-          // 새 고객이 없으면 localStorage에서 제거
-          localStorage.removeItem('unsavedNewCustomer');
-        }
-      } else {
-        // hasUnsavedNewCustomer가 false면 localStorage에서 제거
-        localStorage.removeItem('unsavedNewCustomer');
-      }
-    }
-  }, [cases, hasUnsavedNewCustomer]);
 
-  // 실제 케이스 데이터 로드
-  useEffect(() => {
-    const loadCases = async () => {
-      if (!user) return;
-      
-      try {
-        // fetchCases API를 사용해서 실제 데이터 가져오기
-        const { fetchCases } = await import('@/lib/clinical-photos');
-        const allCasesData = await fetchCases();
-        
-        // 고객 케이스만 필터링 (본인 케이스 제외)
-        const casesData = allCasesData.filter(case_ => 
-          case_.customerName?.trim().toLowerCase() !== '본인' && 
-          !case_.customerName?.includes('본인')
-        );
-        
-        console.log('전체 케이스:', allCasesData.length, '고객 케이스:', casesData.length);
-        
-        // API 응답 데이터를 컴포넌트 형식에 맞게 변환
-        const transformedCases: ClinicalCase[] = await Promise.all(casesData.map(async case_ => {
-          // 체크박스 관련 제품 데이터 처리
-          const productTypes = [];
-          if (case_.cureBooster) productTypes.push('cure_booster');
-          if (case_.cureMask) productTypes.push('cure_mask');
-          if (case_.premiumMask) productTypes.push('premium_mask');
-          if (case_.allInOneSerum) productTypes.push('all_in_one_serum');
-          
-          // 체크박스 관련 피부타입 데이터 처리
-          const skinTypeData = [];
-          if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
-          if (case_.skinPigment) skinTypeData.push('pigment');
-          if (case_.skinPore) skinTypeData.push('pore');
-          if (case_.skinTrouble) skinTypeData.push('acne_trouble');
-          if (case_.skinWrinkle) skinTypeData.push('wrinkle');
-          if (case_.skinEtc) skinTypeData.push('other');
-          
-          // 사진 데이터 로드
-          let photos: PhotoSlot[] = [];
-          try {
-            const { fetchPhotos } = await import('@/lib/clinical-photos-api');
-            const photoData = await fetchPhotos(case_.id);
-            photos = photoData.map(p => ({
-              id: p.id,
-              roundDay: p.roundDay,
-              angle: p.angle as 'front' | 'left' | 'right',
-              imageUrl: p.imageUrl,
-              uploaded: true
-            }));
-          } catch (error) {
-            console.error(`Failed to load photos for case ${case_.id}:`, error);
-          }
-
-          // 회차별 고객 정보 로드
-          const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
-          try {
-            const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
-            const roundData = await fetchRoundCustomerInfo(case_.id);
-            roundData.forEach(round => {
-              roundCustomerInfo[round.round_number] = {
-                age: round.age,
-                gender: round.gender,
-                treatmentType: round.treatment_type || '',
-                products: safeParseStringArray(round.products),
-                skinTypes: safeParseStringArray(round.skin_types),
-                memo: round.memo || '',
-                date: round.treatment_date || ''
-              };
-            });
-          } catch (error) {
-            console.error(`Failed to load round info for case ${case_.id}:`, error);
-          }
-
-          // 기본 회차 정보가 없으면 생성 (또는 제품/피부타입 정보가 비어있을 때 기본값 채우기)
-          if (!roundCustomerInfo[1]) {
-            roundCustomerInfo[1] = {
-              age: undefined,
-              gender: undefined,
-              treatmentType: '',
-              products: productTypes,
-              skinTypes: skinTypeData,
-              memo: case_.treatmentPlan || '',
-              date: case_.createdAt.split('T')[0],
-            };
-          } else {
-            // DB에 값이 없을 때만 기본값 보완
-            if ((!roundCustomerInfo[1].products || roundCustomerInfo[1].products.length === 0) && productTypes.length > 0) {
-              roundCustomerInfo[1].products = productTypes;
-            }
-            if ((!roundCustomerInfo[1].skinTypes || roundCustomerInfo[1].skinTypes.length === 0) && skinTypeData.length > 0) {
-              roundCustomerInfo[1].skinTypes = skinTypeData;
-            }
-          }
-          
-          // 변환된 케이스 데이터 반환
-          return {
-            id: case_.id.toString(),
-            customerName: case_.customerName,
-            status: (case_.status === 'archived' || (case_.status as any) === 'cancelled')
-              ? 'active'
-              : (case_.status as 'active' | 'completed'),
-            createdAt: case_.createdAt.split('T')[0],
-            consentReceived: case_.consentReceived,
-            consentImageUrl: case_.consentImageUrl,
-            photos: photos,
-            customerInfo: {
-              name: case_.customerName,
-              age: roundCustomerInfo[1]?.age,
-              gender: roundCustomerInfo[1]?.gender,
-              products: productTypes,
-              skinTypes: skinTypeData,
-              memo: case_.treatmentPlan || ''
-            },
-            roundCustomerInfo: roundCustomerInfo,
-            // 본래 API의 boolean 필드를 그대로 설정
-            cureBooster: case_.cureBooster || false,
-            cureMask: case_.cureMask || false,
-            premiumMask: case_.premiumMask || false,
-            allInOneSerum: case_.allInOneSerum || false,
-            skinRedSensitive: case_.skinRedSensitive || false,
-            skinPigment: case_.skinPigment || false,
-            skinPore: case_.skinPore || false,
-            skinTrouble: case_.skinTrouble || false,
-            skinWrinkle: case_.skinWrinkle || false,
-            skinEtc: case_.skinEtc || false
-          };
-        }));
-        
-        setCases(transformedCases);
-        
-        // 초기 현재 회차 설정
-        const initialRounds: { [caseId: string]: number } = {};
-        transformedCases.forEach(case_ => {
-          initialRounds[case_.id] = 1;
-        });
-        setCurrentRounds(initialRounds);
-      } catch (error) {
-        console.error('Failed to load cases:', error);
-        setCases([]); // 에러 시 빈 배열
-      }
-    };
-
-    loadCases();
-  }, [user]);
-
-  // 스크롤 기반 숫자 애니메이션 (사용자 상호작용 중이 아닐 때만 표시)
-  useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout | null = null;
-    let throttleTimeout: NodeJS.Timeout | null = null;
-    let isScrolling = false;
-    
-    const handleScroll = () => {
-      console.log('스크롤 이벤트 감지됨', { isUserInteracting }); // 디버깅용
-      
-      // 사용자 상호작용 중이면 애니메이션 비활성화
-      if (isUserInteracting) {
-        console.log('사용자 상호작용 중 - 스크롤 애니메이션 차단');
-        return;
-      }
-      
-      // 스크롤 시작 시에만 숫자 표시 (throttling으로 성능 향상)
-      if (!isScrolling && !throttleTimeout) {
-        isScrolling = true;
-        console.log(' 의도적 스크롤 감지 - 숫자 애니메이션 시작'); // 디버깅용
-        
-        // 현재 cases 상태를 ref로 접근하여 애니메이션 표시
-        const currentCases = casesRef.current;
-        if (currentCases && currentCases.length > 0) {
-          setNumberVisibleCards(new Set(currentCases.map(c => c.id)));
-        }
-        
-        // throttling: 150ms 동안 추가 실행 방지 (더 안정적인 감지)
-        throttleTimeout = setTimeout(() => {
-          throttleTimeout = null;
-        }, 150);
-      }
-      
-      // 스크롤이 멈추면 숫자 숨기기 (디바운싱)
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        console.log(' 스크롤 멈춤 - 숫자 애니메이션 종료'); // 디버깅용
-        setNumberVisibleCards(new Set());
-        isScrolling = false;
-      }, 800); // 0.8초 후 숫자 숨김 (조금 더 길게)
-    };
-
-    // 스크롤 이벤트 리스너 등록 (항상 등록)
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      if (throttleTimeout) clearTimeout(throttleTimeout);
-    };
-  }, [isUserInteracting]); // isUserInteracting 의존성 추가
-
-  // 초기 애니메이션 테스트 (케이스 로드 후 한 번만 실행, 사용자 상호작용 중이 아닐 때만)
-  useEffect(() => {
-    if (cases.length > 0 && !isUserInteracting) {
-      console.log(' 초기 애니메이션 테스트 시작', { casesLength: cases.length, isUserInteracting });
-      
-      // 약간의 지연 후 애니메이션 시작 (페이지 로드 완료 후)
-      const initialAnimationTimer = setTimeout(() => {
-        // 다시 한 번 사용자 상호작용 상태 확인
-        if (!isUserInteracting) {
-          setNumberVisibleCards(new Set(cases.map(c => c.id)));
-          
-          // 2초 후 숨김
-          setTimeout(() => {
-            setNumberVisibleCards(new Set());
-          }, 2000);
-        } else {
-          console.log('초기 애니메이션 차단 - 사용자 상호작용 중');
-        }
-      }, 1000); // 1초 지연
-      
-      return () => {
-        clearTimeout(initialAnimationTimer);
-      };
-    }
-  }, [cases.length, isUserInteracting]); // cases.length와 isUserInteracting 의존성 추가
-
-  // cases 상태를 ref에 동기화 (스크롤 애니메이션에서 사용)
-  useEffect(() => {
-    casesRef.current = cases;
-  }, [cases]);
-
-  // 컴포넌트 언마운트 시 디바운스 타이머 정리
-  useEffect(() => {
-    return () => {
-      Object.values(inputDebounceTimers).forEach(timer => {
-        if (timer) clearTimeout(timer);
-      });
-    };
-  }, []);
 
 
 
