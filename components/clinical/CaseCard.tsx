@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { ConsentUploader } from '@/components/clinical/ConsentUploader';
-import { PhotoUploader } from '@/components/clinical/PhotoUploader';
+import PhotoRoundCarousel from '@/components/clinical/PhotoRoundCarousel';
 import CaseStatusTabs from '@/app/kol-new/clinical-photos/components/CaseStatusTabs';
 import { SYSTEM_OPTIONS } from '@/types/clinical';
 import type { ClinicalCase } from '@/types/clinical';
@@ -238,42 +238,26 @@ export const CaseCard: React.FC<CaseCardProps> = ({
             )}
 
             {/* 블록 2: 임상사진 업로드 */}
-            <div className="legacy-photo-container">
-              <div className="flex justify-between mb-2">
-                <div className="flex-1 text-center">
-                  <h3 className="text-xs font-medium text-gray-700">
-                    {(currentRounds[case_.id] || 1) === 1 ? 'Before' : `${(currentRounds[case_.id] || 1) - 1}회차`}
-                  </h3>
-                </div>
-              </div>
-              
-              <div className="legacy-photo-grid">
-                <PhotoUploader
-                  caseId={case_.id}
-                  roundId={(currentRounds[case_.id] || 1).toString()}
-                  angle="front"
-                  onUploaded={() => refreshCases()}
-                  disabled={case_.status === 'completed'}
-                  className="legacy-photo-uploader"
-                />
-                <PhotoUploader
-                  caseId={case_.id}
-                  roundId={(currentRounds[case_.id] || 1).toString()}
-                  angle="left"
-                  onUploaded={() => refreshCases()}
-                  disabled={case_.status === 'completed'}
-                  className="legacy-photo-uploader"
-                />
-                <PhotoUploader
-                  caseId={case_.id}
-                  roundId={(currentRounds[case_.id] || 1).toString()}
-                  angle="right"
-                  onUploaded={() => refreshCases()}
-                  disabled={case_.status === 'completed'}
-                  className="legacy-photo-uploader"
-                />
-              </div>
-            </div>
+            <PhotoRoundCarousel
+              caseId={case_.id}
+              photos={case_.photos}
+              onPhotoUpload={async (roundDay: number, angle: string, file: File) => {
+                // TODO: PhotoUpload 로직 구현 필요
+                console.log('Photo upload:', { roundDay, angle, file });
+                refreshCases();
+              }}
+              onPhotoDelete={async (roundDay: number, angle: string) => {
+                // TODO: PhotoDelete 로직 구현 필요  
+                console.log('Photo delete:', { roundDay, angle });
+                refreshCases();
+              }}
+              isCompleted={case_.status === 'completed'}
+              onRoundChange={(roundDay: number) => {
+                // TODO: currentRounds 업데이트 로직 구현 필요
+                console.log('Round change:', roundDay);
+              }}
+              onPhotosRefresh={() => refreshCases()}
+            />
             
             {/* 블록 3: 고객 정보 */}
             <div className="space-y-3 legacy-section">
