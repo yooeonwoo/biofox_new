@@ -5,7 +5,11 @@
 /* ───── legacy 레이아웃 레이어 ───── */
 @layer components {
   .legacy-card {
-    @apply px-7.5 py-7.5 rounded-xl shadow-lg bg-white mb-7.5;
+    @apply w-full max-w-2xl mx-auto mb-6;
+  }
+  
+  .legacy-card-glass {
+    @apply w-full max-w-2xl mx-auto mb-6 bg-gradient-to-br from-white/80 to-gray-50/50 backdrop-blur-sm border border-gray-200/50;
   }
   
   .legacy-btn {
@@ -34,6 +38,18 @@
   
   .legacy-round-badge {
     @apply text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40;
+  }
+  
+  .legacy-photo-container {
+    @apply border-2 border-gray-200 rounded-lg p-2 bg-gray-50/50;
+  }
+  
+  .legacy-photo-grid {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+  }
+  
+  .legacy-photo-uploader {
+    @apply w-full h-full border-2 rounded-lg overflow-hidden border-soksok-light-blue/40 bg-soksok-light-blue/10;
   }
 }
 

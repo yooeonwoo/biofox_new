@@ -96,11 +96,8 @@ export const CaseCard: React.FC<CaseCardProps> = ({
     >
       <Card 
         data-case-id={case_.id}
-        className={`legacy-card relative overflow-hidden border transition-all duration-200 shadow-sm hover:shadow-md rounded-xl ${
-          case_.status === 'completed' 
-            ? 'bg-gradient-to-r from-biofox-lavender/5 to-biofox-lavender/10 border-biofox-lavender/30' 
-            : 'bg-white hover:bg-gray-50/50 border-gray-100'
-        }`}
+        className="legacy-card"
+        variant={case_.status === 'completed' ? 'glass-light' : 'default'}
       >
         {/* 카드 배경 큰 번호 - 3초 후 자동 숨김 */}
         <motion.div 
@@ -241,21 +238,23 @@ export const CaseCard: React.FC<CaseCardProps> = ({
             )}
 
             {/* 블록 2: 임상사진 업로드 */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-medium text-gray-900">임상사진 업로드</h3>
-                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">
-                  {currentRounds[case_.id] || 1}회차
-                </span>
+            <div className="legacy-photo-container">
+              <div className="flex justify-between mb-2">
+                <div className="flex-1 text-center">
+                  <h3 className="text-xs font-medium text-gray-700">
+                    {(currentRounds[case_.id] || 1) === 1 ? 'Before' : `${(currentRounds[case_.id] || 1) - 1}회차`}
+                  </h3>
+                </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="legacy-photo-grid">
                 <PhotoUploader
                   caseId={case_.id}
                   roundId={(currentRounds[case_.id] || 1).toString()}
                   angle="front"
                   onUploaded={() => refreshCases()}
                   disabled={case_.status === 'completed'}
+                  className="legacy-photo-uploader"
                 />
                 <PhotoUploader
                   caseId={case_.id}
@@ -263,6 +262,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                   angle="left"
                   onUploaded={() => refreshCases()}
                   disabled={case_.status === 'completed'}
+                  className="legacy-photo-uploader"
                 />
                 <PhotoUploader
                   caseId={case_.id}
@@ -270,6 +270,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                   angle="right"
                   onUploaded={() => refreshCases()}
                   disabled={case_.status === 'completed'}
+                  className="legacy-photo-uploader"
                 />
               </div>
             </div>
