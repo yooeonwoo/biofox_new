@@ -337,8 +337,8 @@ export type Database = {
       }
     }
     // 복잡한 쿼리 결과에 대한 타입 정의
-    Views: {}
-    Functions: {}
+    Views: Record<string, never>
+    Functions: Record<string, never>
   }
 }
 

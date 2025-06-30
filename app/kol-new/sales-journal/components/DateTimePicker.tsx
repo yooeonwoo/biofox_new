@@ -28,13 +28,9 @@ interface DateTimePickerProps {
 
 export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
   const [isClient, setIsClient] = React.useState(false);
-  React.useEffect(() => setIsClient(true), []);
-
-  if (!isClient) {
-    return null;
-  }
-
   const [date, setDate] = React.useState<Date | undefined>(value ? new Date(value) : undefined);
+  
+  React.useEffect(() => setIsClient(true), []);
 
   React.useEffect(() => {
     // value prop이 외부에서 변경될 때 내부 date 상태를 업데이트합니다.
@@ -46,7 +42,11 @@ export function DateTimePicker({ value, onChange }: DateTimePickerProps) {
     } else {
       setDate(undefined);
     }
-  }, [value]);
+  }, [value, date]);
+
+  if (!isClient) {
+    return null;
+  }
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (!selectedDate) return;

@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { redirect, useRouter } from 'next/navigation';
-import { fetchCases, updateCase } from '@/lib/clinical-photos-api';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { checkAuthSupabase } from '@/lib/auth';
+import { useClinicalCases, useUpdateCase } from '@/src/hooks/useClinicalCases';
+import { useCaseSerialQueues } from '@/src/hooks/useSerialQueue';
+import { SYSTEM_OPTIONS, safeParseStringArray } from '@/src/types/clinical';
+import type { ClinicalCase, CustomerInfo, RoundCustomerInfo, PhotoSlot, KolInfo, CaseStatus } from '@/src/types/clinical';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { ArrowLeft, Camera, Plus, Calendar, User, Scissors, Eye, Trash2, Edit, Save } from "lucide-react";
@@ -17,140 +20,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import KolHeader from "../../../../components/layout/KolHeader";
-import KolSidebar from "../../../../components/layout/KolSidebar";
-import KolFooter from "../../../../components/layout/KolFooter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import KolMobileMenu from "../../../../components/layout/KolMobileMenu";
 import PhotoRoundCarousel from "../../components/PhotoRoundCarousel";
 import CaseStatusTabs from "../../components/CaseStatusTabs";
+import { PhotoUploader } from '@/src/components/clinical/PhotoUploader';
 
-// 시스템 상수 정의
-const SYSTEM_OPTIONS = {
-  genders: [
-    { value: 'male', label: '남성' },
-    { value: 'female', label: '여성' },
-    { value: 'other', label: '기타' }
-  ] as const,
-  
-  treatmentTypes: [
-    { value: '10GF', label: '10GF 마이크로젯 케어' },
-    { value: 'realafter', label: '리얼에프터 케어' }
-  ] as const,
-  
-  products: [
-    { value: 'cure_booster', label: '큐어 부스터' },
-    { value: 'cure_mask', label: '큐어 마스크' },
-    { value: 'premium_mask', label: '프리미엄 마스크' },
-    { value: 'all_in_one_serum', label: '올인원 세럼' }
-  ] as const,
-  
-  skinTypes: [
-    { value: 'red_sensitive', label: '붉고 예민함' },
-    { value: 'pigment', label: '색소 / 미백' },
-    { value: 'pore', label: '모공 늘어짐' },
-    { value: 'acne_trouble', label: '트러블 / 여드름' },
-    { value: 'wrinkle', label: '주름 / 탄력' },
-    { value: 'other', label: '기타' }
-  ] as const
-} as const;
-
-// 문자열 혹은 JSON 문자열/배열을 안전하게 string[]로 변환
-function safeParseStringArray(input: any): string[] {
-  if (!input) return [];
-  if (Array.isArray(input)) return input as string[];
-  if (typeof input === 'string') {
-    try {
-      const parsed = JSON.parse(input);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
-      // JSON.parse 실패 – fallback 처리
-    }
-    return input
-      .split(/[;,]/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-  }
-  return [];
-}
-
-// 고객 정보 관련 타입
-interface CustomerInfo {
-  name: string;
-  age?: number;
-  gender?: 'male' | 'female' | 'other';
-  treatmentType?: string;
-  products: string[];
-  skinTypes: string[];
-  memo?: string;
-}
-
-// 회차별 고객 정보 타입
-interface RoundCustomerInfo {
-  age?: number;
-  gender?: 'male' | 'female' | 'other';
-  treatmentType?: string;
-  products: string[];
-  skinTypes: string[];
-  memo?: string;
-  date?: string; // 회차별 날짜
-}
-
-// 케이스 데이터 타입
-// CaseStatusTabs에서 사용하는 타입과 맞추기 위한 타입 정의
-type CaseStatus = 'active' | 'completed' | 'archived' | 'cancelled';
-
-interface ClinicalCase {
-  id: string;
-  customerName: string;
-  status: CaseStatus;
-  createdAt: string;
-  consentReceived: boolean;
-  consentImageUrl?: string;
-  photos: PhotoSlot[];
-  customerInfo: CustomerInfo;
-  roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo };
-  // 본래 API와 일치하는 boolean 필드 추가
-  // 플레이어 제품 관련 필드
-  cureBooster?: boolean;
-  cureMask?: boolean;
-  premiumMask?: boolean;
-  allInOneSerum?: boolean;
-  // 고객 피부 타입 관련 필드
-  skinRedSensitive?: boolean;
-  skinPigment?: boolean;
-  skinPore?: boolean;
-  skinTrouble?: boolean;
-  skinWrinkle?: boolean;
-  skinEtc?: boolean;
-}
-
-interface PhotoSlot {
-  id: string;
-  roundDay: number;
-  angle: 'front' | 'left' | 'right';
-  imageUrl?: string;
-  uploaded: boolean;
-}
-
-interface KolInfo {
-  id: number;
-  name: string;
-  shopName: string;
-  email: string;
-  phone: string;
-  imageUrl?: string;
-  region?: string;
-}
+// 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 
 export default function CustomerClinicalUploadPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const { signOut } = useClerk();
   const router = useRouter();
-  const [isKol, setIsKol] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [dashboardData, setDashboardData] = useState<{ kol?: KolInfo } | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // 케이스 관리 상태
   const [cases, setCases] = useState<ClinicalCase[]>([]);
@@ -189,6 +69,27 @@ export default function CustomerClinicalUploadPage() {
     return updateQueue.current[caseId];
   };
   // ---------------------------------------------
+
+  // 사용자 인증 확인
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { user } = await checkAuthSupabase(['kol', 'test']);
+        if (!user) {
+          router.push('/signin');
+          return;
+        }
+        setUser(user);
+      } catch (error) {
+        console.error('인증 확인 중 오류:', error);
+        router.push('/signin');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, [router]);
 
   // 사용자 상호작용 감지 훅
   useEffect(() => {
@@ -286,52 +187,14 @@ export default function CustomerClinicalUploadPage() {
     setInputDebounceTimers(prev => ({ ...prev, [key]: newTimer }));
   };
 
-  // 사용자 역할 확인
-  useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
-      try {
-        const userRole = user.publicMetadata?.role as string || "kol";
-        console.log('사용자 역할:', userRole);
-        // test 역할과 kol 역할 모두 임상사진 페이지 접근 허용
-        setIsKol(userRole === "kol" || userRole === "test");
-        setLoading(false);
-      } catch (err) {
-        console.error('사용자 역할 확인 중 오류:', err);
-        setIsKol(true);
-        setLoading(false);
-      }
-    }
-  }, [isLoaded, isSignedIn, user]);
-
-  // 대시보드 데이터 로드
-  useEffect(() => {
-    if (isLoaded && isSignedIn && isKol !== null) {
-      const fetchDashboardData = async () => {
-        try {
-          console.log('임상관리(고객) - 대시보드 데이터 로드 시작...');
-          const dashboardResponse = await fetch('/api/kol-new/dashboard');
-          
-          if (!dashboardResponse.ok) {
-            console.error('대시보드 API 에러');
-            return;
-          }
-          
-          const dashboardResult = await dashboardResponse.json();
-          console.log('임상관리(고객) - 대시보드 데이터 로드 완료');
-          setDashboardData(dashboardResult);
-        } catch (err) {
-          console.error('대시보드 데이터 로드 중 오류:', err);
-        }
-      };
-      
-      fetchDashboardData();
-    }
-  }, [isLoaded, isSignedIn, isKol]);
-
   // 로그아웃 함수
   const handleSignOut = async () => {
     try {
-      await signOut();
+      // 개발환경에서는 localStorage 클리어
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('dev-user');
+      }
+      router.push('/signin');
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
@@ -339,7 +202,7 @@ export default function CustomerClinicalUploadPage() {
 
   // 임시저장된 새 고객 데이터 로드
   useEffect(() => {
-    if (typeof window !== 'undefined' && isLoaded && isSignedIn && isKol) {
+    if (typeof window !== 'undefined' && user) {
       const savedNewCustomer = localStorage.getItem('unsavedNewCustomer');
       if (savedNewCustomer) {
         try {
@@ -360,7 +223,7 @@ export default function CustomerClinicalUploadPage() {
         }
       }
     }
-  }, [isLoaded, isSignedIn, isKol]);
+  }, [user]);
 
   // 새 고객 데이터 변경 시 localStorage에 저장
   useEffect(() => {
@@ -383,7 +246,7 @@ export default function CustomerClinicalUploadPage() {
   // 실제 케이스 데이터 로드
   useEffect(() => {
     const loadCases = async () => {
-      if (!isLoaded || !isSignedIn || !isKol) return;
+      if (!user) return;
       
       try {
         // fetchCases API를 사용해서 실제 데이터 가져오기
@@ -522,7 +385,7 @@ export default function CustomerClinicalUploadPage() {
     };
 
     loadCases();
-  }, [isLoaded, isSignedIn, isKol]);
+  }, [user]);
 
   // 스크롤 기반 숫자 애니메이션 (사용자 상호작용 중이 아닐 때만 표시)
   useEffect(() => {
@@ -1654,7 +1517,7 @@ export default function CustomerClinicalUploadPage() {
   };
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!isLoaded || isKol === null || loading) {
+  if (!user || isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -1669,30 +1532,9 @@ export default function CustomerClinicalUploadPage() {
     );
   }
 
-  // KOL이 아닌 경우 홈으로 리다이렉트
-  if (!isKol) {
-    return redirect('/');
-  }
-
   return (
-    <div className="flex h-screen flex-col">
-      {/* Header */}
-      <KolHeader 
-        userName={user?.firstName || "KOL"}
-        shopName={dashboardData?.kol?.shopName || "로딩 중..."}
-        userImage={user?.imageUrl}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-        onSignOut={handleSignOut}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Desktop Only */}
-        <KolSidebar />
-
-        {/* Main Content */}
-        <main ref={mainContentRef} className="flex-1 overflow-auto bg-soksok-light-blue/10">
-          <div className="mx-auto max-w-4xl">
+    <div className="space-y-6">
+      <main ref={mainContentRef} className="mx-auto max-w-4xl">
             {/* 뒤로가기 헤더 - 고정 */}
             <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm py-3 px-4 md:px-6 border-b border-gray-100">
               <div className="flex items-center justify-center gap-16 max-w-2xl mx-auto">
@@ -1979,16 +1821,37 @@ export default function CustomerClinicalUploadPage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                       {/* 블록 1: 임상사진 업로드 */}
-                      <div className="space-y-3">
-                        <PhotoRoundCarousel
-                          caseId={case_.id}
-                          photos={case_.photos}
-                          onPhotoUpload={(roundDay, angle, file) => handlePhotoUpload(case_.id, roundDay, angle, file)}
-                          onPhotoDelete={(roundDay, angle) => handlePhotoDelete(case_.id, roundDay, angle)}
-                          isCompleted={case_.status === 'completed'}
-                          onRoundChange={(roundDay) => handleCurrentRoundChange(case_.id, roundDay)}
-                          onPhotosRefresh={() => refreshCases()}
-                        />
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-medium text-gray-900">임상사진 업로드</h3>
+                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">
+                            {currentRounds[case_.id] || 1}회차
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <PhotoUploader
+                            caseId={case_.id}
+                            roundId={(currentRounds[case_.id] || 1).toString()}
+                            angle="front"
+                            onUploaded={() => refreshCases()}
+                            disabled={case_.status === 'completed'}
+                          />
+                          <PhotoUploader
+                            caseId={case_.id}
+                            roundId={(currentRounds[case_.id] || 1).toString()}
+                            angle="left"
+                            onUploaded={() => refreshCases()}
+                            disabled={case_.status === 'completed'}
+                          />
+                          <PhotoUploader
+                            caseId={case_.id}
+                            roundId={(currentRounds[case_.id] || 1).toString()}
+                            angle="right"
+                            onUploaded={() => refreshCases()}
+                            disabled={case_.status === 'completed'}
+                          />
+                        </div>
                       </div>
                       
                       {/* 블록 2: 고객 정보 */}
@@ -2367,35 +2230,7 @@ export default function CustomerClinicalUploadPage() {
                 </AnimatePresence>
               </div>
             </LayoutGroup>
-
-            <div className="mt-6 px-4 md:px-6">
-              <KolFooter />
-            </div>
-          </div>
-        </main>
-      </div>
-
-      {/* Mobile Menu */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetTrigger className="block sm:hidden">
-          <div className="flex items-center justify-center p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
-            </svg>
-          </div>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[250px] sm:w-[300px]">
-          <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
-          <KolMobileMenu 
-            userName={user?.firstName || dashboardData?.kol?.name || "KOL"}
-            shopName={dashboardData?.kol?.shopName || "임상사진 업로드"}
-            userImage={user?.imageUrl} 
-            setMobileMenuOpen={setMobileMenuOpen} 
-            onSignOut={handleSignOut}
-          />
-        </SheetContent>
-      </Sheet>
-
-    </div>
+          </main>
+        </div>
   );
 }

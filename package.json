@@ -12,6 +12,9 @@
     "migrate:year-month": "echo '⚠️  데이터베이스 마이그레이션을 실행합니다. 백업을 먼저 확인하세요!' && echo 'psql -h $DB_HOST -d $DB_NAME -f scripts/migrate-year-month-format.sql'",
     "db:check-formats": "echo '📊 year_month 형식 분석 중...' && node -e \"require('./scripts/test-year-month-fix.js')\"",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "storybook": "storybook dev -p 6006",
     "storybook:mcp": "tsx mcp/react-native-storybook/index.ts",
     "build-storybook": "storybook build"
@@ -71,11 +74,12 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
-    "zod": "^3.25.30"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@modelcontextprotocol/sdk": "^1.12.3",
+    "@playwright/test": "^1.53.1",
     "@storybook/addon-docs": "^9.0.11",
     "@storybook/addon-onboarding": "^9.0.11",
     "@storybook/nextjs": "^9.0.11",
@@ -91,9 +95,12 @@
     "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.2.3",
+    "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-storybook": "^9.0.11",
     "jsdom": "^26.1.0",
     "postcss": "^8.4.35",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.13",
     "storybook": "^9.0.11",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.20.3",
