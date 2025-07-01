@@ -9,7 +9,7 @@ import {
   Shield,
   ShoppingBag,
   Bell,
-  FileText,
+
 } from "lucide-react";
 
 const ICONS = [
@@ -17,7 +17,6 @@ const ICONS = [
   { href: "/kol-new/stores", label: "전문점 관리", Icon: Store },
   { href: "/kol-new/clinical-photos", label: "임상사진", Icon: Camera },
   { href: "/kol-new/customer-manager", label: "고객 관리", Icon: Users },
-  { href: "/kol-new/sales-journal", label: "영업일지", Icon: FileText },
   { href: "/kol-new/notifications", label: "알림", Icon: Bell },
   { href: "https://biofoxpro.co.kr/", label: "전문가몰", Icon: ShoppingBag, external: true },
 ];
