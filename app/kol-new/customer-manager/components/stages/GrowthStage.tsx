@@ -195,50 +195,7 @@ export default function GrowthStage({ value, onChange }: Props) {
         </div>
       </div>
 
-      {/* 매출 */}
-      <div className="p-3 rounded-md border bg-purple-50/40 border-purple-200">
-        <div className="font-medium mb-2">매출 (최근 12개월)</div>
-        <div className="h-40 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-              <defs>
-                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <CartesianGrid strokeDasharray="3 3" />
-              <Tooltip 
-                contentStyle={{ fontSize: '12px', padding: '5px' }}
-                formatter={(value: number) => [`${value}만원`, '매출']}
-              />
-              <Area type="monotone" dataKey="sales" stroke="#8884d8" fillOpacity={1} fill="url(#colorSales)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        {(() => {
-          const arr = current.salesData!;
-          const avg = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
-          const last = arr[arr.length - 1];
-          const prev = arr[arr.length - 2] || last;
-          const diff = prev !== 0 ? Math.round(((last - prev) / prev) * 100) : 0;
-          return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-center text-[11px] mt-3">
-              <div className="bg-blue-600 text-white rounded-lg p-2 shadow-sm">
-                평균 매출<br />
-                <span className="font-semibold text-sm">{avg}만원</span>
-              </div>
-              <div className={`${diff >= 0 ? "bg-green-500" : "bg-red-500"} text-white rounded-lg p-2 shadow-sm`}>
-                전월 매출<br />
-                <span className="font-semibold text-sm">{last}만원</span> ({diff >= 0 ? "+" : ""}
-                {diff}%)
-              </div>
-            </div>
-          );
-        })()}
-      </div>
+
     </div>
   );
 } 
