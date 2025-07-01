@@ -123,6 +123,9 @@ export interface Achievements {
   starManager?: boolean;
   starOwner?: boolean;
   starDirector?: boolean;
+  /* 임상 & 학습 평가 시스템 */
+  clinicalStar?: boolean;
+  learningStar?: boolean;
 }
 
 export interface CustomerProgress {

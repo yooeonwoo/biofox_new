@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Achievements } from "@/lib/types/customer";
 import AchievementCheckbox from "./AchievementCheckbox";
 import StarTabs, { getIntegratedStarState } from "@/components/StarTabs";
+import ClinicalLearningTabs, { getClinicalLearningStarState } from "@/components/ClinicalLearningTabs";
 
 const LABELS: Record<1 | 2 | 3, string> = {
   1: "본사 실무교육 이수",
@@ -237,8 +238,55 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
               </StageWrapper>
             );
           })}
-          {/* 5단계 완료 체크박스 → 레벨 2 */}
-          <AchievementCheckbox level={2} achievements={achievements} onChange={onAchievementsChange} />
+          {/* 임상 & 학습 평가 */}
+          <div className="p-3 border rounded-md bg-muted/20">
+            {/* 타이틀과 통합 별 2개를 같은 줄에 배치 */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getClinicalLearningStarState({
+                      clinical: achievements.clinicalStar,
+                      learning: achievements.learningStar,
+                    })
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="임상 학습 평가 완료 여부"
+                >
+                  🌟
+                </span>
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getClinicalLearningStarState({
+                      clinical: achievements.clinicalStar,
+                      learning: achievements.learningStar,
+                    })
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="임상 학습 평가 완료 여부"
+                >
+                  🌟
+                </span>
+              </div>
+              <div className="text-sm font-medium text-gray-700">임상 & 학습</div>
+            </div>
+            <ClinicalLearningTabs
+              value={{
+                clinical: achievements.clinicalStar,
+                learning: achievements.learningStar,
+              }}
+              onToggle={(key) => onAchievementsChange({
+                ...achievements, 
+                [key === "clinical" ? "clinicalStar" : "learningStar"]: 
+                  !achievements[key === "clinical" ? "clinicalStar" : "learningStar"]
+              })}
+              hideIntegratedStar={true}
+            />
+          </div>
         </SectionBlock>
       </div>
 
