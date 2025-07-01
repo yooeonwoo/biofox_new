@@ -119,3 +119,7 @@ html, body {
 .min-w-0 { 
   min-width: 0 !important; 
 }
+
+/* Hide scrollbar for horizontal scroll */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

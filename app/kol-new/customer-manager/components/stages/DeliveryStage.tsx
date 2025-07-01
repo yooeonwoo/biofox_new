@@ -5,6 +5,7 @@ import { DeliveryStageValue } from "@/lib/types/customer";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "lucide-react";
 import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
+import StarTabs from "@/components/StarTabs";
 
 const DELIVERY_TYPES: Array<{
     key: "ship" | "install";
@@ -142,6 +143,19 @@ export default function DeliveryStage({ value, onChange }: Props) {
             </div>
           );
         })}
+      </div>
+
+      {/* 별점 평가 시스템 */}
+      <div className="mt-4 p-3 border rounded-md bg-muted/20">
+        <div className="text-sm font-medium mb-2">평가</div>
+        <StarTabs
+          value={{
+            manager: current.starManager,
+            owner: current.starOwner,
+            director: current.starDirector,
+          }}
+          onToggle={() => setField("starManager", !current.starManager)}
+        />
       </div>
     </div>
   );
