@@ -164,7 +164,7 @@ export default function GrowthStage({ value, onChange }: Props) {
 
           {/* Text */}
           <p
-            className="text-[11px] xs:text-xs font-medium text-blue-800 leading-tight
+            className="text-[10px] xs:text-[11px] sm:text-xs font-medium text-blue-800 leading-tight
                        whitespace-pre-wrap"
           >
             좋은 임상은 동의서를 받아서,<br className="inline sm:hidden" />
