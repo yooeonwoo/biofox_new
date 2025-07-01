@@ -7,7 +7,16 @@ import { Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { fetchCases, ClinicalCase } from "@/lib/clinical-photos";
+// import { fetchCases, ClinicalCase } from "@/lib/clinical-photos"; // 임시로 주석 처리
+
+// 임시 타입 정의
+interface ClinicalCase {
+  id: string;
+  customerName: string;
+  caseName: string;
+  status: string;
+  createdAt: string;
+}
 
 interface KolInfo {
   id: number;
@@ -18,6 +27,38 @@ interface KolInfo {
   imageUrl?: string;
   region?: string;
 }
+
+// 임시 모킹 데이터
+const mockCases: ClinicalCase[] = [
+  {
+    id: '1',
+    customerName: '본인',
+    caseName: '보톡스 이마',
+    status: 'completed',
+    createdAt: '2024-01-15T00:00:00Z'
+  },
+  {
+    id: '2',
+    customerName: '본인',
+    caseName: '필러 팔자주름',
+    status: 'in_progress',
+    createdAt: '2024-01-20T00:00:00Z'
+  },
+  {
+    id: '3',
+    customerName: '김고객',
+    caseName: '리프팅',
+    status: 'completed',
+    createdAt: '2024-01-10T00:00:00Z'
+  },
+  {
+    id: '4',
+    customerName: '이고객',
+    caseName: '스킨부스터',
+    status: 'in_progress',
+    createdAt: '2024-01-25T00:00:00Z'
+  }
+];
 
 // 체크 아이템 컴포넌트
 interface CheckItemProps {
@@ -99,11 +140,11 @@ export default function ClinicalPhotosPage() {
   const tempUser = {
     isLoaded: true,
     isSignedIn: true,
-    role: "kol",
-    publicMetadata: { role: "kol" }
+    role: "shop",
+    publicMetadata: { role: "shop" }
   };
 
-  const [isKol, setIsKol] = useState<boolean | null>(null);
+  const [isShop, setIsShop] = useState<boolean | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [cases, setCases] = useState<ClinicalCase[]>([]);
   const [casesLoading, setCasesLoading] = useState(false);
@@ -112,27 +153,35 @@ export default function ClinicalPhotosPage() {
   useEffect(() => {
     if (tempUser.isLoaded && tempUser.isSignedIn) {
       const userRole = tempUser.publicMetadata?.role as string || "shop";
-      setIsKol(userRole === "shop" || userRole === "test");
+      setIsShop(userRole === "shop" || userRole === "test");
       setLoading(false);
     }
   }, []);
 
-  // 케이스 목록 조회
+  // 케이스 목록 조회 (모킹)
   useEffect(() => {
     const loadCases = async () => {
-      if (!isKol || loading) return;
+      if (!isShop || loading) return;
       setCasesLoading(true);
       try {
-        const casesData = await fetchCases();
-        setCases(casesData);
+        // 실제 API 호출 대신 모킹 데이터 사용
+        // const casesData = await fetchCases();
+        // setCases(casesData);
+        
+        // 로딩 시뮬레이션
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setCases(mockCases);
+        console.log('Shop 임상사진: 모킹 데이터 로드 완료');
       } catch (error) {
         console.error('임상사진: 케이스 로드 실패:', error);
+        // 에러 발생시에도 빈 배열로 설정하여 UI는 정상 작동
+        setCases([]);
       } finally {
         setCasesLoading(false);
       }
     };
     loadCases();
-  }, [isKol, loading]);
+  }, [isShop, loading]);
 
   const personalCases = cases.filter(c => c.customerName === "본인");
   const customerCases = cases.filter(c => c.customerName !== "본인");
@@ -145,7 +194,7 @@ export default function ClinicalPhotosPage() {
     ? Math.round((customerCases.filter(c => c.status === 'completed').length / customerCases.length) * 100)
     : 0;
 
-  if (!tempUser.isLoaded || isKol === null || loading) {
+  if (!tempUser.isLoaded || isShop === null || loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -160,7 +209,7 @@ export default function ClinicalPhotosPage() {
     );
   }
 
-  if (!isKol) {
+  if (!isShop) {
     return redirect('/');
   }
 
@@ -232,6 +281,51 @@ export default function ClinicalPhotosPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 최근 케이스 목록 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">최근 케이스</CardTitle>
+          <CardDescription>최근에 등록된 임상사진 케이스들</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {casesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-sm text-gray-500">로딩 중...</div>
+            </div>
+          ) : cases.length > 0 ? (
+            <div className="space-y-3">
+              {cases.map((case_) => (
+                <div key={case_.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  <div className="flex-1">
+                    <h4 className="font-medium">{case_.customerName}</h4>
+                    <p className="text-sm text-gray-500">{case_.caseName}</p>
+                    <p className="text-xs text-gray-400">
+                      생성일: {new Date(case_.createdAt).toLocaleDateString('ko-KR')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={case_.status === 'completed' ? 'default' : 'secondary'}>
+                      {case_.status === 'completed' ? '완료' : '진행중'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Plus className="h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">등록된 케이스가 없습니다</h3>
+              <p className="text-gray-500 mb-4">첫 번째 임상사진 케이스를 등록해보세요</p>
+              <Button asChild>
+                <Link href="/shop/clinical-photos/upload">
+                  케이스 등록하기
+                </Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

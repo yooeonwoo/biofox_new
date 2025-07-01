@@ -27,15 +27,46 @@ interface FormData {
   consentDate: string | undefined;
 }
 
+// 임시 모킹 데이터
+const mockExistingCases = [
+  {
+    id: '1',
+    customerName: '김고객',
+    caseName: '보톡스 이마',
+    status: 'in_progress',
+    createdAt: '2024-01-10T00:00:00Z'
+  },
+  {
+    id: '2',
+    customerName: '이고객',
+    caseName: '필러 팔자주름',
+    status: 'completed',
+    createdAt: '2024-01-15T00:00:00Z'
+  },
+  {
+    id: '3',
+    customerName: '박고객',
+    caseName: '리프팅',
+    status: 'in_progress',
+    createdAt: '2024-01-20T00:00:00Z'
+  }
+];
+
 export default function ClinicalPhotosUploadPage() {
-  const [user, setUser] = useState<any>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  const router = useRouter();
+  // 임시 사용자 정보 (개발용)
+  const tempUser = {
+    isLoaded: true,
+    isSignedIn: true,
+    role: "shop",
+    firstName: "전문점",
+    imageUrl: null
+  };
+
   const [isShop, setIsShop] = useState<boolean | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [dashboardData, setDashboardData] = useState<{ shop?: ShopInfo } | null>(null);
   const [existingCases, setExistingCases] = useState<any[]>([]);
+  const router = useRouter();
   
   // 폼 상태
   const [formData, setFormData] = useState<FormData>({
@@ -45,73 +76,54 @@ export default function ClinicalPhotosUploadPage() {
     consentDate: ''
   });
 
-  // 사용자 인증 확인
+  // 사용자 인증 확인 (모킹)
   useEffect(() => {
-    async function checkAuth() {
+    const checkAuth = async () => {
       try {
-        const response = await fetch('/api/user', {
-          credentials: 'include'
-        });
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setIsSignedIn(true);
-          const userRole = userData.role || "shop";
-          console.log('사용자 역할:', userRole);
-          setIsShop(userRole === "shop" || userRole === "test");
-        } else {
-          setIsSignedIn(false);
-          setIsShop(false);
-        }
+        // 실제 API 호출 대신 모킹
+        setIsShop(true);
+        setLoading(false);
+        console.log('Shop 업로드: 인증 확인 완료 (모킹)');
       } catch (error) {
         console.error('인증 확인 오류:', error);
-        setIsSignedIn(false);
         setIsShop(false);
-      } finally {
-        setIsLoaded(true);
-        setLoading(false);
       }
-    }
+    };
     checkAuth();
   }, []);
 
-  // 대시보드 데이터 로드
+  // 대시보드 데이터 로드 (모킹)
   useEffect(() => {
-    if (isLoaded && isSignedIn && isShop !== null) {
-      const fetchDashboardData = async () => {
+    if (isShop !== null && !loading) {
+      const fetchData = async () => {
         try {
-          console.log('임상사진 업로드 - 대시보드 데이터 로드 시작...');
-          const dashboardResponse = await fetch('/api/shop/dashboard');
+          // 실제 API 호출 대신 모킹 데이터 사용
+          console.log('Shop 업로드: 대시보드 데이터 로드 시작 (모킹)');
           
-          if (!dashboardResponse.ok) {
-            console.error('대시보드 API 에러');
-            return;
-          }
+          await new Promise(resolve => setTimeout(resolve, 500)); // 로딩 시뮬레이션
           
-          const dashboardResult = await dashboardResponse.json();
-          console.log('임상사진 업로드 - 대시보드 데이터 로드 완료');
-          setDashboardData(dashboardResult);
+          setDashboardData({
+            shop: {
+              id: 1,
+              name: "전문점",
+              shopName: "바이오폭스 전문점",
+              email: "shop@example.com",
+              phone: "010-0000-0000"
+            }
+          });
+          
+          // 기존 케이스 로드 (모킹)
+          setExistingCases(mockExistingCases.slice(0, 5));
+          console.log('Shop 업로드: 모킹 데이터 로드 완료');
         } catch (err) {
-          console.error('대시보드 데이터 로드 중 오류:', err);
+          console.error('데이터 로드 중 오류:', err);
+          setExistingCases([]);
         }
       };
       
-      fetchDashboardData();
-      
-      // 기존 케이스 로드
-      const fetchExistingCases = async () => {
-        try {
-          const { fetchCases } = await import('@/lib/clinical-photos');
-          const cases = await fetchCases();
-          setExistingCases(cases.slice(0, 5)); // 최초 5개만 표시
-        } catch (error) {
-          console.error('기존 케이스 로드 실패:', error);
-        }
-      };
-      
-      fetchExistingCases();
+      fetchData();
     }
-  }, [isLoaded, isSignedIn, isShop]);
+  }, [isShop, loading]);
 
   // 폼 입력 핸들러
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,36 +144,27 @@ export default function ClinicalPhotosUploadPage() {
     }));
   };
 
-  // 케이스 생성 핸들러
+  // 케이스 생성 핸들러 (모킹)
   const handleCreateCase = async () => {
     try {
-      const { createCase } = await import('@/lib/clinical-photos-api');
-      const caseData = {
-        customerName: formData.customerName,
-        caseName: formData.caseName,
-        consentReceived: formData.consentReceived,
-        consentDate: formData.consentDate || undefined,
-        treatmentPlan: '',
-        concernArea: ''
-      };
+      console.log('케이스 생성 요청 (모킹):', formData);
       
-      const createdCase = await createCase(caseData);
+      // 실제 API 호출 대신 성공 시뮬레이션
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (createdCase) {
-        alert('케이스가 성공적으로 생성되었습니다!');
-        // 폼 초기화
-        setFormData({
-          customerName: '',
-          caseName: '',
-          consentReceived: false,
-          consentDate: ''
-        });
-        // 상세 페이지로 이동
-        router.push('/shop/clinical-photos/upload/customer');
-      }
+      alert('케이스가 성공적으로 생성되었습니다! (개발 모드)');
+      // 폼 초기화
+      setFormData({
+        customerName: '',
+        caseName: '',
+        consentReceived: false,
+        consentDate: ''
+      });
+      // 상세 페이지로 이동하지 않고 현재 페이지에 머물기
+      console.log('케이스 생성 완료 (모킹)');
     } catch (error) {
       console.error('케이스 생성 실패:', error);
-      alert('케이스 생성에 실패했습니다. 다시 시도해주세요.');
+      alert('케이스 생성에 실패했습니다. (개발 모드)');
     }
   };
 
@@ -198,7 +201,7 @@ export default function ClinicalPhotosUploadPage() {
   }, []);
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!isLoaded || isShop === null || loading) {
+  if (isShop === null || loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -233,6 +236,16 @@ export default function ClinicalPhotosUploadPage() {
           <p className="text-sm text-muted-foreground mt-1">새로운 케이스를 등록하고 사진을 업로드하세요</p>
         </div>
       </div>
+
+      {/* 개발 모드 알림 */}
+      <Card className="mb-6 border-orange-200 bg-orange-50">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-orange-800">
+            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+            <span className="text-sm font-medium">개발 모드: 실제 데이터베이스 연결 없이 UI만 확인 가능합니다.</span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 새 업로드 폼 (상단 고정) */}
       <Card className="mb-6 border-2 border-dashed border-blue-200 bg-blue-50/50">
@@ -298,7 +311,7 @@ export default function ClinicalPhotosUploadPage() {
                   id="consentDate"
                   name="consentDate"
                   type="date"
-                  value={formData.consentDate}
+                  value={formData.consentDate || ''}
                   onChange={handleInputChange}
                   className="w-full sm:w-auto"
                 />
@@ -349,10 +362,8 @@ export default function ClinicalPhotosUploadPage() {
                     }`}>
                       {case_.status === 'completed' ? '완료' : '진행중'}
                     </span>
-                    <Button size="sm" variant="outline" asChild>
-                      <Link href="/shop/clinical-photos/upload/customer">
-                        사진 업로드
-                      </Link>
+                    <Button size="sm" variant="outline" disabled>
+                      사진 업로드 (개발 모드)
                     </Button>
                   </div>
                 </div>
