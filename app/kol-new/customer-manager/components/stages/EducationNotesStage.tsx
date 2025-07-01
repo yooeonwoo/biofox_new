@@ -75,12 +75,15 @@ export default function EducationNotesStage({ value, onChange }: Props) {
           const setLevel = (lvl: "상" | "중" | "하") => setField(levelKey, lvl);
 
           return (
-            <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div
+              key={idx}
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+            >
               {/* 번호 + 질문 */}
               <span className="text-sm font-medium sm:w-48">{idx}. {text}</span>
 
-              {/* 버튼 그룹 + Y/N 을 한 줄에 */}
-              <div className="flex items-center gap-2">
+              {/* 버튼 그룹 + Y/N 을 한 줄에 (우측 정렬) */}
+              <div className="flex items-center gap-2 self-end sm:self-auto sm:ml-auto">
                 {/* 상 · 중 · 하 버튼 */}
                 <div className="flex gap-1">
                   {["상", "중", "하"].map((lvl) => {
