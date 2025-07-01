@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Users } from "lucide-react";
+import { SheetTitle } from "@/components/ui/sheet";
 
 const menuItems = [
     { name: "셀프 성장 시스템", href: "/shop/customer-manager", icon: Users },
@@ -20,7 +21,7 @@ export default function ShopMobileMenu({ setMobileMenuOpen }: ShopMobileMenuProp
 
   return (
     <div className="p-4 pt-8">
-        <div className="text-lg font-semibold mb-4 px-2">Shop Menu</div>
+        <SheetTitle className="text-lg font-semibold mb-4 px-2">Shop Menu</SheetTitle>
         <nav className="flex flex-col space-y-2">
             {menuItems.map((item) => (
                 <Link

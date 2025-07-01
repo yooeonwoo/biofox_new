@@ -15,8 +15,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-export default function ChangePasswordDialog() {
-  const [open, setOpen] = useState(false);
+interface ChangePasswordDialogProps {
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+}
+
+export default function ChangePasswordDialog({ open: externalOpen, setOpen: externalSetOpen }: ChangePasswordDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // 외부에서 open state를 제어하는 경우와 내부에서 제어하는 경우를 구분
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalSetOpen || setInternalOpen;
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -69,11 +78,13 @@ export default function ChangePasswordDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          비밀번호 변경
-        </Button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            비밀번호 변경
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>비밀번호 변경</DialogTitle>
