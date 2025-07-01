@@ -151,4 +151,24 @@ export interface ContractStageValue {
   rejectAd?: boolean;
   rejectRetarget?: boolean;
   memo?: string;
+}
+
+// ─── Growth & Expert 스테이지 타입을 모든 앱에서 사용 가능하도록 추가 ───
+export interface GrowthStageValue {
+  clinicalProgress?: {
+    personal: number;
+    customers: number[];
+  };
+  learningProgress?: {
+    [key: string]: { value: number; max: number; label: string };
+  };
+  evaluationScores?: {
+    [key: string]: number;
+  };
+  salesData?: number[];
+}
+
+export interface ExpertStageValue {
+  topic?: "매출업" | "상담법" | "마케팅";
+  memo?: string;
 } 

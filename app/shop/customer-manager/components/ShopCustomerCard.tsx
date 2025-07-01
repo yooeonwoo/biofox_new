@@ -1,27 +1,46 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { ShopCustomerData } from '../lib/types';
+import { ShopCustomerData, SelfAssessmentValue, TrainingTabsValue } from '../lib/types';
+import { GrowthStageValue, ExpertStageValue } from '@/lib/types/customer';
 import CustomerSectionWrapper from './sections/CustomerSectionWrapper';
 import InstallationEducationSection from './sections/InstallationEducationSection';
+import SelfAssessmentSection from './sections/SelfAssessmentSection';
+import TrainingTabs, { getTrainingStarState } from './sections/TrainingTabs';
 import GrowthSection from './sections/GrowthSection';
 import ExpertSection from './sections/ExpertSection';
+import { cn } from '@/lib/utils';
 
 interface CustomerCardProps {
   customer: ShopCustomerData;
   cardNumber: number;
+  shopId: string;
 }
 
 // This is a new main component that reflects the Figma design.
-export default function ShopCustomerCard({ customer, cardNumber }: CustomerCardProps) {
-  const [activeButtons, setActiveButtons] = useState<Record<string, string>>({});
-  const [progressValues, setProgressValues] = useState<Record<string, number>>({ personal: 5 });
-  const [customerProgress, setCustomerProgress] = useState<Record<string, number[]>>({});
-  const [formData, setFormData] = useState<Record<string, string>>({
-      manager: customer.manager,
-      contractDate: customer.contractDate,
+export default function ShopCustomerCard({ customer, cardNumber, shopId }: CustomerCardProps) {
+  // 단일 stageData 객체로 통합
+  const [stageData, setStageData] = useState<{
+    growth: GrowthStageValue;
+    expert: ExpertStageValue;
+  }>({
+    growth: {
+      clinicalProgress: { personal: 5, customers: [] },
+      learningProgress: { 
+        '홍조': { value: 0, max: 8, label: '홍조' },
+        '기미': { value: 0, max: 12, label: '기미' },
+        '브리핑': { value: 0, max: 6, label: '브리핑' },
+        '여드름': { value: 0, max: 8, label: '여드름' }
+      },
+      evaluationScores: { '모의 테스트': 0, '실전 테스트': 0 },
+      salesData: []
+    },
+    expert: {
+      topic: undefined,
+      memo: undefined
+    }
   });
-  const [checkboxes, setCheckboxes] = useState<Record<string, boolean>>({});
+
   const [achievements, setAchievements] = useState<Record<string, boolean>>({
     'basic-training': false,
     'standard-protocol': false,
@@ -29,8 +48,11 @@ export default function ShopCustomerCard({ customer, cardNumber }: CustomerCardP
   });
   const [sectionMemos, setSectionMemos] = useState<Record<string, string>>({});
   const [openMemoSections, setOpenMemoSections] = useState<Record<string, boolean>>({});
-  const [learningProgress, setLearningProgress] = useState<Record<string, number>>({ '홍조': 0, '기미': 0, '브리핑': 0, '여드름': 0 });
-  const [evaluationScores, setEvaluationScores] = useState<Record<string, number>>({ '모의 테스트': 0, '평가 테스트': 0, '튜터링': 0 });
+  const [selfAssess, setSelfAssess] = useState<SelfAssessmentValue>({});
+  const [trainingTabs, setTrainingTabs] = useState<TrainingTabsValue>({
+    application: false,
+    completion: false,
+  });
 
   const handleAchievementChange = (achievementKey: string, checked: boolean) => {
     setAchievements(prev => {
@@ -56,29 +78,9 @@ export default function ShopCustomerCard({ customer, cardNumber }: CustomerCardP
 
   const handleMemoToggle = (sectionId: string) => setOpenMemoSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
   const handleMemoChange = (sectionId: string, value: string) => setSectionMemos(prev => ({ ...prev, [sectionId]: value }));
-  const handleButtonClick = (section: string, value: string) => setActiveButtons(prev => ({ ...prev, [section]: prev[section] === value ? '' : value }));
-  const handleInputChange = (field: string, value: string) => setFormData(prev => ({ ...prev, [field]: value }));
-  const handleCheckboxChange = (field: string, checked: boolean) => setCheckboxes(prev => ({ ...prev, [field]: !!checked }));
-  const handleTrainingApplication = () => console.log('Apply for training');
-
-  const handleProgressClick = (type: string, index: number) => setProgressValues({ ...progressValues, [type]: index + 1 });
-  const handleCustomerProgressClick = (customerIndex: number, progressIndex: number) => {
-      const key = `customer-${customerIndex}`;
-      const current = customerProgress[key] || [];
-      const newProgress = current.includes(progressIndex) ? current.filter(p => p !== progressIndex) : [...current, progressIndex];
-      setCustomerProgress({ ...customerProgress, [key]: newProgress });
-  };
-  const learningMaxProgress: { [key: string]: number } = { '홍조': 8, '기미': 12, '브리핑': 6, '여드름': 8 };
-  const handleLearningProgressClick = (subject: string, event: React.MouseEvent) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const clickX = event.clientX - rect.left;
-      const newProgress = Math.max(0, Math.min(learningMaxProgress[subject], Math.round((clickX / rect.width) * learningMaxProgress[subject])));
-      setLearningProgress(prev => ({ ...prev, [subject]: newProgress }));
-  };
-  const handleScoreChange = (evalType: string, value: string) => {
-      const clampedScore = Math.max(0, Math.min(100, parseInt(value) || 0));
-      setEvaluationScores(prev => ({ ...prev, [evalType]: clampedScore }));
-  };
+  
+  const updateSelfAssess = (k: keyof SelfAssessmentValue, v: boolean) =>
+    setSelfAssess((prev) => ({ ...prev, [k]: v }));
 
   const getMemoBackgroundColor = (sectionId: string) => {
     const colorMap: Record<string, string> = {
@@ -98,8 +100,8 @@ export default function ShopCustomerCard({ customer, cardNumber }: CustomerCardP
             {Array.from({ length: getHighestAchievement() }).map((_, i) => <span key={i} className="text-yellow-500">⭐</span>)}
           </div>
           <div className="text-right">
-            <p className="text-sm">담당자 : {formData.manager}</p>
-            <p className="text-xs text-gray-500 mt-1">계약일 : {formData.contractDate}</p>
+            <p className="text-sm">담당자 : {customer.manager}</p>
+            <p className="text-xs text-gray-500 mt-1">계약일 : {customer.contractDate}</p>
           </div>
         </div>
       </div>
@@ -108,15 +110,41 @@ export default function ShopCustomerCard({ customer, cardNumber }: CustomerCardP
       <div className="relative mb-6 p-4 rounded-xl bg-slate-100 border border-slate-300">
         <CustomerSectionWrapper number="1" title="설치/교육" sectionId="delivery" memo={sectionMemos['delivery'] || ''} isMemoOpen={openMemoSections['delivery'] || false} onMemoToggle={() => handleMemoToggle('delivery')} onMemoChange={(v) => handleMemoChange('delivery', v)} getMemoBackgroundColor={getMemoBackgroundColor}>
              <InstallationEducationSection 
-                formData={formData}
-                activeButtons={activeButtons}
-                checkboxes={checkboxes}
-                onInputChange={handleInputChange}
-                onButtonClick={handleButtonClick}
-                onCheckboxChange={handleCheckboxChange}
-                onApplyTraining={handleTrainingApplication}
-                cardNumber={cardNumber}
+                shopId={shopId}
             />
+            <div className="mt-6">
+                <SelfAssessmentSection 
+                    value={selfAssess} 
+                    onChange={updateSelfAssess} 
+                />
+            </div>
+
+            {/* 본사 실무교육 이수 - TrainingTabs */}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 shadow-sm mt-6">
+              {/* 타이틀과 통합 별을 같은 줄에 배치 */}
+              <div className="flex items-center gap-2 mb-3">
+                <span
+                  className={cn(
+                    "text-[22px] flex-shrink-0 transition-opacity duration-200",
+                    getTrainingStarState(trainingTabs)
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="전체 교육 완료 여부"
+                >
+                  🌟
+                </span>
+                <div className="text-sm font-medium text-gray-700">본사 실무교육 이수</div>
+              </div>
+              <TrainingTabs
+                value={trainingTabs}
+                onToggle={(key) => setTrainingTabs(prev => ({
+                  ...prev,
+                  [key]: !prev[key]
+                }))}
+                hideIntegratedStar={true}
+              />
+            </div>
         </CustomerSectionWrapper>
       </div>
       
@@ -124,17 +152,8 @@ export default function ShopCustomerCard({ customer, cardNumber }: CustomerCardP
       <div className="relative mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
         <CustomerSectionWrapper number="3" title="성장" sectionId="growth" memo={sectionMemos['growth'] || ''} isMemoOpen={openMemoSections['growth'] || false} onMemoToggle={() => handleMemoToggle('growth')} onMemoChange={(v) => handleMemoChange('growth', v)} getMemoBackgroundColor={getMemoBackgroundColor}>
             <GrowthSection 
-                progressValues={progressValues}
-                customerProgress={customerProgress}
-                learningProgress={learningProgress}
-                evaluationScores={evaluationScores}
-                achievements={achievements}
-                onProgressClick={handleProgressClick}
-                onCustomerProgressClick={handleCustomerProgressClick}
-                onLearningProgressClick={handleLearningProgressClick}
-                onScoreChange={handleScoreChange}
-                onAchievementChange={handleAchievementChange}
-                cardNumber={cardNumber}
+                value={stageData.growth}
+                onChange={(v) => setStageData((p) => ({ ...p, growth: v || { clinicalProgress: { personal: 0, customers: [] }, learningProgress: {}, evaluationScores: {}, salesData: [] } }))}
             />
         </CustomerSectionWrapper>
       </div>
@@ -143,11 +162,8 @@ export default function ShopCustomerCard({ customer, cardNumber }: CustomerCardP
       <div className="relative mb-6 p-4 rounded-xl bg-violet-50 border border-violet-200">
         <CustomerSectionWrapper number="4" title="전문가과정" sectionId="expert" memo={sectionMemos['expert'] || ''} isMemoOpen={openMemoSections['expert'] || false} onMemoToggle={() => handleMemoToggle('expert')} onMemoChange={(v) => handleMemoChange('expert', v)} getMemoBackgroundColor={getMemoBackgroundColor}>
             <ExpertSection
-                activeButtons={activeButtons}
-                achievements={achievements}
-                onButtonClick={handleButtonClick}
-                onAchievementChange={handleAchievementChange}
-                cardNumber={cardNumber}
+                value={stageData.expert}
+                onChange={(v) => setStageData((p) => ({ ...p, expert: v || { topic: undefined, memo: undefined } }))}
             />
         </CustomerSectionWrapper>
       </div>

@@ -1,167 +1,214 @@
 "use client";
 
-import React, { useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+import React, { useMemo } from "react";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ClipboardCheck } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import CustomerMiniProgress from "@/components/CustomerMiniProgress";
+import PersonalProgressDots from "./PersonalProgressDots";
+import { GrowthStageValue } from "@/lib/types/customer";
 
-interface GrowthSectionProps {
-  progressValues: Record<string, number>;
-  customerProgress: Record<string, number[]>;
-  learningProgress: Record<string, number>;
-  evaluationScores: Record<string, number>;
-  achievements: Record<string, boolean>;
-
-  onProgressClick: (type: string, index: number) => void;
-  onCustomerProgressClick: (customerIndex: number, progressIndex: number) => void;
-  onLearningProgressClick: (subject: string, event: React.MouseEvent) => void;
-  onScoreChange: (evalType: string, value: string) => void;
-  onAchievementChange: (key: string, checked: boolean) => void;
-  
-  cardNumber: number;
+interface Props {
+  value: GrowthStageValue | undefined;
+  onChange: (val: GrowthStageValue | undefined) => void;
 }
 
-const learningMaxProgress = { '홍조': 8, '기미': 12, '브리핑': 6, '여드름': 8 };
+const LEARNING_MAX: Record<string, number> = {
+  홍조: 8,
+  기미: 12,
+  브리핑: 6,
+  여드름: 8,
+};
 
-export default function GrowthSection({
-  progressValues,
-  customerProgress,
-  learningProgress,
-  evaluationScores,
-  achievements,
-  onProgressClick,
-  onCustomerProgressClick,
-  onLearningProgressClick,
-  onScoreChange,
-  onAchievementChange,
-  cardNumber,
-}: GrowthSectionProps) {
+const EVAL_ITEMS = ["모의 테스트", "실전 테스트"] as const;
 
-  const totalLearningProgress = useMemo(() => {
-    const currentTotal = Object.values(learningProgress).reduce((sum, current) => sum + current, 0);
-    const maxTotal = Object.values(learningMaxProgress).reduce((sum, max) => sum + max, 0);
-    const percentage = maxTotal > 0 ? (currentTotal / maxTotal) * 100 : 0;
-    return { currentTotal, maxTotal, percentage };
-  }, [learningProgress]);
+function defaultValue(): GrowthStageValue {
+  return {
+    clinicalProgress: {
+      personal: 0,
+      customers: [],
+    },
+    learningProgress: Object.fromEntries(Object.keys(LEARNING_MAX).map((k) => [k, { value: 0, max: LEARNING_MAX[k], label: k }])),
+    evaluationScores: Object.fromEntries(EVAL_ITEMS.map((k) => [k, 0])),
+    salesData: [320, 280, 450, 380, 520, 480, 610, 580, 530, 620, 580, 650],
+  } as GrowthStageValue;
+}
+
+/**
+ * GrowthSection – KOL의 GrowthStage를 그대로 사용하되 Shop 환경에 맞게 조정.
+ */
+export default function GrowthSection({ value, onChange }: Props) {
+  const current = { ...defaultValue(), ...(value || {}) };
+
+  const setPersonalLevel = (lvl: number) => {
+    onChange({ ...current, clinicalProgress: { ...current.clinicalProgress, personal: lvl, customers: current.clinicalProgress?.customers || [] } });
+  };
+
+  const toggleCustomerProgress = (idx: number, progIdx: number) => {
+    const customersProgress = [...(current.clinicalProgress?.customers || [])];
+    while (customersProgress.length <= idx) {
+      customersProgress.push(0);
+    }
+    
+    if (customersProgress[idx] === progIdx + 1) {
+      customersProgress[idx] = progIdx;
+    } else {
+      customersProgress[idx] = progIdx + 1;
+    }
+
+    onChange({
+      ...current,
+      clinicalProgress: { personal: current.clinicalProgress?.personal || 0, customers: customersProgress },
+    });
+  };
+
+  const setLearningProgress = (subject: string, val: number) => {
+    const existingSubject = current.learningProgress?.[subject] || {
+      value: 0,
+      max: LEARNING_MAX[subject] || 0,
+      label: subject
+    };
+    
+    onChange({
+      ...current,
+      learningProgress: { 
+        ...current.learningProgress, 
+        [subject]: { 
+          ...existingSubject, 
+          value: val
+        } 
+      },
+    });
+  };
+
+  const setScore = (item: string, score: number) => {
+    onChange({
+      ...current,
+      evaluationScores: { ...current.evaluationScores, [item]: score },
+    });
+  };
+
+  const totalLearning = useMemo(() => {
+    const cur = Object.values(current.learningProgress!).reduce((a, b) => a + b.value, 0);
+    const max = Object.entries(LEARNING_MAX).reduce((a, [, m]) => a + m, 0);
+    return {
+      current: cur,
+      max,
+      percent: max > 0 ? (cur / max) * 100 : 0,
+    };
+  }, [current.learningProgress]);
 
   const averageScore = useMemo(() => {
-    const scores = Object.values(evaluationScores);
-    const validScores = scores.filter(score => score > 0);
-    if (validScores.length === 0) return 0;
-    return Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length);
-  }, [evaluationScores]);
+    const scores = Object.values(current.evaluationScores!);
+    const valid = scores.filter((s) => s > 0);
+    return valid.length ? Math.round(valid.reduce((a, b) => a + b, 0) / valid.length) : 0;
+  }, [current.evaluationScores]);
+
+  const chartData = useMemo(() => {
+    return (current.salesData || []).map((sales, i) => ({
+      name: `${i + 1}월`,
+      sales,
+    }));
+  }, [current.salesData]);
+
+  const totalLearningProgress = useMemo(() => {
+    if(!current.learningProgress) return { current: 0, max: 0, percentage: 0 };
+    const max = Object.values(current.learningProgress).reduce((a,b) => a+b.max, 0);
+    const val = Object.values(current.learningProgress).reduce((a,b) => a+b.value, 0);
+    return {
+      current: val,
+      max,
+      percentage: max > 0 ? (val / max) * 100 : 0
+    }
+  }, [current.learningProgress]);
 
   return (
-    <div className="space-y-6">
+    <div className="stage-block border rounded-md p-3 flex flex-col gap-4 text-xs bg-card">
       {/* 임상 */}
-      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 shadow-sm space-y-4">
-        <h4 className="text-md font-semibold text-blue-800 border-b border-blue-200 pb-2">임상</h4>
-        <div className="bg-white p-3 rounded-md border">
-          <div className="flex justify-between items-center mb-2">
-            <span className="font-medium text-sm">👤 본인</span>
-            <Button variant="outline" size="sm" className="text-xs h-6 px-2">보러가기</Button>
-          </div>
-          <div className="flex gap-1">
-            {Array.from({ length: 10 }, (_, i) => (
-              <button
-                key={`personal-${i}`}
-                className={`flex-1 h-8 border border-black rounded text-xs flex items-center justify-center cursor-pointer transition-colors ${
-                  i < (progressValues.personal || 0) ? 'bg-black text-white' : 'bg-white text-black'
-                }`}
-                onClick={() => onProgressClick('personal', i)}
-              >{i + 1}</button>
-            ))}
-          </div>
+      <div className="p-3 border rounded-md bg-muted/20">
+        <h5 className="text-sm font-medium mb-3">임상</h5>
+
+        {/* 본인 임상 */}
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-xs font-medium">👤 본인&nbsp;(10회)</span>
+          <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
-        <div className="bg-white p-3 rounded-md border">
-          <div className="flex justify-between items-center mb-2">
-            <span className="font-medium text-sm">👥 고객</span>
-            <Button variant="outline" size="sm" className="text-xs h-6 px-2">보러가기</Button>
-          </div>
-          <div className="space-y-2">
-            {[...Array(2)].map((_, rowIndex) => (
-              <div key={rowIndex} className="flex gap-2 justify-between">
-                {Array.from({ length: 5 }, (_, customerIndex) => {
-                  const actualIndex = rowIndex * 5 + customerIndex;
-                  return (
-                    <div key={actualIndex} className="flex flex-col items-center gap-1">
-                      <span className="text-xs text-gray-500">{actualIndex + 1}</span>
-                      <div className="flex gap-0.5 border border-gray-300 rounded p-1">
-                        {[...Array(3)].map((_, progressIndex) => (
-                          <button
-                            key={progressIndex}
-                            aria-label={`Customer ${actualIndex + 1} Progress ${progressIndex + 1}`}
-                            className={`w-4 h-4 border border-black rounded-sm text-xs flex items-center justify-center cursor-pointer transition-colors ${
-                              customerProgress[`customer-${actualIndex}`]?.includes(progressIndex) 
-                                ? 'bg-black text-white' : 'bg-white'
-                            }`}
-                            onClick={() => onCustomerProgressClick(actualIndex, progressIndex)}
-                          ></button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+        <PersonalProgressDots 
+          finished={current.clinicalProgress?.personal || 0}
+          onProgressClick={setPersonalLevel}
+        />
+
+        {/* 고객 임상 */}
+        <div className="flex justify-between items-center mt-4 mb-2">
+          <span className="text-xs font-medium">👥 고객&nbsp;(3회&nbsp;10명)</span>
+          <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
+        </div>
+        <CustomerMiniProgress 
+          customers={Array.from({ length: 10 }, (_, i) => ({
+            id: i + 1,
+            completed: (current.clinicalProgress?.customers?.[i] || 0) as 0 | 1 | 2 | 3
+          }))}
+          onProgressClick={toggleCustomerProgress}
+        />
+        {/* ─── Improved aesthetic banner ─── */}
+        <div
+          className="mt-3 flex items-center gap-2 px-2 py-1 bg-blue-50/60
+                     border border-blue-100 rounded-md"
+        >
+          {/* Icon */}
+          <ClipboardCheck
+            className="flex-shrink-0 size-4 text-blue-600 drop-shadow-sm"
+            aria-hidden="true"
+          />
+
+          {/* Text */}
+          <p
+            className="text-[9px] xs:text-[10px] sm:text-[11px] font-medium text-blue-800 leading-tight
+                       whitespace-pre-wrap"
+          >
+            좋은 임상은 동의서를 받아서,<br className="inline sm:hidden" />
+            3종을 보상해주세요.
+          </p>
         </div>
       </div>
 
       {/* 학습 진도 */}
-      <div className="p-4 bg-green-50 rounded-lg border border-green-200 shadow-sm space-y-4">
-        <div className="flex justify-between items-center text-green-800 border-b border-green-200 pb-2">
-          <h4 className="text-md font-semibold">학습 진도</h4>
-          <div className="flex items-center gap-2">
-            <Progress value={totalLearningProgress.percentage} className="h-1.5 w-20 [&>div]:bg-green-600" />
-            <span className="text-xs font-medium whitespace-nowrap">{totalLearningProgress.currentTotal}/{totalLearningProgress.maxTotal}</span>
-          </div>
+      <div className="p-3 rounded-md border bg-green-50/40 border-green-200">
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-medium">학습 진도</span>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.entries(learningMaxProgress).map(([subject, max]) => (
-            <div key={subject}>
-              <div className="text-xs text-gray-700 mb-1 text-center">{subject}</div>
-              <div className="h-8 border border-gray-300 rounded cursor-pointer relative overflow-hidden bg-gray-100 hover:bg-gray-200" onClick={(e) => onLearningProgressClick(subject, e)}>
-                <div className="absolute inset-0 bg-green-500 transition-all" style={{ width: `${(learningProgress[subject] / max) * 100}%` }}/>
-                <div className="absolute inset-0 flex items-center justify-center z-10">
-                  <span className="text-xs font-medium text-gray-800">{learningProgress[subject] || 0}/{max}</span>
-                </div>
-              </div>
+
+        <div className="flex items-center justify-center h-16">
+          <span className="text-sm text-muted-foreground">업데이트 예정</span>
+        </div>
+      </div>
+
+      {/* 평가 */}
+      <div className="p-3 rounded-md border bg-yellow-50/40 border-yellow-200">
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-medium">평가</span>
+          <span className="text-xs">평균: {averageScore}점</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {Object.entries(current.evaluationScores || {}).map(([key, score]) => (
+            <div key={key} className="flex-1 min-w-[60px]">
+              <div className="text-center mb-1 text-muted-foreground text-[11px]">{key}</div>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                className="text-xs h-8 w-full text-center border-gray-200 bg-white"
+                value={score > 0 ? score : ""}
+                placeholder="점수"
+                onChange={(e) => setScore(key, parseInt(e.target.value) || 0)}
+              />
             </div>
           ))}
         </div>
       </div>
 
-      {/* 평가 */}
-      <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 shadow-sm space-y-4">
-        <div className="flex justify-between items-center text-yellow-800 border-b border-yellow-200 pb-2">
-          <h4 className="text-md font-semibold">평가</h4>
-          <span className="text-sm font-medium">평균: {averageScore}점</span>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          {Object.entries(evaluationScores).map(([evalType]) => (
-            <div key={evalType}>
-              <div className="text-xs text-gray-700 mb-1 text-center">{evalType}</div>
-              <div className="h-9 border border-gray-300 rounded bg-gray-100 flex items-center justify-center px-2">
-                <Input type="number" min="0" max="100" className="text-xs h-7 w-full text-center border-0 bg-transparent p-0" value={evaluationScores[evalType] > 0 ? evaluationScores[evalType] : ''} placeholder="점수" onChange={(e) => onScoreChange(evalType, e.target.value)} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* 본사 표준 프로토콜 체크박스 */}
-      <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-          <div className="flex items-center gap-2">
-            <Checkbox id={`standard-protocol-${cardNumber}`} checked={achievements['standard-protocol']} onCheckedChange={(checked) => onAchievementChange('standard-protocol', !!checked)} className="w-4 h-4" />
-            <label htmlFor={`standard-protocol-${cardNumber}`} className="text-sm text-gray-700">본사 표준 프로토콜을 잘 따르는가?</label>
-            <div className="flex gap-1 ml-1">
-              <span className="text-yellow-500">⭐</span>
-              <span className="text-yellow-500">⭐</span>
-            </div>
-          </div>
-      </div>
     </div>
   );
 } 

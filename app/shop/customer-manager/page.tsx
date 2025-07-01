@@ -10,10 +10,17 @@ const sampleShopData = {
     manager: '김대표',
 };
 
+// TODO: 실제 인증된 Shop의 ID를 가져오는 로직으로 교체 예정
+const TEMP_SHOP_ID = "550e8400-e29b-41d4-a716-446655440001"; // UUID 형태의 임시 shopId
+
 export default function ShopCustomerManagerPage() {
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
-        <ShopCustomerCard customer={sampleShopData} cardNumber={1} />
+        <ShopCustomerCard 
+          customer={sampleShopData} 
+          cardNumber={1} 
+          shopId={TEMP_SHOP_ID}
+        />
     </div>
   );
 } 
