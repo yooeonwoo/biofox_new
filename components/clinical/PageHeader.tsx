@@ -12,18 +12,22 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   hasUnsavedNewCustomer,
 }) => {
   return (
-    <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm py-3 px-4 md:px-6 border-b border-gray-100">
-      <div className="flex items-center justify-center gap-16 max-w-2xl mx-auto">
-        <div>
-          <Button variant="default" size="sm" asChild>
-            <Link href="/kol-new/clinical-photos">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              뒤로가기
-            </Link>
-          </Button>
-        </div>
-        
-        {/* 새 고객 추가 버튼 */}
+    <div className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-white px-4 shadow-sm lg:h-[60px] lg:px-6">
+      {/* 뒤로가기 버튼 */}
+      <div>
+        <Button variant="default" size="sm" asChild>
+          <Link href="/kol-new/clinical-photos">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            뒤로가기
+          </Link>
+        </Button>
+      </div>
+      
+      {/* 비어있는 공간 */}
+      <div className="flex-1" />
+
+      {/* 새 고객 추가 버튼 */}
+      <div className="flex items-center space-x-4">
         <div className="flex flex-col items-center gap-1">
           <Button 
             onClick={onAddCustomer}
