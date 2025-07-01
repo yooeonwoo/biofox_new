@@ -120,8 +120,7 @@ export default function ContractStage({ value, onChange }: Props) {
 
               {/* ───────────────── 체크박스 박스 ───────────────── */}
               <div
-                className="h-10 w-full border rounded-md grid grid-cols-2 gap-px xs:gap-0
-                           xs:grid-cols-2 xxs:grid-cols-1 overflow-hidden"
+                className="h-10 w-full border rounded-md grid grid-cols-2 overflow-hidden"
               >
                 {/* 광고 */}
                 <label
@@ -143,8 +142,7 @@ export default function ContractStage({ value, onChange }: Props) {
                 <label
                   htmlFor={`retarget-${key}`}
                   className="flex items-center justify-center gap-1 w-full h-full 
-                             cursor-pointer hover:bg-muted/20 border-l
-                             xxs:border-0 xxs:border-t"
+                             cursor-pointer hover:bg-muted/20 border-l"
                 >
                   <Checkbox
                     id={`retarget-${key}`}
