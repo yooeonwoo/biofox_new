@@ -150,6 +150,11 @@ export default function GrowthStage({ value, onChange }: Props) {
           }))}
           onProgressClick={toggleCustomerProgress}
         />
+        <div className="mt-2 text-center">
+          <span className="text-xs text-gray-600 bg-blue-50 px-2 py-1 rounded-md">
+            좋은 임상은 동의서를 받아서 3종을 보상해주세요.
+          </span>
+        </div>
       </div>
 
       {/* 학습 진도 */}
