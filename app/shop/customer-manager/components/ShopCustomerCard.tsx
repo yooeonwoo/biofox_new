@@ -10,6 +10,7 @@ import TrainingTabs, { getTrainingStarState } from './sections/TrainingTabs';
 import GrowthSection from './sections/GrowthSection';
 import ExpertSection from './sections/ExpertSection';
 import ClinicalLearningTabs, { getClinicalLearningStarState } from '@/components/ClinicalLearningTabs';
+import ShopExpertCourseTabs, { getShopExpertCourseStarState } from './sections/ShopExpertCourseTabs';
 import { ClipboardCheck } from "lucide-react";
 import { cn } from '@/lib/utils';
 
@@ -54,6 +55,13 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
     clinical: false,
     learning: false,
   });
+  
+  // 전문가 과정 상태 추가
+  const [expertCourse, setExpertCourse] = useState<{ application?: boolean; completion?: boolean; educator?: boolean }>({
+    application: false,
+    completion: false,
+    educator: false,
+  });
   const [sectionMemos, setSectionMemos] = useState<Record<string, string>>({});
   const [openMemoSections, setOpenMemoSections] = useState<Record<string, boolean>>({});
   const [selfAssess, setSelfAssess] = useState<SelfAssessmentValue>({});
@@ -92,6 +100,13 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
 
   const handleClinicalLearningChange = (key: "clinical" | "learning") => {
     setClinicalLearning(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleExpertCourseChange = (key: "application" | "completion" | "educator") => {
+    setExpertCourse(prev => ({
       ...prev,
       [key]: !prev[key]
     }));
@@ -244,6 +259,59 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
                 onChange={(v) => setStageData((p) => ({ ...p, expert: v || { topic: undefined, memo: undefined } }))}
             />
         </CustomerSectionWrapper>
+      </div>
+
+      {/* Block 4: Expert Course Tabs */}
+      <div className="relative mb-6 p-4 rounded-xl bg-violet-50 border border-violet-200">
+        <div className="space-y-4">
+          {/* 본사 전문가과정 이수 평가 */}
+          <div className="p-3 border rounded-md bg-muted/20">
+            {/* 타이틀과 통합 별 3개를 같은 줄에 배치 */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getShopExpertCourseStarState(expertCourse)
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="전문가과정 평가 완료 여부"
+                >
+                  🌟
+                </span>
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getShopExpertCourseStarState(expertCourse)
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="전문가과정 평가 완료 여부"
+                >
+                  🌟
+                </span>
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getShopExpertCourseStarState(expertCourse)
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="전문가과정 평가 완료 여부"
+                >
+                  🌟
+                </span>
+              </div>
+              <div className="text-sm font-medium text-gray-700">본사 전문가과정 이수</div>
+            </div>
+            <ShopExpertCourseTabs
+              value={expertCourse}
+              onToggle={handleExpertCourseChange}
+              hideIntegratedStar={true}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
