@@ -75,9 +75,9 @@ export default function EducationNotesStage({ value, onChange }: Props) {
           const setLevel = (lvl: "상" | "중" | "하") => setField(levelKey, lvl);
 
           return (
-            <div key={idx} className="flex flex-col xs:flex-row xs:items-center gap-2">
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2">
               {/* 번호 + 질문 */}
-              <span className="shrink-0 text-sm font-medium w-40">{idx}. {text}</span>
+              <span className="text-sm font-medium sm:w-48">{idx}. {text}</span>
 
               {/* 상 · 중 · 하 버튼 */}
               <div className="flex gap-1">
