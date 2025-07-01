@@ -5,7 +5,7 @@
 /* ───── legacy 레이아웃 레이어 ───── */
 @layer components {
   .legacy-card {
-    @apply w-full max-w-2xl mx-auto mb-6;
+    @apply w-full mx-auto mb-6;
   }
   
   .legacy-card-glass {

@@ -61,6 +61,9 @@ const config = {
       spacing: {
         '7.5': '1.875rem', /* 30px → 예전 카드 패딩 */
       },
+      maxWidth: {
+        'site': '672px', /* 레거시 기준 max-w-2xl */
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

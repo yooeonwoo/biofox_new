@@ -12,9 +12,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   hasUnsavedNewCustomer,
 }) => {
   return (
-    <div className="sticky top-0 z-10 border-b bg-white shadow-sm -mt-4 md:-mt-6 mb-4 md:mb-6">
+    <div className="sticky top-0 z-10 border-b bg-white shadow-sm">
       {/* 카드와 동일한 max-width로 제한 */}
-      <div className="mx-auto max-w-4xl flex h-14 items-center gap-4 px-4 lg:h-[60px] lg:px-6">
+      <div className="mx-auto max-w-2xl flex h-14 items-center gap-4 px-4">
         {/* 뒤로가기 버튼 */}
         <div>
           <Button variant="default" size="sm" asChild>
