@@ -164,10 +164,6 @@ export default function GrowthStage({ value, onChange }: Props) {
       <div className="p-3 rounded-md border bg-green-50/40 border-green-200">
         <div className="flex justify-between items-center mb-2">
           <span className="font-medium">학습 진도</span>
-          <div className="flex items-center gap-2">
-            <Progress value={totalLearningProgress.percentage} className="h-1 w-16" />
-            <span className="text-[11px]">{totalLearningProgress.current}/{totalLearningProgress.max}</span>
-          </div>
         </div>
 
         <div className="flex items-center justify-center h-16">
