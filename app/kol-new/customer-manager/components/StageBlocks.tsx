@@ -13,6 +13,7 @@ import { Achievements } from "@/lib/types/customer";
 import AchievementCheckbox from "./AchievementCheckbox";
 import StarTabs, { getIntegratedStarState } from "@/components/StarTabs";
 import ClinicalLearningTabs, { getClinicalLearningStarState } from "@/components/ClinicalLearningTabs";
+import ExpertCourseTabs, { getExpertCourseStarState } from "@/components/ExpertCourseTabs";
 
 const LABELS: Record<1 | 2 | 3, string> = {
   1: "본사 실무교육 이수",
@@ -313,8 +314,69 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
               </StageWrapper>
             );
           })}
-          {/* 6단계 완료 체크박스 → 레벨 3 */}
-          <AchievementCheckbox level={3} achievements={achievements} onChange={onAchievementsChange} />
+          {/* 본사 전문가과정 이수 평가 */}
+          <div className="p-3 border rounded-md bg-muted/20">
+            {/* 타이틀과 통합 별 3개를 같은 줄에 배치 */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getExpertCourseStarState({
+                      owner: achievements.expertOwner,
+                      educator: achievements.expertEducator,
+                    })
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="전문가과정 평가 완료 여부"
+                >
+                  🌟
+                </span>
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getExpertCourseStarState({
+                      owner: achievements.expertOwner,
+                      educator: achievements.expertEducator,
+                    })
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="전문가과정 평가 완료 여부"
+                >
+                  🌟
+                </span>
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getExpertCourseStarState({
+                      owner: achievements.expertOwner,
+                      educator: achievements.expertEducator,
+                    })
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="전문가과정 평가 완료 여부"
+                >
+                  🌟
+                </span>
+              </div>
+              <div className="text-sm font-medium text-gray-700">본사 전문가과정 이수</div>
+            </div>
+            <ExpertCourseTabs
+              value={{
+                owner: achievements.expertOwner,
+                educator: achievements.expertEducator,
+              }}
+              onToggle={(key) => onAchievementsChange({
+                ...achievements, 
+                [key === "owner" ? "expertOwner" : "expertEducator"]: 
+                  !achievements[key === "owner" ? "expertOwner" : "expertEducator"]
+              })}
+              hideIntegratedStar={true}
+            />
+          </div>
         </SectionBlock>
       </div>
     </div>

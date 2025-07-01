@@ -126,6 +126,9 @@ export interface Achievements {
   /* 임상 & 학습 평가 시스템 */
   clinicalStar?: boolean;
   learningStar?: boolean;
+  /* 본사 전문가과정 이수 평가 시스템 */
+  expertOwner?: boolean;
+  expertEducator?: boolean;
 }
 
 export interface CustomerProgress {
