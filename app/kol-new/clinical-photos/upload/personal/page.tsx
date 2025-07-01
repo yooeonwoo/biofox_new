@@ -68,7 +68,7 @@ export default function PersonalPage() {
 
   return (
     <div className="space-y-6">
-      <main ref={pageState.mainContentRef} className="mx-auto max-w-2xl">
+      <main ref={pageState.mainContentRef} className="mx-auto w-full md:max-w-2xl">
         {/* 헤더 - Personal용으로 수정 */}
         <PageHeader
           onAddCustomer={handlers.handleAddPersonalCase}
@@ -76,7 +76,7 @@ export default function PersonalPage() {
         />
 
         {/* 메인 컨텐츠 */}
-        <div className="space-y-5 p-4 md:p-6">
+        <div className="space-y-5 p-4 md:px-0 md:py-6">
           {/* 케이스가 없을 때 */}
           {pageState.cases.length === 0 && (
             <EmptyStateCard

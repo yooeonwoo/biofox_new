@@ -14,7 +14,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <div className="sticky top-0 z-10 border-b bg-white shadow-sm -mt-4 md:-mt-6">
       {/* 카드와 동일한 max-width로 제한 */}
-      <div className="mx-auto max-w-2xl flex h-14 items-center gap-4 px-4">
+      <div className="mx-auto w-full md:max-w-2xl flex h-14 items-center gap-4 px-4 md:px-0">
         {/* 뒤로가기 버튼 */}
         <div>
           <Button variant="default" size="sm" asChild>
