@@ -170,15 +170,8 @@ export default function GrowthStage({ value, onChange }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {Object.entries(current.learningProgress || {}).map(([key, p]) => (
-            <div key={key} className="flex-1 min-w-[60px]">
-              <div className="text-center mb-1 text-muted-foreground text-[11px]">{p.label}</div>
-              <div className="h-8 bg-gray-200 border border-gray-300 rounded relative cursor-pointer flex items-center justify-center text-[10px] font-medium">
-                {p.value}/{p.max}
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center justify-center h-16">
+          <span className="text-sm text-muted-foreground">업데이트 예정</span>
         </div>
       </div>
 
