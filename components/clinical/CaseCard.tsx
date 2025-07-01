@@ -148,7 +148,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
           <CardHeader className="pb-4 bg-gray-50/30 rounded-t-xl">
             {/* 첫 번째 줄: 고객이름 + 동의/미동의 + 진행중/완료 */}
             <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-x-1 gap-y-1 flex-1 min-w-0">
                 <div className="h-6 w-6 xs:h-7 xs:w-7 sm:h-9 sm:w-9 bg-biofox-blue-violet text-white rounded-lg flex items-center justify-center text-[11px] xs:text-xs sm:text-sm font-bold flex-shrink-0 shadow-sm transform hover:scale-105 transition-transform">
                   {totalCases - index}
                 </div>
@@ -219,7 +219,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
             </div>
           </CardHeader>
           
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-3 xs:space-y-4 sm:space-y-6 p-3 xs:p-4 sm:p-6">
             {/* 블록 1: 동의서 업로드 */}
             {case_.consentReceived && (
               <div className="space-y-4">
@@ -303,8 +303,8 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 {/* 첫 번째 열 */}
                 <div className="space-y-3">
                   {/* 이름 */}
-                  <div className="flex items-center gap-0.5">
-                    <Label htmlFor={`name-${case_.id}`} className="text-xs font-medium w-14 shrink-0 text-gray-600">이름</Label>
+                  <div className="flex items-center gap-1">
+                    <Label htmlFor={`name-${case_.id}`} className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">이름</Label>
                     <Input
                       id={`name-${case_.id}`}
                       value={case_.customerInfo.name}
@@ -315,21 +315,21 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                         handleBasicCustomerInfoUpdate(case_.id, { name: e.currentTarget.value });
                       }}
                       placeholder="고객 이름"
-                      className="w-20 text-sm h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
+                      className="flex-1 min-w-0 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                     />
                   </div>
                   
                   {/* 성별 */}
-                  <div className="flex items-center gap-0.5">
-                    <Label className="text-xs font-medium w-14 shrink-0 text-gray-600">성별</Label>
+                  <div className="flex items-center gap-1">
+                    <Label className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">성별</Label>
                     <Select
                       value={case_.customerInfo.gender || ''}
                       onValueChange={(value: 'male' | 'female' | 'other') => 
                         handleBasicCustomerInfoUpdate(case_.id, { gender: value })
                       }
                     >
-                      <SelectTrigger className="w-full sm:w-28 text-sm h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200">
-                        <SelectValue placeholder="성별 선택" />
+                      <SelectTrigger className="flex-1 min-w-0 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200">
+                        <SelectValue placeholder="성별" />
                       </SelectTrigger>
                       <SelectContent className="bg-white">
                         {SYSTEM_OPTIONS.genders.map((gender) => (
@@ -375,16 +375,16 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 </div>
                 
                 {/* 관리 유형 - 전체 너비 */}
-                <div className="flex items-center col-span-2">
-                  <Label className="text-xs font-medium w-14 shrink-0 text-gray-600">관리유형</Label>
+                <div className="flex items-center col-span-2 gap-1">
+                  <Label className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">관리유형</Label>
                   <Select
                     value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.treatmentType || ''}
                     onValueChange={(value) => 
                       handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { treatmentType: value })
                     }
                   >
-                    <SelectTrigger className="flex-1 text-sm h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200">
-                      <SelectValue placeholder="관리 유형 선택" />
+                    <SelectTrigger className="flex-1 min-w-0 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200">
+                      <SelectValue placeholder="관리 유형" />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
                       {SYSTEM_OPTIONS.treatmentTypes.map((treatment) => (

@@ -17,7 +17,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       <div className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl flex h-12 xs:h-14 items-center gap-3 xs:gap-4 px-3 xs:px-4 md:px-0">
         {/* 뒤로가기 버튼 */}
         <div>
-          <Button variant="default" size="sm" asChild className="h-8 px-3 xs:h-9 xs:px-4">
+          <Button variant="default" size="sm" asChild className="h-7 px-2 xs:h-8 xs:px-3 sm:h-9 sm:px-4">
             <Link href="/kol-new/clinical-photos">
               <ArrowLeft className="mr-1 xs:mr-2 h-3 xs:h-4 w-3 xs:w-4" />
               <span className="text-xs xs:text-sm">뒤로가기</span>
@@ -29,11 +29,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         <div className="flex-1" />
 
         {/* 새 고객 추가 버튼 */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-2 xs:gap-3 sm:gap-4">
           <div className="flex flex-col items-center gap-1">
             <Button 
               onClick={onAddCustomer}
-              className="legacy-btn flex items-center gap-1 xs:gap-2 h-8 px-3 xs:h-9 xs:px-4 text-xs xs:text-sm"
+              className="legacy-btn flex items-center gap-1 xs:gap-2 h-7 px-2 xs:h-8 xs:px-3 sm:h-9 sm:px-4 text-xs xs:text-xs sm:text-sm"
               size="sm"
               disabled={hasUnsavedNewCustomer}
             >
