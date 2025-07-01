@@ -89,7 +89,7 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
   const cardRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={cardRef} className="relative bg-card border rounded-xl p-4 mb-5 max-w-full md:max-w-4xl mx-auto shadow">
+    <div ref={cardRef} className="relative bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
       <ConnectionLineProvider cardRef={cardRef}>
         {/* 연결선 */}
         <ConnectionLines stageData={localProgress.stageData} />
@@ -106,12 +106,14 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
         />
 
         {/* 스테이지 블록 */}
-        <StageBlocks
-          stageData={localProgress.stageData}
-          onStageChange={handleStageChange}
-          achievements={localProgress.achievements}
-          onAchievementsChange={handleAchievementChange}
-        />
+        <div className="p-3 xs:p-4 sm:p-6">
+          <StageBlocks
+            stageData={localProgress.stageData}
+            onStageChange={handleStageChange}
+            achievements={localProgress.achievements}
+            onAchievementsChange={handleAchievementChange}
+          />
+        </div>
       </ConnectionLineProvider>
     </div>
   );

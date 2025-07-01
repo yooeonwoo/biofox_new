@@ -1,9 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, BookText } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
   backPath: string;
@@ -19,39 +17,45 @@ export default function PageHeader({
   isAdding,
 }: PageHeaderProps) {
   return (
-    <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm py-3 px-4 md:px-6 border-b">
-      <div className="flex items-center justify-between gap-4 max-w-4xl mx-auto">
+    <div className="sticky top-0 z-10 border-b bg-white shadow-sm">
+      <div className="w-full flex h-12 xs:h-14 items-center justify-between gap-3 xs:gap-4 px-3 xs:px-4 sm:px-6 md:px-8">
         {/* 뒤로가기 버튼 */}
-        <Button variant="outline" size="sm" asChild>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          asChild 
+          className="h-8 xs:h-9 px-3 xs:px-4 text-xs xs:text-sm font-medium bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 transition-all duration-200 flex-shrink-0"
+        >
           <Link href={backPath}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            뒤로가기
+            뒤로 가기
           </Link>
         </Button>
 
-        {/* 중앙 버튼 그룹 */}
-        <div className="flex items-center gap-2">
-            <div className="flex flex-col items-center gap-1">
-                 <Button
-                    onClick={onAddCustomer}
-                    disabled={isAdding}
-                    size="sm"
-                 >
-                    <Plus className="mr-2 h-4 w-4" />
-                    고객 추가
-                </Button>
-                {isAdding && (
-                    <p className="text-xs text-orange-600">
-                        신규 고객을 저장하거나 삭제 후 추가할 수 있습니다.
-                    </p>
-                )}
-            </div>
+        {/* 고객 추가 버튼 */}
+        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+          <Button 
+            onClick={onAddCustomer}
+            size="sm"
+            disabled={isAdding}
+            className="h-8 xs:h-9 px-3 xs:px-4 text-xs xs:text-sm font-medium bg-biofox-blue-violet hover:bg-biofox-dark-blue-violet text-white shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            고객 추가
+          </Button>
+          {isAdding && (
+            <p className="text-[10px] xs:text-xs text-orange-600 text-center whitespace-nowrap max-w-[140px] xs:max-w-[180px] sm:max-w-none leading-tight">
+              신규 고객을 저장하거나 삭제 후 추가할 수 있습니다
+            </p>
+          )}
         </div>
 
         {/* 영업일지 버튼 */}
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/kol-new/sales-journal">
-            <BookText className="mr-2 h-4 w-4" />
+        <Button 
+          variant="outline" 
+          size="sm" 
+          asChild 
+          className="h-8 xs:h-9 px-3 xs:px-4 text-xs xs:text-sm font-medium bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 transition-all duration-200 flex-shrink-0"
+        >
+          <Link href={journalPath}>
             영업일지
           </Link>
         </Button>

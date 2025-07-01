@@ -79,25 +79,29 @@ export default function CustomerList({ initialData, kolId }: Props) {
   }
 
   return (
-    <>
+    <div>
       <PageHeader 
         backPath="/kol-new"
         journalPath="/kol-new/sales-journal"
         onAddCustomer={handleAddCustomer}
         isAdding={isAdding}
       />
-      <div className="p-4 sm:p-6 flex flex-col gap-6">
+      
+      {/* 메인 컨테이너 - clinical-photos와 동일한 반응형 레이아웃 */}
+      <main className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
+        <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
           {localCustomers.map((c, idx) => (
             <CustomerCard 
-                key={c.id} 
-                customer={c} 
-                progress={c.customer_progress?.[0]} 
-                cardNumber={idx + 1}
-                isNew={c.isNew}
-                onDelete={() => handleDeleteNewCustomer(c.id)}
+              key={c.id} 
+              customer={c} 
+              progress={c.customer_progress?.[0]} 
+              cardNumber={idx + 1}
+              isNew={c.isNew}
+              onDelete={() => handleDeleteNewCustomer(c.id)}
             />
           ))}
-      </div>
-    </>
+        </div>
+      </main>
+    </div>
   );
 } 
