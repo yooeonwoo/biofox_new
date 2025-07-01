@@ -1,68 +1,73 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { groupBy } from "lodash-es";
+import { format, compareDesc } from "date-fns";
+import { ko } from "date-fns/locale";
 import TrainingCard, { TrainingReq } from "./TrainingCard";
+import { getTrainingRequests } from "./api/get-requests";
 
-const MOCK: TrainingReq[] = [
-  {
-    id: "a1",
-    created_at: "2024-03-01",
-    shop_name: "바이오포톤 강남점",
-    contact_name: "홍길동",
-    contact_phone: "010-1234-5678",
-    lecture_date: "2024-04-05",
-    is_completed: false,
-  },
-  {
-    id: "b2",
-    created_at: "2024-03-03",
-    shop_name: "바이오포톤 부산점",
-    contact_name: "김미래",
-    contact_phone: "010-9876-5432",
-    lecture_date: "2024-04-08",
-    is_completed: true,
-  },
-  {
-    id: "c3",
-    created_at: "2024-03-05",
-    shop_name: "바이오포톤 대구점",
-    contact_name: "이진수",
-    contact_phone: "010-5555-1234",
-    lecture_date: "2024-04-12",
-    is_completed: false,
-  },
-  {
-    id: "d4",
-    created_at: "2024-03-07",
-    shop_name: "바이오포톤 인천점",
-    contact_name: "박서현",
-    contact_phone: "010-7777-8888",
-    lecture_date: "2024-04-15",
-    is_completed: true,
-  },
-  {
-    id: "e5",
-    created_at: "2024-03-10",
-    shop_name: "바이오포톤 광주점",
-    contact_name: "최민호",
-    contact_phone: "010-3333-4444",
-    lecture_date: "2024-04-20",
-    is_completed: false,
-  },
-];
+interface TrainingRound {
+  round: number;
+  date: string;
+  list: TrainingReq[];
+}
 
 export default function HQTrainingPage() {
-  const [list, setList] = useState<TrainingReq[]>(MOCK);
+  const [reqs, setReqs] = useState<TrainingRound[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 완료 토글 (모바일에서도 즉시 반응)
+  useEffect(() => {
+    getTrainingRequests().then((data) => {
+      // 날짜별 그룹핑 (문자열 'YYYY-MM-DD' 기준)
+      const groups = groupBy(data, (r) => r.lecture_date);
+      
+      // 최신 날짜가 1회차가 되도록 날짜 desc 정렬
+      const sortedDates = Object.keys(groups).sort((a, b) =>
+        compareDesc(new Date(a), new Date(b))
+      );
+      
+      // [{ round: 1, date: '2025-07-10', list: [...]}, …]
+      const rounds = sortedDates.map((date, idx) => ({
+        round: idx + 1,
+        date,
+        list: groups[date] || [],
+      }));
+      
+      setReqs(rounds);
+      setLoading(false);
+    });
+  }, []);
+
+  // 완료 토글 함수 (회차별 구조에 맞게 수정)
   const toggle = (id: string) =>
-    setList((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, is_completed: !r.is_completed } : r
-      )
+    setReqs((prev) =>
+      prev.map((sec) => ({
+        ...sec,
+        list: sec.list.map((r) =>
+          r.id === id ? { ...r, is_completed: !r.is_completed } : r
+        ),
+      }))
     );
 
-  const completedCount = list.filter(req => req.is_completed).length;
-  const totalCount = list.length;
+  // 전체 통계 계산
+  const totalCount = reqs.reduce((sum, round) => sum + round.list.length, 0);
+  const completedCount = reqs.reduce(
+    (sum, round) => sum + round.list.filter(req => req.is_completed).length, 
+    0
+  );
+
+  if (loading) {
+    return (
+      <div className="p-4 md:p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6">
@@ -78,10 +83,24 @@ export default function HQTrainingPage() {
         </div>
       </div>
 
-      {/* 카드 그리드 */}
-      <main className="grid gap-4 place-items-center sm:grid-cols-2 lg:grid-cols-3">
-        {list.map((req) => (
-          <TrainingCard key={req.id} req={req} onToggle={toggle} />
+      {/* 회차별 섹션 */}
+      <main className="flex flex-col gap-6">
+        {reqs.map(({ round, date, list: arr }) => (
+          <section key={date} className="flex flex-col gap-3">
+            {/* 섹션 헤더 */}
+            <h3 className="text-sm font-semibold text-gray-800">
+              본사 실무교육&nbsp;{round}회차&nbsp;(
+              {format(new Date(date), "yyyy.MM.dd", { locale: ko })}
+              )
+            </h3>
+
+            {/* 카드 그리드 (모바일 1열 → sm 2열 → lg 3열) */}
+            <div className="grid gap-4 place-items-center sm:grid-cols-2 lg:grid-cols-3">
+              {arr.map((req) => (
+                <TrainingCard key={req.id} req={req} onToggle={toggle} />
+              ))}
+            </div>
+          </section>
         ))}
       </main>
     </div>
