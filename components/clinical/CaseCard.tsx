@@ -495,7 +495,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                         }}
                         className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
                       />
-                      <span className="text-xs leading-tight">{product.label}</span>
+                      <span className="text-[10px] xs:text-xs leading-tight">{product.label}</span>
                     </label>
                   );
                 })}
@@ -589,7 +589,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                         }}
                         className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
                       />
-                      <span className="text-xs leading-tight">{skinType.label}</span>
+                      <span className="text-[10px] xs:text-xs leading-tight">{skinType.label}</span>
                     </label>
                   );
                 })}
