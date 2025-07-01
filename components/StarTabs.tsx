@@ -17,25 +17,25 @@ export default function StarTabs({ value, onToggle }: Props) {
 
   return (
     <div>
-      {/* 통합 별(타이틀 위치) */}
+      {/* 통합 별 – 타이틀 자리를 대체 */}
       <span
         className={cn(
-          "text-2xl text-yellow-400 block mb-2",
-          allDone ? "" : "opacity-40"       /* 세 탭 모두 활성 → 진한 노랑 */
+          "text-2xl text-yellow-400 mb-2 block",
+          allDone ? "" : "opacity-40"
         )}
       >
         🌟
       </span>
 
       {/* 세그먼트 탭 - 한 줄 고정 */}
-      <div className="flex items-center gap-2 py-1">
+      <div className="flex items-center gap-2 py-1 whitespace-nowrap">
         {SEG.map(({ key, label, readOnly, active }) => (
           <button
             key={key}
             disabled={readOnly}
             onClick={() => !readOnly && onToggle("manager")}
             className={cn(
-              "flex-1 min-w-0 flex items-center justify-center gap-0.5 px-1.5 py-1 border rounded-md text-[11px]",
+              "flex-1 min-w-0 flex items-center justify-center gap-[2px] px-1 py-[3px] border rounded-md text-[11px] leading-none",
               readOnly && "opacity-60 cursor-default",
               active ? "bg-yellow-50 border-yellow-400" : "bg-muted/20"
             )}
@@ -46,7 +46,20 @@ export default function StarTabs({ value, onToggle }: Props) {
                 active ? "fill-yellow-400 text-yellow-400" : "text-gray-400"
               )}
             />
-            {label}
+            {/* 모바일에서 라벨 축약 */}
+            {key === "owner" ? (
+              <>
+                <span className="inline xs:hidden">원장</span>
+                <span className="hidden xs:inline">원장님</span>
+              </>
+            ) : key === "director" ? (
+              <>
+                <span className="inline xs:hidden">교육</span>
+                <span className="hidden xs:inline">교육&nbsp;이사</span>
+              </>
+            ) : (
+              label   /* 담당 */
+            )}
           </button>
         ))}
       </div>
