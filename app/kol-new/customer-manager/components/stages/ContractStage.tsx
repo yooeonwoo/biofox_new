@@ -5,7 +5,7 @@ import { ContractStageValue } from "@/lib/types/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DollarSign, Calendar, Eraser } from "lucide-react";
+import { DollarSign, Calendar, Eraser, Megaphone, Crosshair } from "lucide-react";
 import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 
 const SECTIONS_CONFIG: Array<{
@@ -107,31 +107,56 @@ export default function ContractStage({ value, onChange }: Props) {
               />
             </div>
           ) : (
-            <div className="relative w-full">
-              <Eraser className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                placeholder="거절사유"
-                className="h-10 pl-8 text-sm"
-                value={reasonValue || ""}
-                onChange={(e) => setField(`${key}Reason`, e.target.value)}
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                <Checkbox
-                  id={`ad-add-${key}`}
-                  checked={adValue}
-                  onCheckedChange={(c) => setField(`${key}Ad`, !!c)}
+            <>
+              <div className="relative w-full mb-2">
+                <Eraser className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="거절사유"
+                  className="h-10 pl-8 text-sm"
+                  value={reasonValue || ""}
+                  onChange={(e) => setField(`${key}Reason`, e.target.value)}
                 />
-                <label htmlFor={`ad-add-${key}`} className="text-xs font-normal whitespace-nowrap">광고</label>
-                
-                {/* ▶️ 새 '리타겟' 체크박스 */}
-                <Checkbox
-                  id={`retarget-${key}`}
-                  checked={retargetValue}
-                  onCheckedChange={(c) => setField(`${key}Retarget`, !!c)}
-                />
-                <label htmlFor={`retarget-${key}`} className="text-xs font-normal whitespace-nowrap">리타겟</label>
               </div>
-            </div>
+
+              {/* ───────────────── 체크박스 박스 ───────────────── */}
+              <div
+                className="h-10 w-full border rounded-md grid grid-cols-2 gap-px xs:gap-0
+                           xs:grid-cols-2 xxs:grid-cols-1 overflow-hidden"
+              >
+                {/* 광고 */}
+                <label
+                  htmlFor={`ad-add-${key}`}
+                  className="flex items-center justify-center gap-1 w-full h-full 
+                             cursor-pointer hover:bg-muted/20"
+                >
+                  <Checkbox
+                    id={`ad-add-${key}`}
+                    checked={adValue}
+                    onCheckedChange={(c) => setField(`${key}Ad`, !!c)}
+                    className="peer"
+                  />
+                  <Megaphone className="size-4 text-muted-foreground peer-checked:text-blue-600" />
+                  <span className="text-xs">광고</span>
+                </label>
+
+                {/* 리타겟 */}
+                <label
+                  htmlFor={`retarget-${key}`}
+                  className="flex items-center justify-center gap-1 w-full h-full 
+                             cursor-pointer hover:bg-muted/20 border-l
+                             xxs:border-0 xxs:border-t"
+                >
+                  <Checkbox
+                    id={`retarget-${key}`}
+                    checked={retargetValue}
+                    onCheckedChange={(c) => setField(`${key}Retarget`, !!c)}
+                    className="peer"
+                  />
+                  <Crosshair className="size-4 text-muted-foreground peer-checked:text-blue-600" />
+                  <span className="text-xs">리타겟</span>
+                </label>
+              </div>
+            </>
           )}
         </div>
       </div>
