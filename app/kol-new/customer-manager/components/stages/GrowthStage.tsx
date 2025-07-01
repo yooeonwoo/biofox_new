@@ -148,7 +148,7 @@ export default function GrowthStage({ value, onChange }: Props) {
 
         {/* 고객 임상 */}
         <div className="flex justify-between items-center mt-4 mb-2">
-          <span className="text-sm font-medium">👥 고객</span>
+          <span className="text-sm font-medium">👥 고객&nbsp;(3회&nbsp;10명)</span>
           <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
         <CustomerMiniProgress 
