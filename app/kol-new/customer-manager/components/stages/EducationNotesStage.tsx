@@ -79,43 +79,46 @@ export default function EducationNotesStage({ value, onChange }: Props) {
               {/* 번호 + 질문 */}
               <span className="text-sm font-medium sm:w-48">{idx}. {text}</span>
 
-              {/* 상 · 중 · 하 버튼 */}
-              <div className="flex gap-1">
-                {["상", "중", "하"].map((lvl) => {
-                  const active = currentLevel === lvl;
-                  return (
-                    <Button
-                      key={lvl}
-                      variant={active ? "default" : "outline"}
-                      size="sm"
-                      className={cn(
-                        "h-7 w-9 text-xs",
-                        active && "bg-blue-600 text-white border-blue-600"
-                      )}
-                      onClick={() => setLevel(lvl as "상" | "중" | "하")}
-                    >
-                      {lvl}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              {/* Y/N 배지 – 1~4번만 */}
-              {hasYN && (
-                <div className="flex items-center gap-1 text-xs">
-                  <span>/</span>
-                  <span
-                    className={cn(
-                      "px-2 py-0.5 rounded-full font-medium",
-                      currentYN === true && "bg-green-600 text-white",
-                      currentYN === false && "bg-gray-300 text-gray-700",
-                      currentYN === undefined && "bg-gray-200 text-gray-500"
-                    )}
-                  >
-                    {currentYN === true ? "Y" : currentYN === false ? "N" : "—"}
-                  </span>
+              {/* 버튼 그룹 + Y/N 을 한 줄에 */}
+              <div className="flex items-center gap-2">
+                {/* 상 · 중 · 하 버튼 */}
+                <div className="flex gap-1">
+                  {["상", "중", "하"].map((lvl) => {
+                    const active = currentLevel === lvl;
+                    return (
+                      <Button
+                        key={lvl}
+                        variant={active ? "default" : "outline"}
+                        size="sm"
+                        className={cn(
+                          "h-7 w-9 text-xs",
+                          active && "bg-blue-600 text-white border-blue-600"
+                        )}
+                        onClick={() => setLevel(lvl as "상" | "중" | "하")}
+                      >
+                        {lvl}
+                      </Button>
+                    );
+                  })}
                 </div>
-              )}
+
+                {/* / Y/N 배지 */}
+                {hasYN && (
+                  <div className="flex items-center gap-1 text-xs">
+                    <span className="text-gray-400">/</span>
+                    <span
+                      className={cn(
+                        "min-w-[34px] px-2 py-0.5 rounded-full border text-center",
+                        currentYN === true && "bg-green-500 text-white border-green-500",
+                        currentYN === false && "bg-red-500 text-white border-red-500",
+                        currentYN === undefined && "bg-gray-200 text-gray-500 border-gray-300"
+                      )}
+                    >
+                      {currentYN === true ? "Y" : currentYN === false ? "N" : "Y/N"}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
