@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ClipboardCheck } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomerMiniProgress from "@/components/CustomerMiniProgress";
 import PersonalProgressDots from "./PersonalProgressDots";
@@ -150,10 +151,25 @@ export default function GrowthStage({ value, onChange }: Props) {
           }))}
           onProgressClick={toggleCustomerProgress}
         />
-        <div className="mt-2 text-center">
-          <span className="text-xs text-gray-600 bg-blue-50 px-2 py-1 rounded-md">
-            좋은 임상은 동의서를 받아서 3종을 보상해주세요.
-          </span>
+        {/* ─── Improved aesthetic banner ─── */}
+        <div
+          className="mt-3 flex items-center gap-2 px-2 py-1 bg-blue-50/60
+                     border border-blue-100 rounded-md"
+        >
+          {/* Icon */}
+          <ClipboardCheck
+            className="flex-shrink-0 size-4 text-blue-600 drop-shadow-sm"
+            aria-hidden="true"
+          />
+
+          {/* Text */}
+          <p
+            className="text-[11px] xs:text-xs font-medium text-blue-800 leading-tight
+                       whitespace-pre-wrap"
+          >
+            좋은 임상은 동의서를 받아서,<br className="inline sm:hidden" />
+            3종을 보상해주세요.
+          </p>
         </div>
       </div>
 
