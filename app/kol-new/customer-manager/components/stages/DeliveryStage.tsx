@@ -147,7 +147,6 @@ export default function DeliveryStage({ value, onChange }: Props) {
 
       {/* 별점 평가 시스템 */}
       <div className="mt-4 p-3 border rounded-md bg-muted/20">
-        <div className="text-sm font-medium mb-2">평가</div>
         <StarTabs
           value={{
             manager: current.starManager,
