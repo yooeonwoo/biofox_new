@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 // Achievements 타입 및 단일 체크박스 컴포넌트 추가
 import { Achievements } from "@/lib/types/customer";
 import AchievementCheckbox from "./AchievementCheckbox";
-import StarTabs from "@/components/StarTabs";
+import StarTabs, { getIntegratedStarState } from "@/components/StarTabs";
 
 const LABELS: Record<1 | 2 | 3, string> = {
   1: "본사 실무교육 이수",
@@ -179,7 +179,25 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
           })}
           {/* 본사 실무교육 이수 평가 */}
           <div className="p-3 border rounded-md bg-muted/20">
-            <div className="text-sm font-medium mb-3 text-gray-700">본사 실무교육 이수</div>
+            {/* 타이틀과 통합 별을 같은 줄에 배치 */}
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className={cn(
+                  "text-[22px] flex-shrink-0 transition-opacity duration-200",
+                  getIntegratedStarState({
+                    manager: achievements.starManager,
+                    owner: achievements.starOwner,
+                    director: achievements.starDirector,
+                  })
+                    ? "text-yellow-400 opacity-100"
+                    : "text-gray-300 opacity-40"
+                )}
+                aria-label="전체 평가 완료 여부"
+              >
+                🌟
+              </span>
+              <div className="text-sm font-medium text-gray-700">본사 실무교육 이수</div>
+            </div>
             <StarTabs
               value={{
                 manager: achievements.starManager,
@@ -190,6 +208,7 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
                 ...achievements, 
                 starManager: !achievements.starManager
               })}
+              hideIntegratedStar={true}
             />
           </div>
         </SectionBlock>

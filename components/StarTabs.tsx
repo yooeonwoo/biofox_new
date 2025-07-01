@@ -4,9 +4,10 @@ import { cn } from "@/lib/utils";
 type Props = {
   value: { manager?: boolean; owner?: boolean; director?: boolean };
   onToggle: (key: "manager") => void;          // 토글 가능한 건 'manager' 하나
+  hideIntegratedStar?: boolean;                // 통합 별 숨김 옵션
 };
 
-export default function StarTabs({ value, onToggle }: Props) {
+export default function StarTabs({ value, onToggle, hideIntegratedStar }: Props) {
   const SEG = [
     { key: "manager", label: "담당", readOnly: false, active: value.manager },
     { key: "owner", label: "원장님", readOnly: true, active: value.owner },
@@ -19,18 +20,20 @@ export default function StarTabs({ value, onToggle }: Props) {
     <div>
       {/* 세그먼트 탭 - 한 줄 고정 */}
       <div className="flex items-center gap-2 py-[3px] whitespace-nowrap">
-        {/* 통합 별 – 왼쪽에 배치 */}
-        <span
-          className={cn(
-            "text-[22px] flex-shrink-0 transition-opacity duration-200",
-            allDone
-              ? "text-yellow-400 opacity-100"
-              : "text-gray-300 opacity-40"
-          )}
-          aria-label="전체 평가 완료 여부"
-        >
-          🌟
-        </span>
+        {/* 통합 별 – 조건부 렌더링 */}
+        {!hideIntegratedStar && (
+          <span
+            className={cn(
+              "text-[22px] flex-shrink-0 transition-opacity duration-200",
+              allDone
+                ? "text-yellow-400 opacity-100"
+                : "text-gray-300 opacity-40"
+            )}
+            aria-label="전체 평가 완료 여부"
+          >
+            🌟
+          </span>
+        )}
 
         {SEG.map(({ key, label, readOnly, active }) => (
           <button
@@ -68,4 +71,9 @@ export default function StarTabs({ value, onToggle }: Props) {
       </div>
     </div>
   );
-} 
+}
+
+// 통합 별 상태를 외부에서 계산할 수 있도록 헬퍼 함수 export
+export const getIntegratedStarState = (value: { manager?: boolean; owner?: boolean; director?: boolean }) => {
+  return value.manager && value.owner && value.director;
+}; 
