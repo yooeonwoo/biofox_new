@@ -177,8 +177,9 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
               </StageWrapper>
             );
           })}
-          {/* 별점 평가 시스템 */}
+          {/* 본사 실무교육 이수 평가 */}
           <div className="p-3 border rounded-md bg-muted/20">
+            <div className="text-sm font-medium mb-3 text-gray-700">본사 실무교육 이수</div>
             <StarTabs
               value={{
                 manager: achievements.starManager,
