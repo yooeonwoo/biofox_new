@@ -77,7 +77,7 @@ export interface InflowStageValue {
 }
 
 export interface DeliveryStageValue {
-  type?: "ship" | "install" | "retarget";
+  type?: "ship" | "install";
   shipDate?: string;
   shipPackage?: string;
   installDate?: string;
@@ -117,5 +117,6 @@ export interface ContractStageValue {
   rejectDate?: string;
   rejectReason?: string;
   rejectAd?: boolean;
+  rejectRetarget?: boolean;
   memo?: string;
 } 

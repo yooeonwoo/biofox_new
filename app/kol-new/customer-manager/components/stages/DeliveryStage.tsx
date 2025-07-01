@@ -7,12 +7,11 @@ import { Calendar } from "lucide-react";
 import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 
 const DELIVERY_TYPES: Array<{
-    key: "ship" | "install" | "retarget";
+    key: "ship" | "install";
     label: string;
 }> = [
     { key: "ship", label: "출고" },
     { key: "install", label: "설치/교육" },
-    { key: "retarget", label: "리타겟" },
 ];
 
 interface Props {
@@ -30,7 +29,6 @@ export default function DeliveryStage({ value, onChange }: Props) {
   const refs = {
     ship: useRef<HTMLDivElement>(null),
     install: useRef<HTMLDivElement>(null),
-    retarget: useRef<HTMLDivElement>(null),
   };
 
   useEffect(() => {
@@ -48,7 +46,7 @@ export default function DeliveryStage({ value, onChange }: Props) {
     };
   }, [context]);
   
-  const setType = (type?: "ship" | "install" | "retarget") => {
+  const setType = (type?: "ship" | "install") => {
     onChange({ ...current, type });
   };
   
@@ -58,7 +56,7 @@ export default function DeliveryStage({ value, onChange }: Props) {
 
   return (
     <div className="stage-block flex flex-col gap-3 text-xs bg-card">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {DELIVERY_TYPES.map(({ key, label }) => {
           const isActive = current.type === key;
 
@@ -117,10 +115,7 @@ export default function DeliveryStage({ value, onChange }: Props) {
                   </div>
               )}
 
-              {/* '리타겟'은 별도 입력 필드가 없으므로, 레이아웃을 채우기 위한 플레이스홀더 추가 */}
-              {key === 'retarget' && (
-                  <div className="flex-grow"></div>
-              )}
+
             </div>
           );
         })}

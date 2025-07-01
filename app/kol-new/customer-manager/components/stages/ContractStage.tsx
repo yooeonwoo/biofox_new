@@ -57,6 +57,7 @@ export default function ContractStage({ value, onChange }: Props) {
     const amountValue = (current as any)[`${key}Amount`];
     const reasonValue = (current as any)[`${key}Reason`];
     const adValue = (current as any)[`${key}Ad`];
+    const retargetValue = (current as any)[`${key}Retarget`];
     
     const isActive = current.type === key;
 
@@ -121,6 +122,14 @@ export default function ContractStage({ value, onChange }: Props) {
                   onCheckedChange={(c) => setField(`${key}Ad`, !!c)}
                 />
                 <label htmlFor={`ad-add-${key}`} className="text-xs font-normal whitespace-nowrap">광고</label>
+                
+                {/* ▶️ 새 '리타겟' 체크박스 */}
+                <Checkbox
+                  id={`retarget-${key}`}
+                  checked={retargetValue}
+                  onCheckedChange={(c) => setField(`${key}Retarget`, !!c)}
+                />
+                <label htmlFor={`retarget-${key}`} className="text-xs font-normal whitespace-nowrap">리타겟</label>
               </div>
             </div>
           )}
