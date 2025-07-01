@@ -129,7 +129,7 @@ export default function GrowthStage({ value, onChange }: Props) {
 
         {/* 본인 임상 */}
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium">👤 본인</span>
+          <span className="text-xs font-medium">👤 본인&nbsp;(10회)</span>
           <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
         <div className="relative h-6 w-full bg-gray-200 rounded-full cursor-pointer" onClick={(e) => {
@@ -148,7 +148,7 @@ export default function GrowthStage({ value, onChange }: Props) {
 
         {/* 고객 임상 */}
         <div className="flex justify-between items-center mt-4 mb-2">
-          <span className="text-sm font-medium">👥 고객&nbsp;(3회&nbsp;10명)</span>
+          <span className="text-xs font-medium">👥 고객&nbsp;(3회&nbsp;10명)</span>
           <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
         <CustomerMiniProgress 
