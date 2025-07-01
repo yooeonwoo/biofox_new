@@ -90,7 +90,7 @@ export default function CustomerClinicalUploadPage() {
 
   return (
     <div className="space-y-6">
-      <main ref={mainContentRef} className="mx-auto w-full md:max-w-2xl">
+      <main ref={mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
         {/* 뒤로가기 헤더 - 고정 */}
         <PageHeader
           onAddCustomer={handleAddCustomer}
@@ -99,7 +99,7 @@ export default function CustomerClinicalUploadPage() {
 
         {/* 기존 케이스들 */}
         <LayoutGroup>
-          <div className="space-y-5 p-4 md:px-0 md:py-6">
+          <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
             <AnimatePresence mode="popLayout">
               {cases.length > 0 ? (
                 cases.map((case_, index) => {

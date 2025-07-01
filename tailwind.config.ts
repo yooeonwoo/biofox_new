@@ -18,6 +18,16 @@ const config = {
         "2xl": "1400px",
       },
     },
+    screens: {
+      xs:  '320px',   // iPhone SE
+      xxs: '350px',   // 소형 안드로이드
+      xm:  '375px',   // iPhone 12 mini / 13 mini
+      sm:  '640px',
+      md:  '768px',
+      lg:  '1024px',
+      xl:  '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",

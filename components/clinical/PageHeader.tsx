@@ -12,15 +12,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   hasUnsavedNewCustomer,
 }) => {
   return (
-    <div className="sticky top-0 z-10 border-b bg-white shadow-sm -mt-4 md:-mt-6">
+    <div className="sticky top-0 z-10 border-b bg-white shadow-sm -mt-3 xs:-mt-4 md:-mt-6">
       {/* 카드와 동일한 max-width로 제한 */}
-      <div className="mx-auto w-full md:max-w-2xl flex h-14 items-center gap-4 px-4 md:px-0">
+      <div className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl flex h-12 xs:h-14 items-center gap-3 xs:gap-4 px-3 xs:px-4 md:px-0">
         {/* 뒤로가기 버튼 */}
         <div>
-          <Button variant="default" size="sm" asChild>
+          <Button variant="default" size="sm" asChild className="h-8 px-3 xs:h-9 xs:px-4">
             <Link href="/kol-new/clinical-photos">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              뒤로가기
+              <ArrowLeft className="mr-1 xs:mr-2 h-3 xs:h-4 w-3 xs:w-4" />
+              <span className="text-xs xs:text-sm">뒤로가기</span>
             </Link>
           </Button>
         </div>
@@ -33,11 +33,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <div className="flex flex-col items-center gap-1">
             <Button 
               onClick={onAddCustomer}
-              className="legacy-btn flex items-center gap-2"
+              className="legacy-btn flex items-center gap-1 xs:gap-2 h-8 px-3 xs:h-9 xs:px-4 text-xs xs:text-sm"
               size="sm"
               disabled={hasUnsavedNewCustomer}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3 xs:h-4 w-3 xs:w-4" />
               새 고객 추가
             </Button>
             {hasUnsavedNewCustomer && (

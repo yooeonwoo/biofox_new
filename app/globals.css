@@ -108,3 +108,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* mobile safari overscroll 방지 */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}

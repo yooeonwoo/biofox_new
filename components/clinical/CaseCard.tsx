@@ -149,7 +149,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
             {/* 첫 번째 줄: 고객이름 + 동의/미동의 + 진행중/완료 */}
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="h-9 w-9 bg-biofox-blue-violet text-white rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm transform hover:scale-105 transition-transform">
+                <div className="h-6 w-6 xs:h-7 xs:w-7 sm:h-9 sm:w-9 bg-biofox-blue-violet text-white rounded-lg flex items-center justify-center text-[11px] xs:text-xs sm:text-sm font-bold flex-shrink-0 shadow-sm transform hover:scale-105 transition-transform">
                   {totalCases - index}
                 </div>
                 <span className="text-lg font-medium text-gray-800 truncate">{case_.customerName || '새 고객'}</span>
@@ -355,7 +355,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                         age: e.target.value ? parseInt(e.target.value) : undefined 
                       })}
                       placeholder="나이"
-                      className="flex-1 text-xs h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
+                      className="flex-1 text-xs h-8 xs:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                     />
                   </div>
                   
@@ -369,7 +369,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                       onChange={(e) => 
                         handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { date: e.target.value })
                       }
-                      className="flex-1 text-xs h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
+                      className="flex-1 text-xs h-8 xs:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
                     />
                   </div>
                 </div>
