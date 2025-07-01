@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Home, Store, Users, BarChart3, Bell, ShoppingBag, Camera, X } from "lucide-react";
+import { Home, Store, Users, BarChart3, Bell, ShoppingBag, Camera, X, LayoutDashboard, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FoxLogo } from "@/components/ui/fox-logo";
@@ -27,9 +27,16 @@ export default function KolSidebar({ className, isOpen = false, onClose }: KolSi
 
   const navigation = [
     {
+      name: '홈',
+      href: '/kol-new/home',
+      icon: Home,
+      current: pathname === '/kol-new/home',
+      show: !isTestRole
+    },
+    {
       name: '대시보드',
       href: '/kol-new',
-      icon: Home,
+      icon: LayoutDashboard,
       current: pathname === '/kol-new',
       show: !isTestRole
     },
@@ -53,6 +60,13 @@ export default function KolSidebar({ className, isOpen = false, onClose }: KolSi
       icon: Camera,
       current: pathname.startsWith('/kol-new/clinical-photos'),
       show: true
+    },
+    {
+      name: '영업일지',
+      href: '/kol-new/sales-journal',
+      icon: FileText,
+      current: pathname.startsWith('/kol-new/sales-journal'),
+      show: !isTestRole
     },
     {
       name: '알림',
