@@ -7,11 +7,15 @@ import { Input } from "@/components/ui/input";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomerMiniProgress from "@/components/CustomerMiniProgress";
 import PersonalProgressDots from "./PersonalProgressDots";
+import ClinicalLearningTabs, { getClinicalLearningStarState } from "@/components/ClinicalLearningTabs";
 import { GrowthStageValue } from "@/lib/types/customer";
+import { cn } from "@/lib/utils";
 
 interface Props {
   value: GrowthStageValue | undefined;
   onChange: (val: GrowthStageValue | undefined) => void;
+  clinicalLearning?: { clinical?: boolean; learning?: boolean };
+  onClinicalLearningChange?: (key: "clinical" | "learning") => void;
 }
 
 const LEARNING_MAX: Record<string, number> = {
@@ -38,7 +42,7 @@ function defaultValue(): GrowthStageValue {
 /**
  * GrowthSection – KOL의 GrowthStage를 그대로 사용하되 Shop 환경에 맞게 조정.
  */
-export default function GrowthSection({ value, onChange }: Props) {
+export default function GrowthSection({ value, onChange, clinicalLearning, onClinicalLearningChange }: Props) {
   const current = { ...defaultValue(), ...(value || {}) };
 
   const setPersonalLevel = (lvl: number) => {
@@ -131,7 +135,7 @@ export default function GrowthSection({ value, onChange }: Props) {
 
         {/* 본인 임상 */}
         <div className="flex justify-between items-center mb-2">
-          <span className="text-xs font-medium">👤 본인&nbsp;(10회)</span>
+          <span className="text-xs font-medium">본인&nbsp;(10회)</span>
           <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
         <PersonalProgressDots 
@@ -141,7 +145,7 @@ export default function GrowthSection({ value, onChange }: Props) {
 
         {/* 고객 임상 */}
         <div className="flex justify-between items-center mt-4 mb-2">
-          <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium">👥 고객&nbsp;(3회&nbsp;10명)</span>
+          <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium">고객&nbsp;(3회&nbsp;10명)</span>
           <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
         <CustomerMiniProgress 
@@ -187,6 +191,45 @@ export default function GrowthSection({ value, onChange }: Props) {
           ))}
         </div>
       </div>
+
+      {/* 임상 & 학습 평가 */}
+      {clinicalLearning && onClinicalLearningChange && (
+        <div className="p-3 border rounded-md bg-muted/20">
+          {/* 타이틀과 통합 별 2개를 같은 줄에 배치 */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <span
+                className={cn(
+                  "text-[22px] transition-opacity duration-200",
+                  getClinicalLearningStarState(clinicalLearning)
+                    ? "text-yellow-400 opacity-100"
+                    : "text-gray-300 opacity-40"
+                )}
+                aria-label="임상 학습 평가 완료 여부"
+              >
+                🌟
+              </span>
+              <span
+                className={cn(
+                  "text-[22px] transition-opacity duration-200",
+                  getClinicalLearningStarState(clinicalLearning)
+                    ? "text-yellow-400 opacity-100"
+                    : "text-gray-300 opacity-40"
+                )}
+                aria-label="임상 학습 평가 완료 여부"
+              >
+                🌟
+              </span>
+            </div>
+            <div className="text-sm font-medium text-gray-700">임상 & 학습</div>
+          </div>
+          <ClinicalLearningTabs
+            value={clinicalLearning}
+            onToggle={onClinicalLearningChange}
+            hideIntegratedStar={true}
+          />
+        </div>
+      )}
 
     </div>
   );

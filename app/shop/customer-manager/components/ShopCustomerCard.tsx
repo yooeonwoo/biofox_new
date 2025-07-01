@@ -46,6 +46,12 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
     'standard-protocol': false,
     'expert-course': false,
   });
+  
+  // 임상 & 학습 평가용 상태 추가
+  const [clinicalLearning, setClinicalLearning] = useState<{ clinical?: boolean; learning?: boolean }>({
+    clinical: false,
+    learning: false,
+  });
   const [sectionMemos, setSectionMemos] = useState<Record<string, string>>({});
   const [openMemoSections, setOpenMemoSections] = useState<Record<string, boolean>>({});
   const [selfAssess, setSelfAssess] = useState<SelfAssessmentValue>({});
@@ -81,6 +87,13 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
   
   const updateSelfAssess = (k: keyof SelfAssessmentValue, v: boolean) =>
     setSelfAssess((prev) => ({ ...prev, [k]: v }));
+
+  const handleClinicalLearningChange = (key: "clinical" | "learning") => {
+    setClinicalLearning(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
 
   const getMemoBackgroundColor = (sectionId: string) => {
     const colorMap: Record<string, string> = {
@@ -154,6 +167,8 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
             <GrowthSection 
                 value={stageData.growth}
                 onChange={(v) => setStageData((p) => ({ ...p, growth: v || { clinicalProgress: { personal: 0, customers: [] }, learningProgress: {}, evaluationScores: {}, salesData: [] } }))}
+                clinicalLearning={clinicalLearning}
+                onClinicalLearningChange={handleClinicalLearningChange}
             />
         </CustomerSectionWrapper>
       </div>
