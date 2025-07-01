@@ -5,8 +5,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "본사 교육" };
-
 export default function HQTrainingLayout({
   children,
 }: {
