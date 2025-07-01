@@ -5,14 +5,12 @@ import Link from "next/link";
 
 interface PageHeaderProps {
   backPath: string;
-  journalPath: string;
   onAddCustomer: () => void;
   isAdding: boolean;
 }
 
 export default function PageHeader({
   backPath,
-  journalPath,
   onAddCustomer,
   isAdding,
 }: PageHeaderProps) {
@@ -48,17 +46,7 @@ export default function PageHeader({
           )}
         </div>
 
-        {/* 영업일지 버튼 */}
-        <Button 
-          variant="outline" 
-          size="sm" 
-          asChild 
-          className="h-8 xs:h-9 px-3 xs:px-4 text-xs xs:text-sm font-medium bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 transition-all duration-200 flex-shrink-0"
-        >
-          <Link href={journalPath}>
-            영업일지
-          </Link>
-        </Button>
+
       </div>
     </div>
   );

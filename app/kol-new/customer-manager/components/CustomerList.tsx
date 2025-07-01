@@ -82,7 +82,6 @@ export default function CustomerList({ initialData, kolId }: Props) {
     <div>
       <PageHeader 
         backPath="/kol-new"
-        journalPath="/kol-new/sales-journal"
         onAddCustomer={handleAddCustomer}
         isAdding={isAdding}
       />
