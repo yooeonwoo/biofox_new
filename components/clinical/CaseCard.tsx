@@ -434,7 +434,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                   
                   return (
                     <label key={product.value} className={`
-                      flex items-center space-x-1 p-1.5 rounded-lg text-xs
+                      flex items-start space-x-1 p-1.5 rounded-lg text-xs
                       border border-transparent cursor-pointer
                       hover:bg-soksok-light-blue/20
                       transition-all duration-150
@@ -493,9 +493,9 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                             ));
                           }
                         }}
-                        className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
+                        className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet flex-shrink-0 mt-0.5"
                       />
-                      <span className="text-[10px] xs:text-xs leading-tight">{product.label}</span>
+                      <span className="text-[10px] xs:text-xs leading-tight break-words min-w-0">{product.label}</span>
                     </label>
                   );
                 })}
@@ -526,7 +526,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                   
                   return (
                     <label key={skinType.value} className={`
-                      flex items-center space-x-1 p-1.5 rounded-lg text-xs
+                      flex items-start space-x-1 p-1.5 rounded-lg text-xs
                       border border-transparent cursor-pointer
                       hover:bg-soksok-light-blue/20
                       transition-all duration-150
@@ -587,9 +587,9 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                             ));
                           }
                         }}
-                        className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet"
+                        className="data-[state=checked]:bg-biofox-blue-violet data-[state=checked]:border-biofox-blue-violet flex-shrink-0 mt-0.5"
                       />
-                      <span className="text-[10px] xs:text-xs leading-tight">{skinType.label}</span>
+                      <span className="text-[10px] xs:text-xs leading-tight break-words min-w-0">{skinType.label}</span>
                     </label>
                   );
                 })}
