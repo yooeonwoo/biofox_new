@@ -145,55 +145,27 @@ export const CaseCard: React.FC<CaseCardProps> = ({
         
         {/* 카드 내용 */}
         <div className="relative" style={{ zIndex: 1 }}>
-          <CardHeader className="pb-4 bg-gray-50/30 rounded-t-xl">
-            {/* 첫 번째 줄: 고객이름 + 동의/미동의 + 진행중/완료 */}
+          <CardHeader className="pb-3 xs:pb-4 bg-gray-50/30 rounded-t-xl">
+            {/* 첫 번째 줄: 번호 + 고객이름 + 삭제 버튼 */}
             <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex flex-wrap items-center gap-x-1 gap-y-1 flex-1 min-w-0">
-                <div className="h-6 w-6 xs:h-7 xs:w-7 sm:h-9 sm:w-9 bg-biofox-blue-violet text-white rounded-lg flex items-center justify-center text-[11px] xs:text-xs sm:text-sm font-bold flex-shrink-0 shadow-sm transform hover:scale-105 transition-transform">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 bg-biofox-blue-violet text-white rounded-lg flex items-center justify-center text-[10px] xs:text-xs sm:text-sm font-bold flex-shrink-0 shadow-sm">
                   {totalCases - index}
                 </div>
-                <span className="text-lg font-medium text-gray-800 truncate">{case_.customerName || '새 고객'}</span>
+                <span className="text-sm xs:text-base sm:text-lg font-medium text-gray-800 truncate">
+                  {case_.customerName || '새 고객'}
+                </span>
                 {/* 완료 상태인데 동의서가 없으면 경고 */}
                 {case_.status === 'completed' && case_.consentReceived && !case_.consentImageUrl && (
-                  <span className="text-orange-500 flex-shrink-0">⚠️</span>
+                  <span className="text-orange-500 flex-shrink-0 text-sm">⚠️</span>
                 )}
               </div>
               
-              {/* 동의/미동의 탭 */}
-              <div className="flex bg-gray-100/70 p-1 rounded-lg flex-shrink-0">
-                <button
-                  className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
-                    case_.consentReceived 
-                      ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                  onClick={() => handleConsentChange(case_.id, true)}
-                >
-                  동의
-                </button>
-                <button
-                  className={`px-2 py-1 text-xs font-medium rounded-md transition-all duration-150 ${
-                    !case_.consentReceived 
-                      ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                  onClick={() => handleConsentChange(case_.id, false)}
-                >
-                  미동의
-                </button>
-              </div>
-
-              {/* 진행중/완료 탭 */}
-              <CaseStatusTabs
-                status={case_.status as 'active' | 'completed'}
-                onStatusChange={(status) => handleCaseStatusChange(case_.id, status)}
-              />
-
               {/* 삭제 버튼 */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="icon" variant="ghost" className="text-gray-400 hover:text-red-600" aria-label="케이스 삭제">
-                    <Trash2 className="h-4 w-4" />
+                  <Button size="icon" variant="ghost" className="text-gray-400 hover:text-red-600 h-7 w-7 xs:h-8 xs:w-8" aria-label="케이스 삭제">
+                    <Trash2 className="h-3 w-3 xs:h-4 xs:w-4" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="sm:max-w-sm bg-white">
@@ -211,6 +183,57 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+            </div>
+
+            {/* 두 번째 줄: 동의/미동의 탭 + 진행중/완료 탭 */}
+            <div className="flex items-center justify-start xs:justify-center gap-2 xs:gap-3">
+              {/* 동의/미동의 탭 */}
+              <div className="flex bg-gray-100/70 p-0.5 xs:p-1 rounded-lg">
+                <button
+                  className={`px-1.5 xs:px-2 py-1 text-[10px] xs:text-xs font-medium rounded-md transition-all duration-150 ${
+                    case_.consentReceived 
+                      ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  onClick={() => handleConsentChange(case_.id, true)}
+                >
+                  동의
+                </button>
+                <button
+                  className={`px-1.5 xs:px-2 py-1 text-[10px] xs:text-xs font-medium rounded-md transition-all duration-150 ${
+                    !case_.consentReceived 
+                      ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  onClick={() => handleConsentChange(case_.id, false)}
+                >
+                  미동의
+                </button>
+              </div>
+
+              {/* 진행중/완료 탭 */}
+              <div className="flex bg-gray-100/70 p-0.5 xs:p-1 rounded-lg">
+                <button
+                  className={`px-1.5 xs:px-2 py-1 text-[10px] xs:text-xs font-medium rounded-md transition-all duration-150 ${
+                    case_.status === 'active'
+                      ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  onClick={() => handleCaseStatusChange(case_.id, 'active')}
+                >
+                  진행중
+                </button>
+                <button
+                  className={`px-1.5 xs:px-2 py-1 text-[10px] xs:text-xs font-medium rounded-md transition-all duration-150 ${
+                    case_.status === 'completed'
+                      ? 'bg-white text-biofox-dark-blue-violet shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  onClick={() => handleCaseStatusChange(case_.id, 'completed')}
+                >
+                  완료
+                </button>
+              </div>
             </div>
           </CardHeader>
           
