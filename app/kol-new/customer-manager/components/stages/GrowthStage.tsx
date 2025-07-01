@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import CustomerMiniProgress from "@/components/CustomerMiniProgress";
+import PersonalProgressDots from "./PersonalProgressDots";
 
 export interface GrowthStageValue {
   clinicalProgress?: {
@@ -132,19 +133,10 @@ export default function GrowthStage({ value, onChange }: Props) {
           <span className="text-xs font-medium">👤 본인&nbsp;(10회)</span>
           <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
-        <div className="relative h-6 w-full bg-gray-200 rounded-full cursor-pointer" onClick={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const clickX = e.clientX - rect.left;
-          const newLevel = Math.round((clickX / rect.width) * 10);
-          setPersonalLevel(Math.min(10, Math.max(0, newLevel)));
-        }}>
-          <div className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all" style={{width: `${(current.clinicalProgress?.personal || 0) * 10}%`}}></div>
-          <div className="absolute inset-0 flex justify-between items-center px-2">
-            {Array.from({length: 10}).map((_, i) => (
-              <span key={i} className="text-xs text-white mix-blend-difference">{i+1}</span>
-            ))}
-          </div>
-        </div>
+        <PersonalProgressDots 
+          finished={current.clinicalProgress?.personal || 0}
+          onProgressClick={setPersonalLevel}
+        />
 
         {/* 고객 임상 */}
         <div className="flex justify-between items-center mt-4 mb-2">

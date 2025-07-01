@@ -11,7 +11,7 @@ export default function CustomerMiniProgress({ customers, onProgressClick }: Pro
       {customers.map(({ id, completed }) => (
         <div key={id} className="flex flex-col items-center gap-1 min-w-0">
           {/* 번호 뱃지 */}
-          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full bg-gray-300/70 text-gray-600 flex items-center justify-center text-[11px] font-medium">
             {id}
           </div>
 
@@ -22,7 +22,7 @@ export default function CustomerMiniProgress({ customers, onProgressClick }: Pro
                 key={step}
                 className={cn(
                   "w-1.5 h-1.5 rounded-full transition-colors",
-                  step <= completed ? "bg-blue-500" : "bg-gray-300/70",
+                  step <= completed ? "bg-blue-600" : "bg-gray-300/70",
                   onProgressClick && "cursor-pointer hover:scale-110"
                 )}
                 onClick={() => onProgressClick?.(id - 1, step - 1)}
