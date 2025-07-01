@@ -22,9 +22,12 @@ export default function StarTabs({ value, onToggle }: Props) {
         {/* 통합 별 – 왼쪽에 배치 */}
         <span
           className={cn(
-            "text-[22px] flex-shrink-0",
-            allDone ? "text-yellow-400" : "text-gray-300"
+            "text-[22px] flex-shrink-0 transition-opacity duration-200",
+            allDone
+              ? "text-yellow-400 opacity-100"
+              : "text-gray-300 opacity-40"
           )}
+          aria-label="전체 평가 완료 여부"
         >
           🌟
         </span>
