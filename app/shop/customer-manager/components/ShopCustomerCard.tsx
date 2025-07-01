@@ -9,6 +9,8 @@ import SelfAssessmentSection from './sections/SelfAssessmentSection';
 import TrainingTabs, { getTrainingStarState } from './sections/TrainingTabs';
 import GrowthSection from './sections/GrowthSection';
 import ExpertSection from './sections/ExpertSection';
+import ClinicalLearningTabs, { getClinicalLearningStarState } from '@/components/ClinicalLearningTabs';
+import { ClipboardCheck } from "lucide-react";
 import { cn } from '@/lib/utils';
 
 interface CustomerCardProps {
@@ -167,10 +169,71 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
             <GrowthSection 
                 value={stageData.growth}
                 onChange={(v) => setStageData((p) => ({ ...p, growth: v || { clinicalProgress: { personal: 0, customers: [] }, learningProgress: {}, evaluationScores: {}, salesData: [] } }))}
-                clinicalLearning={clinicalLearning}
-                onClinicalLearningChange={handleClinicalLearningChange}
             />
         </CustomerSectionWrapper>
+      </div>
+
+      {/* Block 2.5: Clinical & Learning */}
+      <div className="relative mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+        <div className="space-y-4">
+          {/* 임상 & 학습 평가 */}
+          <div className="p-3 border rounded-md bg-muted/20">
+            {/* 타이틀과 통합 별 2개를 같은 줄에 배치 */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getClinicalLearningStarState(clinicalLearning)
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="임상 학습 평가 완료 여부"
+                >
+                  🌟
+                </span>
+                <span
+                  className={cn(
+                    "text-[22px] transition-opacity duration-200",
+                    getClinicalLearningStarState(clinicalLearning)
+                      ? "text-yellow-400 opacity-100"
+                      : "text-gray-300 opacity-40"
+                  )}
+                  aria-label="임상 학습 평가 완료 여부"
+                >
+                  🌟
+                </span>
+              </div>
+              <div className="text-sm font-medium text-gray-700">임상 & 학습</div>
+            </div>
+            <ClinicalLearningTabs
+              value={clinicalLearning}
+              onToggle={handleClinicalLearningChange}
+              hideIntegratedStar={true}
+            />
+            
+            {/* 안내문구 */}
+            <div
+              className="mt-3 flex items-center gap-2 px-2 py-1 bg-blue-50/60
+                         border border-blue-100 rounded-md"
+            >
+              {/* Icon */}
+              <ClipboardCheck
+                className="flex-shrink-0 size-4 text-blue-600 drop-shadow-sm"
+                aria-hidden="true"
+              />
+
+              {/* Text */}
+              <p
+                className="text-[9px] xs:text-[10px] sm:text-[11px] font-medium text-blue-800 leading-tight
+                           whitespace-pre-wrap"
+              >
+                전문가 과정을 이수하면,<br className="inline sm:hidden" />
+                광고에 노출시켜드립니다.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Block 3: Expert Course */}
