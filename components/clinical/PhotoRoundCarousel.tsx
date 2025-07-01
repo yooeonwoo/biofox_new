@@ -359,12 +359,12 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
 
       {/* 전체 컨테이너 - 좌우 버튼과 슬롯들 */}
       <div className="relative flex gap-2 items-start">
-        {/* 왼쪽 회차 이동 버튼 - 절대 위치로 겹치게 */}
+        {/* 왼쪽 회차 이동 버튼 - 더 바깥쪽 + 호버 효과 */}
         {canGoPrev && (
           <Button
             variant="default"
             size="sm"
-            className="legacy-btn absolute left-0 top-1/2 transform -translate-y-1/2 z-20 shadow-xl hover:scale-110 h-8 w-8 p-0"
+            className="legacy-btn absolute -left-3 xs:-left-4 sm:-left-5 top-1/2 transform -translate-y-1/2 z-20 shadow-xl hover:scale-110 h-8 w-8 p-0 opacity-30 hover:opacity-100 transition-all duration-300"
             onClick={goToPrevRound}
             disabled={uploading}
           >
@@ -492,12 +492,12 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
           )}
         </div>
 
-        {/* 오른쪽 회차 이동 버튼 - 절대 위치로 겹치게 */}
+        {/* 오른쪽 회차 이동 버튼 - 더 바깥쪽 + 호버 효과 */}
         {canGoNext && (
           <Button
             variant="default"
             size="sm"
-            className="legacy-btn absolute right-0 top-1/2 transform -translate-y-1/2 z-20 shadow-xl hover:scale-110 h-8 w-8 p-0"
+            className="legacy-btn absolute -right-3 xs:-right-4 sm:-right-5 top-1/2 transform -translate-y-1/2 z-20 shadow-xl hover:scale-110 h-8 w-8 p-0 opacity-30 hover:opacity-100 transition-all duration-300"
             onClick={goToNextRound}
             disabled={uploading}
           >
