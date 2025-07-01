@@ -156,6 +156,7 @@ export default function GrowthStage({ value, onChange }: Props) {
             id: i + 1,
             completed: (current.clinicalProgress?.customers?.[i] || 0) as 0 | 1 | 2 | 3
           }))}
+          onProgressClick={toggleCustomerProgress}
         />
       </div>
 
