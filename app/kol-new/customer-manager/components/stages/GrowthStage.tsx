@@ -206,26 +206,6 @@ export default function GrowthStage({ value, onChange }: Props) {
             </div>
           ))}
         </div>
-        
-        {/* ─── Evaluation guidance banner ─── */}
-        <div
-          className="mt-3 flex items-center gap-2 px-2 py-1 bg-blue-50/60
-                     border border-blue-100 rounded-md"
-        >
-          {/* Icon */}
-          <ClipboardCheck
-            className="flex-shrink-0 size-4 text-blue-600 drop-shadow-sm"
-            aria-hidden="true"
-          />
-
-          {/* Text */}
-          <p
-            className="text-[9px] xs:text-[10px] sm:text-[11px] font-medium text-blue-800 leading-tight
-                       whitespace-pre-wrap"
-          >
-            전문가 과정을 들을 수 있게끔 권유하세요.
-          </p>
-        </div>
       </div>
 
 

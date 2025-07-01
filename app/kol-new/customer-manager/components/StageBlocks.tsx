@@ -4,7 +4,7 @@ import { StageData } from "@/lib/types/customer";
 import { StageWrapper, InflowStage, ContractStage, DeliveryStage, EducationNotesStage, GrowthStage, ExpertStage } from "./stages";
 // 아직 교체되지 않은 스테이지는 기존 컴포넌트 사용
 import React from "react";
-import { Star } from "lucide-react";
+import { Star, ClipboardCheck } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
@@ -287,6 +287,26 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
               })}
               hideIntegratedStar={true}
             />
+            
+            {/* ─── Expert course guidance banner ─── */}
+            <div
+              className="mt-3 flex items-center gap-2 px-2 py-1 bg-blue-50/60
+                         border border-blue-100 rounded-md"
+            >
+              {/* Icon */}
+              <ClipboardCheck
+                className="flex-shrink-0 size-4 text-blue-600 drop-shadow-sm"
+                aria-hidden="true"
+              />
+
+              {/* Text */}
+              <p
+                className="text-[9px] xs:text-[10px] sm:text-[11px] font-medium text-blue-800 leading-tight
+                           whitespace-pre-wrap"
+              >
+                전문가 과정을 들을 수 있게끔 권유하세요.
+              </p>
+            </div>
           </div>
         </SectionBlock>
       </div>
