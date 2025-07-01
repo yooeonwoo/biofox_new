@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { useUploadPhoto } from '@/hooks/useClinicalCases';
 import { useCaseSerialQueues } from '@/hooks/useSerialQueue';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // 가이드 이미지 경로를 웹 호스팅 링크로 정의
 const frontGuideImage = 'https://i.ibb.co/8gmSndQC/front-guide.png';
@@ -44,6 +45,17 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{ roundDay: number; angle: string } | null>(null);
+  
+  // 회차 변경 애니메이션 상태
+  const [roundChangeAnimation, setRoundChangeAnimation] = useState<{
+    show: boolean;
+    roundNumber: number;
+    flashBackground: boolean;
+  }>({
+    show: false,
+    roundNumber: 1,
+    flashBackground: false
+  });
 
   // 회차별로 사진 그룹화 및 동적 회차 생성
   const photosByRound = React.useMemo(() => {
@@ -246,22 +258,78 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
     ? currentRound < completedRounds  // 완료 상태: 완료된 회차까지만
     : true;                          // 진행 상태: 무제한
 
+  // 회차 변경 애니메이션 트리거 함수
+  const triggerRoundChangeAnimation = (roundNumber: number) => {
+    setRoundChangeAnimation({
+      show: true,
+      roundNumber,
+      flashBackground: true
+    });
+
+    // 1.5초 후 애니메이션 숨기기
+    setTimeout(() => {
+      setRoundChangeAnimation(prev => ({
+        ...prev,
+        show: false,
+        flashBackground: false
+      }));
+    }, 1500);
+  };
+
   const goToPrevRound = () => {
     const newRound = Math.max(1, currentRound - 1);
     setCurrentRound(newRound);
     onRoundChange?.(newRound);
+    triggerRoundChangeAnimation(newRound);
   };
   
   const goToNextRound = () => {
     const newRound = currentRound + 1;
     setCurrentRound(newRound);
     onRoundChange?.(newRound);
+    triggerRoundChangeAnimation(newRound);
   };
 
   const nextSlot = !isCompleted ? getNextSlot() : null;
 
   return (
-    <div className="border-2 border-gray-200 rounded-lg p-2 bg-gray-50/50">
+    <div className={`border-2 border-gray-200 rounded-lg p-2 bg-gray-50/50 relative transition-all duration-300 ${
+      roundChangeAnimation.flashBackground ? 'bg-blue-100/80 border-blue-300' : ''
+    }`}>
+      {/* 회차 변경 애니메이션 오버레이 */}
+      <AnimatePresence>
+        {roundChangeAnimation.show && (
+                     <motion.div
+             initial={{ opacity: 0, scale: 0 }}
+             animate={{ 
+               opacity: [0, 1, 1, 0],
+               scale: [0, 1.2, 1, 1]
+             }}
+             exit={{ opacity: 0, scale: 0.8 }}
+             transition={{ 
+               duration: 1.5,
+               times: [0, 0.2, 0.8, 1],
+               ease: "easeOut"
+             }}
+             style={{
+               position: 'absolute',
+               inset: 0,
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               zIndex: 50,
+               pointerEvents: 'none'
+             }}
+           >
+            <div className="bg-biofox-blue-violet text-white px-6 py-3 rounded-xl shadow-2xl">
+              <span className="text-xl font-bold">
+                {getRoundName(roundChangeAnimation.roundNumber)}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 숨겨진 파일 입력 */}
       <input
         ref={fileInputRef}
