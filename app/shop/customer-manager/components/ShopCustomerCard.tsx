@@ -150,7 +150,7 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
       
       {/* Block 2: Growth */}
       <div className="relative mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-        <CustomerSectionWrapper number="3" title="성장" sectionId="growth" memo={sectionMemos['growth'] || ''} isMemoOpen={openMemoSections['growth'] || false} onMemoToggle={() => handleMemoToggle('growth')} onMemoChange={(v) => handleMemoChange('growth', v)} getMemoBackgroundColor={getMemoBackgroundColor}>
+        <CustomerSectionWrapper number="2" title="성장" sectionId="growth" memo={sectionMemos['growth'] || ''} isMemoOpen={openMemoSections['growth'] || false} onMemoToggle={() => handleMemoToggle('growth')} onMemoChange={(v) => handleMemoChange('growth', v)} getMemoBackgroundColor={getMemoBackgroundColor}>
             <GrowthSection 
                 value={stageData.growth}
                 onChange={(v) => setStageData((p) => ({ ...p, growth: v || { clinicalProgress: { personal: 0, customers: [] }, learningProgress: {}, evaluationScores: {}, salesData: [] } }))}
@@ -160,7 +160,7 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
 
       {/* Block 3: Expert Course */}
       <div className="relative mb-6 p-4 rounded-xl bg-violet-50 border border-violet-200">
-        <CustomerSectionWrapper number="4" title="전문가과정" sectionId="expert" memo={sectionMemos['expert'] || ''} isMemoOpen={openMemoSections['expert'] || false} onMemoToggle={() => handleMemoToggle('expert')} onMemoChange={(v) => handleMemoChange('expert', v)} getMemoBackgroundColor={getMemoBackgroundColor}>
+        <CustomerSectionWrapper number="3" title="전문가과정" sectionId="expert" memo={sectionMemos['expert'] || ''} isMemoOpen={openMemoSections['expert'] || false} onMemoToggle={() => handleMemoToggle('expert')} onMemoChange={(v) => handleMemoChange('expert', v)} getMemoBackgroundColor={getMemoBackgroundColor}>
             <ExpertSection
                 value={stageData.expert}
                 onChange={(v) => setStageData((p) => ({ ...p, expert: v || { topic: undefined, memo: undefined } }))}
