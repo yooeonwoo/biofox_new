@@ -7,7 +7,7 @@ export interface EducationNotesStageValue {
   understanding?: "상" | "중" | "하";
   cleanliness?: "상" | "중" | "하";
   setting?: "상" | "중" | "하";
-  personality?: string;
+  personality?: string[];        // 다중 선택 배열
   memo?: string;
 }
 
@@ -26,9 +26,15 @@ export default function EducationNotesStage({ value, onChange }: Props) {
 
   const setField = (
     field: keyof EducationNotesStageValue,
-    val: string | undefined
+    val: any
   ) => {
-    // If clicking the same value again, deselect it
+    // For personality field (array), set directly without deselecting logic
+    if (field === "personality") {
+      onChange({ ...current, [field]: val.length > 0 ? val : undefined });
+      return;
+    }
+    
+    // For other fields, keep original deselecting logic
     const deselecting = current[field] === val;
     onChange({ ...current, [field]: deselecting ? undefined : val });
   };
@@ -71,23 +77,34 @@ export default function EducationNotesStage({ value, onChange }: Props) {
         ))}
       </div>
 
-      {/* MBTI 선택 */}
+      {/* 성향 선택 */}
       <div className="p-3 border rounded-md bg-muted/20">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {["ENFP", "ENTP", "ISTJ", "INFP"].map((mbti) => (
-            <Button
-              key={mbti}
-              variant={current.personality === mbti ? 'default' : 'outline'}
-              size="sm"
-              className={cn(
-                "flex-1 text-xs h-8",
-                current.personality === mbti && "bg-blue-600 text-white border-blue-600"
-              )}
-              onClick={() => setField("personality", mbti)}
-            >
-              {mbti}
-            </Button>
-          ))}
+          {["행동부족형", "학습부족형", "부정형", "긍정형"].map((label) => {
+            const selectedArr = current.personality || [];
+            const isActive = selectedArr.includes(label);
+            const toggle = () =>
+              setField(
+                "personality",
+                isActive
+                  ? selectedArr.filter((v) => v !== label)           // ⬅ 제외
+                  : [...selectedArr, label]                          // ⬅ 추가
+              );
+            return (
+              <Button
+                key={label}
+                variant={isActive ? "default" : "outline"}
+                size="sm"
+                className={cn(
+                  "flex-1 text-xs h-8",
+                  isActive && "bg-blue-600 text-white border-blue-600"
+                )}
+                onClick={toggle}
+              >
+                {label}
+              </Button>
+            );
+          })}
         </div>
       </div>
     </div>
