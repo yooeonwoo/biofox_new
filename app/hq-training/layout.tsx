@@ -11,43 +11,51 @@ export default function HQTrainingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* ───────── Desktop Sidebar ───────── */}
-      <aside className="hidden lg:flex flex-col w-60 bg-white border-r border-gray-200">
-        <Header />
+    <div className="flex h-screen text-gray-800">
+      {/* ── Desktop Sidebar ── */}
+      <aside className="hidden lg:flex flex-col w-60 bg-white border-r shadow-sm">
+        <SidebarHeader />
         <NavLinks />
       </aside>
 
-      {/* ───────── Mobile Sheet (Shadcn) ───────── */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <button className="lg:hidden p-3" aria-label="메뉴 열기">
-            <Menu className="size-6 text-blue-600" />
-          </button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-60 p-0">
-          <SheetTitle className="sr-only">본사 교육 메뉴</SheetTitle>
-          <Header />
-          <NavLinks />
-        </SheetContent>
-      </Sheet>
+      {/* ── Main Column (Header + Content) ── */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* ===== Header Bar ===== */}
+        <header className="h-14 flex items-center gap-3 px-4 border-b bg-white lg:shadow-sm">
+          {/* ☰ mobile trigger */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className="lg:hidden" aria-label="메뉴 열기">
+                <Menu className="size-6 text-blue-600" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-60 p-0">
+              <SheetTitle className="sr-only">본사 교육 메뉴</SheetTitle>
+              <SidebarHeader />
+              <NavLinks />
+            </SheetContent>
+          </Sheet>
 
-      {/* ───────── Main Content ───────── */}
-      <main className="flex-1 overflow-y-auto p-4">{children}</main>
+          <span className="text-base font-semibold text-blue-600">
+            본사 교육
+          </span>
+        </header>
+
+        {/* ===== Page body ===== */}
+        <main className="flex-1 overflow-y-auto p-4 bg-gray-50">{children}</main>
+      </div>
     </div>
   );
 }
 
-/* 공통 헤더(사이드바 상단) */
-function Header() {
+function SidebarHeader() {
   return (
-    <div className="h-16 flex items-center justify-center border-b border-gray-100">
+    <div className="h-14 flex items-center justify-center border-b border-gray-100">
       <span className="text-lg font-bold text-blue-600">본사 교육</span>
     </div>
   );
 }
 
-/* 네비게이션 링크 */
 function NavLinks() {
   const pathname = usePathname();
 
