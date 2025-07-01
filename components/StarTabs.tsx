@@ -17,18 +17,18 @@ export default function StarTabs({ value, onToggle }: Props) {
 
   return (
     <div>
-      {/* 통합 별 – 타이틀 자리를 대체 */}
-      <span
-        className={cn(
-          "text-2xl text-yellow-400 mb-2 block",
-          allDone ? "" : "opacity-40"
-        )}
-      >
-        🌟
-      </span>
-
       {/* 세그먼트 탭 - 한 줄 고정 */}
-      <div className="flex items-center gap-2 py-1 whitespace-nowrap">
+      <div className="flex items-center gap-2 py-[3px] whitespace-nowrap">
+        {/* 통합 별 – 왼쪽에 배치 */}
+        <span
+          className={cn(
+            "text-[22px] flex-shrink-0",
+            allDone ? "text-yellow-400" : "text-gray-300"
+          )}
+        >
+          🌟
+        </span>
+
         {SEG.map(({ key, label, readOnly, active }) => (
           <button
             key={key}
