@@ -1,7 +1,6 @@
 "use client";
 
 import { Customer, CustomerProgress, StageData } from "@/lib/types/customer";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Star, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -26,23 +25,7 @@ interface Props {
   onDelete?: () => void;
 }
 
-function getCompletedCount(stageData: StageData): number {
-  if (!stageData) return 0;
-  return (
-    [
-      stageData.inflow,
-      stageData.contract,
-      stageData.delivery,
-      stageData.educationNotes,
-      stageData.growth,
-      stageData.expert,
-    ].filter(Boolean).length || 0
-  );
-}
-
 export default function CustomerHeader({ customer, progress, cardNumber, basicInfo, onBasicInfoChange, isNew, onDelete }: Props) {
-  const completed = getCompletedCount(progress?.stageData || ({} as StageData));
-  const percent = (completed / 6) * 100;
 
   const setField = (field: string, val: string) => {
     onBasicInfoChange({ ...basicInfo, [field]: val });
@@ -117,8 +100,6 @@ export default function CustomerHeader({ customer, progress, cardNumber, basicIn
         </div>
       </div>
 
-      {/* 진행률 바 */}
-      <Progress value={percent} className="mt-2" />
     </div>
   );
 } 
