@@ -74,8 +74,9 @@ export default function PersonalPage() {
         hasUnsavedNewCustomer={pageState.hasUnsavedPersonalCase}
       />
       
+      {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
       <main ref={pageState.mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
-        {/* 메인 컨텐츠 */}
+        {/* 메인 컨텐츠 - Legacy 반응형 패딩과 간격 적용 */}
         <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
           {/* 케이스가 없을 때 */}
           {pageState.cases.length === 0 && (

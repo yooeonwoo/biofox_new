@@ -77,7 +77,7 @@ export default async function CustomerManagerPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="container mx-auto">
+    <div className="mx-auto w-full px-0">
       <CustomerList initialData={customers ?? []} kolId={kolId} />
     </div>
   );

@@ -88,8 +88,8 @@ export default function CustomerList({ initialData, kolId }: Props) {
       />
       
       {/* 메인 컨테이너 - clinical-photos와 동일한 반응형 레이아웃 */}
-      <main className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
-        <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
+      <main className="mx-auto w-full max-w-none xs:max-w-full sm:max-w-2xl">
+        <div className="space-y-4 xs:space-y-5 p-2 xs:p-3 md:px-0 md:py-6">
           {localCustomers.map((c, idx) => (
             <CustomerCard 
               key={c.id} 

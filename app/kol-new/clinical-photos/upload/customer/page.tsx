@@ -96,9 +96,11 @@ export default function CustomerClinicalUploadPage() {
         hasUnsavedNewCustomer={hasUnsavedNewCustomer}
       />
       
+      {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
       <main ref={mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
         {/* 기존 케이스들 */}
         <LayoutGroup>
+          {/* 메인 컨텐츠 - Legacy 반응형 패딩과 간격 적용 */}
           <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
             <AnimatePresence mode="popLayout">
               {cases.length > 0 ? (
