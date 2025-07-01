@@ -31,7 +31,7 @@ const LEARNING_MAX: Record<string, number> = {
   여드름: 8,
 };
 
-const EVAL_ITEMS = ["모의 테스트", "평가 테스트", "튜터링"] as const;
+const EVAL_ITEMS = ["모의 테스트", "실전 테스트"] as const;
 
 function defaultValue(): GrowthStageValue {
   return {
@@ -177,7 +177,7 @@ export default function GrowthStage({ value, onChange }: Props) {
           <span className="font-medium">평가</span>
           <span className="text-xs">평균: {averageScore}점</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {Object.entries(current.evaluationScores || {}).map(([key, score]) => (
             <div key={key} className="flex-1 min-w-[60px]">
               <div className="text-center mb-1 text-muted-foreground text-[11px]">{key}</div>
