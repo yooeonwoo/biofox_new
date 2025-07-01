@@ -2,26 +2,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-
-export interface EducationNotesStageValue {
-  understanding?: "상" | "중" | "하";
-  cleanliness?: "상" | "중" | "하";
-  setting?: "상" | "중" | "하";
-  personality?: string[];
-
-  /* 교육 완료 후 특이사항 6문항 */
-  q1Level?: "상" | "중" | "하";
-  q1YN?: boolean;
-  q2Level?: "상" | "중" | "하";
-  q2YN?: boolean;
-  q3Level?: "상" | "중" | "하";
-  q3YN?: boolean;
-  q4Level?: "상" | "중" | "하";
-  q4YN?: boolean;
-  q5Level?: "상" | "중" | "하";
-  q6Level?: "상" | "중" | "하";
-  memo?: string;
-}
+import StarTabs from "@/components/StarTabs";
+import { EducationNotesStageValue } from "@/lib/types/customer";
 
 interface Props {
   value: EducationNotesStageValue | undefined;
@@ -169,6 +151,18 @@ export default function EducationNotesStage({ value, onChange }: Props) {
             );
           })}
         </div>
+      </div>
+
+      {/* 별점 평가 시스템 */}
+      <div className="p-3 border rounded-md bg-muted/20">
+        <StarTabs
+          value={{
+            manager: current.starManager,
+            owner: current.starOwner,
+            director: current.starDirector,
+          }}
+          onToggle={() => setField("starManager", !current.starManager)}
+        />
       </div>
     </div>
   );

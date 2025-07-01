@@ -49,6 +49,31 @@ export interface EducationNotesStage {
   date?: string;
 }
 
+export interface EducationNotesStageValue {
+  understanding?: "상" | "중" | "하";
+  cleanliness?: "상" | "중" | "하";
+  setting?: "상" | "중" | "하";
+  personality?: string[];
+
+  /* 교육 완료 후 특이사항 6문항 */
+  q1Level?: "상" | "중" | "하";
+  q1YN?: boolean;
+  q2Level?: "상" | "중" | "하";
+  q2YN?: boolean;
+  q3Level?: "상" | "중" | "하";
+  q3YN?: boolean;
+  q4Level?: "상" | "중" | "하";
+  q4YN?: boolean;
+  q5Level?: "상" | "중" | "하";
+  q6Level?: "상" | "중" | "하";
+  memo?: string;
+
+  /* 별점 평가 시스템 */
+  starManager?: boolean;
+  starOwner?: boolean;
+  starDirector?: boolean;
+}
+
 export interface GrowthStage {
   /** 성장 단계(레벨) 또는 점수 */
   growthLevel?: number;
