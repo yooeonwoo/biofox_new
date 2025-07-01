@@ -108,9 +108,6 @@ export interface DeliveryStageValue {
   installDate?: string;
   installContactName?: string;   // 담당자 이름
   installContactPhone?: string;  // 연락처
-  starManager?: boolean;   // 담당 – 현재 페이지에서 토글
-  starOwner?: boolean;    // 원장님 – 읽기 전용
-  starDirector?: boolean;   // 교육 이사 – 읽기 전용
   memo?: string;
 }
 
