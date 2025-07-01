@@ -102,20 +102,33 @@ export default function EducationNotesStage({ value, onChange }: Props) {
                   })}
                 </div>
 
-                {/* / Y/N 배지 */}
+                {/* Y/N 스위치 탭 (읽기 전용) */}
                 {hasYN && (
-                  <div className="flex items-center gap-1 text-xs">
-                    <span className="text-gray-400">/</span>
-                    <span
+                  <div
+                    className={cn(
+                      "flex text-xs font-medium border rounded-full overflow-hidden",
+                      currentYN === undefined && "opacity-40"
+                    )}
+                    style={{ minWidth: 46 }}   /* 23px × 2 */
+                  >
+                    {/* Y 구역 */}
+                    <div
                       className={cn(
-                        "min-w-[34px] px-2 py-0.5 rounded-full border text-center",
-                        currentYN === true && "bg-green-500 text-white border-green-500",
-                        currentYN === false && "bg-red-500 text-white border-red-500",
-                        currentYN === undefined && "bg-gray-200 text-gray-500 border-gray-300"
+                        "w-1/2 h-6 flex items-center justify-center",
+                        currentYN === true && "bg-blue-600 text-white"
                       )}
                     >
-                      {currentYN === true ? "Y" : currentYN === false ? "N" : "Y/N"}
-                    </span>
+                      Y
+                    </div>
+                    {/* N 구역 */}
+                    <div
+                      className={cn(
+                        "w-1/2 h-6 flex items-center justify-center border-l",
+                        currentYN === false && "bg-blue-600 text-white"
+                      )}
+                    >
+                      N
+                    </div>
                   </div>
                 )}
               </div>
