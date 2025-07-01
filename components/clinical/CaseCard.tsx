@@ -153,11 +153,6 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                   {totalCases - index}
                 </div>
                 <span className="text-lg font-medium text-gray-800 truncate">{case_.customerName || '새 고객'}</span>
-                {isNewCustomer(case_.id) && (
-                  <span className="text-[11px] bg-biofox-lavender/20 text-purple-700 px-[6px] py-[2px] rounded-full border border-biofox-lavender/40 leading-none whitespace-nowrap">
-                    새 고객
-                  </span>
-                )}
                 {/* 완료 상태인데 동의서가 없으면 경고 */}
                 {case_.status === 'completed' && case_.consentReceived && !case_.consentImageUrl && (
                   <span className="text-orange-500 flex-shrink-0">⚠️</span>
@@ -299,83 +294,77 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 xs:grid-cols-2 gap-x-3 gap-y-3">
-                                  {/* 첫 번째 열 */}
-                <div className="space-y-2 xs:space-y-3">
-                  {/* 이름 */}
-                  <div className="flex items-center gap-1">
-                    <Label htmlFor={`name-${case_.id}`} className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">이름</Label>
-                    <Input
-                      id={`name-${case_.id}`}
-                      value={case_.customerInfo.name}
-                      onChange={(e) => handleBasicCustomerInfoUpdate(case_.id, { name: e.target.value })}
-                      onCompositionStart={() => setIsComposing(true)}
-                      onCompositionEnd={(e) => {
-                        setIsComposing(false);
-                        handleBasicCustomerInfoUpdate(case_.id, { name: e.currentTarget.value });
-                      }}
-                      placeholder="고객 이름"
-                      className="flex-1 min-w-0 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
-                    />
-                  </div>
-                  
-                  {/* 성별 */}
-                  <div className="flex items-center gap-1">
-                    <Label className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">성별</Label>
-                    <Select
-                      value={case_.customerInfo.gender || ''}
-                      onValueChange={(value: 'male' | 'female' | 'other') => 
-                        handleBasicCustomerInfoUpdate(case_.id, { gender: value })
-                      }
-                    >
-                      <SelectTrigger className="flex-1 min-w-0 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200">
-                        <SelectValue placeholder="성별" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {SYSTEM_OPTIONS.genders.map((gender) => (
-                          <SelectItem key={gender.value} value={gender.value}>
-                            {gender.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="space-y-3">
+                {/* 이름 */}
+                <div className="flex items-center gap-1">
+                  <Label htmlFor={`name-${case_.id}`} className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">이름</Label>
+                  <Input
+                    id={`name-${case_.id}`}
+                    value={case_.customerInfo.name}
+                    onChange={(e) => handleBasicCustomerInfoUpdate(case_.id, { name: e.target.value })}
+                    onCompositionStart={() => setIsComposing(true)}
+                    onCompositionEnd={(e) => {
+                      setIsComposing(false);
+                      handleBasicCustomerInfoUpdate(case_.id, { name: e.currentTarget.value });
+                    }}
+                    placeholder="고객 이름"
+                    className="flex-1 min-w-0 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
+                  />
                 </div>
                 
-                {/* 두 번째 열 */}
-                <div className="space-y-2 xs:space-y-3">
-                  {/* 나이 */}
-                  <div className="flex items-center">
-                    <Label htmlFor={`age-${case_.id}`} className="text-xs font-medium w-10 shrink-0 text-gray-600">나이</Label>
-                    <Input
-                      id={`age-${case_.id}`}
-                      type="number"
-                      value={case_.customerInfo.age || ''}
-                      onChange={(e) => handleBasicCustomerInfoUpdate(case_.id, { 
-                        age: e.target.value ? parseInt(e.target.value) : undefined 
-                      })}
-                      placeholder="나이"
-                      className="flex-1 text-xs h-8 xs:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
-                    />
-                  </div>
-                  
-                  {/* 날짜 */}
-                  <div className="flex items-center">
-                    <Label htmlFor={`date-${case_.id}`} className="text-xs font-medium w-10 shrink-0 text-gray-600">날짜</Label>
-                    <Input
-                      id={`date-${case_.id}`}
-                      type="date"
-                      value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.date || ''}
-                      onChange={(e) => 
-                        handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { date: e.target.value })
-                      }
-                      className="flex-1 text-xs h-8 xs:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
-                    />
-                  </div>
+                {/* 성별 */}
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">성별</Label>
+                  <Select
+                    value={case_.customerInfo.gender || ''}
+                    onValueChange={(value: 'male' | 'female' | 'other') => 
+                      handleBasicCustomerInfoUpdate(case_.id, { gender: value })
+                    }
+                  >
+                    <SelectTrigger className="flex-1 min-w-0 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200">
+                      <SelectValue placeholder="성별" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {SYSTEM_OPTIONS.genders.map((gender) => (
+                        <SelectItem key={gender.value} value={gender.value}>
+                          {gender.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 
-                {/* 관리 유형 - 전체 너비 */}
-                <div className="flex items-center col-span-2 gap-1">
+                {/* 나이 */}
+                <div className="flex items-center gap-1">
+                  <Label htmlFor={`age-${case_.id}`} className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">나이</Label>
+                  <Input
+                    id={`age-${case_.id}`}
+                    type="number"
+                    value={case_.customerInfo.age || ''}
+                    onChange={(e) => handleBasicCustomerInfoUpdate(case_.id, { 
+                      age: e.target.value ? parseInt(e.target.value) : undefined 
+                    })}
+                    placeholder="나이"
+                    className="flex-1 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
+                  />
+                </div>
+                
+                {/* 날짜 */}
+                <div className="flex items-center gap-1">
+                  <Label htmlFor={`date-${case_.id}`} className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">날짜</Label>
+                  <Input
+                    id={`date-${case_.id}`}
+                    type="date"
+                    value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.date || ''}
+                    onChange={(e) => 
+                      handleRoundCustomerInfoUpdate(case_.id, currentRounds[case_.id] || 1, { date: e.target.value })
+                    }
+                    className="flex-1 text-xs xs:text-sm h-7 xs:h-8 sm:h-9 border-gray-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200"
+                  />
+                </div>
+                
+                {/* 관리 유형 */}
+                <div className="flex items-center gap-1">
                   <Label className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">관리유형</Label>
                   <Select
                     value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.treatmentType || ''}
