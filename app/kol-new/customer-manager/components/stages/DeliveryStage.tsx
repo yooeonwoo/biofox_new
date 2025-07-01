@@ -104,7 +104,9 @@ export default function DeliveryStage({ value, onChange }: Props) {
               )}
               
               {key === 'install' && (
-                 <div className="relative w-full mt-auto">
+                <div className="flex flex-col gap-2 mt-auto">
+                  {/* 날짜 입력 */}
+                  <div className="relative w-full">
                     <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         type="date"
@@ -113,6 +115,27 @@ export default function DeliveryStage({ value, onChange }: Props) {
                         onChange={e => setField('installDate', e.target.value)}
                     />
                   </div>
+
+                  {/* 담당자 이름 */}
+                  <div className="relative w-full">
+                    <Input
+                      placeholder="담당자 이름"
+                      className="h-9 text-sm"
+                      value={current.installContactName || ""}
+                      onChange={e => setField("installContactName", e.target.value)}
+                    />
+                  </div>
+
+                  {/* 연락처 */}
+                  <div className="relative w-full">
+                    <Input
+                      placeholder="010-0000-0000"
+                      className="h-9 text-sm"
+                      value={current.installContactPhone || ""}
+                      onChange={e => setField("installContactPhone", e.target.value)}
+                    />
+                  </div>
+                </div>
               )}
 
 

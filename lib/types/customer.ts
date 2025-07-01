@@ -81,6 +81,8 @@ export interface DeliveryStageValue {
   shipDate?: string;
   shipPackage?: string;
   installDate?: string;
+  installContactName?: string;   // 담당자 이름
+  installContactPhone?: string;  // 연락처
   memo?: string;
 }
 
