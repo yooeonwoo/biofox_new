@@ -1,108 +1,136 @@
-"use client";
-import { useState, useEffect } from "react";
-import { groupBy } from "lodash-es";
-import { format, compareDesc } from "date-fns";
-import { ko } from "date-fns/locale";
-import TrainingCard, { TrainingReq } from "./TrainingCard";
-import { getTrainingRequests } from "./api/get-requests";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Calendar, CheckCircle, Clock } from "lucide-react";
+import Link from "next/link";
 
-interface TrainingRound {
-  round: number;
-  date: string;
-  list: TrainingReq[];
-}
-
-export default function HQTrainingPage() {
-  const [reqs, setReqs] = useState<TrainingRound[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getTrainingRequests().then((data) => {
-      // 날짜별 그룹핑 (문자열 'YYYY-MM-DD' 기준)
-      const groups = groupBy(data, (r) => r.lecture_date);
-      
-      // 최신 날짜가 1회차가 되도록 날짜 desc 정렬
-      const sortedDates = Object.keys(groups).sort((a, b) =>
-        compareDesc(new Date(a), new Date(b))
-      );
-      
-      // [{ round: 1, date: '2025-07-10', list: [...]}, …]
-      const rounds = sortedDates.map((date, idx) => ({
-        round: idx + 1,
-        date,
-        list: groups[date] || [],
-      }));
-      
-      setReqs(rounds);
-      setLoading(false);
-    });
-  }, []);
-
-  // 완료 토글 함수 (회차별 구조에 맞게 수정)
-  const toggle = (id: string) =>
-    setReqs((prev) =>
-      prev.map((sec) => ({
-        ...sec,
-        list: sec.list.map((r) =>
-          r.id === id ? { ...r, is_completed: !r.is_completed } : r
-        ),
-      }))
-    );
-
-  // 전체 통계 계산
-  const totalCount = reqs.reduce((sum, round) => sum + round.list.length, 0);
-  const completedCount = reqs.reduce(
-    (sum, round) => sum + round.list.filter(req => req.is_completed).length, 
-    0
-  );
-
-  if (loading) {
-    return (
-      <div className="p-4 md:p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+export default function HQTrainingDashboard() {
+  // Mock 통계 데이터 (추후 실제 데이터로 교체)
+  const stats = {
+    totalRequests: 6,
+    completedRequests: 2,
+    upcomingRounds: 3,
+    totalParticipants: 12,
+  };
 
   return (
     <div className="p-4 md:p-6">
-      {/* 헤더 영역 */}
+      {/* 헤더 */}
       <div className="mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-2">
-          본사 교육 담당자 페이지
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+          본사 교육 대시보드
         </h1>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span>전체: <strong>{totalCount}건</strong></span>
-          <span>완료: <strong className="text-green-600">{completedCount}건</strong></span>
-          <span>미완료: <strong className="text-orange-600">{totalCount - completedCount}건</strong></span>
-        </div>
+        <p className="text-gray-600">
+          본사 교육 현황을 한눈에 확인하고 관리하세요.
+        </p>
       </div>
 
-      {/* 회차별 섹션 */}
-      <main className="flex flex-col gap-6">
-        {reqs.map(({ round, date, list: arr }) => (
-          <section key={date} className="flex flex-col gap-3">
-            {/* 섹션 헤더 */}
-            <h3 className="text-sm font-semibold text-gray-800">
-              본사 실무교육&nbsp;{round}회차&nbsp;(
-              {format(new Date(date), "yyyy.MM.dd", { locale: ko })}
-              )
-            </h3>
+      {/* 통계 카드 그리드 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard
+          title="전체 신청"
+          value={stats.totalRequests}
+          unit="건"
+          icon={<Users className="w-5 h-5" />}
+          bgColor="bg-blue-500"
+        />
+        <StatCard
+          title="완료"
+          value={stats.completedRequests}
+          unit="건"
+          icon={<CheckCircle className="w-5 h-5" />}
+          bgColor="bg-green-500"
+        />
+        <StatCard
+          title="진행 중"
+          value={stats.totalRequests - stats.completedRequests}
+          unit="건"
+          icon={<Clock className="w-5 h-5" />}
+          bgColor="bg-orange-500"
+        />
+        <StatCard
+          title="예정 회차"
+          value={stats.upcomingRounds}
+          unit="회차"
+          icon={<Calendar className="w-5 h-5" />}
+          bgColor="bg-purple-500"
+        />
+      </div>
 
-            {/* 카드 그리드 (모바일 1열 → sm 2열 → lg 3열) */}
-            <div className="grid gap-4 place-items-center sm:grid-cols-2 lg:grid-cols-3">
-              {arr.map((req) => (
-                <TrainingCard key={req.id} req={req} onToggle={toggle} />
-              ))}
-            </div>
-          </section>
-        ))}
-      </main>
+      {/* 빠른 액션 카드 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              본사 실무교육 관리
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 mb-4">
+              교육 신청 현황을 확인하고 완료 상태를 관리하세요.
+            </p>
+            <Link
+              href="/hq-training/head-office"
+              className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              관리하기
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-green-600" />
+              교육 일정 관리
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 mb-4">
+              향후 교육 일정을 계획하고 관리하세요.
+            </p>
+            <button
+              disabled
+              className="inline-flex items-center justify-center px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed"
+            >
+              준비 중
+            </button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
+  );
+}
+
+// 통계 카드 컴포넌트
+function StatCard({
+  title,
+  value,
+  unit,
+  icon,
+  bgColor,
+}: {
+  title: string;
+  value: number;
+  unit: string;
+  icon: React.ReactNode;
+  bgColor: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600 mb-1">{title}</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold">{value}</span>
+              <span className="text-sm text-gray-500">{unit}</span>
+            </div>
+          </div>
+          <div className={`${bgColor} text-white p-2 rounded-lg`}>
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 } 
