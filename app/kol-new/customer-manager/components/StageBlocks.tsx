@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 // Achievements 타입 및 단일 체크박스 컴포넌트 추가
 import { Achievements } from "@/lib/types/customer";
 import AchievementCheckbox from "./AchievementCheckbox";
+import StarTabs from "@/components/StarTabs";
 
 const LABELS: Record<1 | 2 | 3, string> = {
   1: "본사 실무교육 이수",
@@ -176,8 +177,20 @@ export default function StageBlocks({ stageData, onStageChange, achievements, on
               </StageWrapper>
             );
           })}
-          {/* 4단계 완료 체크박스 → 레벨 1 */}
-          <AchievementCheckbox level={1} achievements={achievements} onChange={onAchievementsChange} />
+          {/* 별점 평가 시스템 */}
+          <div className="p-3 border rounded-md bg-muted/20">
+            <StarTabs
+              value={{
+                manager: achievements.starManager,
+                owner: achievements.starOwner,
+                director: achievements.starDirector,
+              }}
+              onToggle={() => onAchievementsChange({
+                ...achievements, 
+                starManager: !achievements.starManager
+              })}
+            />
+          </div>
         </SectionBlock>
       </div>
 

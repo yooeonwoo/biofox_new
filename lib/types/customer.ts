@@ -67,11 +67,6 @@ export interface EducationNotesStageValue {
   q5Level?: "상" | "중" | "하";
   q6Level?: "상" | "중" | "하";
   memo?: string;
-
-  /* 별점 평가 시스템 */
-  starManager?: boolean;
-  starOwner?: boolean;
-  starDirector?: boolean;
 }
 
 export interface GrowthStage {
@@ -124,6 +119,10 @@ export interface Achievements {
   basicTraining: boolean;
   standardProtocol: boolean;
   expertCourse: boolean;
+  /* 별점 평가 시스템 */
+  starManager?: boolean;
+  starOwner?: boolean;
+  starDirector?: boolean;
 }
 
 export interface CustomerProgress {

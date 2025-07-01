@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import StarTabs from "@/components/StarTabs";
 import { EducationNotesStageValue } from "@/lib/types/customer";
 
 interface Props {
@@ -151,18 +150,6 @@ export default function EducationNotesStage({ value, onChange }: Props) {
             );
           })}
         </div>
-      </div>
-
-      {/* 별점 평가 시스템 */}
-      <div className="p-3 border rounded-md bg-muted/20">
-        <StarTabs
-          value={{
-            manager: current.starManager,
-            owner: current.starOwner,
-            director: current.starDirector,
-          }}
-          onToggle={() => setField("starManager", !current.starManager)}
-        />
       </div>
     </div>
   );
