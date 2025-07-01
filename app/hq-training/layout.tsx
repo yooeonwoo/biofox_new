@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +26,7 @@ export default function HQTrainingLayout({
           </button>
         </SheetTrigger>
         <SheetContent side="left" className="w-60 p-0">
+          <SheetTitle className="sr-only">본사 교육 메뉴</SheetTitle>
           <Header />
           <NavLinks />
         </SheetContent>
