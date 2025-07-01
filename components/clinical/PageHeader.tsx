@@ -12,7 +12,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   hasUnsavedNewCustomer,
 }) => {
   return (
-    <div className="sticky top-0 z-10 border-b bg-white shadow-sm -mt-3 xs:-mt-4 md:-mt-6">
+    <div className="sticky top-0 z-10 border-b bg-white shadow-sm">
       {/* 전체 너비를 활용하면서 반응형으로 동작 */}
       <div className="w-full flex h-12 xs:h-14 items-center justify-between gap-3 xs:gap-4 px-3 xs:px-4 sm:px-6 md:px-8">
         {/* 뒤로가기 버튼 */}

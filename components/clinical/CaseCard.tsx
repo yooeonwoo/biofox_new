@@ -154,7 +154,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 </div>
                 <span className="text-lg font-medium text-gray-800 truncate">{case_.customerName || '새 고객'}</span>
                 {isNewCustomer(case_.id) && (
-                  <span className="text-xs bg-biofox-lavender/20 text-purple-700 px-2 py-1 rounded-full border border-biofox-lavender/40">
+                  <span className="text-[11px] bg-biofox-lavender/20 text-purple-700 px-[6px] py-[2px] rounded-full border border-biofox-lavender/40 leading-none whitespace-nowrap">
                     새 고객
                   </span>
                 )}
@@ -299,9 +299,9 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 </Button>
               </div>
               
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                {/* 첫 번째 열 */}
-                <div className="space-y-3">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-x-3 gap-y-3">
+                                  {/* 첫 번째 열 */}
+                <div className="space-y-2 xs:space-y-3">
                   {/* 이름 */}
                   <div className="flex items-center gap-1">
                     <Label htmlFor={`name-${case_.id}`} className="text-xs font-medium w-10 xs:w-12 sm:w-14 shrink-0 text-gray-600">이름</Label>
@@ -343,7 +343,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 </div>
                 
                 {/* 두 번째 열 */}
-                <div className="space-y-3">
+                <div className="space-y-2 xs:space-y-3">
                   {/* 나이 */}
                   <div className="flex items-center">
                     <Label htmlFor={`age-${case_.id}`} className="text-xs font-medium w-10 shrink-0 text-gray-600">나이</Label>

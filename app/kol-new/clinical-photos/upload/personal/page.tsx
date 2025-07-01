@@ -67,14 +67,14 @@ export default function PersonalPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
+      {/* 헤더를 main 밖으로 이동하여 전체 너비 활용 */}
+      <PageHeader
+        onAddCustomer={handlers.handleAddPersonalCase}
+        hasUnsavedNewCustomer={pageState.hasUnsavedPersonalCase}
+      />
+      
       <main ref={pageState.mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
-        {/* 헤더 - Personal용으로 수정 */}
-        <PageHeader
-          onAddCustomer={handlers.handleAddPersonalCase}
-          hasUnsavedNewCustomer={pageState.hasUnsavedPersonalCase}
-        />
-
         {/* 메인 컨텐츠 */}
         <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
           {/* 케이스가 없을 때 */}

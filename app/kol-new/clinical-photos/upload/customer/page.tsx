@@ -89,14 +89,14 @@ export default function CustomerClinicalUploadPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
+      {/* 헤더를 main 밖으로 이동하여 전체 너비 활용 */}
+      <PageHeader
+        onAddCustomer={handleAddCustomer}
+        hasUnsavedNewCustomer={hasUnsavedNewCustomer}
+      />
+      
       <main ref={mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
-        {/* 뒤로가기 헤더 - 고정 */}
-        <PageHeader
-          onAddCustomer={handleAddCustomer}
-          hasUnsavedNewCustomer={hasUnsavedNewCustomer}
-        />
-
         {/* 기존 케이스들 */}
         <LayoutGroup>
           <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
