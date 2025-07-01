@@ -141,7 +141,7 @@ export default function GrowthSection({ value, onChange }: Props) {
 
         {/* 고객 임상 */}
         <div className="flex justify-between items-center mt-4 mb-2">
-          <span className="text-xs font-medium">👥 고객&nbsp;(8px,9px,10px)</span>
+          <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium">👥 고객&nbsp;(3회&nbsp;10명)</span>
           <Button variant="outline" size="sm" className="h-6 px-2 text-xs">보러가기</Button>
         </div>
         <CustomerMiniProgress 
