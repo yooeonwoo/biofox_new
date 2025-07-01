@@ -123,15 +123,21 @@ export default function ShopCustomerCard({ customer, cardNumber, shopId }: Custo
     <div className="bg-white border-2 border-black rounded-xl p-4 mb-5 max-w-2xl mx-auto relative font-sans">
       {/* Header */}
       <div className="mb-4 p-3 border border-gray-300 rounded-lg bg-gray-50">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold shadow-lg">{cardNumber}</div>
-            <h2 className="text-lg font-bold">{customer.name}</h2>
+        <div className="space-y-2">
+          {/* 샵명과 별점 */}
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold truncate">{customer.name}</h2>
             {Array.from({ length: getHighestAchievement() }).map((_, i) => <span key={i} className="text-yellow-500">⭐</span>)}
           </div>
-          <div className="text-right">
-            <p className="text-sm">담당자 : {customer.manager}</p>
-            <p className="text-xs text-gray-500 mt-1">계약일 : {customer.contractDate}</p>
+          
+          {/* 담당자 */}
+          <div>
+            <p className="text-sm truncate">담당자 : {customer.manager}</p>
+          </div>
+          
+          {/* 계약일 */}
+          <div>
+            <p className="text-xs text-gray-500 truncate">계약일 : {customer.contractDate}</p>
           </div>
         </div>
       </div>
