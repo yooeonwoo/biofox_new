@@ -3,7 +3,7 @@
 import { useRef, useContext, useEffect } from "react";
 import { DeliveryStageValue } from "@/lib/types/customer";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 
 const DELIVERY_TYPES: Array<{
@@ -83,13 +83,12 @@ export default function DeliveryStage({ value, onChange }: Props) {
 
               {key === 'ship' && (
                 <div className="flex flex-col gap-2 mt-auto">
-                  <div className="relative w-full">
-                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                        type="date"
-                        className="h-9 pl-8 text-sm cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0"
-                        value={current.shipDate || ""}
-                        onChange={e => setField('shipDate', e.target.value)}
+                  <div className="w-full">
+                    <DatePicker
+                      value={current.shipDate || ""}
+                      onChange={value => setField('shipDate', value)}
+                      placeholder="출고 날짜 선택"
+                      className="h-9 text-sm"
                     />
                   </div>
                   <div className="relative w-full">
@@ -106,13 +105,12 @@ export default function DeliveryStage({ value, onChange }: Props) {
               {key === 'install' && (
                 <div className="flex flex-col gap-2 mt-auto">
                   {/* 날짜 입력 */}
-                  <div className="relative w-full">
-                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                        type="date"
-                        className="h-9 pl-8 text-sm cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0"
-                        value={current.installDate || ""}
-                        onChange={e => setField('installDate', e.target.value)}
+                  <div className="w-full">
+                    <DatePicker
+                      value={current.installDate || ""}
+                      onChange={value => setField('installDate', value)}
+                      placeholder="설치 날짜 선택"
+                      className="h-9 text-sm"
                     />
                   </div>
 

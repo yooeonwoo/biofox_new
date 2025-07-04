@@ -4,7 +4,7 @@ import { useRef, useContext, useEffect } from "react";
 import { InflowStageValue } from "@/lib/types/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 import { cn } from "@/lib/utils";
 
@@ -100,14 +100,12 @@ export default function InflowStage({ value, onChange }: Props) {
               >
                 <div className={cn("font-semibold text-sm", isActive && "text-blue-800")}>{label}</div>
                 <div className="flex flex-col gap-2">
-                    <div className="relative w-full">
-                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                        <Input
-                            type="date"
-                            className="h-9 pl-8 text-sm bg-white cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0"
+                    <div className="w-full">
+                        <DatePicker
                             value={dateValue || ""}
-                            onChange={e => setField(`${key}Date` as any, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
+                            onChange={value => setField(`${key}Date` as any, value)}
+                            placeholder={`${label} 날짜 선택`}
+                            className="h-9 text-sm bg-white"
                         />
                     </div>
                     <div className="relative w-full">

@@ -5,7 +5,8 @@ import { ContractStageValue } from "@/lib/types/customer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DollarSign, Calendar, Eraser, Megaphone, Crosshair } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { DollarSign, Eraser, Megaphone, Crosshair } from "lucide-react";
 import { ConnectionLineContext } from "../../contexts/ConnectionLineContext";
 
 const SECTIONS_CONFIG: Array<{
@@ -85,13 +86,12 @@ export default function ContractStage({ value, onChange }: Props) {
         </div>
 
         <div className="w-full flex flex-col gap-2 md:flex-row">
-          <div className="relative w-full">
-            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              type="date"
-              className="h-10 pl-8 text-sm cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0"
+          <div className="w-full">
+            <DatePicker
               value={dateValue || ""}
-              onChange={(e) => setField(`${key}Date`, e.target.value)}
+              onChange={(value) => setField(`${key}Date`, value)}
+              placeholder={`${label} 날짜 선택`}
+              className="h-10 text-sm"
             />
           </div>
 
