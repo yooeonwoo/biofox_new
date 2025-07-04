@@ -87,7 +87,7 @@ export default function DeliveryStage({ value, onChange }: Props) {
                     <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         type="date"
-                        className="h-9 pl-8 text-sm"
+                        className="h-9 pl-8 text-sm cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0"
                         value={current.shipDate || ""}
                         onChange={e => setField('shipDate', e.target.value)}
                     />
@@ -110,7 +110,7 @@ export default function DeliveryStage({ value, onChange }: Props) {
                     <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         type="date"
-                        className="h-9 pl-8 text-sm"
+                        className="h-9 pl-8 text-sm cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0"
                         value={current.installDate || ""}
                         onChange={e => setField('installDate', e.target.value)}
                     />
