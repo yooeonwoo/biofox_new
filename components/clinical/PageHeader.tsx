@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 interface PageHeaderProps {
   onAddCustomer: () => void;
   hasUnsavedNewCustomer: boolean;
+  title?: string;
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
   onAddCustomer,
   hasUnsavedNewCustomer,
+  title,
 }) => {
   return (
     <div className="sticky top-0 z-10 border-b bg-white shadow-sm">
@@ -24,6 +26,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             뒤로 가기
           </Link>
         </Button>
+
+        {/* 제목 */}
+        {title && (
+          <div className="flex-1 text-center">
+            <h1 className="text-sm xs:text-base font-semibold text-gray-900 truncate">
+              {title}
+            </h1>
+          </div>
+        )}
 
         {/* 새 고객 버튼 */}
         <div className="flex flex-col items-end gap-1 flex-shrink-0">

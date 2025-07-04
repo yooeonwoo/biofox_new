@@ -94,6 +94,7 @@ export default function CustomerClinicalUploadPage() {
       <PageHeader
         onAddCustomer={handleAddCustomer}
         hasUnsavedNewCustomer={hasUnsavedNewCustomer}
+        title="임상 관리 (고객)"
       />
       
       {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}

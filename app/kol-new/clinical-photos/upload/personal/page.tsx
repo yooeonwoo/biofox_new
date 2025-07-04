@@ -72,6 +72,7 @@ export default function PersonalPage() {
       <PageHeader
         onAddCustomer={handlers.handleAddPersonalCase}
         hasUnsavedNewCustomer={pageState.hasUnsavedPersonalCase}
+        title="임상관리 (본인)"
       />
       
       {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
