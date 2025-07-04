@@ -18,7 +18,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   return (
     <div className="sticky top-0 z-10 border-b bg-white shadow-sm">
-      <div className="w-full flex h-12 xs:h-14 items-center justify-between gap-3 xs:gap-4 px-3 xs:px-4 sm:px-6 md:px-8">
+      <div className="w-full flex h-12 xs:h-14 items-center gap-3 xs:gap-4 px-3 xs:px-4 sm:px-6 md:px-8 relative">
         {/* 뒤로가기 버튼 */}
         <Button 
           variant="outline" 
@@ -33,7 +33,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
         {/* 제목 */}
         {title && (
-          <div className="flex-1 text-center">
+          <div className={`${showAddButton && onAddCustomer ? 'flex-1 text-center' : 'absolute left-1/2 transform -translate-x-1/2'}`}>
             <h1 className="text-sm xs:text-base font-semibold text-gray-900 truncate">
               {title}
             </h1>
