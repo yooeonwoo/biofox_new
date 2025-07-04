@@ -84,6 +84,7 @@ export default function CustomerList({ initialData, kolId }: Props) {
         backPath="/kol-new"
         onAddCustomer={handleAddCustomer}
         isAdding={isAdding}
+        title="영업 관리 일지"
       />
       
       {/* 메인 컨테이너 - clinical-photos와 동일한 반응형 레이아웃 */}
