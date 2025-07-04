@@ -1,6 +1,7 @@
 "use client";
 
 import ShopCustomerCard from "./components/ShopCustomerCard";
+import { PageHeader } from "@/components/clinical/PageHeader";
 
 // As per the new requirement, we display a single card for the shop's self-growth system.
 // This data is based on the sample from docs/고객 관리 시스템 (전문점샵용)/App.tsx
@@ -15,12 +16,24 @@ const TEMP_SHOP_ID = "550e8400-e29b-41d4-a716-446655440001"; // UUID 형태의 �
 
 export default function ShopCustomerManagerPage() {
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
-        <ShopCustomerCard 
-          customer={sampleShopData} 
-          cardNumber={1} 
-          shopId={TEMP_SHOP_ID}
-        />
+    <div>
+      {/* 헤더 */}
+      <PageHeader
+        title="셀프 성장 관리"
+        backPath="/shop"
+        showAddButton={false}
+      />
+      
+      {/* 메인 컨테이너 */}
+      <main className="mx-auto w-full max-w-none xs:max-w-full sm:max-w-2xl">
+        <div className="space-y-4 xs:space-y-5 p-2 xs:p-3 md:px-0 md:py-6">
+          <ShopCustomerCard 
+            customer={sampleShopData} 
+            cardNumber={1} 
+            shopId={TEMP_SHOP_ID}
+          />
+        </div>
+      </main>
     </div>
   );
 } 

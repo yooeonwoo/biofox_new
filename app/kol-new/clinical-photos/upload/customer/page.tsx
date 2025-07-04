@@ -95,6 +95,8 @@ export default function CustomerClinicalUploadPage() {
         onAddCustomer={handleAddCustomer}
         hasUnsavedNewCustomer={hasUnsavedNewCustomer}
         title="임상 관리 (고객)"
+        backPath="/kol-new/clinical-photos"
+        showAddButton={true}
       />
       
       {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
