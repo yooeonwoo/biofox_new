@@ -84,6 +84,7 @@ const upsertMetrics = async (data: { kolMetrics: any; shopMetrics: any[] }) => {
 
 export default function ManualMetricsPage() {
   const [selectedKolId, setSelectedKolId] = useState<number | null>(null);
+  const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [queryEnabled, setQueryEnabled] = useState(false);
@@ -166,24 +167,84 @@ export default function ManualMetricsPage() {
     mutation.mutate(payload);
   };
 
+  // 파생 데이터: KOL별 묶음
+  const kolMap = kols.reduce(
+    (
+      acc: Record<
+        number,
+        {
+          kolName: string; // KOL 이름 (사용 안 하더라도 보존)
+          kolShopName: string; // KOL의 대표 샵명
+          shops: typeof kols;
+        }
+      >,
+      cur
+    ) => {
+      if (!acc[cur.kol_id]) {
+        acc[cur.kol_id] = {
+          kolName: cur.name,
+          kolShopName: cur.kol_shop_name,
+          shops: [],
+        };
+      }
+      acc[cur.kol_id]!.shops.push(cur);
+      return acc;
+    },
+    {}
+  );
+
+  const kolOptions = Object.entries(kolMap).map(([kolId, { kolShopName }]) => ({ kolId: Number(kolId), label: kolShopName }));
+  let shopOptions: typeof kols = [];
+  if (selectedKolId !== null && kolMap[selectedKolId]) {
+    shopOptions = kolMap[selectedKolId].shops;
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <h1 className="text-lg sm:text-xl md:text-2xl font-bold">수기 실적 입력 (Admin Dashboard)</h1>
 
       <Card>
         <CardContent className="p-4 flex flex-wrap items-center gap-4">
-          <Select onValueChange={(v) => setSelectedKolId(Number(v))} disabled={kolsLoading}>
-            <SelectTrigger className="w-[200px]">
+          {/* KOL 선택 */}
+          <Select
+            onValueChange={(v) => {
+              setSelectedKolId(Number(v));
+              setSelectedShopId(null);
+            }}
+            disabled={kolsLoading}
+            value={selectedKolId ? String(selectedKolId) : undefined}
+          >
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="KOL 선택" />
             </SelectTrigger>
-            <SelectContent className="max-h-[200px] overflow-y-auto">
-              {kols.map((kol: { id: number; kol_id: number; name: string; shop_name: string; shop_id: number }) => (
-                <SelectItem key={kol.id} value={String(kol.kol_id)}>
-                  <span className="font-medium">{kol.name} / {kol.shop_name}</span>
+            <SelectContent className="max-h-60 overflow-y-auto">
+              {kolOptions.map((k) => (
+                <SelectItem key={k.kolId} value={String(k.kolId)}>
+                  {k.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+
+          {/* 전문점 선택 */}
+          <Select
+            onValueChange={(v) => setSelectedShopId(Number(v))}
+            disabled={!selectedKolId || shopOptions.length === 0}
+            value={selectedShopId ? String(selectedShopId) : undefined}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="전문점 선택" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60 overflow-y-auto">
+              {shopOptions.map((s) => (
+                <SelectItem key={s.shop_id} value={String(s.shop_id)}>
+                  {s.shop_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* 년, 월 Select들은 그대로 */}
 
           <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
             <SelectTrigger className="w-[120px]">

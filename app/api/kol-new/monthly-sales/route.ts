@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getCurrentDate, getPreviousMonth, getMonthsBetween, getCurrentYearMonth } from '@/lib/date-utils';
 import { checkAuthSupabase } from '@/lib/auth';
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const userId = user.id;
+    const userId = user.id!;
 
     // 쿼리 파라미터에서 KOL ID 가져오기
     const url = new URL(request.url);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     // KOL ID가 제공되지 않은 경우 로그인한 사용자의 KOL ID 조회
     if (!kolIdParam) {
       // 로그인한 사용자의 KOL ID 가져오기
-      const { data: userData, error: userError } = await supabase
+      const { data: userData, error: userError } = await supabaseAdmin
         .from('users')
         .select('id, name, email')
         .eq('id', userId)
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
       console.log('월별 수당 API - 사용자 정보:', userData);
 
-      const { data: kolData, error: kolError } = await supabase
+      const { data: kolData, error: kolError } = await supabaseAdmin
         .from('kols')
         .select('id, name, shop_name')
         .eq('user_id', userData.id)
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       // KOL 접근 권한 확인
       if (userId) {
         // 현재 로그인한 사용자가 요청한 KOL ID에 접근 권한이 있는지 확인
-        const { data: userData, error: userError } = await supabase
+        const { data: userData, error: userError } = await supabaseAdmin
           .from('users')
           .select('id, role')
           .eq('id', userId)
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
         if (!userError && userData) {
           // 관리자가 아니고, 본인 KOL 데이터가 아닌 경우 접근 거부
           if (userData.role !== 'admin') {
-            const { data: kolData, error: kolError } = await supabase
+            const { data: kolData, error: kolError } = await supabaseAdmin
               .from('kols')
               .select('id')
               .eq('user_id', userData.id)
@@ -94,8 +94,8 @@ export async function GET(request: NextRequest) {
     // 현재 날짜와 이전 날짜 계산 - YYYY-MM 형식으로 통일
     const currentDate = getCurrentDate();
     const monthsAgo = new Date(currentDate);
-    monthsAgo.setMonth(monthsAgo.getMonth() - (parseInt(months) - 1));
-    const startDate = monthsAgo.toISOString().split('T')[0];
+    monthsAgo.setMonth(monthsAgo.getMonth() - (parseInt(months || '6') - 1));
+    const startDate = monthsAgo.toISOString().split('T')[0] as string;
     
     // 최근 N개월 범위 생성 (YYYY-MM 형식)
     const monthRange = getMonthsBetween(startDate, currentDate);
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     });
     
     // 1차: 표준 형식(YYYY-MM) 데이터 조회
-    const { data: standardData, error: standardError } = await supabase
+    const { data: standardData, error: standardError } = await supabaseAdmin
       .from('kol_dashboard_metrics')
       .select('year_month, monthly_commission')
       .eq('kol_id', kolId)
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
     
     let legacyData: any[] = [];
     if (legacyMonths.length > 0) {
-      const { data: legacyResult, error: legacyError } = await supabase
+      const { data: legacyResult, error: legacyError } = await supabaseAdmin
         .from('kol_dashboard_metrics')
         .select('year_month, monthly_commission')
         .eq('kol_id', kolId)

@@ -6,6 +6,7 @@ export interface AdminKol {
   id: number;
   kol_id: number;
   name: string;
+  kol_shop_name: string;
   shop_name: string;
   shop_id: number;
 }

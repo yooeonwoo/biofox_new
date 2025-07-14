@@ -15,6 +15,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
@@ -80,11 +82,23 @@ export default function NewShopDialog({ createdBy }: { createdBy: number }) {
             }}
           >
             <SelectTrigger className="w-full bg-white" size="sm">
-              <SelectValue placeholder="KOL 선택" />
+              <SelectValue placeholder="전문점 선택" />
             </SelectTrigger>
             <SelectContent className="max-h-60 overflow-auto bg-white">
-              {kols.map((k) => (
-                <SelectItem key={k.id} value={String(k.id)}>{k.name}</SelectItem>
+              {Object.entries(kols.reduce((groups, kol) => {
+                const key = kol.shop_name;
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(kol);
+                return groups;
+              }, {} as Record<string, typeof kols>)).map(([groupName, groupKols]) => (
+                <SelectGroup key={groupName}>
+                  <SelectLabel>{groupName}</SelectLabel>
+                  {groupKols.map((kol) => (
+                    <SelectItem key={kol.id} value={String(kol.id)}>
+                      {kol.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
             </SelectContent>
           </Select>

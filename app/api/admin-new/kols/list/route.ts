@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id,
       name,
+      shop_name,
       shops!shops_kol_id_fkey(id, shop_name)
     `)
     .order('name');
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
     id: number;
     kol_id: number;
     name: string;
+    kol_shop_name: string;
     shop_name: string;
     shop_id: number;
   }> = [];
@@ -38,6 +40,7 @@ export async function GET(req: NextRequest) {
           id: flatData.length + 1, // 고유 ID 생성
           kol_id: kol.id,
           name: kol.name,
+          kol_shop_name: kol.shop_name, // KOL의 대표 샵명
           shop_name: shop.shop_name,
           shop_id: shop.id
         });
@@ -48,6 +51,7 @@ export async function GET(req: NextRequest) {
         id: flatData.length + 1,
         kol_id: kol.id,
         name: kol.name,
+        kol_shop_name: kol.shop_name,
         shop_name: '샵 없음',
         shop_id: 0
       });

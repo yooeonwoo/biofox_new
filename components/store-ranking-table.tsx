@@ -51,11 +51,13 @@ interface ShopData {
   status: string;
   createdAt: string;
   is_owner_kol?: boolean; // 직영점 여부 추가
+  is_self_shop?: boolean; // 본인 샵 여부 추가
   sales: {
     total: number;
     product: number;
     device: number;
     hasOrdered: boolean;
+    commission?: number;
   };
 }
 
@@ -74,8 +76,8 @@ export default function StoreRankingTable({ shops }: StoreRankingTableProps) {
       }
       
       // 2. KOL 직영점 우선 (true가 앞으로)
-      if ((a.is_owner_kol || false) !== (b.is_owner_kol || false)) {
-        return (b.is_owner_kol || false) ? 1 : -1;
+          if ((a.is_self_shop || false) !== (b.is_self_shop || false)) {
+      return (b.is_self_shop || false) ? 1 : -1;
       }
       
       // 3. 이름순 오름차순
@@ -140,7 +142,7 @@ export default function StoreRankingTable({ shops }: StoreRankingTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="px-0 py-2 sm:py-3 w-[30px] text-center">
-                    {shop.is_owner_kol && (
+                    {shop.is_self_shop && (
                       <CrownIcon className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
                     )}
                   </TableCell>

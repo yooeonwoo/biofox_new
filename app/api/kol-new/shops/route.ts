@@ -69,6 +69,7 @@ export async function GET() {
         status,
         created_at,
         is_owner_kol,
+        is_self_shop,
         shop_sales_metrics (
           total_sales,
           product_sales,
@@ -137,6 +138,7 @@ export async function GET() {
         status: shop.status,
         createdAt: shop.created_at,
         is_owner_kol: shop.is_owner_kol,
+        is_self_shop: shop.is_self_shop,
         sales: {
           total: currentMonthSales?.total_sales || 0,
           product: currentMonthSales?.product_sales || 0,

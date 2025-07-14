@@ -57,7 +57,6 @@ interface ShopData {
   region: string;
   status: string;
   createdAt: string;
-  is_owner_kol?: boolean;
   is_self_shop?: boolean;
   relationship_type?: 'owner' | 'manager';
   owner_kol_id?: number | null;
@@ -612,7 +611,7 @@ export default function StoresPage() {
                           </div>
                         </TableCell>
                         <TableCell className="w-[30px] text-center border-b border-gray-200">
-                          {shop.is_owner_kol && (
+                          {shop.is_self_shop && (
                             <CrownIcon className="h-4 w-4 text-yellow-500" />
                           )}
                         </TableCell>

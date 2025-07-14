@@ -75,12 +75,13 @@ interface ShopData {
   region: string;
   status: string;
   createdAt: string;
-  is_owner_kol?: boolean;
+  is_self_shop?: boolean;
   sales: {
     total: number;
     product: number;
     device: number;
     hasOrdered: boolean;
+    commission?: number;
   };
 }
 
