@@ -96,8 +96,7 @@ export async function GET() {
             year_month
           )
         `)
-        .eq('kol_id', kolData.id)
-        .eq('is_self_shop', false); // 본인 샵 제외
+        .eq('kol_id', kolData.id);
     } else {
       shopsData = { data: [], error: null };
     }
@@ -220,7 +219,7 @@ export async function GET() {
         region: shop.region,
         status: shop.status,
         createdAt: shop.created_at,
-        is_owner_kol: shop.is_owner_kol,
+        is_self_shop: shop.is_self_shop,
         sales: {
           total: currentMonthSales?.total_sales || 0,
           product: currentMonthSales?.product_sales || 0,
