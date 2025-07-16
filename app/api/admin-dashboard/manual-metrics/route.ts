@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     console.log('[API] Querying kol_dashboard_metrics...');
     const { data: kolMetrics, error: kolMetricsError } = await supabaseAdmin
       .from('kol_dashboard_metrics')
-      .select('monthly_sales, monthly_commission')
+      .select('monthly_sales, monthly_commission, total_shops_count, active_shops_count')
       .eq('kol_id', Number(kolId))
       .eq('year_month', yearMonth)
       .maybeSingle();

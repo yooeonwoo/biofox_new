@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAdminNewKols } from '@/lib/hooks/adminNewKols'; // 이 훅의 경로가 admin-dashboard에서도 유효한지 확인 필요
 import { Button } from '@/components/ui/button';
@@ -24,11 +24,28 @@ import {
 } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // 데이터 타입 정의
 interface KolMetrics {
   monthly_sales: number;
   monthly_commission: number;
+  total_shops_count: number;
+  active_shops_count: number;
 }
 
 interface ShopMetric {
@@ -83,11 +100,17 @@ const upsertMetrics = async (data: { kolMetrics: any; shopMetrics: any[] }) => {
 };
 
 export default function ManualMetricsPage() {
+  // Remove search state and custom filtering, let Command handle it
   const [selectedKolId, setSelectedKolId] = useState<number | null>(null);
   const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [queryEnabled, setQueryEnabled] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  // Add state for manual editing mode and auto-calculated value
+  const [isManuallyEditing, setIsManuallyEditing] = useState(false);
+  const [autoCalculatedSales, setAutoCalculatedSales] = useState(0);
 
   const queryClient = useQueryClient();
   const { data: kols = [], isLoading: kolsLoading } = useAdminNewKols(); // 경로 확인!
@@ -117,9 +140,9 @@ export default function ManualMetricsPage() {
     },
   });
 
-  const { control, handleSubmit, reset, register } = useForm<FormValues>({
+  const { control, handleSubmit, reset, register, setValue, watch } = useForm<FormValues>({
     defaultValues: {
-      kolMetrics: { monthly_sales: 0, monthly_commission: 0 },
+      kolMetrics: { monthly_sales: 0, monthly_commission: 0, total_shops_count: 0, active_shops_count: 0 },
       shopMetrics: [],
     },
   });
@@ -129,11 +152,48 @@ export default function ManualMetricsPage() {
     name: 'shopMetrics',
   });
 
+  // Watch shop metrics for auto-calculation
+  const watchedShopMetrics = useWatch({
+    control,
+    name: 'shopMetrics',
+  });
+
+  // Auto-calculate total and active shops count, and monthly sales
+  useEffect(() => {
+    if (watchedShopMetrics && watchedShopMetrics.length > 0) {
+      const totalShops = watchedShopMetrics.length;
+      const activeShops = watchedShopMetrics.filter(shop => 
+        shop.total_sales && Number(shop.total_sales) > 0
+      ).length;
+      
+      // Calculate total monthly sales from all shops
+      const totalMonthlySales = watchedShopMetrics.reduce((sum, shop) => {
+        return sum + (Number(shop.total_sales) || 0);
+      }, 0);
+      
+      // Store auto-calculated value
+      setAutoCalculatedSales(totalMonthlySales);
+      
+      // Update form value only if not manually editing
+      if (!isManuallyEditing) {
+        setValue('kolMetrics.monthly_sales', totalMonthlySales);
+      }
+
+      setValue('kolMetrics.total_shops_count', totalShops);
+      setValue('kolMetrics.active_shops_count', activeShops);
+    }
+  }, [watchedShopMetrics, setValue, isManuallyEditing]);
+
   useEffect(() => {
     if (metricsData) {
+      // Sort shopMetrics by shop_name in Korean alphabetical order
+      const sortedShopMetrics = (metricsData.shopMetrics || []).sort((a, b) =>
+        a.shop_name.localeCompare(b.shop_name, 'ko')
+      );
+      
       reset({
-        kolMetrics: metricsData.kolMetrics || { monthly_sales: 0, monthly_commission: 0 },
-        shopMetrics: metricsData.shopMetrics || [],
+        kolMetrics: metricsData.kolMetrics || { monthly_sales: 0, monthly_commission: 0, total_shops_count: 0, active_shops_count: 0 },
+        shopMetrics: sortedShopMetrics,
       });
     }
   }, [metricsData, reset]);
@@ -157,6 +217,8 @@ export default function ManualMetricsPage() {
         year_month: yearMonth,
         monthly_sales: Number(data.kolMetrics.monthly_sales),
         monthly_commission: Number(data.kolMetrics.monthly_commission),
+        total_shops_count: Number(data.kolMetrics.total_shops_count),
+        active_shops_count: Number(data.kolMetrics.active_shops_count),
       },
       shopMetrics: data.shopMetrics.map((shop) => ({
         shop_id: shop.shop_id,
@@ -199,6 +261,11 @@ export default function ManualMetricsPage() {
     shopOptions = kolMap[selectedKolId].shops;
   }
 
+  // Sort kolOptions alphabetically by label (Korean order)
+  const sortedKolOptions = [...kolOptions].sort((a, b) =>
+    a.label.localeCompare(b.label, 'ko')
+  );
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <h1 className="text-lg sm:text-xl md:text-2xl font-bold">수기 실적 입력 (Admin Dashboard)</h1>
@@ -206,25 +273,56 @@ export default function ManualMetricsPage() {
       <Card>
         <CardContent className="p-4 flex flex-wrap items-center gap-4">
           {/* KOL 선택 */}
-          <Select
-            onValueChange={(v) => {
-              setSelectedKolId(Number(v));
-              setSelectedShopId(null);
-            }}
-            disabled={kolsLoading}
-            value={selectedKolId ? String(selectedKolId) : undefined}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="KOL 선택" />
-            </SelectTrigger>
-            <SelectContent className="max-h-60 overflow-y-auto">
-              {kolOptions.map((k) => (
-                <SelectItem key={k.kolId} value={String(k.kolId)}>
-                  {k.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-[180px] justify-between"
+              >
+                {selectedKolId
+                  ? kolOptions.find((k) => k.kolId === selectedKolId)?.label
+                  : 'KOL 선택'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[180px] p-0">
+              <Command>
+                <CommandInput
+                  placeholder="KOL 검색..."
+                />
+                <CommandList>
+                  <CommandEmpty>검색 결과 없음</CommandEmpty>
+                  <CommandGroup>
+                    {sortedKolOptions.map((k) => (
+                      <CommandItem
+                        key={k.kolId}
+                        value={k.label}
+                        onSelect={(currentValue: string) => {
+                          // Find the KOL by label since currentValue is now the label
+                          const selectedKol = sortedKolOptions.find(kol => kol.label === currentValue);
+                          if (selectedKol) {
+                            setSelectedKolId(selectedKol.kolId);
+                            setSelectedShopId(null);
+                          }
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            selectedKolId === k.kolId ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        {k.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           {/* 전문점 선택 */}
           <Select
@@ -296,12 +394,33 @@ export default function ManualMetricsPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="kol-sales" className="block text-sm font-medium text-gray-700 mb-1">월 매출</label>
+                <label htmlFor="kol-sales" className="block text-sm font-medium text-gray-700 mb-1">
+                  월 매출 <span className="text-xs text-gray-500">(자동 계산)</span>
+                </label>
                 <Input
                   id="kol-sales"
                   type="number"
-                  {...register('kolMetrics.monthly_sales', { valueAsNumber: true })}
+                  onFocus={(e) => {
+                    setIsManuallyEditing(true);
+                    // Clear the field only if it contains 0 (default value)
+                    const currentValue = Number(e.target.value);
+                    if (currentValue === 0) {
+                      e.target.value = '';
+                      e.target.select(); // Select all text for easy replacement
+                    }
+                  }}
+                  {...register('kolMetrics.monthly_sales', { 
+                    valueAsNumber: true,
+                    onBlur: (e) => {
+                      setIsManuallyEditing(false);
+                      // If field is empty, restore auto-calculated value
+                      if (!e.target.value || e.target.value === '') {
+                        setValue('kolMetrics.monthly_sales', autoCalculatedSales);
+                      }
+                    }
+                  })}
                 />
+                <p className="text-xs text-gray-500 mt-1">전문점 매출 합계 (직접 수정 가능)</p>
               </div>
               <div>
                 <label htmlFor="kol-commission" className="block text-sm font-medium text-gray-700 mb-1">월 수당</label>
@@ -310,6 +429,31 @@ export default function ManualMetricsPage() {
                   type="number"
                   {...register('kolMetrics.monthly_commission', { valueAsNumber: true })}
                 />
+              </div>
+              <div>
+                <label htmlFor="kol-total-shops" className="block text-sm font-medium text-gray-700 mb-1">
+                  전체 전문점 수 <span className="text-xs text-gray-500">(자동 계산)</span>
+                </label>
+                <Input
+                  id="kol-total-shops"
+                  type="number"
+                  readOnly
+                  className="bg-gray-50"
+                  {...register('kolMetrics.total_shops_count', { valueAsNumber: true })}
+                />
+              </div>
+              <div>
+                <label htmlFor="kol-active-shops" className="block text-sm font-medium text-gray-700 mb-1">
+                  활성 전문점 수 <span className="text-xs text-gray-500">(자동 계산)</span>
+                </label>
+                <Input
+                  id="kol-active-shops"
+                  type="number"
+                  readOnly
+                  className="bg-gray-50"
+                  {...register('kolMetrics.active_shops_count', { valueAsNumber: true })}
+                />
+                <p className="text-xs text-gray-500 mt-1">매출이 0보다 큰 전문점 수</p>
               </div>
             </CardContent>
           </Card>
