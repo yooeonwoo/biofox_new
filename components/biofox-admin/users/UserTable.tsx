@@ -55,7 +55,7 @@ const roleLabels = {
 
 const statusConfig = {
   pending: { label: '승인 대기', variant: 'secondary' as const },
-  approved: { label: '승인됨', variant: 'success' as const },
+  approved: { label: '승인됨', variant: 'default' as const },
   rejected: { label: '거절됨', variant: 'destructive' as const },
 };
 
@@ -177,10 +177,10 @@ export function UserTable({
                 )}
               </TableCell>
               <TableCell className="text-right">
-                {formatCurrency(user.stats.total_sales_this_month)}
+                {formatCurrency(user.stats?.total_sales_this_month || 0)}
               </TableCell>
               <TableCell className="text-right">
-                {formatCurrency(user.stats.total_commission_this_month)}
+                {formatCurrency(user.stats?.total_commission_this_month || 0)}
               </TableCell>
               <TableCell>
                 {format(new Date(user.created_at), 'PPP', { locale: ko })}
