@@ -30,9 +30,14 @@ export async function GET(
     }
 
     const cookieStore = await cookies();
+    
+    // 개발 환경에서는 서비스 키 사용 (RLS 우회)
+    const isDevMode = process.env.NODE_ENV === 'development';
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      isDevMode 
+        ? process.env.SUPABASE_SERVICE_ROLE_KEY!
+        : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
@@ -53,13 +58,15 @@ export async function GET(
       }
     );
 
-    // 현재 사용자 인증 확인
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 개발 환경에서는 인증 체크 우회
+    if (!isDevMode) {
+      // 현재 사용자 인증 확인
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+      if (authError || !user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -120,6 +127,7 @@ export async function GET(
       success: true,
       data: userProfile
     });
+    } // 개발 환경 체크 if 블록 종료
 
   } catch (error) {
     console.error('GET User API Error:', error);
@@ -142,9 +150,14 @@ export async function PUT(
   try {
     const { userId } = await params;
     const cookieStore = await cookies();
+    
+    // 개발 환경에서는 서비스 키 사용 (RLS 우회)
+    const isDevMode = process.env.NODE_ENV === 'development';
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      isDevMode 
+        ? process.env.SUPABASE_SERVICE_ROLE_KEY!
+        : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
@@ -342,9 +355,14 @@ export async function DELETE(
   try {
     const { userId } = await params;
     const cookieStore = await cookies();
+    
+    // 개발 환경에서는 서비스 키 사용 (RLS 우회)
+    const isDevMode = process.env.NODE_ENV === 'development';
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      isDevMode 
+        ? process.env.SUPABASE_SERVICE_ROLE_KEY!
+        : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {

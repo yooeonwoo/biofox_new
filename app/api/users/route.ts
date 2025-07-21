@@ -26,9 +26,14 @@ function sanitizeInput(input: string): string {
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
+    
+    // 개발 환경에서는 서비스 키 사용 (RLS 우회)
+    const isDevMode = process.env.NODE_ENV === 'development';
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      isDevMode 
+        ? process.env.SUPABASE_SERVICE_ROLE_KEY! 
+        : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
@@ -50,9 +55,7 @@ export async function GET(request: NextRequest) {
     );
 
     // 개발 환경에서는 인증 체크 우회
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
-    if (!isDevelopment) {
+    if (!isDevMode) {
       // 현재 사용자 인증 확인
       const {
         data: { user },
@@ -192,9 +195,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();
+    
+    // 개발 환경에서는 서비스 키 사용 (RLS 우회)
+    const isDevMode = process.env.NODE_ENV === 'development';
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      isDevMode 
+        ? process.env.SUPABASE_SERVICE_ROLE_KEY!
+        : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
@@ -216,10 +224,9 @@ export async function POST(request: NextRequest) {
     );
 
     // 개발 환경에서는 인증 체크 우회
-    const isDevelopment = process.env.NODE_ENV === 'development';
     let currentUserId = 'dev-admin-user';
     
-    if (!isDevelopment) {
+    if (!isDevMode) {
       // 현재 사용자 인증 확인
       const {
         data: { user },
