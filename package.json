@@ -20,7 +20,9 @@
     "storybook:mcp": "tsx mcp/react-native-storybook/index.ts",
     "build-storybook": "storybook build",
     "type-check": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:seed": "tsx db/seed.ts",
+    "db:seed-sql": "psql $DATABASE_URL -f db/migrations/seed-test-data.sql"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",

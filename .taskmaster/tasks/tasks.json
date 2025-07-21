@@ -43,13 +43,52 @@
       {
         "id": 2,
         "title": "Database Schema & Index Implementation",
-        "description": "Implement the shop_relationships table, indexes, and constraints as per PRD. Ensure business rules (unique active relationship, referential integrity, audit fields) are enforced at the DB level.",
-        "details": "- Use Prisma ORM (v5+) or TypeORM (v0.3+) for schema management and migrations.\n- Implement all indexes and unique constraints as specified.\n- Add triggers or check constraints for business rules (e.g., prevent self-reference, enforce single active relationship).\n- Prepare seed scripts for test data.\n- Plan for future sharding (partitioning by shop_owner_id if needed).",
-        "testStrategy": "Run migration scripts; verify schema via DB inspection; write DB-level tests for constraints (e.g., inserting invalid data fails as expected).",
+        "description": "The shop_relationships table, indexes, constraints, triggers, and audit fields are already fully implemented in Supabase. Remaining work is to synchronize the local Drizzle ORM schema files with the current Supabase schema, add seed scripts, write DB-level constraint tests, and document the schema.",
+        "status": "in-progress",
+        "dependencies": [
+          1
+        ],
         "priority": "high",
-        "dependencies": [1],
-        "status": "pending",
-        "subtasks": []
+        "details": "- Update the local Drizzle ORM schema files to exactly match the current Supabase shop_relationships table structure, including all fields, indexes, constraints, and triggers.\n- Write seed scripts to generate representative test data for shop_relationships.\n- Implement DB-level tests to verify all constraints and business rules (e.g., unique active relationship, referential integrity, no self-relationship, valid periods).\n- Document the shop_relationships schema, including field descriptions, constraints, indexes, and business logic enforcement.\n- No further migration or table creation is required; focus is on code-level synchronization and documentation.",
+        "testStrategy": "Verify Drizzle schema matches Supabase via introspection and schema diff tools; run seed scripts and confirm data loads as expected; execute DB-level tests to ensure all constraints and business rules are enforced; review schema documentation for completeness and accuracy.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Update Drizzle ORM schema files to match Supabase shop_relationships table",
+            "description": "Synchronize the local Drizzle schema definition with the current Supabase implementation, including all fields, indexes, constraints, and triggers.",
+            "status": "done",
+            "dependencies": [],
+            "details": "<info added on 2025-07-21T10:01:30.070Z>\nDrizzle ORM schema files have been fully updated and synchronized with the current Supabase database structure. All tables, enums, constraints, and relationships are now defined according to the latest Supabase implementation. The schema has been migrated from integer-based IDs to UUIDs, with all foreign key relationships and business rules accurately reflected. Additional fields for timestamps, auditing, and metadata have been incorporated, and support for array and JSONB types has been added. All TypeScript errors related to SQL helpers and imports have been resolved. The local Drizzle schema is now fully aligned with Supabase, ensuring consistency across development and production environments.\n</info added on 2025-07-21T10:01:30.070Z>",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Write seed scripts for shop_relationships test data",
+            "description": "Create scripts to populate the shop_relationships table with representative test data for development and testing purposes.",
+            "status": "done",
+            "dependencies": [],
+            "details": "<info added on 2025-07-21T10:05:14.117Z>\nTest data seed scripts have been fully implemented, providing both comprehensive SQL-based and type-safe TypeScript-based seeding for the shop_relationships table. Scripts are located at db/migrations/seed-test-data.sql (SQL) and db/seed.ts (TypeScript with Drizzle ORM). New npm scripts db:seed and db:seed-sql have been added for easy execution. The seeded dataset includes 1 admin, 3 KOLs, 4 OLs, 8 approved shop owners, 3 additional shop users in pending/rejected states, 14 hierarchical relationships (KOL→OL, OL→Shop Owner), and special relationship patterns (ended, transferred, temporary). Business scenarios covered: normal hierarchy, approval workflow (pending/approved/rejected), relationship history (transferred/temporary), subordinate statistics, and diverse region distribution. Validation queries for hierarchy and relationship integrity are included. Run seeding via npm run db:seed (TypeScript) or npm run db:seed-sql (SQL).\n</info added on 2025-07-21T10:05:14.117Z>",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement DB-level tests for constraints and business rules",
+            "description": "Write and execute tests to verify that all database-level constraints and business rules are enforced as expected (e.g., unique active relationship, referential integrity, no self-relationship, valid periods).",
+            "status": "todo",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Document shop_relationships schema",
+            "description": "Produce comprehensive documentation for the shop_relationships schema, including field definitions, constraints, indexes, triggers, and business logic.",
+            "status": "todo",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 3,
@@ -58,7 +97,9 @@
         "details": "- Use Express 4+ with OpenAPI 3.1 spec for endpoint documentation.\n- Implement endpoints: GET /api/relationships, GET /api/relationships/tree, GET /api/relationships/history, POST /api/relationships.\n- Use Zod or Joi for request validation.\n- Implement middleware for admin authentication/authorization (JWT or OAuth2).\n- Enforce business rules in service layer (cycle/self-reference prevention, role checks).\n- Integrate Redis (v7+) for caching tree data.\n- Use PostgreSQL CTEs for efficient tree queries.\n- Log all changes to an audit_log table.",
         "testStrategy": "Write unit/integration tests for all endpoints using Jest or Vitest; test business rule enforcement and error handling.",
         "priority": "high",
-        "dependencies": [2],
+        "dependencies": [
+          2
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -69,7 +110,9 @@
         "details": "- Use React 18+ with react-dnd (v16+) for drag-and-drop.\n- Use react-window (v1.8+) or react-virtualized for large tree virtualization.\n- Fetch tree data via API with lazy loading (on expand).\n- Display node status (active/inactive), role-based color, and monthly sales (from API).\n- Implement search with debounce and highlight.\n- Provide drag feedback and error handling UI.\n- Ensure accessibility (ARIA roles, keyboard navigation).",
         "testStrategy": "Write component/unit tests with React Testing Library; perform manual drag-and-drop and search scenarios; test with large datasets for performance.",
         "priority": "high",
-        "dependencies": [3],
+        "dependencies": [
+          3
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -80,7 +123,9 @@
         "details": "- Use React 18+ with MUI or Ant Design modal/dialog.\n- Integrate async search for parent selection (debounced API calls).\n- Show current parent and relationship info.\n- Validate input (required reason, prevent cycles/self-reference via API pre-check).\n- Display error messages and allow cancel/undo.\n- Ensure accessibility and responsive design.",
         "testStrategy": "Component/unit tests for modal logic; integration tests for parent search and validation; manual tests for error scenarios.",
         "priority": "high",
-        "dependencies": [4],
+        "dependencies": [
+          4
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -91,7 +136,9 @@
         "details": "- Use React 18+ with MUI DataGrid or Ant Design Table.\n- Fetch paginated history via API.\n- Display columns: timestamp, previous parent, new parent, reason, changed by.\n- Support sorting (by time), filtering (by shop/parent), and pagination.\n- Highlight changes visually.\n- Ensure accessibility and responsive layout.",
         "testStrategy": "Component/unit tests for table rendering; integration tests for API pagination/sorting; manual tests for large datasets.",
         "priority": "medium",
-        "dependencies": [3],
+        "dependencies": [
+          3
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -102,7 +149,9 @@
         "details": "- Centralize business logic in service layer (backend).\n- Use graph traversal (DFS/BFS) to detect cycles before relationship changes.\n- Validate roles via user profile lookup (KOL/OL only as parent).\n- Enforce admin-only access via middleware.\n- Log all changes with user, timestamp, and reason.\n- Write reusable validation utilities with unit tests.",
         "testStrategy": "Unit/integration tests for all business rules; attempt invalid operations and verify rejection; audit log inspection.",
         "priority": "high",
-        "dependencies": [3],
+        "dependencies": [
+          3
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -113,7 +162,10 @@
         "details": "- Use Redis (v7+) for caching tree and frequently accessed queries.\n- Implement cache invalidation on relationship changes.\n- Use PostgreSQL CTEs and indexes for efficient queries.\n- Frontend: ensure react-window/react-virtualized is used for large trees.\n- Implement lazy loading of child nodes in tree view.\n- Monitor API response times and optimize as needed.",
         "testStrategy": "Load test API endpoints (tree, history) with large datasets; measure response times; profile frontend rendering with >10,000 nodes.",
         "priority": "medium",
-        "dependencies": [4, 3],
+        "dependencies": [
+          4,
+          3
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -124,7 +176,9 @@
         "details": "- Use Passport.js (v0.7+) or NextAuth.js for authentication.\n- Restrict all relationship-changing endpoints to admin users.\n- Store audit logs in a separate, immutable table.\n- Regularly review and test access control policies.\n- Ensure secure handling of tokens and sensitive data.",
         "testStrategy": "Penetration tests for endpoint access; attempt unauthorized actions; verify audit logs for all changes.",
         "priority": "high",
-        "dependencies": [3],
+        "dependencies": [
+          3
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -135,7 +189,10 @@
         "details": "- Use Prometheus + Grafana for API metrics (response time, error rate).\n- Integrate Sentry (v7+) for error tracking (frontend/backend).\n- Log key business events (relationship changes, errors) to ELK stack or similar.\n- Expose metrics endpoints for dashboards.\n- Track frontend usage (drag-and-drop success, search latency) via analytics (e.g., PostHog).",
         "testStrategy": "Simulate errors and slow queries; verify metrics in dashboards; check alerting for failures.",
         "priority": "medium",
-        "dependencies": [3, 4],
+        "dependencies": [
+          3,
+          4
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -146,7 +203,14 @@
         "details": "- Backend: Jest or Vitest for unit/integration tests; use Supertest for API.\n- Frontend: React Testing Library, Cypress for e2e.\n- Cover all business rules, error cases, and edge scenarios.\n- Test with large datasets for performance.\n- Include accessibility tests (axe-core).",
         "testStrategy": "Run all test suites in CI; require >90% coverage; manual exploratory tests for complex flows.",
         "priority": "high",
-        "dependencies": [4, 5, 6, 7, 8, 9],
+        "dependencies": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
         "status": "pending",
         "subtasks": []
       },
@@ -157,14 +221,22 @@
         "details": "- Use Swagger/OpenAPI for API docs (auto-generated).\n- Document DB schema, constraints, and business logic.\n- Create admin user guides (with screenshots, video walkthroughs).\n- Maintain README and contribution guidelines.\n- Store docs in repo (Markdown) and publish via Storybook or Docusaurus.",
         "testStrategy": "Peer review of docs; admin user testing for clarity; verify all endpoints and flows are documented.",
         "priority": "medium",
-        "dependencies": [4, 5, 6, 7, 8, 9, 11],
+        "dependencies": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          11
+        ],
         "status": "pending",
         "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-07-18T10:54:20.972Z",
-      "updated": "2025-07-21T09:54:58.908Z",
+      "updated": "2025-07-21T10:05:17.604Z",
       "description": "Tasks for master context"
     }
   }

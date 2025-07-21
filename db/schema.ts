@@ -1,308 +1,420 @@
-import { pgTable, serial, varchar, timestamp, integer, boolean, text, numeric, date, pgEnum } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, uuid, varchar, timestamp, text, numeric, integer, boolean, date, pgEnum, jsonb, check } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
 
-// Enum 정의
-export const caseStatusEnum = pgEnum('case_status_enum', ['active', 'completed', 'cancelled']);
-export const photoAngleEnum = pgEnum('photo_angle_enum', ['front', 'left', 'right']);
+// Enums 정의
+export const userRoleEnum = pgEnum('user_role_enum', ['admin', 'kol', 'ol', 'shop_owner']);
+export const approvalStatusEnum = pgEnum('approval_status_enum', ['pending', 'approved', 'rejected']);
+export const relationshipTypeEnum = pgEnum('relationship_type_enum', ['direct', 'transferred', 'temporary']);
+export const productCategoryEnum = pgEnum('product_category_enum', ['skincare', 'device', 'supplement', 'cosmetic', 'accessory']);
+export const orderStatusEnum = pgEnum('order_status_enum', ['pending', 'completed', 'cancelled', 'refunded']);
+export const commissionStatusEnum = pgEnum('commission_status_enum', ['calculated', 'adjusted', 'paid', 'cancelled']);
+export const clinicalStatusEnum = pgEnum('clinical_status_enum', ['in_progress', 'completed', 'paused', 'cancelled']);
+export const consentStatusEnum = pgEnum('consent_status_enum', ['no_consent', 'consented', 'pending']);
+export const genderEnum = pgEnum('gender_enum', ['male', 'female', 'other']);
+export const subjectTypeEnum = pgEnum('subject_type_enum', ['self', 'customer']);
+export const photoTypeEnum = pgEnum('photo_type_enum', ['front', 'left_side', 'right_side']);
+export const notificationTypeEnum = pgEnum('notification_type_enum', [
+  'system', 'crm_update', 'order_created', 'commission_paid', 
+  'clinical_progress', 'approval_required', 'status_changed', 'reminder'
+]);
+export const priorityEnum = pgEnum('priority_enum', ['low', 'normal', 'high', 'urgent']);
+export const auditActionEnum = pgEnum('audit_action_enum', ['INSERT', 'UPDATE', 'DELETE']);
+export const ynEnum = pgEnum('yn_enum', ['Y', 'N']);
+export const ratingEnum = pgEnum('rating_enum', ['상', '중', '하']);
+export const educationStatusEnum = pgEnum('education_status_enum', ['not_started', 'applied', 'in_progress', 'completed', 'cancelled']);
+export const tierEnum = pgEnum('tier_enum', ['tier_1_4', 'tier_5_plus']);
 
-// 사용자 테이블
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  clerkId: varchar("clerk_id", { length: 255 }).notNull().unique(),
+/**
+ * 사용자 프로필 테이블
+ * Auth.users와 1:1 관계를 가지는 프로필 정보
+ */
+export const profiles = pgTable("profiles", {
+  id: uuid("id").primaryKey(), // auth.users.id와 동일
   email: varchar("email", { length: 255 }).notNull().unique(),
-  name: varchar("name", { length: 255 }),
-  role: varchar("role", { length: 50 }).notNull().default("kol"), // admin, kol
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 사용자 관계 정의
-export const usersRelations = relations(users, ({ one, many }) => ({
-  kol: one(kols, {
-    fields: [users.id],
-    references: [kols.userId],
-  }),
-  notifications: many(notifications),
-}));
-
-// KOL 테이블
-export const kols = pgTable("kols", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
+  role: userRoleEnum("role").notNull().default('shop_owner'),
+  status: approvalStatusEnum("status").notNull().default('pending'),
   shopName: varchar("shop_name", { length: 255 }).notNull(),
   region: varchar("region", { length: 100 }),
-  smartPlaceLink: varchar("smart_place_link", { length: 500 }),
-  status: varchar("status", { length: 50 }).default("active").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// KOL 관계 정의
-export const kolsRelations = relations(kols, ({ one, many }) => ({
-  user: one(users, {
-    fields: [kols.userId],
-    references: [users.id],
-  }),
-  shops: many(shops),
-  ownedShops: many(shops, {
-    relationName: "ownedShops"
-  }),
-  dashboardMetrics: many(kolDashboardMetrics),
-  totalMonthlySales: many(kolTotalMonthlySales),
+  naverPlaceLink: text("naver_place_link"),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  approvedBy: uuid("approved_by"),
+  commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }),
+  totalSubordinates: integer("total_subordinates").default(0),
+  activeSubordinates: integer("active_subordinates").default(0),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  nameCheck: check("name_length_check", sql`length(trim(both from ${table.name})) >= 2`),
+  shopNameCheck: check("shop_name_length_check", sql`length(trim(both from ${table.shopName})) >= 2`),
+  emailCheck: check("email_format_check", sql`${table.email} ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'`),
+  commissionRateCheck: check("commission_rate_range", sql`${table.commissionRate} >= 0 AND ${table.commissionRate} <= 100`),
+  // Foreign key constraints
+  approvedByFkey: check("approved_by_fkey", sql`${table.approvedBy} IS NULL OR EXISTS (SELECT 1 FROM ${table} WHERE id = ${table.approvedBy})`),
 }));
 
-// 전문점 테이블
-export const shops = pgTable("shops", {
-  id: serial("id").primaryKey(),
-  ownerName: varchar("owner_name", { length: 255 }).notNull(),
-  shopName: varchar("shop_name", { length: 255 }).notNull(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  region: varchar("region", { length: 100 }),
-  smartPlaceLink: varchar("smart_place_link", { length: 500 }),
-  isOwnerKol: boolean("is_owner_kol").default(false).notNull(),
-  contractDate: timestamp("contract_date"),
-  email: varchar("email", { length: 255 }),
-  ownerKolId: integer("owner_kol_id").references(() => kols.id),
-  isSelfShop: boolean("is_self_shop").default(false).notNull(),
-  status: varchar("status", { length: 50 }).default("active").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 전문점 관계 정의
-export const shopsRelations = relations(shops, ({ one, many }) => ({
-  kol: one(kols, {
-    fields: [shops.kolId],
-    references: [kols.id],
-  }),
-  ownerKol: one(kols, {
-    fields: [shops.ownerKolId],
-    references: [kols.id],
-  }),
-  salesMetrics: many(shopSalesMetrics),
+/**
+ * 샵 관계 테이블
+ * KOL과 샵 간의 부모-자식 관계를 추적하는 핵심 테이블
+ */
+export const shopRelationships = pgTable("shop_relationships", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  shopOwnerId: uuid("shop_owner_id").notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  parentId: uuid("parent_id").references(() => profiles.id, { onDelete: 'set null' }),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  isActive: boolean("is_active").notNull().default(true),
+  relationshipType: relationshipTypeEnum("relationship_type").default('direct'),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdBy: uuid("created_by").references(() => profiles.id),
+}, (table) => ({
+  noSelfRelationship: check("no_self_relationship", sql`${table.shopOwnerId} <> ${table.parentId}`),
+  endedRelationshipNotActive: check("ended_relationship_not_active", 
+    sql`NOT ((${table.endedAt} IS NOT NULL) AND (${table.isActive} = true))`),
+  validRelationshipPeriod: check("valid_relationship_period", 
+    sql`(${table.endedAt} IS NULL) OR (${table.endedAt} > ${table.startedAt})`),
 }));
 
-// 제품 테이블
+/**
+ * 제품 테이블
+ * 판매 가능한 모든 제품 정보
+ */
 export const products = pgTable("products", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
-  price: integer("price").notNull(),
-  isDevice: boolean("is_device").default(false).notNull(), // 기기(true) 또는 일반 제품(false)
+  code: varchar("code", { length: 100 }).unique(),
+  category: productCategoryEnum("category"),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  isFeatured: boolean("is_featured").default(false),
+  sortOrder: integer("sort_order").default(0),
   description: text("description"),
-  image: varchar("image", { length: 500 }),
-  category: varchar("category", { length: 100 }),
-  status: varchar("status", { length: 50 }).default("active").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 제품 관계 정의
-export const productsRelations = relations(products, ({ many }) => ({
+  specifications: jsonb("specifications").default({}),
+  images: text("images").array(),
+  defaultCommissionRate: numeric("default_commission_rate", { precision: 5, scale: 2 }),
+  minCommissionRate: numeric("min_commission_rate", { precision: 5, scale: 2 }),
+  maxCommissionRate: numeric("max_commission_rate", { precision: 5, scale: 2 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdBy: uuid("created_by").references(() => profiles.id),
+}, (table) => ({
+  nameCheck: check("name_length_check", sql`length(trim(both from ${table.name})) >= 2`),
+  priceCheck: check("price_positive", sql`${table.price} >= 0`),
 }));
 
-// 알림 테이블
-export const notifications = pgTable("notifications", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  content: varchar("content", { length: 1000 }).notNull(),
-  read: boolean("read").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 알림 관계 정의
-export const notificationsRelations = relations(notifications, ({ one }) => ({
-  user: one(users, {
-    fields: [notifications.userId],
-    references: [users.id],
-  }),
+/**
+ * 주문 테이블
+ * 샵에서 발생한 주문 정보
+ */
+export const orders = pgTable("orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  shopId: uuid("shop_id").notNull().references(() => profiles.id),
+  orderDate: date("order_date").notNull(),
+  orderNumber: varchar("order_number", { length: 100 }),
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+  commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }),
+  commissionAmount: numeric("commission_amount", { precision: 12, scale: 2 }),
+  commissionStatus: commissionStatusEnum("commission_status").default('calculated'),
+  orderStatus: orderStatusEnum("order_status").default('completed'),
+  isSelfShopOrder: boolean("is_self_shop_order").default(false),
+  notes: text("notes"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdBy: uuid("created_by").notNull().references(() => profiles.id),
+}, (table) => ({
+  orderDateCheck: check("order_date_not_future", sql`${table.orderDate} <= CURRENT_DATE`),
+  totalAmountCheck: check("total_amount_range", 
+    sql`${table.totalAmount} >= -999999999 AND ${table.totalAmount} <= 999999999`),
+  commissionRateCheck: check("commission_rate_range", 
+    sql`${table.commissionRate} IS NULL OR (${table.commissionRate} >= 0 AND ${table.commissionRate} <= 100)`),
 }));
 
-
-
-// KOL 대시보드 메트릭 테이블
-export const kolDashboardMetrics = pgTable("kol_dashboard_metrics", {
-  id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  monthlySales: integer("monthly_sales").default(0).notNull(),
-  monthlyCommission: integer("monthly_commission").default(0).notNull(),
-  activeShopsCount: integer("active_shops_count").default(0).notNull(),
-  totalShopsCount: integer("total_shops_count").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// KOL 대시보드 메트릭 관계 정의
-export const kolDashboardMetricsRelations = relations(kolDashboardMetrics, ({ one }) => ({
-  kol: one(kols, {
-    fields: [kolDashboardMetrics.kolId],
-    references: [kols.id],
-  }),
+/**
+ * 주문 아이템 테이블
+ * 주문에 포함된 개별 제품 정보
+ */
+export const orderItems = pgTable("order_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  productId: uuid("product_id").references(() => products.id),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  productCode: varchar("product_code", { length: 100 }),
+  quantity: integer("quantity").notNull(),
+  unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
+  subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
+  itemCommissionRate: numeric("item_commission_rate", { precision: 5, scale: 2 }),
+  itemCommissionAmount: numeric("item_commission_amount", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  quantityCheck: check("quantity_not_zero", sql`${table.quantity} <> 0`),
+  unitPriceCheck: check("unit_price_positive", sql`${table.unitPrice} >= 0`),
 }));
 
-// 전문점 매출 메트릭 테이블
-export const shopSalesMetrics = pgTable("shop_sales_metrics", {
-  id: serial("id").primaryKey(),
-  shopId: integer("shop_id").references(() => shops.id).notNull(),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  totalSales: integer("total_sales").default(0).notNull(),
-  productSales: integer("product_sales").default(0).notNull(),
-  deviceSales: integer("device_sales").default(0).notNull(),
-  commission: integer("commission").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 전문점 매출 메트릭 관계 정의
-export const shopSalesMetricsRelations = relations(shopSalesMetrics, ({ one }) => ({
-  shop: one(shops, {
-    fields: [shopSalesMetrics.shopId],
-    references: [shops.id],
-  }),
-}));
-
-
-// KOL 총 월간 매출 테이블
-export const kolTotalMonthlySales = pgTable("kol_total_monthly_sales", {
-  id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  yearMonth: varchar("year_month", { length: 7 }).notNull(), // YYYY-MM 형식
-  totalSales: integer("total_sales").default(0).notNull(),
-  productSales: integer("product_sales").default(0).notNull(),
-  deviceSales: integer("device_sales").default(0).notNull(),
-  totalCommission: integer("total_commission").default(0).notNull(),
-  totalActiveShops: integer("total_active_shops").default(0).notNull(),
-  totalShops: integer("total_shops").default(0).notNull(),
-  directSalesRatio: numeric("direct_sales_ratio").default("0").notNull(),
-  indirectSalesRatio: numeric("indirect_sales_ratio").default("0").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: false }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: false }).defaultNow().notNull()
-});
-
-// KOL 총 월간 매출 관계 정의
-export const kolTotalMonthlySalesRelations = relations(kolTotalMonthlySales, ({ one }) => ({
-  kol: one(kols, {
-    fields: [kolTotalMonthlySales.kolId],
-    references: [kols.id],
-  }),
-}));
-
-// 임상 고객 테이블
-export const clinicalCustomers = pgTable("clinical_customers", {
-  id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  name: varchar("name", { length: 100 }).notNull(),
-  phone: varchar("phone", { length: 20 }),
-  email: varchar("email", { length: 100 }),
-  birthDate: date("birth_date"),
-  memo: text("memo"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 임상 케이스 테이블
+/**
+ * 임상 케이스 테이블
+ * 고객의 임상 케이스 관리
+ */
 export const clinicalCases = pgTable("clinical_cases", {
-  id: serial("id").primaryKey(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  customerId: integer("customer_id").references(() => clinicalCustomers.id),
-  customerName: varchar("customer_name", { length: 100 }).notNull(),
-  caseName: varchar("case_name", { length: 200 }).notNull(),
-  concernArea: varchar("concern_area", { length: 100 }),
-  treatmentPlan: text("treatment_plan"),
-  consentReceived: boolean("consent_received").default(false).notNull(),
-  consentDate: date("consent_date"),
-  status: caseStatusEnum("status").default("active").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-
-// 임상 사진 테이블
-export const clinicalPhotos = pgTable("clinical_photos", {
-  id: serial("id").primaryKey(),
-  caseId: integer("case_id").references(() => clinicalCases.id).notNull(),
-  kolId: integer("kol_id").references(() => kols.id).notNull(),
-  photoDate: date("photo_date").defaultNow().notNull(),
-  roundNumber: integer("round_number").notNull(),
-  angle: photoAngleEnum("angle").notNull(),
-  fileUrl: text("file_url").notNull(),
-  thumbnailUrl: text("thumbnail_url"),
-  fileSize: integer("file_size"),
-  mimeType: varchar("mime_type", { length: 50 }),
-  memo: text("memo"),
-  createdAt: timestamp("created_at").defaultNow().notNull()
-});
-
-// 회차별 시술 정보 테이블
-export const clinicalRoundInfo = pgTable("clinical_round_info", {
-  id: serial("id").primaryKey(),
-  caseId: integer("case_id").references(() => clinicalCases.id).notNull(),
-  roundNumber: integer("round_number").notNull(),
-  treatmentType: varchar("treatment_type", { length: 50 }),
-  treatmentDate: date("treatment_date"),
-  products: text("products"),
-  skinTypes: text("skin_types"),
+  id: uuid("id").primaryKey().defaultRandom(),
+  shopId: uuid("shop_id").notNull().references(() => profiles.id),
+  subjectType: subjectTypeEnum("subject_type").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  gender: genderEnum("gender"),
   age: integer("age"),
-  gender: varchar("gender", { length: 10 }),
-  memo: text("memo"),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull()
+  status: clinicalStatusEnum("status").notNull().default('in_progress'),
+  treatmentItem: varchar("treatment_item", { length: 255 }),
+  startDate: date("start_date").default(sql`CURRENT_DATE`),
+  endDate: date("end_date"),
+  totalSessions: integer("total_sessions").default(0),
+  consentStatus: consentStatusEnum("consent_status").notNull().default('pending'),
+  consentDate: date("consent_date"),
+  marketingConsent: boolean("marketing_consent").default(false),
+  notes: text("notes"),
+  tags: text("tags").array(),
+  customFields: jsonb("custom_fields").default({}),
+  photoCount: integer("photo_count").default(0),
+  latestSession: integer("latest_session").default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdBy: uuid("created_by").references(() => profiles.id),
+}, (table) => ({
+  ageCheck: check("age_range", sql`${table.age} IS NULL OR (${table.age} > 0 AND ${table.age} < 150)`),
+  totalSessionsCheck: check("total_sessions_positive", sql`${table.totalSessions} >= 0`),
+}));
+
+/**
+ * 임상 사진 테이블
+ * 임상 케이스의 진행 사진들
+ */
+export const clinicalPhotos = pgTable("clinical_photos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clinicalCaseId: uuid("clinical_case_id").notNull().references(() => clinicalCases.id, { onDelete: 'cascade' }),
+  sessionNumber: integer("session_number").notNull(),
+  photoType: photoTypeEnum("photo_type").notNull(),
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size"),
+  metadata: jsonb("metadata").default({}),
+  uploadDate: timestamp("upload_date", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  uploadedBy: uuid("uploaded_by").references(() => profiles.id),
+}, (table) => ({
+  sessionNumberCheck: check("session_number_range", 
+    sql`${table.sessionNumber} >= 0 AND ${table.sessionNumber} <= 999`),
+  fileSizeCheck: check("file_size_positive", 
+    sql`${table.fileSize} IS NULL OR ${table.fileSize} > 0`),
+}));
+
+/**
+ * 동의서 파일 테이블
+ * 임상 케이스별 동의서 파일 정보
+ */
+export const consentFiles = pgTable("consent_files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clinicalCaseId: uuid("clinical_case_id").notNull().unique().references(() => clinicalCases.id, { onDelete: 'cascade' }),
+  filePath: text("file_path").notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileSize: integer("file_size"),
+  fileType: varchar("file_type", { length: 100 }),
+  metadata: jsonb("metadata").default({}),
+  uploadDate: timestamp("upload_date", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  uploadedBy: uuid("uploaded_by").references(() => profiles.id),
+}, (table) => ({
+  fileSizeCheck: check("file_size_positive", 
+    sql`${table.fileSize} IS NULL OR ${table.fileSize} > 0`),
+}));
+
+/**
+ * 알림 테이블
+ * 시스템 알림 관리
+ */
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  type: notificationTypeEnum("type").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  relatedType: varchar("related_type", { length: 100 }),
+  relatedId: uuid("related_id"),
+  actionUrl: text("action_url"),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  isArchived: boolean("is_archived").default(false),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  priority: priorityEnum("priority").default('normal'),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
 });
 
-// 동의서 파일 정보 테이블
-export const clinicalConsentFiles = pgTable("clinical_consent_files", {
-  id: serial("id").primaryKey(),
-  caseId: integer("case_id").references(() => clinicalCases.id).notNull(),
-  fileUrl: text("file_url").notNull(),
-  uploadedAt: timestamp("uploaded_at").defaultNow().notNull()
+/**
+ * 감사 로그 테이블
+ * 데이터 변경 이력 추적
+ */
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tableName: varchar("table_name", { length: 100 }).notNull(),
+  recordId: uuid("record_id").notNull(),
+  action: auditActionEnum("action").notNull(),
+  userId: uuid("user_id").references(() => profiles.id),
+  userRole: varchar("user_role", { length: 50 }),
+  userIp: varchar("user_ip", { length: 45 }), // IPv6 지원
+  oldValues: jsonb("old_values"),
+  newValues: jsonb("new_values"),
+  changedFields: text("changed_fields").array(),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-// 관계 정의
-export const clinicalCustomersRelations = relations(clinicalCustomers, ({ one, many }) => ({
-  kol: one(kols, {
-    fields: [clinicalCustomers.kolId],
-    references: [kols.id],
+/**
+ * 파일 메타데이터 테이블
+ * 업로드된 파일들의 메타데이터 관리
+ */
+export const fileMetadata = pgTable("file_metadata", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  bucketName: varchar("bucket_name", { length: 100 }).notNull(),
+  filePath: text("file_path").notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileSize: integer("file_size"),
+  mimeType: varchar("mime_type", { length: 100 }),
+  uploadedBy: uuid("uploaded_by").references(() => profiles.id),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Relations 정의
+export const profilesRelations = relations(profiles, ({ one, many }) => ({
+  approver: one(profiles, {
+    fields: [profiles.approvedBy],
+    references: [profiles.id],
+    relationName: "approver"
   }),
-  cases: many(clinicalCases),
+  parentRelationships: many(shopRelationships, {
+    relationName: "parentRelationships"
+  }),
+  childRelationships: many(shopRelationships, {
+    relationName: "childRelationships"  
+  }),
+  orders: many(orders, {
+    relationName: "shopOrders"
+  }),
+  createdOrders: many(orders, {
+    relationName: "createdOrders"
+  }),
+  clinicalCases: many(clinicalCases),
+  notifications: many(notifications),
+  auditLogs: many(auditLogs),
+  uploadedFiles: many(fileMetadata),
+  createdProducts: many(products),
+}));
+
+export const shopRelationshipsRelations = relations(shopRelationships, ({ one }) => ({
+  shopOwner: one(profiles, {
+    fields: [shopRelationships.shopOwnerId],
+    references: [profiles.id],
+    relationName: "childRelationships"
+  }),
+  parent: one(profiles, {
+    fields: [shopRelationships.parentId], 
+    references: [profiles.id],
+    relationName: "parentRelationships"
+  }),
+  creator: one(profiles, {
+    fields: [shopRelationships.createdBy],
+    references: [profiles.id],
+    relationName: "createdRelationships"
+  }),
+}));
+
+export const productsRelations = relations(products, ({ one, many }) => ({
+  creator: one(profiles, {
+    fields: [products.createdBy],
+    references: [profiles.id]
+  }),
+  orderItems: many(orderItems),
+}));
+
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  shop: one(profiles, {
+    fields: [orders.shopId],
+    references: [profiles.id],
+    relationName: "shopOrders"
+  }),
+  creator: one(profiles, {
+    fields: [orders.createdBy],
+    references: [profiles.id],
+    relationName: "createdOrders"
+  }),
+  items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id]
+  }),
+  product: one(products, {
+    fields: [orderItems.productId],
+    references: [products.id]
+  }),
 }));
 
 export const clinicalCasesRelations = relations(clinicalCases, ({ one, many }) => ({
-  kol: one(kols, {
-    fields: [clinicalCases.kolId],
-    references: [kols.id],
+  shop: one(profiles, {
+    fields: [clinicalCases.shopId],
+    references: [profiles.id]
   }),
-  customer: one(clinicalCustomers, {
-    fields: [clinicalCases.customerId],
-    references: [clinicalCustomers.id],
+  creator: one(profiles, {
+    fields: [clinicalCases.createdBy],
+    references: [profiles.id]
   }),
   photos: many(clinicalPhotos),
-  roundInfos: many(clinicalRoundInfo),
-  consentFiles: many(clinicalConsentFiles),
+  consentFiles: many(consentFiles),
 }));
 
 export const clinicalPhotosRelations = relations(clinicalPhotos, ({ one }) => ({
-  case: one(clinicalCases, {
-    fields: [clinicalPhotos.caseId],
-    references: [clinicalCases.id],
+  clinicalCase: one(clinicalCases, {
+    fields: [clinicalPhotos.clinicalCaseId],
+    references: [clinicalCases.id]
   }),
-  kol: one(kols, {
-    fields: [clinicalPhotos.kolId],
-    references: [kols.id],
-  }),
-}));
-
-export const clinicalRoundInfoRelations = relations(clinicalRoundInfo, ({ one }) => ({
-  case: one(clinicalCases, {
-    fields: [clinicalRoundInfo.caseId],
-    references: [clinicalCases.id],
+  uploader: one(profiles, {
+    fields: [clinicalPhotos.uploadedBy],
+    references: [profiles.id]
   }),
 }));
 
-export const clinicalConsentFilesRelations = relations(clinicalConsentFiles, ({ one }) => ({
-  case: one(clinicalCases, {
-    fields: [clinicalConsentFiles.caseId],
-    references: [clinicalCases.id],
+export const consentFilesRelations = relations(consentFiles, ({ one }) => ({
+  clinicalCase: one(clinicalCases, {
+    fields: [consentFiles.clinicalCaseId],
+    references: [clinicalCases.id]
+  }),
+  uploader: one(profiles, {
+    fields: [consentFiles.uploadedBy],
+    references: [profiles.id]
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(profiles, {
+    fields: [notifications.userId],
+    references: [profiles.id]
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(profiles, {
+    fields: [auditLogs.userId],
+    references: [profiles.id]
+  }),
+}));
+
+export const fileMetadataRelations = relations(fileMetadata, ({ one }) => ({
+  uploader: one(profiles, {
+    fields: [fileMetadata.uploadedBy],
+    references: [profiles.id]
   }),
 }));
