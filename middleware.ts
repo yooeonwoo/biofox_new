@@ -2,6 +2,14 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // 개발 환경에서는 모든 인증 체크 우회
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (isDevelopment) {
+    console.log(`[DEV] Middleware bypassed for: ${request.nextUrl.pathname}`);
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -44,16 +52,12 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // 개발 환경에서 인증 완전 비활성화
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
   // 개발 로그인 페이지는 항상 인증 없이 접근 가능
   if (pathname === "/auth/dev-login") {
     return response;
   }
 
   // biofox-admin 인증 검사 제거: 항상 통과
-
   return response;
 }
 

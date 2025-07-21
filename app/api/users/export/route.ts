@@ -84,39 +84,46 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // 현재 사용자 인증 확인
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 개발 환경에서는 인증 체크 우회
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (!isDevelopment) {
+      // 현재 사용자 인증 확인
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+      if (authError || !user) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
 
-    // 현재 사용자의 프로필 확인
-    const { data: currentUserProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+      // 현재 사용자의 프로필 확인
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-    if (profileError || !currentUserProfile) {
-      return NextResponse.json(
-        { success: false, error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
+      if (profileError || !currentUserProfile) {
+        return NextResponse.json(
+          { success: false, error: 'Profile not found' },
+          { status: 404 }
+        );
+      }
 
-    // admin 권한 확인
-    if (currentUserProfile.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions' },
-        { status: 403 }
-      );
+      // admin 권한 확인
+      if (currentUserProfile.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        );
+      }
+    } else {
+      console.log('[DEV] Authentication bypassed for GET /api/users/export');
     }
 
     // URL 쿼리 파라미터 파싱
@@ -257,25 +264,32 @@ export async function HEAD(request: NextRequest) {
       }
     );
 
-    // 인증 확인
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 개발 환경에서는 인증 체크 우회
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (!isDevelopment) {
+      // 인증 확인
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return new Response(null, { status: 401 });
-    }
+      if (authError || !user) {
+        return new Response(null, { status: 401 });
+      }
 
-    // 권한 확인
-    const { data: currentUserProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+      // 권한 확인
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-    if (profileError || !currentUserProfile || currentUserProfile.role !== 'admin') {
-      return new Response(null, { status: 403 });
+      if (profileError || !currentUserProfile || currentUserProfile.role !== 'admin') {
+        return new Response(null, { status: 403 });
+      }
+    } else {
+      console.log('[DEV] Authentication bypassed for HEAD /api/users/export');
     }
 
     // 다운로드 가능 상태 반환

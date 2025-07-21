@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
@@ -25,43 +25,70 @@ function sanitizeInput(input: string): string {
 // 사용자 목록 조회 API
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({
-      cookies: () => cookies(),
-    });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
-    // 현재 사용자 인증 확인
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 개발 환경에서는 인증 체크 우회
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (!isDevelopment) {
+      // 현재 사용자 인증 확인
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+      if (authError || !user) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
 
-    // 현재 사용자의 프로필 확인
-    const { data: currentUserProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+      // 현재 사용자의 프로필 확인
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-    if (profileError || !currentUserProfile) {
-      return NextResponse.json(
-        { success: false, error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
+      if (profileError || !currentUserProfile) {
+        return NextResponse.json(
+          { success: false, error: 'Profile not found' },
+          { status: 404 }
+        );
+      }
 
-    // admin 권한 확인 (일반 사용자는 제한된 정보만 볼 수 있도록)
-    if (currentUserProfile.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions' },
-        { status: 403 }
-      );
+      // admin 권한 확인
+      if (currentUserProfile.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        );
+      }
+    } else {
+      console.log('[DEV] Authentication bypassed for GET /api/users');
     }
 
     // URL 쿼리 파라미터 파싱
@@ -164,43 +191,73 @@ export async function GET(request: NextRequest) {
 // 사용자 생성 API
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({
-      cookies: () => cookies(),
-    });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
-    // 현재 사용자 인증 확인
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 개발 환경에서는 인증 체크 우회
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    let currentUserId = 'dev-admin-user';
+    
+    if (!isDevelopment) {
+      // 현재 사용자 인증 확인
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+      if (authError || !user) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
 
-    // 현재 사용자의 프로필 확인 (admin 권한 체크)
-    const { data: currentUserProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+      // 현재 사용자의 프로필 확인 (admin 권한 체크)
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-    if (profileError || !currentUserProfile) {
-      return NextResponse.json(
-        { success: false, error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
+      if (profileError || !currentUserProfile) {
+        return NextResponse.json(
+          { success: false, error: 'Profile not found' },
+          { status: 404 }
+        );
+      }
 
-    // admin 권한 확인
-    if (currentUserProfile.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions' },
-        { status: 403 }
-      );
+      // admin 권한 확인
+      if (currentUserProfile.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        );
+      }
+      
+      currentUserId = user.id;
+    } else {
+      console.log('[DEV] Authentication bypassed for POST /api/users');
     }
 
     // 요청 본문 파싱
@@ -221,7 +278,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Validation failed',
-          details: validation.error.errors.map(err => ({
+          details: validation.error.errors.map((err: any) => ({
             field: err.path.join('.'),
             message: err.message
           }))
@@ -328,7 +385,7 @@ export async function POST(request: NextRequest) {
         table_name: 'profiles',
         record_id: authUser.user.id,
         action: 'INSERT',
-        user_id: user.id,
+        user_id: currentUserId,
         old_values: null,
         new_values: {
           email: sanitizedData.email,
@@ -357,7 +414,7 @@ export async function POST(request: NextRequest) {
       meta: {
         invitationSent: true,
         createdAt: new Date().toISOString(),
-        createdBy: user.id
+        createdBy: currentUserId
       }
     }, { status: 201 });
 

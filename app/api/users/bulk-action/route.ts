@@ -56,39 +56,49 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // 현재 사용자 인증 확인
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 개발 환경에서는 인증 체크 우회
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    let currentUserId = 'dev-admin-user';
+    
+    if (!isDevelopment) {
+      // 현재 사용자 인증 확인
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+      if (authError || !user) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
 
-    // 현재 사용자의 프로필 확인
-    const { data: currentUserProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+      // 현재 사용자의 프로필 확인
+      const { data: currentUserProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-    if (profileError || !currentUserProfile) {
-      return NextResponse.json(
-        { success: false, error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
+      if (profileError || !currentUserProfile) {
+        return NextResponse.json(
+          { success: false, error: 'Profile not found' },
+          { status: 404 }
+        );
+      }
 
-    // admin 권한 확인
-    if (currentUserProfile.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions' },
-        { status: 403 }
-      );
+      // admin 권한 확인
+      if (currentUserProfile.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        );
+      }
+      
+      currentUserId = user.id;
+    } else {
+      console.log('[DEV] Authentication bypassed for POST /api/users/bulk-action');
     }
 
     // 요청 본문 파싱
@@ -121,7 +131,7 @@ export async function POST(request: NextRequest) {
     const { action, userIds, reason, data } = validation.data;
 
     // 자기 자신 대상 액션 방지 (삭제의 경우)
-    if (action === 'delete' && userIds.includes(user.id)) {
+    if (action === 'delete' && userIds.includes(currentUserId)) {
       return NextResponse.json(
         { success: false, error: 'Cannot delete your own account' },
         { status: 400 }
@@ -237,7 +247,7 @@ export async function POST(request: NextRequest) {
             table_name: 'profiles',
             record_id: targetUser.id,
             action: action === 'delete' ? 'DELETE' : 'UPDATE',
-            user_id: user.id,
+            user_id: currentUserId,
             old_values: action === 'delete' ? targetUser : 
               Object.fromEntries(
                 Object.keys(updateData).filter(key => key !== 'updated_at')
@@ -283,7 +293,7 @@ export async function POST(request: NextRequest) {
       },
       meta: {
         processedAt: new Date().toISOString(),
-        processedBy: user.id,
+        processedBy: currentUserId,
         reason: reason || null
       }
     });
