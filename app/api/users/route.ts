@@ -22,6 +22,145 @@ function sanitizeInput(input: string): string {
     .trim(); // 공백 제거
 }
 
+// 사용자 목록 조회 API
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createServerComponentClient({
+      cookies: () => cookies(),
+    });
+
+    // 현재 사용자 인증 확인
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // 현재 사용자의 프로필 확인
+    const { data: currentUserProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !currentUserProfile) {
+      return NextResponse.json(
+        { success: false, error: 'Profile not found' },
+        { status: 404 }
+      );
+    }
+
+    // admin 권한 확인 (일반 사용자는 제한된 정보만 볼 수 있도록)
+    if (currentUserProfile.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions' },
+        { status: 403 }
+      );
+    }
+
+    // URL 쿼리 파라미터 파싱
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const search = searchParams.get('search') || '';
+    const role = searchParams.get('role') || '';
+    const status = searchParams.get('status') || '';
+    const createdFrom = searchParams.get('createdFrom');
+    const createdTo = searchParams.get('createdTo');
+
+    // 페이지네이션 계산
+    const offset = (page - 1) * limit;
+
+    // 기본 쿼리 구성
+    let query = supabase
+      .from('profiles')
+      .select(`
+        id, name, email, role, status, shop_name, region, 
+        commission_rate, total_subordinates, active_subordinates,
+        naver_place_link, approved_at, created_at, updated_at
+      `, { count: 'exact' });
+
+    // 필터 적용
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,shop_name.ilike.%${search}%`);
+    }
+
+    if (role) {
+      const roles = role.split(',').map(r => r.trim());
+      if (roles.length === 1) {
+        query = query.eq('role', roles[0]);
+      } else {
+        query = query.in('role', roles);
+      }
+    }
+
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim());
+      if (statuses.length === 1) {
+        query = query.eq('status', statuses[0]);
+      } else {
+        query = query.in('status', statuses);
+      }
+    }
+
+    if (createdFrom) {
+      query = query.gte('created_at', createdFrom);
+    }
+
+    if (createdTo) {
+      query = query.lte('created_at', createdTo);
+    }
+
+    // 정렬 및 페이지네이션 적용
+    query = query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data: users, error: fetchError, count } = await query;
+
+    if (fetchError) {
+      console.error('User fetch error:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch users' },
+        { status: 500 }
+      );
+    }
+
+    // 총 페이지 수 계산
+    const totalPages = Math.ceil((count || 0) / limit);
+
+    return NextResponse.json({
+      success: true,
+      data: users || [],
+      meta: {
+        total: count || 0,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('GET API Error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+
 // 사용자 생성 API
 export async function POST(request: NextRequest) {
   try {
