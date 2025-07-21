@@ -5,10 +5,30 @@ import { z } from 'zod';
 
 // 벌크 액션 검증 스키마
 const bulkActionSchema = z.object({
-  action: z.enum(['delete', 'approve', 'reject', 'suspend']),
-  userIds: z.array(z.string().uuid()).min(1, 'At least one user ID is required'),
-  reason: z.string().optional()
+  action: z.enum(['delete', 'approve', 'reject', 'suspend', 'change_role']),
+  userIds: z.array(z.string().uuid()).min(1, 'At least one user ID is required').max(100, 'Maximum 100 users per action'),
+  reason: z.string().optional(),
+  data: z.object({
+    role: z.enum(['admin', 'kol', 'ol', 'shop_owner']).optional()
+  }).optional()
 });
+
+// 액션별 한국어 레이블 매핑
+const actionLabels: Record<string, string> = {
+  approve: '승인',
+  reject: '거절',
+  suspend: '정지',
+  change_role: '역할 변경',
+  delete: '삭제'
+};
+
+// 역할 레이블 매핑
+const roleLabels: Record<string, string> = {
+  admin: '관리자',
+  kol: 'KOL',
+  ol: 'OL',
+  shop_owner: '상점 운영자'
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,10 +69,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 현재 사용자의 프로필 확인 (admin 권한 체크)
+    // 현재 사용자의 프로필 확인
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('role, name')
+      .select('role')
       .eq('id', user.id)
       .single();
 
@@ -89,7 +109,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Validation failed',
-          details: validation.error.errors.map(err => ({
+          details: validation.error.errors.map((err: any) => ({
             field: err.path.join('.'),
             message: err.message
           }))
@@ -98,123 +118,175 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validatedData = validation.data;
+    const { action, userIds, reason, data } = validation.data;
 
-    // change_role 작업의 경우 역할 데이터 필수 확인
-    if (validatedData.action === 'change_role') {
-      if (!validatedData.data?.role) {
-        return NextResponse.json(
-          { success: false, error: 'Role is required for role change action' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // 자기 자신 삭제 방지 (delete 액션의 경우)
-    if (validatedData.action === 'delete' && validatedData.user_ids.includes(user.id)) {
+    // 자기 자신 대상 액션 방지 (삭제의 경우)
+    if (action === 'delete' && userIds.includes(user.id)) {
       return NextResponse.json(
-        { success: false, error: 'Cannot delete yourself' },
+        { success: false, error: 'Cannot delete your own account' },
         { status: 400 }
       );
     }
 
-    // Supabase RPC 함수 호출
-    const { data: rpcResult, error: rpcError } = await supabase.rpc('bulk_update_users', {
-      user_ids: validatedData.user_ids,
-      action_type: validatedData.action,
-      action_data: validatedData.data || {},
-      current_admin_id: user.id
-    });
+    // 대상 사용자들 조회
+    const { data: targetUsers, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', userIds);
 
-    if (rpcError) {
-      console.error('RPC Error:', rpcError);
+    if (fetchError) {
+      console.error('Target users fetch error:', fetchError);
       return NextResponse.json(
-        { success: false, error: 'Database operation failed' },
+        { success: false, error: 'Failed to fetch target users' },
         { status: 500 }
       );
     }
 
-    // RPC 함수 결과 확인
-    if (!rpcResult.success) {
+    if (!targetUsers || targetUsers.length === 0) {
       return NextResponse.json(
-        { success: false, error: rpcResult.error || 'Operation failed' },
-        { status: 500 }
+        { success: false, error: 'No target users found' },
+        { status: 404 }
       );
     }
 
-    // delete 액션의 경우 Auth 사용자도 삭제
-    if (validatedData.action === 'delete' && rpcResult.results.successful.length > 0) {
-      const successfulUserIds = rpcResult.results.successful;
-      
-      // Auth 사용자 삭제 (실패해도 메인 작업에는 영향 없음)
-      for (const userId of successfulUserIds) {
-        try {
-          await supabase.auth.admin.deleteUser(userId);
-        } catch (authDeleteError) {
-          console.error(`Failed to delete auth user ${userId}:`, authDeleteError);
-          // Auth 삭제 실패는 로그만 남기고 계속 진행
-        }
-      }
-    }
+    const results = {
+      success: [] as string[],
+      failed: [] as { id: string; error: string }[]
+    };
 
-    // 감사 로그 기록
-    if (rpcResult.results.successful.length > 0) {
-      const auditLogPromises = rpcResult.results.successful.map(async (userId: string) => {
-        const logData = {
-          table_name: 'profiles',
-          record_id: userId,
-          action: validatedData.action === 'delete' ? 'DELETE' : 'UPDATE',
-          user_id: user.id,
-          old_values: null, // RPC 함수에서 처리
-          new_values: validatedData.action === 'change_role' ? { role: validatedData.data?.role } : null,
-          changed_fields: validatedData.action === 'change_role' ? ['role'] : ['status'],
-          metadata: {
-            operation: 'bulk_action',
-            action_type: validatedData.action,
-            admin_name: currentUserProfile.name,
-            timestamp: new Date().toISOString(),
-            batch_size: validatedData.user_ids.length,
-            successful_count: rpcResult.results.successful.length,
-            failed_count: rpcResult.results.failed.length
-          }
+    // 액션별 처리
+    for (const targetUser of targetUsers) {
+      try {
+        let updateData: any = {
+          updated_at: new Date().toISOString()
         };
 
+        switch (action) {
+          case 'approve':
+            updateData.status = 'approved';
+            if (targetUser.status !== 'approved') {
+              updateData.approved_at = new Date().toISOString();
+            }
+            break;
+
+          case 'reject':
+            updateData.status = 'rejected';
+            break;
+
+          case 'suspend':
+            updateData.status = 'suspended';
+            break;
+
+          case 'change_role':
+            if (!data?.role) {
+              results.failed.push({
+                id: targetUser.id,
+                error: 'Role is required for role change action'
+              });
+              continue;
+            }
+            updateData.role = data.role;
+            break;
+
+          case 'delete':
+            // 삭제는 별도 처리
+            const { error: deleteError } = await supabase
+              .from('profiles')
+              .delete()
+              .eq('id', targetUser.id);
+
+            if (deleteError) {
+              results.failed.push({
+                id: targetUser.id,
+                error: deleteError.message
+              });
+            } else {
+              // Auth 사용자도 삭제 시도
+              try {
+                await supabase.auth.admin.deleteUser(targetUser.id);
+              } catch (authDeleteError) {
+                console.error('Auth user deletion error:', authDeleteError);
+                // 프로필 삭제는 성공했으므로 성공으로 처리
+              }
+              results.success.push(targetUser.id);
+            }
+            continue;
+        }
+
+        // 삭제가 아닌 경우 업데이트 수행
+        if (action !== 'delete') {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('id', targetUser.id);
+
+          if (updateError) {
+            results.failed.push({
+              id: targetUser.id,
+              error: updateError.message
+            });
+          } else {
+            results.success.push(targetUser.id);
+          }
+        }
+
+        // 감사 로그 기록
         const { error: auditError } = await supabase
           .from('audit_logs')
-          .insert(logData);
+          .insert({
+            table_name: 'profiles',
+            record_id: targetUser.id,
+            action: action === 'delete' ? 'DELETE' : 'UPDATE',
+            user_id: user.id,
+            old_values: action === 'delete' ? targetUser : 
+              Object.fromEntries(
+                Object.keys(updateData).filter(key => key !== 'updated_at')
+                  .map(key => [key, targetUser[key]])
+              ),
+            new_values: action === 'delete' ? null : updateData,
+            changed_fields: action === 'delete' ? Object.keys(targetUser) : Object.keys(updateData),
+            metadata: {
+              operation: 'bulk_action',
+              action_type: action,
+              admin_action: true,
+              reason: reason || null,
+              timestamp: new Date().toISOString()
+            }
+          });
 
         if (auditError) {
           console.error('Failed to log bulk action:', auditError);
         }
-      });
 
-      // 모든 감사 로그를 병렬로 처리
-      await Promise.allSettled(auditLogPromises);
+      } catch (error) {
+        console.error(`Error processing user ${targetUser.id}:`, error);
+        results.failed.push({
+          id: targetUser.id,
+          error: String(error)
+        });
+      }
     }
 
-    // 성공 응답
-    const response = {
+    // 결과 응답
+    const actionLabel = actionLabels[action] || action;
+    
+    return NextResponse.json({
       success: true,
-      message: `${actionLabels[validatedData.action]} 작업이 완료되었습니다`,
-      affected: rpcResult.affected,
-      results: {
-        successful: rpcResult.results.successful,
-        failed: rpcResult.results.failed
+      message: `벌크 ${actionLabel} 작업이 완료되었습니다`,
+      data: {
+        action,
+        actionLabel,
+        totalRequested: userIds.length,
+        successCount: results.success.length,
+        failedCount: results.failed.length,
+        results
       },
       meta: {
-        action: validatedData.action,
-        action_label: actionLabels[validatedData.action],
-        role_changed_to: validatedData.action === 'change_role' ? 
-          roleLabels[validatedData.data?.role as keyof typeof roleLabels] : undefined,
-        processed_at: new Date().toISOString(),
-        processed_by: {
-          id: user.id,
-          name: currentUserProfile.name
-        }
+        processedAt: new Date().toISOString(),
+        processedBy: user.id,
+        reason: reason || null
       }
-    };
-
-    return NextResponse.json(response, { status: 200 });
+    });
 
   } catch (error) {
     console.error('Bulk Action API Error:', error);

@@ -3,22 +3,61 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { stringify } from 'csv-stringify/sync';
 
-// 역할 레이블 매핑 (한국어)
-const roleLabels = {
+// CSV 헤더 매핑
+const csvHeaders = {
+  id: 'ID',
+  name: '이름',
+  email: '이메일',
+  role: '역할',
+  status: '상태',
+  shop_name: '상점명',
+  region: '지역',
+  commission_rate: '수수료율(%)',
+  total_subordinates: '총 하급자 수',
+  active_subordinates: '활성 하급자 수',
+  naver_place_link: '네이버 플레이스 링크',
+  approved_at: '승인일시',
+  created_at: '생성일시',
+  updated_at: '수정일시'
+};
+
+// 역할 한글 변환
+const roleLabels: Record<string, string> = {
   admin: '관리자',
   kol: 'KOL',
   ol: 'OL',
   shop_owner: '상점 운영자'
 };
 
-// 상태 레이블 매핑 (한국어)
-const statusLabels = {
-  pending: '승인 대기',
+// 상태 한글 변환
+const statusLabels: Record<string, string> = {
+  pending: '대기중',
   approved: '승인됨',
-  rejected: '거절됨'
+  rejected: '거절됨',
+  suspended: '정지됨'
 };
 
-// 사용자 내보내기 API
+// 사용자 데이터를 CSV용으로 변환
+function transformUserForCsv(user: any) {
+  return {
+    id: user.id,
+    name: user.name || '',
+    email: user.email || '',
+    role: roleLabels[user.role] || user.role,
+    status: statusLabels[user.status] || user.status,
+    shop_name: user.shop_name || '',
+    region: user.region || '',
+    commission_rate: user.commission_rate || '',
+    total_subordinates: user.total_subordinates || 0,
+    active_subordinates: user.active_subordinates || 0,
+    naver_place_link: user.naver_place_link || '',
+    approved_at: user.approved_at ? new Date(user.approved_at).toLocaleString('ko-KR') : '',
+    created_at: user.created_at ? new Date(user.created_at).toLocaleString('ko-KR') : '',
+    updated_at: user.updated_at ? new Date(user.updated_at).toLocaleString('ko-KR') : ''
+  };
+}
+
+// 사용자 목록 CSV 다운로드 API
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -58,7 +97,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 현재 사용자의 프로필 확인 (admin 권한 체크)
+    // 현재 사용자의 프로필 확인
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -80,18 +119,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 쿼리 파라미터 파싱
+    // URL 쿼리 파라미터 파싱
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const role = searchParams.get('role');
-    const status = searchParams.get('status');
-    const hasRelationship = searchParams.get('hasRelationship');
+    const search = searchParams.get('search') || '';
+    const role = searchParams.get('role') || '';
+    const status = searchParams.get('status') || '';
     const createdFrom = searchParams.get('createdFrom');
     const createdTo = searchParams.get('createdTo');
-    const sortBy = searchParams.get('sortBy') || 'created_at';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    // Supabase 쿼리 빌드
+    // 기본 쿼리 구성
     let query = supabase
       .from('profiles')
       .select(`
@@ -101,129 +137,83 @@ export async function GET(request: NextRequest) {
       `);
 
     // 필터 적용
-    if (status) {
-      query = query.eq('status', status);
-    }
-    
-    if (role) {
-      query = query.eq('role', role);
-    }
-    
-    if (search && search.length >= 2) {
+    if (search) {
       query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,shop_name.ilike.%${search}%`);
     }
 
-    // hasRelationship 필터는 복잡한 조인이 필요하므로 일단 스킵
-    // 추후 RPC 함수나 View로 개선 가능
+    if (role) {
+      const roles = role.split(',').map(r => r.trim());
+      if (roles.length === 1) {
+        query = query.eq('role', roles[0]);
+      } else {
+        query = query.in('role', roles);
+      }
+    }
+
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim());
+      if (statuses.length === 1) {
+        query = query.eq('status', statuses[0]);
+      } else {
+        query = query.in('status', statuses);
+      }
+    }
 
     if (createdFrom) {
       query = query.gte('created_at', createdFrom);
     }
+
     if (createdTo) {
       query = query.lte('created_at', createdTo);
     }
 
     // 정렬 적용
-    const validSortFields = ['name', 'email', 'shop_name', 'created_at', 'status', 'role'];
-    const orderColumn = validSortFields.includes(sortBy) ? sortBy : 'created_at';
-    query = query.order(orderColumn, { ascending: sortOrder === 'asc' });
+    query = query.order('created_at', { ascending: false });
 
-    // 데이터 조회
-    const { data: users, error: queryError } = await query;
+    const { data: users, error: fetchError } = await query;
 
-    if (queryError) {
-      console.error('Export query error:', queryError);
+    if (fetchError) {
+      console.error('User export fetch error:', fetchError);
       return NextResponse.json(
-        { success: false, error: 'Failed to fetch user data' },
+        { success: false, error: 'Failed to fetch users for export' },
         { status: 500 }
       );
     }
 
     if (!users || users.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'No users found to export' },
+        { success: false, error: 'No users found for export' },
         { status: 404 }
       );
     }
 
-    // CSV 헤더 (한국어)
-    const headers = [
-      'ID',
-      '이름',
-      '이메일',
-      '역할',
-      '상태',
-      '상점명',
-      '지역',
-      '수수료율 (%)',
-      '총 하위 직원',
-      '활성 하위 직원',
-      '네이버 플레이스',
-      '승인일',
-      '가입일',
-      '최종 수정일'
-    ];
-
     // 데이터 변환
-    const rows = users.map(user => [
-      user.id,
-      user.name || '',
-      user.email || '',
-      roleLabels[user.role as keyof typeof roleLabels] || user.role,
-      statusLabels[user.status as keyof typeof statusLabels] || user.status,
-      user.shop_name || '',
-      user.region || '',
-      user.commission_rate ? user.commission_rate.toString() : '',
-      user.total_subordinates?.toString() || '0',
-      user.active_subordinates?.toString() || '0',
-      user.naver_place_link || '',
-      user.approved_at ? new Date(user.approved_at).toLocaleDateString('ko-KR') : '',
-      user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '',
-      user.updated_at ? new Date(user.updated_at).toLocaleDateString('ko-KR') : ''
-    ]);
+    const transformedUsers = users.map(transformUserForCsv);
 
     // CSV 생성
-    const csvContent = stringify([headers, ...rows], {
-      header: false,
-      delimiter: ',',
-      quote: '"',
-      quoted: true,
-      escape: '"'
+    const csv = stringify(transformedUsers, {
+      header: true,
+      columns: csvHeaders,
+      cast: {
+        date: (value) => value ? new Date(value).toLocaleString('ko-KR') : ''
+      }
     });
 
-    // UTF-8 BOM 추가 (한국어 지원)
-    const BOM = '\uFEFF';
-    const csvWithBOM = BOM + csvContent;
-
-    // 파일명 생성
+    // 파일명 생성 (한국 시간 기준)
     const now = new Date();
-    const dateString = now.toISOString().split('T')[0];
-    const timeString = now.toISOString().split('T')[1].split(':').slice(0, 2).join('');
-    let filename = `users_export_${dateString}_${timeString}`;
+    const kstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const timestamp = kstTime.toISOString().slice(0, 19).replace(/[:-]/g, '').replace('T', '_');
+    const filename = `users_export_${timestamp}.csv`;
 
-    // 필터 조건을 파일명에 추가
-    const filters: string[] = [];
-    if (status) filters.push(`status-${status}`);
-    if (role) filters.push(`role-${role}`);
-    if (search) filters.push(`search-${search.substring(0, 10)}`);
-    
-    if (filters.length > 0) {
-      filename += `_${filters.join('_')}`;
-    }
-    
-    filename += '.csv';
-
-    // 응답 헤더 설정
-    return new Response(csvWithBOM, {
+    // CSV 응답 반환
+    return new Response(csv, {
       status: 200,
       headers: {
-        'Content-Type': 'text/csv;charset=utf-8',
+        'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Export-Count': users.length.toString(),
-        'X-Export-Timestamp': now.toISOString()
+        'Expires': '0'
       }
     });
 
@@ -240,7 +230,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 통계 정보만 반환하는 HEAD 메서드 (다운로드 전 미리보기용)
+// HEAD 요청 처리 (다운로드 가능 여부 확인)
 export async function HEAD(request: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -277,7 +267,7 @@ export async function HEAD(request: NextRequest) {
       return new Response(null, { status: 401 });
     }
 
-    // admin 권한 확인
+    // 권한 확인
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -288,45 +278,17 @@ export async function HEAD(request: NextRequest) {
       return new Response(null, { status: 403 });
     }
 
-    // 동일한 필터링 로직으로 카운트만 조회
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const role = searchParams.get('role');
-    const status = searchParams.get('status');
-    const hasRelationship = searchParams.get('hasRelationship');
-    const createdFrom = searchParams.get('createdFrom');
-    const createdTo = searchParams.get('createdTo');
-
-    let query = supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true });
-
-    // 필터 적용
-    if (status) query = query.eq('status', status);
-    if (role) query = query.eq('role', role);
-    if (search && search.length >= 2) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,shop_name.ilike.%${search}%`);
-    }
-    // hasRelationship 필터는 복잡한 조인이 필요하므로 일단 스킵
-    if (createdFrom) query = query.gte('created_at', createdFrom);
-    if (createdTo) query = query.lte('created_at', createdTo);
-
-    const { count, error: countError } = await query;
-
-    if (countError) {
-      return new Response(null, { status: 500 });
-    }
-
-    return new Response(null, {
+    // 다운로드 가능 상태 반환
+    return new Response(null, { 
       status: 200,
       headers: {
-        'X-Export-Count': (count || 0).toString(),
-        'X-Export-Timestamp': new Date().toISOString()
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Cache-Control': 'no-cache'
       }
     });
 
   } catch (error) {
-    console.error('Export HEAD Error:', error);
+    console.error('Export HEAD API Error:', error);
     return new Response(null, { status: 500 });
   }
 } 
