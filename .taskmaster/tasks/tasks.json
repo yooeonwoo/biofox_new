@@ -3,504 +3,175 @@
     "tasks": [
       {
         "id": 1,
-        "title": "Implement User Detail API",
-        "description": "Create the API endpoint to fetch detailed user information including relationship history, recent activity, and statistics.",
-        "details": "Create a GET endpoint at `/api/users/[userId]/route.ts` that retrieves comprehensive user data from Supabase.\n\nImplementation steps:\n1. Create the API route file with proper Next.js 14 structure\n2. Implement authentication middleware to verify admin access\n3. Call the Supabase RPC function `get_user_detailed_info`\n4. If the RPC function doesn't exist yet, create it with the following SQL:\n```sql\nCREATE OR REPLACE FUNCTION get_user_detailed_info(user_id UUID)\nRETURNS JSON AS $$\nDECLARE\n  user_data JSON;\n  relationship_data JSON;\n  activity_data JSON;\n  crm_stats JSON;\n  sales_stats JSON;\nBEGIN\n  -- Get basic user info\n  SELECT json_build_object(\n    'id', p.id,\n    'name', p.name,\n    'email', p.email,\n    'role', p.role,\n    'status', p.status,\n    'shop_name', p.shop_name,\n    'region', p.region,\n    'commission_rate', p.commission_rate,\n    'created_at', p.created_at\n  ) INTO user_data\n  FROM profiles p\n  WHERE p.id = user_id;\n\n  -- Get relationship history\n  SELECT json_agg(json_build_object(\n    'id', sr.id,\n    'parent_id', sr.parent_id,\n    'parent_name', pp.name,\n    'parent_role', pp.role,\n    'started_at', sr.created_at,\n    'ended_at', sr.ended_at,\n    'is_active', sr.is_active\n  )) INTO relationship_data\n  FROM shop_relationships sr\n  JOIN profiles pp ON sr.parent_id = pp.id\n  WHERE sr.child_id = user_id\n  ORDER BY sr.created_at DESC;\n\n  -- Get recent activity\n  SELECT json_build_object(\n    'orders', (SELECT json_agg(json_build_object(\n      'id', o.id,\n      'order_date', o.created_at,\n      'total_amount', o.total_amount,\n      'commission_amount', o.commission_amount\n    ))\n    FROM orders o\n    WHERE o.user_id = user_id\n    ORDER BY o.created_at DESC\n    LIMIT 5),\n    'clinical_cases', (SELECT json_agg(json_build_object(\n      'id', cc.id,\n      'name', cc.name,\n      'status', cc.status,\n      'created_at', cc.created_at\n    ))\n    FROM clinical_cases cc\n    WHERE cc.user_id = user_id\n    ORDER BY cc.created_at DESC\n    LIMIT 5)\n  ) INTO activity_data;\n\n  -- Get CRM stats\n  SELECT json_build_object(\n    'total_cards', COUNT(c.id),\n    'total_stages', COUNT(DISTINCT c.stage),\n    'completed_stages', COUNT(c.id) FILTER (WHERE c.status = 'completed'),\n    'completion_rate', CASE WHEN COUNT(c.id) > 0 THEN \n      ROUND((COUNT(c.id) FILTER (WHERE c.status = 'completed')::numeric / COUNT(c.id)) * 100, 2)\n      ELSE 0 END\n  ) INTO crm_stats\n  FROM crm_cards c\n  WHERE c.user_id = user_id;\n\n  -- Get sales stats\n  SELECT json_build_object(\n    'total_sales', COALESCE(SUM(o.total_amount), 0),\n    'total_commission', COALESCE(SUM(o.commission_amount), 0)\n  ) INTO sales_stats\n  FROM orders o\n  WHERE o.user_id = user_id;\n\n  -- Combine all data\n  RETURN json_build_object(\n    'data', json_build_object(\n      'user', user_data,\n      'relationship_history', COALESCE(relationship_data, '[]'::json),\n      'recent_activity', COALESCE(activity_data, '{}'::json),\n      'crm_stats', COALESCE(crm_stats, '{}'::json),\n      'sales_stats', COALESCE(sales_stats, '{}'::json)\n    )\n  );\nEND;\n$$ LANGUAGE plpgsql;\n```\n5. Implement error handling for cases where user doesn't exist\n6. Ensure response matches the required format in the PRD\n7. Add appropriate caching headers for performance",
-        "testStrategy": "1. Unit test the API endpoint with Jest:\n   - Test successful retrieval with mock Supabase responses\n   - Test error handling for non-existent users\n   - Test authentication failure scenarios\n\n2. Integration test with actual Supabase:\n   - Verify all data sections are correctly populated\n   - Verify performance meets the 1-second response time requirement\n   - Test with different user roles and data scenarios\n\n3. Manual testing:\n   - Verify the UserDetailModal correctly displays all sections\n   - Check that relationship history is properly formatted\n   - Validate that statistics are calculated correctly",
+        "title": "Project Repository and Environment Setup",
+        "description": "Initialize monorepo for BIOFOX KOL Admin Dashboard, configure backend (Node.js + TypeScript + Express), frontend (React 18+), and database (PostgreSQL 15+). Integrate ESLint, Prettier, Husky, and CI/CD pipeline (GitHub Actions).",
+        "details": "- Use pnpm or Yarn workspaces for monorepo management.\n- Backend: Node.js 20+, TypeScript 5+, Express 4+.\n- Frontend: React 18+, Vite or Next.js 14+ for fast dev/build.\n- DB: PostgreSQL 15+ with pg 8+ driver.\n- Setup Docker Compose for local dev (API, DB, Redis).\n- Configure environment variables via dotenv and .env files.\n- Add Husky for pre-commit hooks (lint, type-check).\n- Setup CI/CD with GitHub Actions for lint, test, build.\n- Use Storybook 8+ for UI component development.",
+        "testStrategy": "Verify all services start locally via Docker Compose; run lint, type-check, and test scripts; ensure CI/CD pipeline passes on PR.",
         "priority": "high",
         "dependencies": [],
-        "status": "done",
+        "status": "pending",
         "subtasks": []
       },
       {
         "id": 2,
-        "title": "Implement User Edit API",
-        "description": "Create the API endpoint to update user information with proper validation and error handling.",
-        "status": "done",
-        "dependencies": [],
+        "title": "Database Schema & Index Implementation",
+        "description": "Implement the shop_relationships table, indexes, and constraints as per PRD. Ensure business rules (unique active relationship, referential integrity, audit fields) are enforced at the DB level.",
+        "details": "- Use Prisma ORM (v5+) or TypeORM (v0.3+) for schema management and migrations.\n- Implement all indexes and unique constraints as specified.\n- Add triggers or check constraints for business rules (e.g., prevent self-reference, enforce single active relationship).\n- Prepare seed scripts for test data.\n- Plan for future sharding (partitioning by shop_owner_id if needed).",
+        "testStrategy": "Run migration scripts; verify schema via DB inspection; write DB-level tests for constraints (e.g., inserting invalid data fails as expected).",
         "priority": "high",
-        "details": "Implement the PUT method in `/api/users/[userId]/route.ts` to handle user information updates and the DELETE method for user deletion.\n\nImplementation steps:\n1. Add the PUT handler to the existing route file\n2. Implement authentication and authorization checks\n3. Validate incoming request data against the schema:\n```typescript\nconst updateUserSchema = z.object({\n  name: z.string().optional(),\n  role: z.enum(['admin', 'kol', 'ol', 'shop_owner']).optional(),\n  status: z.enum(['pending', 'approved', 'rejected']).optional(),\n  shop_name: z.string().optional(),\n  region: z.string().optional(),\n  commission_rate: z.number().min(0).max(100).optional()\n});\n```\n4. Sanitize inputs to prevent SQL injection and XSS attacks\n5. Update the user record in Supabase:\n```typescript\nconst { error } = await supabase\n  .from('profiles')\n  .update(validatedData)\n  .eq('id', userId);\n```\n6. If the role is changed, handle any necessary side effects (e.g., updating relationships)\n7. Return appropriate success or error responses\n8. Log the change for audit purposes\n9. Implement DELETE method with proper cascading and data integrity\n10. Ensure audit logging for user deletion\n11. Add validation for UUID format and user existence checks\n12. Set approved_at and approved_by automatically when user status changes to approved",
-        "testStrategy": "1. Unit test the API endpoint:\n   - Test successful updates with various field combinations\n   - Test validation errors for invalid inputs\n   - Test authorization checks\n   - Test successful deletion\n   - Test prevention of self-deletion\n\n2. Integration test with Supabase:\n   - Verify updates are correctly persisted\n   - Test role change scenarios and their side effects\n   - Verify audit logging works correctly\n   - Verify all related data is properly deleted\n   - Test with the new Supabase project `cezxkgmzlkbjqataogtd`\n\n3. Security testing:\n   - Test with malicious inputs to verify sanitization\n   - Verify only authorized users can update profiles\n   - Test with invalid user IDs\n   - Verify admin-only access for certain operations\n\n4. UI testing:\n   - Verify the edit form in the UI correctly submits to this API\n   - Check that validation errors are properly displayed\n   - Verify success messages appear after successful updates\n   - Test deletion confirmation and feedback",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "",
-            "description": "Implement PUT method with Zod validation schema",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "",
-            "description": "Add XSS prevention for input data",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "",
-            "description": "Implement UUID format validation and user existence checks",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "",
-            "description": "Add admin authorization and user permission validation",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "",
-            "description": "Implement audit logging for role changes",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 6,
-            "title": "",
-            "description": "Add automatic approved_at and approved_by setting",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 7,
-            "title": "",
-            "description": "Implement detailed error handling and response messages",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 8,
-            "title": "",
-            "description": "Add debugging information for development environment",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 9,
-            "title": "",
-            "description": "Implement DELETE method with self-deletion prevention",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 10,
-            "title": "",
-            "description": "Add audit logging for user deletion",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 11,
-            "title": "",
-            "description": "Connect API with new Supabase project `cezxkgmzlkbjqataogtd`",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 12,
-            "title": "",
-            "description": "Document the implemented endpoints for team reference",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          }
-        ]
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
       },
       {
         "id": 3,
-        "title": "Implement User Delete API",
-        "description": "Create the API endpoint to delete users and their associated data with proper cascading and data integrity.",
-        "details": "Implement the DELETE method in `/api/users/[userId]/route.ts` to handle user deletion with proper cascading.\n\nImplementation steps:\n1. Add the DELETE handler to the existing route file\n2. Implement strict authentication and authorization checks (admin only)\n3. Create a transaction to ensure data integrity during deletion\n4. Delete related data in the correct order to respect foreign key constraints:\n```typescript\nconst { error } = await supabase.rpc('delete_user_with_related_data', { user_id: userId });\n```\n5. Create the RPC function in Supabase if it doesn't exist:\n```sql\nCREATE OR REPLACE FUNCTION delete_user_with_related_data(user_id UUID)\nRETURNS VOID AS $$\nBEGIN\n  -- Delete orders\n  DELETE FROM orders WHERE user_id = user_id;\n  \n  -- Delete clinical cases\n  DELETE FROM clinical_cases WHERE user_id = user_id;\n  \n  -- Delete CRM cards\n  DELETE FROM crm_cards WHERE user_id = user_id;\n  \n  -- Delete shop relationships\n  DELETE FROM shop_relationships WHERE child_id = user_id OR parent_id = user_id;\n  \n  -- Delete user profile\n  DELETE FROM profiles WHERE id = user_id;\n  \n  -- Delete auth user (if using Supabase Auth)\n  DELETE FROM auth.users WHERE id = user_id;\nEND;\n$$ LANGUAGE plpgsql;\n```\n6. Implement proper error handling and rollback on failure\n7. Return appropriate success or error responses\n8. Add audit logging for security compliance",
-        "testStrategy": "1. Unit test the API endpoint:\n   - Test successful deletion\n   - Test authorization failures\n   - Test error handling\n\n2. Integration test with Supabase:\n   - Verify all related data is properly deleted\n   - Test transaction rollback on failure\n   - Verify audit logs are created\n\n3. Data integrity testing:\n   - Verify no orphaned records remain after deletion\n   - Test with users that have complex relationships\n   - Verify Supabase Auth user is properly removed\n\n4. UI testing:\n   - Verify delete confirmation dialog works correctly\n   - Check that user list updates after deletion\n   - Verify proper success/error messages are displayed",
+        "title": "API Design & Implementation (Relationships CRUD & Tree)",
+        "description": "Develop RESTful API endpoints for relationships: list, tree, history, create/update. Enforce business logic (cycle prevention, role validation, audit logging) in service layer.",
+        "details": "- Use Express 4+ with OpenAPI 3.1 spec for endpoint documentation.\n- Implement endpoints: GET /api/relationships, GET /api/relationships/tree, GET /api/relationships/history, POST /api/relationships.\n- Use Zod or Joi for request validation.\n- Implement middleware for admin authentication/authorization (JWT or OAuth2).\n- Enforce business rules in service layer (cycle/self-reference prevention, role checks).\n- Integrate Redis (v7+) for caching tree data.\n- Use PostgreSQL CTEs for efficient tree queries.\n- Log all changes to an audit_log table.",
+        "testStrategy": "Write unit/integration tests for all endpoints using Jest or Vitest; test business rule enforcement and error handling.",
         "priority": "high",
-        "dependencies": [],
-        "status": "done",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
         "subtasks": []
       },
       {
         "id": 4,
-        "title": "Implement Bulk Action API",
-        "description": "Create the API endpoint to perform bulk operations on multiple users including approval, rejection, role changes, and deletion.",
-        "status": "done",
+        "title": "Frontend Component: RelationshipTreeView",
+        "description": "Build a virtualized, collapsible tree view with drag-and-drop for relationship management. Integrate real-time search, status, and performance display per node.",
+        "details": "- Use React 18+ with react-dnd (v16+) for drag-and-drop.\n- Use react-window (v1.8+) or react-virtualized for large tree virtualization.\n- Fetch tree data via API with lazy loading (on expand).\n- Display node status (active/inactive), role-based color, and monthly sales (from API).\n- Implement search with debounce and highlight.\n- Provide drag feedback and error handling UI.\n- Ensure accessibility (ARIA roles, keyboard navigation).",
+        "testStrategy": "Write component/unit tests with React Testing Library; perform manual drag-and-drop and search scenarios; test with large datasets for performance.",
+        "priority": "high",
         "dependencies": [
           3
         ],
-        "priority": "medium",
-        "details": "Create a new API endpoint at `/api/users/bulk-action/route.ts` to handle various bulk operations on multiple users.\n\nImplementation steps:\n1. Create the new API route file with POST method\n2. Implement strict authentication and authorization checks\n3. Validate the incoming request data:\n```typescript\nconst bulkActionSchema = z.object({\n  user_ids: z.array(z.string().uuid()).min(1).max(100),\n  action: z.enum(['approve', 'reject', 'change_role', 'delete']),\n  data: z.object({\n    role: z.enum(['admin', 'kol', 'ol', 'shop_owner']).optional()\n  }).optional()\n});\n```\n4. Create the Supabase RPC functions:\n\n   a. `delete_user_with_related_data(target_user_id UUID)` function:\n   - Handles deletion of all user-related data in proper dependency order\n   - Removes clinical photos, consent files, clinical cases\n   - Cleans up orders, order items, device sales\n   - Removes KOL device accumulators, commission calculations\n   - Deletes CRM cards, shop relationships\n   - Ensures safe deletion respecting dependencies\n\n   b. `bulk_update_users(user_ids UUID[], action_type TEXT, action_data JSONB, current_admin_id UUID)` function:\n```sql\nCREATE OR REPLACE FUNCTION bulk_update_users(\n  user_ids UUID[],\n  action_type TEXT,\n  action_data JSONB DEFAULT '{}'::jsonb,\n  current_admin_id UUID\n)\nRETURNS JSON AS $$\nDECLARE\n  successful_ids UUID[] := '{}';\n  failed_records JSON[] := '{}';\n  current_id UUID;\n  error_message TEXT;\n  affected_count INTEGER := 0;\nBEGIN\n  FOREACH current_id IN ARRAY user_ids\n  LOOP\n    -- Prevent actions on self\n    IF current_id = current_admin_id AND action_type IN ('delete', 'change_role') THEN\n      failed_records := array_append(failed_records, \n        json_build_object('id', current_id, 'error', 'Cannot perform this action on yourself'));\n      CONTINUE;\n    END IF;\n    \n    BEGIN\n      CASE action_type\n        WHEN 'approve' THEN\n          UPDATE profiles SET status = 'approved' WHERE id = current_id;\n          \n        WHEN 'reject' THEN\n          UPDATE profiles SET status = 'rejected' WHERE id = current_id;\n          \n        WHEN 'change_role' THEN\n          IF action_data->>'role' IS NULL THEN\n            RAISE EXCEPTION 'Role is required for change_role action';\n          END IF;\n          UPDATE profiles SET role = action_data->>'role' WHERE id = current_id;\n          \n        WHEN 'delete' THEN\n          PERFORM delete_user_with_related_data(current_id);\n          \n        ELSE\n          RAISE EXCEPTION 'Unknown action type: %', action_type;\n      END CASE;\n      \n      affected_count := affected_count + 1;\n      successful_ids := array_append(successful_ids, current_id);\n      \n    EXCEPTION WHEN OTHERS THEN\n      error_message := SQLERRM;\n      failed_records := array_append(failed_records, \n        json_build_object('id', current_id, 'error', error_message));\n    END;\n  END LOOP;\n  \n  RETURN json_build_object(\n    'affected', affected_count,\n    'results', json_build_object(\n      'successful', successful_ids,\n      'failed', failed_records\n    )\n  );\nEND;\n$$ LANGUAGE plpgsql;\n```\n\n5. Call the RPC function from the API:\n```typescript\nconst { data, error } = await supabase.rpc('bulk_update_users', {\n  user_ids: validatedData.user_ids,\n  action_type: validatedData.action,\n  action_data: validatedData.data || {},\n  current_admin_id: session.user.id\n});\n```\n6. Implement proper error handling and response formatting\n7. Add transaction support for atomicity\n8. Add audit logging for each affected user using Promise.allSettled for parallel processing\n9. Implement Auth user deletion when using the delete action\n10. Add Korean language support for messages and labels\n11. Provide detailed success/failure results in the response\n12. Include debugging information in development environment",
-        "testStrategy": "1. Unit test the API endpoint:\n   - Test each action type with valid inputs\n   - Test validation errors\n   - Test authorization checks\n   - Test prevention of self-deletion/role change\n   - Test maximum user limit (100)\n\n2. Integration test with Supabase:\n   - Verify each bulk action works correctly\n   - Test with mixed success/failure scenarios\n   - Verify the response format matches requirements\n   - Test Auth user deletion with delete action\n   - Verify audit logs are created for all successful actions\n\n3. Performance testing:\n   - Test with varying numbers of users (10, 50, 100)\n   - Verify response time scales appropriately\n   - Test concurrent bulk operations\n   - Verify parallel audit logging works correctly\n\n4. UI testing:\n   - Verify bulk action UI correctly calls this API\n   - Check that progress indicators work\n   - Verify success/error summaries are displayed correctly\n   - Test Korean language support\n\n5. Security testing:\n   - Verify UUID validation works correctly\n   - Test transaction safety and rollback behavior\n   - Verify admin-only access restrictions",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Create Supabase RPC functions",
-            "description": "Implemented delete_user_with_related_data and bulk_update_users RPC functions in Supabase",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "Implement API endpoint with validation",
-            "description": "Created /api/users/bulk-action/route.ts with POST method, Zod validation, and admin authorization",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "Implement core bulk actions",
-            "description": "Implemented approve, reject, change_role, and delete actions with proper error handling",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "Add Auth user deletion",
-            "description": "Added functionality to delete users from Supabase Auth when using delete action",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "Implement audit logging",
-            "description": "Added detailed audit logging for all successful actions with parallel processing",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 6,
-            "title": "Add Korean language support",
-            "description": "Implemented Korean messages and labels for better user experience",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 7,
-            "title": "Add self-action prevention",
-            "description": "Implemented logic to prevent admins from deleting themselves or changing their own role",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 8,
-            "title": "Implement detailed response formatting",
-            "description": "Created comprehensive success/failure results in the API response",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 9,
-            "title": "Add user limit and performance optimizations",
-            "description": "Limited bulk actions to 100 users maximum and optimized performance",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 10,
-            "title": "Test with new Supabase project",
-            "description": "Verified all functionality works with new Supabase project cezxkgmzlkbjqataogtd",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          }
-        ]
+        "status": "pending",
+        "subtasks": []
       },
       {
         "id": 5,
-        "title": "Implement User Add Modal Component",
-        "description": "Create a new modal component for adding users with form validation, email verification, and Supabase Auth integration.",
-        "status": "done",
-        "dependencies": [],
-        "priority": "medium",
-        "details": "Create a new React component at `components/biofox-admin/users/UserAddModal.tsx` to handle user creation.\n\nImplementation steps:\n1. Create the new component with proper TypeScript typing:\n```typescript\ninterface UserAddModalProps {\n  isOpen: boolean;\n  onClose: () => void;\n  onSuccess: () => void;\n}\n\nconst UserAddModal: React.FC<UserAddModalProps> = ({ isOpen, onClose, onSuccess }) => {\n  // Implementation here\n};\n```\n2. Implement a form with the following fields:\n   - Email (required, with validation)\n   - Name (required)\n   - Role (required, select from options)\n   - Shop name (required for shop_owner role)\n   - Region (optional)\n   - Commission rate (optional, numeric with min/max)\n\n3. Add email duplication check:\n```typescript\nconst checkEmailExists = async (email: string) => {\n  const { data, error } = await supabase\n    .from('profiles')\n    .select('id')\n    .eq('email', email)\n    .maybeSingle();\n  \n  return !!data;\n};\n```\n\n4. Implement conditional field validation based on selected role\n\n5. Add form submission handler that:\n   - Creates user profile in Supabase\n   - Sends invitation email via Supabase Auth\n   - Handles success/error states\n\n6. Create a new API endpoint at `/api/users/route.ts` with POST method to handle user creation:\n```typescript\nexport async function POST(req: Request) {\n  const { email, name, role, shop_name, region, commission_rate } = await req.json();\n  \n  // Validate admin access\n  const session = await getServerSession();\n  if (!session || session.user.role !== 'admin') {\n    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403 });\n  }\n  \n  // Check if email exists\n  const { data: existingUser } = await supabase\n    .from('profiles')\n    .select('id')\n    .eq('email', email)\n    .maybeSingle();\n    \n  if (existingUser) {\n    return new Response(JSON.stringify({ error: 'Email already exists' }), { status: 400 });\n  }\n  \n  // Create user in Auth\n  const { data: authUser, error: authError } = await supabase.auth.admin.inviteUserByEmail(email);\n  \n  if (authError) {\n    return new Response(JSON.stringify({ error: authError.message }), { status: 500 });\n  }\n  \n  // Create profile\n  const { error: profileError } = await supabase\n    .from('profiles')\n    .insert({\n      id: authUser.user.id,\n      email,\n      name,\n      role,\n      shop_name,\n      region,\n      commission_rate,\n      status: 'pending'\n    });\n    \n  if (profileError) {\n    return new Response(JSON.stringify({ error: profileError.message }), { status: 500 });\n  }\n  \n  return new Response(JSON.stringify({ success: true }), { status: 201 });\n}\n```\n\n7. Add proper error handling and user feedback\n8. Implement loading states and success confirmation",
-        "testStrategy": "1. Unit test the component:\n   - Test form validation for all fields\n   - Test conditional validation based on role\n   - Test email duplication check\n\n2. Integration test with API:\n   - Test successful user creation\n   - Test error handling scenarios\n   - Verify Supabase Auth invitation is sent\n\n3. UI testing:\n   - Verify form layout and responsiveness\n   - Test form submission and feedback\n   - Verify modal opens and closes correctly\n\n4. End-to-end testing:\n   - Complete the full user creation flow\n   - Verify created user appears in the user list\n   - Test the invitation email flow",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "API POST Endpoint Implementation",
-            "description": "Created `/api/users/route.ts` with complete implementation including Zod validation schema, Supabase Auth integration, XSS prevention, email duplication check, and comprehensive error handling.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "UserAddModal Component Implementation",
-            "description": "Implemented UserAddModal component using React Hook Form with Zod resolver, including all required fields (email, name, role, shop name, region, commission rate), conditional field display based on role (hiding commission rate for admin), real-time form validation with error display, and loading state management.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "User Management Page Integration",
-            "description": "Integrated UserAddModal into the user management page, connected 'Add User' button to open the modal, implemented automatic list refresh on successful user addition, and added Toast notifications for user feedback.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "Type System Completion",
-            "description": "Added User-related types to types/biofox-admin/index.ts including UserFilters, PaginationState, and BulkActionRequest types to ensure complete type safety.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "Security and UX Features",
-            "description": "Implemented admin permission verification, email duplication checking with real-time validation, automatic audit logging, invitation email confirmation, and user-friendly error messages.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 6,
-            "title": "Supabase Project Integration",
-            "description": "Ensured all functionality is properly integrated with the new Supabase project 'cezxkgmzlkbjqataogtd'.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          }
-        ]
+        "title": "Frontend Component: RelationshipChangeModal",
+        "description": "Implement modal for changing parent relationship. Support parent search, reason input, current relationship display, and validation (cycle/self-reference prevention).",
+        "details": "- Use React 18+ with MUI or Ant Design modal/dialog.\n- Integrate async search for parent selection (debounced API calls).\n- Show current parent and relationship info.\n- Validate input (required reason, prevent cycles/self-reference via API pre-check).\n- Display error messages and allow cancel/undo.\n- Ensure accessibility and responsive design.",
+        "testStrategy": "Component/unit tests for modal logic; integration tests for parent search and validation; manual tests for error scenarios.",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
       },
       {
         "id": 6,
-        "title": "Implement Excel Export API",
-        "description": "Create the API endpoint to export user data to Excel/CSV format with proper filtering and Korean character encoding support.",
-        "status": "done",
-        "dependencies": [],
-        "priority": "low",
-        "details": "Create a new API endpoint at `/api/users/export/route.ts` to handle exporting user data to CSV format.\n\nImplementation steps:\n1. Create the new API route file with GET and HEAD methods\n2. Implement authentication and authorization checks (admin only)\n3. Parse and apply filter parameters from the request query:\n```typescript\nconst { searchTerm, role, status, region, sortBy, sortOrder, createdFrom, createdTo } = req.query;\n```\n4. Fetch filtered user data from Supabase:\n```typescript\nlet query = supabase.from('profiles').select('*');\n\nif (searchTerm && searchTerm.length >= 2) {\n  query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,shop_name.ilike.%${searchTerm}%`);\n}\n\nif (role) {\n  query = query.eq('role', role);\n}\n\nif (status) {\n  query = query.eq('status', status);\n}\n\nif (createdFrom) {\n  query = query.gte('created_at', createdFrom);\n}\n\nif (createdTo) {\n  query = query.lte('created_at', createdTo);\n}\n\n// Apply other filters...\n\nif (sortBy && sortOrder) {\n  query = query.order(sortBy, { ascending: sortOrder === 'asc' });\n}\n\nconst { data, error } = await query;\n```\n5. Transform the data to CSV format using the `csv-stringify` library:\n```typescript\nimport { stringify } from 'csv-stringify/sync';\n\nconst headers = [\n  'ID', '이름', '이메일', '역할', '상태', '상점명', '지역', '수수료율', '총 하위직원', '활성 하위직원', '네이버플레이스', '승인일', '가입일', '수정일'\n];\n\nconst rows = data.map(user => [\n  user.id,\n  user.name,\n  user.email,\n  translateRole(user.role), // Helper to translate role to Korean\n  translateStatus(user.status), // Helper to translate status to Korean\n  user.shop_name || '',\n  user.region || '',\n  user.commission_rate ? `${user.commission_rate}%` : '',\n  user.total_subordinates || '0',\n  user.active_subordinates || '0',\n  user.naver_place_url || '',\n  user.approved_at ? new Date(user.approved_at).toLocaleDateString('ko-KR') : '',\n  new Date(user.created_at).toLocaleDateString('ko-KR'),\n  user.updated_at ? new Date(user.updated_at).toLocaleDateString('ko-KR') : ''\n]);\n\nconst csvContent = stringify([headers, ...rows]);\n```\n6. Add UTF-8 BOM for Korean character support:\n```typescript\nconst BOM = '\\uFEFF';\nconst csvWithBOM = BOM + csvContent;\n```\n7. Generate smart filename with timestamp and applied filters:\n```typescript\nconst timestamp = new Date().toISOString().replace(/[\\-:]/g, '').split('.')[0].replace('T', '_');\nlet filename = `users_export_${timestamp}`;\n\nif (status) filename += `_status-${status}`;\nif (role) filename += `_role-${role}`;\n\nfilename += '.csv';\n```\n8. Set appropriate headers for file download:\n```typescript\nreturn new Response(csvWithBOM, {\n  headers: {\n    'Content-Type': 'text/csv;charset=utf-8',\n    'Content-Disposition': `attachment; filename=\"${filename}\"`,\n    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',\n    'Pragma': 'no-cache',\n    'Expires': '0',\n    'X-Export-Count': data.length.toString(),\n    'X-Export-Timestamp': new Date().toISOString()\n  }\n});\n```\n9. Implement HEAD method for download preview:\n```typescript\nif (req.method === 'HEAD') {\n  const { count } = await query.count();\n  return new Response(null, {\n    headers: {\n      'X-Export-Count': count.toString(),\n      'X-Export-Timestamp': new Date().toISOString()\n    }\n  });\n}\n```\n10. Add comprehensive error handling for failed queries\n11. Ensure connection to the new Supabase project `cezxkgmzlkbjqataogtd`",
-        "testStrategy": "1. Unit test the API endpoint:\n   - Test with various filter combinations\n   - Test authorization checks\n   - Test error handling\n   - Test HEAD method for count preview\n   - Test smart filename generation\n\n2. Integration test with Supabase:\n   - Verify data is correctly fetched and filtered\n   - Test with large datasets for performance\n   - Verify all 14 user fields are correctly exported\n   - Test with the new Supabase project `cezxkgmzlkbjqataogtd`\n\n3. File format testing:\n   - Verify CSV structure is correct\n   - Test Korean character encoding (UTF-8 with BOM)\n   - Verify the file can be opened in Excel with proper Korean display\n   - Test null value handling\n\n4. Filter testing:\n   - Test name/email/shop_name search (ILIKE with 2+ characters)\n   - Test role filtering (admin, kol, ol, shop_owner)\n   - Test status filtering (pending, approved, rejected)\n   - Test date range filtering (createdFrom, createdTo)\n   - Test sorting functionality\n\n5. UI testing:\n   - Verify export button correctly triggers download\n   - Test that current filters are applied to export\n   - Verify download progress indicators",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Implement Excel Export API endpoint",
-            "description": "Created `/api/users/export/route.ts` with GET and HEAD methods, admin authentication, and comprehensive query parameter support.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "Implement CSV generation with Korean support",
-            "description": "Installed csv-stringify library, implemented proper CSV generation with headers, and added UTF-8 BOM for Korean character support.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "Implement advanced filtering functionality",
-            "description": "Added support for name/email/shop_name search, role/status filtering, date range filtering, and sorting options.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "Implement smart filename generation",
-            "description": "Created timestamp-based filenames that include applied filter conditions.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "Implement comprehensive user data export",
-            "description": "Added support for exporting 14 columns including ID, name, email, role, status, shop details, subordinate counts, and dates in Korean format.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 6,
-            "title": "Implement HEAD method for download preview",
-            "description": "Added HEAD method support to provide count and metadata before actual download.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 7,
-            "title": "Implement security and performance features",
-            "description": "Added admin-only access control, parameterized queries for SQL injection prevention, error handling, and appropriate HTTP status codes.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          },
-          {
-            "id": 8,
-            "title": "Connect to new Supabase project",
-            "description": "Integrated with the new Supabase project `cezxkgmzlkbjqataogtd`.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
-          }
-        ]
+        "title": "Frontend Component: RelationshipHistoryTable",
+        "description": "Develop paginated, sortable table showing relationship change history, with before/after comparison and reason display.",
+        "details": "- Use React 18+ with MUI DataGrid or Ant Design Table.\n- Fetch paginated history via API.\n- Display columns: timestamp, previous parent, new parent, reason, changed by.\n- Support sorting (by time), filtering (by shop/parent), and pagination.\n- Highlight changes visually.\n- Ensure accessibility and responsive layout.",
+        "testStrategy": "Component/unit tests for table rendering; integration tests for API pagination/sorting; manual tests for large datasets.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
       },
       {
         "id": 7,
-        "title": "Implement Comprehensive Test Suite for User Management System",
-        "description": "Develop a complete test suite covering all user management functionality including User Detail API, User Edit API, User Delete API, Bulk Action API, User Add Modal, and Excel Export API using unit, component, and E2E testing approaches.",
-        "status": "done",
+        "title": "Business Rule Enforcement & Validation Layer",
+        "description": "Implement robust business rule enforcement: role validation, cycle/self-reference prevention, single active relationship, admin-only changes, and audit logging.",
+        "details": "- Centralize business logic in service layer (backend).\n- Use graph traversal (DFS/BFS) to detect cycles before relationship changes.\n- Validate roles via user profile lookup (KOL/OL only as parent).\n- Enforce admin-only access via middleware.\n- Log all changes with user, timestamp, and reason.\n- Write reusable validation utilities with unit tests.",
+        "testStrategy": "Unit/integration tests for all business rules; attempt invalid operations and verify rejection; audit log inspection.",
+        "priority": "high",
         "dependencies": [
-          1,
-          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Performance Optimization: Caching & Virtualization",
+        "description": "Optimize API and frontend for large-scale data: Redis caching for tree data, API response optimization, frontend virtualization, and lazy loading.",
+        "details": "- Use Redis (v7+) for caching tree and frequently accessed queries.\n- Implement cache invalidation on relationship changes.\n- Use PostgreSQL CTEs and indexes for efficient queries.\n- Frontend: ensure react-window/react-virtualized is used for large trees.\n- Implement lazy loading of child nodes in tree view.\n- Monitor API response times and optimize as needed.",
+        "testStrategy": "Load test API endpoints (tree, history) with large datasets; measure response times; profile frontend rendering with >10,000 nodes.",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Security & Access Control Implementation",
+        "description": "Implement robust authentication (JWT/OAuth2), admin-only access to relationship management, and secure audit logging. Ensure all endpoints are protected and sensitive actions are logged.",
+        "details": "- Use Passport.js (v0.7+) or NextAuth.js for authentication.\n- Restrict all relationship-changing endpoints to admin users.\n- Store audit logs in a separate, immutable table.\n- Regularly review and test access control policies.\n- Ensure secure handling of tokens and sensitive data.",
+        "testStrategy": "Penetration tests for endpoint access; attempt unauthorized actions; verify audit logs for all changes.",
+        "priority": "high",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Monitoring, Logging, and Metrics Integration",
+        "description": "Integrate monitoring for API performance, error tracking, and usage metrics. Track tree loading time, relationship change success, and user actions.",
+        "details": "- Use Prometheus + Grafana for API metrics (response time, error rate).\n- Integrate Sentry (v7+) for error tracking (frontend/backend).\n- Log key business events (relationship changes, errors) to ELK stack or similar.\n- Expose metrics endpoints for dashboards.\n- Track frontend usage (drag-and-drop success, search latency) via analytics (e.g., PostHog).",
+        "testStrategy": "Simulate errors and slow queries; verify metrics in dashboards; check alerting for failures.",
+        "priority": "medium",
+        "dependencies": [
           3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Comprehensive Testing: Unit, Integration, and User Flows",
+        "description": "Develop automated tests for backend (unit/integration), frontend (component/e2e), and full user flows (relationship change, drag-and-drop, history view).",
+        "details": "- Backend: Jest or Vitest for unit/integration tests; use Supertest for API.\n- Frontend: React Testing Library, Cypress for e2e.\n- Cover all business rules, error cases, and edge scenarios.\n- Test with large datasets for performance.\n- Include accessibility tests (axe-core).",
+        "testStrategy": "Run all test suites in CI; require >90% coverage; manual exploratory tests for complex flows.",
+        "priority": "high",
+        "dependencies": [
           4,
           5,
-          6
+          6,
+          7,
+          8,
+          9
         ],
-        "priority": "high",
-        "details": "Implement a comprehensive testing strategy for all user management features:\n\n1. **API Unit Tests (vitest + MSW)**:\n   - Set up Mock Service Worker for API mocking:\n   ```typescript\n   // src/mocks/handlers.ts\n   import { rest } from 'msw'\n   \n   export const handlers = [\n     rest.get('/api/users/:userId', (req, res, ctx) => {\n       return res(ctx.json({ id: req.params.userId, name: 'Test User', ... }))\n     }),\n     // Add handlers for all other API endpoints\n   ]\n   ```\n   \n   - Create unit tests for each API endpoint:\n     - User Detail API: Test successful retrieval, error handling, authentication\n     - User Edit API: Test updates with various field combinations, validation errors\n     - User Delete API: Test successful deletion, authorization failures\n     - Bulk Action API: Test each action type (approve, reject, change_role, delete)\n     - Excel Export API: Test with various filter combinations, encoding support\n\n2. **React Component Tests (React Testing Library)**:\n   - Test User Add Modal:\n   ```typescript\n   import { render, screen, fireEvent } from '@testing-library/react'\n   import UserAddModal from '@/components/biofox-admin/users/UserAddModal'\n   \n   test('validates form fields correctly', async () => {\n     render(<UserAddModal isOpen={true} onClose={() => {}} onSuccess={() => {}} />)\n     \n     // Test validation logic\n     fireEvent.click(screen.getByText('Submit'))\n     expect(await screen.findByText('Email is required')).toBeInTheDocument()\n     \n     // Test successful submission\n     // ...\n   })\n   ```\n   \n   - Test other user management components including:\n     - User list components\n     - User detail views\n     - Filter and search components\n     - Pagination components\n\n3. **E2E Tests (Playwright)**:\n   - Set up Playwright test environment:\n   ```typescript\n   // e2e/user-management.spec.ts\n   import { test, expect } from '@playwright/test'\n   \n   test('complete user management workflow', async ({ page }) => {\n     // Login as admin\n     await page.goto('/login')\n     await page.fill('[name=email]', 'admin@example.com')\n     await page.fill('[name=password]', 'password')\n     await page.click('button[type=submit]')\n     \n     // Test user listing\n     await page.goto('/admin/users')\n     await expect(page.locator('table')).toBeVisible()\n     \n     // Test adding a user\n     await page.click('button:has-text(\"Add User\")')\n     // Fill form and submit\n     // ...\n     \n     // Test editing a user\n     // ...\n     \n     // Test deleting a user\n     // ...\n     \n     // Test bulk actions\n     // ...\n     \n     // Test excel export\n     // ...\n   })\n   ```\n\n4. **Test Coverage Requirements**:\n   - Aim for at least 80% code coverage for all components and APIs\n   - Ensure all edge cases and error scenarios are covered\n   - Test with various user roles (admin, regular user) to verify authorization\n\n5. **Test Environment Setup**:\n   - Configure test database with seed data\n   - Set up CI/CD pipeline integration for automated testing\n   - Create test utilities for common operations (authentication, data setup)",
-        "testStrategy": "Verify the implementation of the test suite through the following steps:\n\n1. **Code Review**:\n   - Review test files to ensure they follow best practices\n   - Verify test coverage for all required functionality\n   - Check that tests are properly organized and maintainable\n\n2. **Unit Test Verification**:\n   - Run all unit tests and verify they pass\n   - Check test coverage reports to ensure minimum 80% coverage\n   - Verify that all edge cases are properly tested:\n     - Authentication failures\n     - Validation errors\n     - Server errors\n     - Empty/null responses\n\n3. **Component Test Verification**:\n   - Run all React component tests\n   - Verify that component interactions are properly tested\n   - Check that form validation is thoroughly tested\n   - Ensure modal behaviors (open/close/submit) are verified\n\n4. **E2E Test Verification**:\n   - Run Playwright tests in both headless and headed modes\n   - Verify tests pass consistently across different browsers (Chrome, Firefox, Safari)\n   - Check that all user flows are properly tested end-to-end\n   - Verify test recordings and screenshots for failed tests\n\n5. **CI/CD Integration**:\n   - Confirm tests run successfully in the CI/CD pipeline\n   - Verify that failing tests properly block deployments\n   - Check test execution time and optimize slow tests\n\n6. **Regression Testing**:\n   - Introduce intentional bugs to verify tests catch them\n   - Run tests against previous versions to ensure backward compatibility\n   - Verify tests detect changes in API responses or component behavior",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Set up test environment",
-            "description": "Install and configure necessary testing libraries and frameworks",
-            "status": "done",
-            "dependencies": [],
-            "details": "Installed msw, supertest, @testing-library/react, and vitest. Configured the integration test framework and verified the basic environment tests pass.",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "Implement API integration tests",
-            "description": "Create integration tests for all user management API endpoints",
-            "status": "done",
-            "dependencies": [],
-            "details": "Created `__tests__/integration/user-api.integration.test.ts` with 14 test cases covering all user management API endpoints, including authentication/authorization checks. Tests are currently skipped but fully implemented.",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "Implement E2E tests",
-            "description": "Create end-to-end tests for user management workflows",
-            "status": "done",
-            "dependencies": [],
-            "details": "Implemented comprehensive E2E tests in `tests/e2e/user-management.spec.ts` with 19 test scenarios covering user listing, detail modal, add modal, bulk actions, export functionality, user editing/deletion, and error handling. Also included performance and accessibility tests.",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "Implement React component tests",
-            "description": "Create tests for React components in the user management system",
-            "status": "done",
-            "dependencies": [],
-            "details": "Created `__tests__/components/UserAddModal.test.tsx` with 21 test cases covering rendering, form validation, user interactions, conditional fields based on roles, loading states, and accessibility testing.",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "Adjust component tests for UI structure",
-            "description": "Update component tests to match actual UI structure and text",
-            "status": "done",
-            "dependencies": [],
-            "details": "Adjust test selectors to match actual UI text (e.g., 'Email' vs 'Email Address *'). Update button text and interaction element matching to align with the production UI.",
-            "testStrategy": ""
-          },
-          {
-            "id": 6,
-            "title": "Configure Jest DOM setup",
-            "description": "Set up Jest DOM matchers and testing utilities",
-            "status": "done",
-            "dependencies": [],
-            "details": "Configure Jest DOM setup and matcher libraries to properly test DOM elements and interactions.",
-            "testStrategy": ""
-          },
-          {
-            "id": 7,
-            "title": "Set up test database environment",
-            "description": "Configure a dedicated test database with seed data",
-            "status": "done",
-            "dependencies": [],
-            "details": "Create a test database environment with appropriate seed data for consistent test execution.",
-            "testStrategy": ""
-          },
-          {
-            "id": 8,
-            "title": "Integrate tests with CI/CD pipeline",
-            "description": "Configure CI/CD pipeline to run tests automatically",
-            "status": "done",
-            "dependencies": [],
-            "details": "Set up the CI/CD pipeline to automatically run all tests and report results. Configure it to block deployments on test failures.",
-            "testStrategy": ""
-          },
-          {
-            "id": 9,
-            "title": "Document test coverage and results",
-            "description": "Create documentation for test coverage and execution results",
-            "status": "done",
-            "dependencies": [],
-            "details": "Document the current test coverage (API layer, component layer, E2E layer, authentication/authorization) and test execution results. Include information about passing tests and areas needing adjustment.",
-            "testStrategy": ""
-          }
-        ]
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Documentation & Admin Training Materials",
+        "description": "Prepare comprehensive technical documentation (API, DB schema, business rules), user guides for admins, and onboarding materials. Include OpenAPI docs and UI walkthroughs.",
+        "details": "- Use Swagger/OpenAPI for API docs (auto-generated).\n- Document DB schema, constraints, and business logic.\n- Create admin user guides (with screenshots, video walkthroughs).\n- Maintain README and contribution guidelines.\n- Store docs in repo (Markdown) and publish via Storybook or Docusaurus.",
+        "testStrategy": "Peer review of docs; admin user testing for clarity; verify all endpoints and flows are documented.",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          11
+        ],
+        "status": "pending",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-07-18T10:54:20.972Z",
-      "updated": "2025-07-21T06:57:18.628Z",
+      "updated": "2025-07-21T09:44:27.945Z",
       "description": "Tasks for master context"
     }
   }
