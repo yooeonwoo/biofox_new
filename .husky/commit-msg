@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 커밋 메시지 파일 경로
+commit_msg_file=$1
+commit_msg=$(cat "$commit_msg_file")
+
+# 컨벤셔널 커밋 패턴
+# feat: 새로운 기능
+# fix: 버그 수정
+# docs: 문서 수정
+# style: 코드 포맷팅, 세미콜론 누락, 코드 변경이 없는 경우
+# refactor: 코드 리팩토링
+# test: 테스트 추가, 테스트 리팩토링
+# chore: 빌드 업무 수정, 패키지 매니저 수정
+pattern="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,50}"
+
+if ! echo "$commit_msg" | grep -qE "$pattern"; then
+    echo "❌ Invalid commit message format!"
+    echo ""
+    echo "📋 Commit message should follow Conventional Commits format:"
+    echo "   <type>[optional scope]: <description>"
+    echo ""
+    echo "📝 Examples:"
+    echo "   feat: add user authentication"
+    echo "   fix: resolve login redirect issue"
+    echo "   docs: update API documentation"
+    echo "   feat(auth): implement JWT token validation"
+    echo ""
+    echo "🏷️  Valid types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
+    echo ""
+    echo "💡 Your commit message: '$commit_msg'"
+    exit 1
+fi
+
+echo "✅ Commit message format is valid!" 

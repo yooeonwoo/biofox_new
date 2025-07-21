@@ -4,13 +4,41 @@
       {
         "id": 1,
         "title": "Project Repository and Environment Setup",
-        "description": "Initialize monorepo for BIOFOX KOL Admin Dashboard, configure backend (Node.js + TypeScript + Express), frontend (React 18+), and database (PostgreSQL 15+). Integrate ESLint, Prettier, Husky, and CI/CD pipeline (GitHub Actions).",
-        "details": "- Use pnpm or Yarn workspaces for monorepo management.\n- Backend: Node.js 20+, TypeScript 5+, Express 4+.\n- Frontend: React 18+, Vite or Next.js 14+ for fast dev/build.\n- DB: PostgreSQL 15+ with pg 8+ driver.\n- Setup Docker Compose for local dev (API, DB, Redis).\n- Configure environment variables via dotenv and .env files.\n- Add Husky for pre-commit hooks (lint, type-check).\n- Setup CI/CD with GitHub Actions for lint, test, build.\n- Use Storybook 8+ for UI component development.",
-        "testStrategy": "Verify all services start locally via Docker Compose; run lint, type-check, and test scripts; ensure CI/CD pipeline passes on PR.",
-        "priority": "high",
+        "description": "Finalize the remaining environment setup for the BIOFOX KOL Admin Dashboard monorepo. Complete CI/CD pipeline (GitHub Actions), Husky pre-commit hooks, and Docker Compose for local development. All other core project configurations are already in place.",
+        "status": "done",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "priority": "high",
+        "details": "- Monorepo is already set up with Next.js 15, React 19, TypeScript 5.8, PostgreSQL (via Supabase), ESLint, Prettier, Storybook 8+, and testing tools (Vitest, Playwright, Testing Library).\n- UI stack (Shadcn/ui, TailwindCSS, Radix UI) and development scripts are configured.\n- Remaining setup:\n  - Add and configure GitHub Actions for CI/CD (lint, test, build, deploy as needed).\n  - Integrate Husky for pre-commit hooks (lint, type-check, test).\n  - Create Docker Compose setup for local development (API, DB, Redis if needed).\n- Ensure all new scripts and configs are documented in the repository README.",
+        "testStrategy": "Verify that:\n- GitHub Actions pipeline runs and passes on PRs (lint, type-check, test, build).\n- Husky pre-commit hooks block commits on lint/type errors.\n- All services start and connect correctly via Docker Compose for local development.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure GitHub Actions CI/CD Pipeline",
+            "description": "Set up GitHub Actions workflows for linting, type-checking, testing, and building the monorepo. Ensure the pipeline runs on PRs and main branch pushes.",
+            "status": "done",
+            "dependencies": [],
+            "details": "<info added on 2025-07-21T09:50:58.185Z>\nGitHub Actions CI/CD pipeline has been fully configured with the following workflows and files:\n\nci.yml – Main CI pipeline (ESLint, TypeScript, Vitest, Playwright, build)\ndeploy.yml – Production deployment workflow (Vercel integration)\ncode-quality.yml – Code quality, security, and performance audits (SonarCloud, Snyk, Lighthouse)\nlighthouserc.json – Lighthouse CI performance thresholds\n.github/README.md – CI/CD setup guide and usage documentation\n\nKey features:\n- Automatic CI runs on PRs and pushes to main/master/develop/xono branches\n- Code quality checks (lint, type-check, test)\n- Automated E2E testing\n- Security vulnerability scanning (npm audit, Snyk)\n- Performance auditing (Lighthouse CI)\n- Automatic production deployment on main branch\n\nAdditional required setup:\n- Configure GitHub Secrets for environment variables (Supabase, Vercel, etc.)[1][2]\n- Set branch protection rules\n- Optionally link SonarCloud/Snyk accounts\n\nCI/CD pipeline setup is complete.\n</info added on 2025-07-21T09:50:58.185Z>",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Integrate Husky Pre-commit Hooks",
+            "description": "Add Husky to enforce pre-commit checks for lint, type-check, and tests. Ensure developers cannot commit code that fails these checks.",
+            "status": "done",
+            "dependencies": [],
+            "details": "<info added on 2025-07-21T09:53:59.187Z>\nHusky pre-commit hooks have been fully configured to enforce code quality and commit standards in the repository. The setup includes installation of husky and lint-staged as dev dependencies, husky initialization to create the .husky directory, and lint-staged rules in package.json for file-type-specific checks. The pre-commit hook is set to run ESLint, Prettier, TypeScript type checks, and tests, while the commit-msg hook enforces conventional commit message formats. Additional scripts for type-check and prepare have been added to package.json.\n\nOn commit, only staged files are checked with ESLint and Prettier, type-checking and tests are run, and commit messages are validated for conventional format. Currently, there are 318 TypeScript errors and some ESLint compatibility issues with the latest Next.js/ESLint versions, which may block commits due to pre-commit hook failures. Further work is needed to resolve TypeScript errors, address ESLint compatibility, and plan a gradual code quality improvement strategy. The base Husky pre-commit hook setup is complete.\n</info added on 2025-07-21T09:53:59.187Z>",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Set Up Docker Compose for Local Development",
+            "description": "Create a Docker Compose configuration to run the Next.js app, PostgreSQL (Supabase), and Redis (if required) for local development. Ensure all services are networked and environment variables are managed securely.",
+            "status": "done",
+            "dependencies": [],
+            "details": "<info added on 2025-07-21T09:54:51.002Z>\nDocker Compose setup for local development has been intentionally skipped based on user request. Since the project already uses a cloud-based Supabase database, setting up a local PostgreSQL container is not required at this time. Developers will connect directly to the Supabase cloud instance for development. Docker Compose configuration can be added later if local containers become necessary.\n</info added on 2025-07-21T09:54:51.002Z>",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 2,
@@ -19,9 +47,7 @@
         "details": "- Use Prisma ORM (v5+) or TypeORM (v0.3+) for schema management and migrations.\n- Implement all indexes and unique constraints as specified.\n- Add triggers or check constraints for business rules (e.g., prevent self-reference, enforce single active relationship).\n- Prepare seed scripts for test data.\n- Plan for future sharding (partitioning by shop_owner_id if needed).",
         "testStrategy": "Run migration scripts; verify schema via DB inspection; write DB-level tests for constraints (e.g., inserting invalid data fails as expected).",
         "priority": "high",
-        "dependencies": [
-          1
-        ],
+        "dependencies": [1],
         "status": "pending",
         "subtasks": []
       },
@@ -32,9 +58,7 @@
         "details": "- Use Express 4+ with OpenAPI 3.1 spec for endpoint documentation.\n- Implement endpoints: GET /api/relationships, GET /api/relationships/tree, GET /api/relationships/history, POST /api/relationships.\n- Use Zod or Joi for request validation.\n- Implement middleware for admin authentication/authorization (JWT or OAuth2).\n- Enforce business rules in service layer (cycle/self-reference prevention, role checks).\n- Integrate Redis (v7+) for caching tree data.\n- Use PostgreSQL CTEs for efficient tree queries.\n- Log all changes to an audit_log table.",
         "testStrategy": "Write unit/integration tests for all endpoints using Jest or Vitest; test business rule enforcement and error handling.",
         "priority": "high",
-        "dependencies": [
-          2
-        ],
+        "dependencies": [2],
         "status": "pending",
         "subtasks": []
       },
@@ -45,9 +69,7 @@
         "details": "- Use React 18+ with react-dnd (v16+) for drag-and-drop.\n- Use react-window (v1.8+) or react-virtualized for large tree virtualization.\n- Fetch tree data via API with lazy loading (on expand).\n- Display node status (active/inactive), role-based color, and monthly sales (from API).\n- Implement search with debounce and highlight.\n- Provide drag feedback and error handling UI.\n- Ensure accessibility (ARIA roles, keyboard navigation).",
         "testStrategy": "Write component/unit tests with React Testing Library; perform manual drag-and-drop and search scenarios; test with large datasets for performance.",
         "priority": "high",
-        "dependencies": [
-          3
-        ],
+        "dependencies": [3],
         "status": "pending",
         "subtasks": []
       },
@@ -58,9 +80,7 @@
         "details": "- Use React 18+ with MUI or Ant Design modal/dialog.\n- Integrate async search for parent selection (debounced API calls).\n- Show current parent and relationship info.\n- Validate input (required reason, prevent cycles/self-reference via API pre-check).\n- Display error messages and allow cancel/undo.\n- Ensure accessibility and responsive design.",
         "testStrategy": "Component/unit tests for modal logic; integration tests for parent search and validation; manual tests for error scenarios.",
         "priority": "high",
-        "dependencies": [
-          4
-        ],
+        "dependencies": [4],
         "status": "pending",
         "subtasks": []
       },
@@ -71,9 +91,7 @@
         "details": "- Use React 18+ with MUI DataGrid or Ant Design Table.\n- Fetch paginated history via API.\n- Display columns: timestamp, previous parent, new parent, reason, changed by.\n- Support sorting (by time), filtering (by shop/parent), and pagination.\n- Highlight changes visually.\n- Ensure accessibility and responsive layout.",
         "testStrategy": "Component/unit tests for table rendering; integration tests for API pagination/sorting; manual tests for large datasets.",
         "priority": "medium",
-        "dependencies": [
-          3
-        ],
+        "dependencies": [3],
         "status": "pending",
         "subtasks": []
       },
@@ -84,9 +102,7 @@
         "details": "- Centralize business logic in service layer (backend).\n- Use graph traversal (DFS/BFS) to detect cycles before relationship changes.\n- Validate roles via user profile lookup (KOL/OL only as parent).\n- Enforce admin-only access via middleware.\n- Log all changes with user, timestamp, and reason.\n- Write reusable validation utilities with unit tests.",
         "testStrategy": "Unit/integration tests for all business rules; attempt invalid operations and verify rejection; audit log inspection.",
         "priority": "high",
-        "dependencies": [
-          3
-        ],
+        "dependencies": [3],
         "status": "pending",
         "subtasks": []
       },
@@ -97,10 +113,7 @@
         "details": "- Use Redis (v7+) for caching tree and frequently accessed queries.\n- Implement cache invalidation on relationship changes.\n- Use PostgreSQL CTEs and indexes for efficient queries.\n- Frontend: ensure react-window/react-virtualized is used for large trees.\n- Implement lazy loading of child nodes in tree view.\n- Monitor API response times and optimize as needed.",
         "testStrategy": "Load test API endpoints (tree, history) with large datasets; measure response times; profile frontend rendering with >10,000 nodes.",
         "priority": "medium",
-        "dependencies": [
-          4,
-          3
-        ],
+        "dependencies": [4, 3],
         "status": "pending",
         "subtasks": []
       },
@@ -111,9 +124,7 @@
         "details": "- Use Passport.js (v0.7+) or NextAuth.js for authentication.\n- Restrict all relationship-changing endpoints to admin users.\n- Store audit logs in a separate, immutable table.\n- Regularly review and test access control policies.\n- Ensure secure handling of tokens and sensitive data.",
         "testStrategy": "Penetration tests for endpoint access; attempt unauthorized actions; verify audit logs for all changes.",
         "priority": "high",
-        "dependencies": [
-          3
-        ],
+        "dependencies": [3],
         "status": "pending",
         "subtasks": []
       },
@@ -124,10 +135,7 @@
         "details": "- Use Prometheus + Grafana for API metrics (response time, error rate).\n- Integrate Sentry (v7+) for error tracking (frontend/backend).\n- Log key business events (relationship changes, errors) to ELK stack or similar.\n- Expose metrics endpoints for dashboards.\n- Track frontend usage (drag-and-drop success, search latency) via analytics (e.g., PostHog).",
         "testStrategy": "Simulate errors and slow queries; verify metrics in dashboards; check alerting for failures.",
         "priority": "medium",
-        "dependencies": [
-          3,
-          4
-        ],
+        "dependencies": [3, 4],
         "status": "pending",
         "subtasks": []
       },
@@ -138,14 +146,7 @@
         "details": "- Backend: Jest or Vitest for unit/integration tests; use Supertest for API.\n- Frontend: React Testing Library, Cypress for e2e.\n- Cover all business rules, error cases, and edge scenarios.\n- Test with large datasets for performance.\n- Include accessibility tests (axe-core).",
         "testStrategy": "Run all test suites in CI; require >90% coverage; manual exploratory tests for complex flows.",
         "priority": "high",
-        "dependencies": [
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
+        "dependencies": [4, 5, 6, 7, 8, 9],
         "status": "pending",
         "subtasks": []
       },
@@ -156,22 +157,14 @@
         "details": "- Use Swagger/OpenAPI for API docs (auto-generated).\n- Document DB schema, constraints, and business logic.\n- Create admin user guides (with screenshots, video walkthroughs).\n- Maintain README and contribution guidelines.\n- Store docs in repo (Markdown) and publish via Storybook or Docusaurus.",
         "testStrategy": "Peer review of docs; admin user testing for clarity; verify all endpoints and flows are documented.",
         "priority": "medium",
-        "dependencies": [
-          4,
-          5,
-          6,
-          7,
-          8,
-          9,
-          11
-        ],
+        "dependencies": [4, 5, 6, 7, 8, 9, 11],
         "status": "pending",
         "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-07-18T10:54:20.972Z",
-      "updated": "2025-07-21T09:44:27.945Z",
+      "updated": "2025-07-21T09:54:58.908Z",
       "description": "Tasks for master context"
     }
   }

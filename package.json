@@ -18,7 +18,9 @@
     "test:e2e:headed": "playwright test --headed",
     "storybook": "storybook dev -p 6006",
     "storybook:mcp": "tsx mcp/react-native-storybook/index.ts",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "type-check": "tsc --noEmit",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -107,7 +109,9 @@
     "eslint-config-next": "15.3.4",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-storybook": "^0.8.0",
+    "husky": "^9.1.7",
     "jsdom": "^26.1.0",
+    "lint-staged": "^16.1.2",
     "msw": "^2.10.4",
     "node-mocks-http": "^1.17.2",
     "postcss": "^8",
@@ -121,5 +125,14 @@
     "typescript": "^5.8.2",
     "undici": "^7.10.0",
     "vitest": "^1.5.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   }
 }
