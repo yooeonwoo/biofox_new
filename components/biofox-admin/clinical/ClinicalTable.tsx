@@ -48,10 +48,10 @@ interface ClinicalTableProps {
   loading?: boolean
   selectedIds: string[]
   onSelectionChange: (ids: string[]) => void
-  onView?: (case: ClinicalCase) => void
-  onEdit?: (case: ClinicalCase) => void
-  onDelete?: (case: ClinicalCase) => void
-  onManagePhotos?: (case: ClinicalCase) => void
+  onView?: (clinicalCase: ClinicalCase) => void
+  onEdit?: (clinicalCase: ClinicalCase) => void
+  onDelete?: (clinicalCase: ClinicalCase) => void
+  onManagePhotos?: (clinicalCase: ClinicalCase) => void
   showShopInfo?: boolean // 관리자용
 }
 
