@@ -78,6 +78,7 @@ export default function UsersPage() {
       });
 
       // Add filters
+      console.log('Current filters:', filters); // 디버깅용
       if (filters.status) params.append('status', filters.status);
       if (filters.role) params.append('role', filters.role);
       if (filters.search) params.append('search', filters.search);
