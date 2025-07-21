@@ -73,8 +73,8 @@ export default function UsersPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
+        page: (pagination.page || 1).toString(),
+        limit: (pagination.limit || 20).toString(),
       });
 
       // Add filters
@@ -164,12 +164,19 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  // pagination이나 filters 변경 시 리로딩
+  // pagination 변경 시 리로딩
   useEffect(() => {
     if (pagination && typeof pagination.page !== 'undefined') {
       fetchUsers();
     }
-  }, [pagination?.page, pagination?.limit, filters]);
+  }, [pagination?.page, pagination?.limit, fetchUsers]);
+
+  // filters 변경 시 페이지를 1로 리셋하고 리로딩
+  useEffect(() => {
+    if (pagination && typeof pagination.page !== 'undefined') {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
+  }, [filters]);
 
   // Handlers
   const handleSearch = () => {
