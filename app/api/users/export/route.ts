@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 import { stringify } from 'csv-stringify/sync';
 
 // 역할 레이블 매핑 (한국어)
@@ -21,9 +21,29 @@ const statusLabels = {
 // 사용자 내보내기 API
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({
-      cookies: () => cookies(),
-    });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
     // 현재 사용자 인증 확인
     const {
@@ -223,9 +243,29 @@ export async function GET(request: NextRequest) {
 // 통계 정보만 반환하는 HEAD 메서드 (다운로드 전 미리보기용)
 export async function HEAD(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({
-      cookies: () => cookies(),
-    });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
     // 인증 확인
     const {

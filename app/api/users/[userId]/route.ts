@@ -1,37 +1,57 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// 사용자 업데이트 데이터 검증 스키마
+// 사용자 업데이트 스키마
 const updateUserSchema = z.object({
-  name: z.string().min(1, '이름은 필수입니다').optional(),
-  role: z.enum(['admin', 'kol', 'ol', 'shop_owner'], {
-    errorMap: () => ({ message: '유효하지 않은 역할입니다' })
-  }).optional(),
-  status: z.enum(['pending', 'approved', 'rejected'], {
-    errorMap: () => ({ message: '유효하지 않은 상태입니다' })
-  }).optional(),
-  shop_name: z.string().min(1, '상점명은 필수입니다').optional(),
+  name: z.string().min(2).optional(),
+  role: z.enum(['admin', 'kol', 'ol', 'shop_owner']).optional(),
+  status: z.enum(['pending', 'approved', 'suspended', 'rejected']).optional(),
+  shop_name: z.string().min(2).optional(),
   region: z.string().optional(),
-  commission_rate: z.number().min(0, '수수료율은 0% 이상이어야 합니다').max(100, '수수료율은 100% 이하여야 합니다').optional()
+  commission_rate: z.number().min(0).max(100).optional(),
+  naver_place_link: z.string().url().optional().or(z.literal('')),
 });
 
-// 입력 데이터 정리 함수 (XSS 방지)
-function sanitizeInput(input: string): string {
-  return input
-    .replace(/[<>]/g, '') // HTML 태그 제거
-    .trim(); // 공백 제거
-}
-
+// 사용자 조회 API
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const supabase = createServerComponentClient({
-      cookies: () => cookies(),
-    });
+    const { userId } = await params;
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
     // 현재 사용자 인증 확인
     const {
@@ -46,7 +66,7 @@ export async function GET(
       );
     }
 
-    // 현재 사용자의 프로필 확인 (admin 권한 체크)
+    // 현재 사용자의 프로필 확인
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -68,18 +88,8 @@ export async function GET(
       );
     }
 
-    // userId 매개변수 유효성 검증
-    const { userId } = params;
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
-
     // UUID 형식 검증
-    const uuidRegex = 
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(userId)) {
       return NextResponse.json(
         { success: false, error: 'Invalid user ID format' },
@@ -87,51 +97,32 @@ export async function GET(
       );
     }
 
-    // RPC 함수 호출
-    const { data: userDetailData, error: rpcError } = await supabase.rpc(
-      'get_user_detailed_info',
-      { user_id: userId }
-    );
+    // 사용자 정보 조회
+    const { data: userProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select(`
+        id, name, email, role, status, shop_name, region, 
+        commission_rate, total_subordinates, active_subordinates,
+        naver_place_link, approved_at, created_at, updated_at
+      `)
+      .eq('id', userId)
+      .single();
 
-    if (rpcError) {
-      console.error('RPC Error:', rpcError);
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch user details' },
-        { status: 500 }
-      );
-    }
-
-    // RPC 함수가 에러를 반환한 경우
-    if (!userDetailData.success) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: userDetailData.error || 'Failed to fetch user details' 
-        },
-        { status: 500 }
-      );
-    }
-
-    // 사용자가 존재하지 않는 경우
-    if (!userDetailData.data?.user) {
+    if (fetchError) {
+      console.error('User fetch error:', fetchError);
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    // 성공적인 응답
     return NextResponse.json({
       success: true,
-      data: userDetailData.data,
-      meta: {
-        fetchedAt: new Date().toISOString(),
-        requestedBy: user.id,
-      }
+      data: userProfile
     });
 
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('GET User API Error:', error);
     return NextResponse.json(
       { 
         success: false, 
@@ -143,15 +134,36 @@ export async function GET(
   }
 }
 
-// 사용자 정보 수정 API
+// 사용자 정보 업데이트 API
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const supabase = createServerComponentClient({
-      cookies: () => cookies(),
-    });
+    const { userId } = await params;
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
     // 현재 사용자 인증 확인
     const {
@@ -166,7 +178,7 @@ export async function PUT(
       );
     }
 
-    // 현재 사용자의 프로필 확인 (admin 권한 체크)
+    // 현재 사용자의 프로필 확인
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -185,25 +197,6 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions' },
         { status: 403 }
-      );
-    }
-
-    // userId 매개변수 유효성 검증
-    const { userId } = params;
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // UUID 형식 검증
-    const uuidRegex = 
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID format' },
-        { status: 400 }
       );
     }
 
@@ -225,7 +218,7 @@ export async function PUT(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.error.errors.map(err => ({
+          details: validation.error.errors.map((err: any) => ({
             field: err.path.join('.'),
             message: err.message
           }))
@@ -236,56 +229,40 @@ export async function PUT(
 
     const validatedData = validation.data;
 
-    // 업데이트할 사용자가 존재하는지 확인
-    const { data: targetUser, error: userCheckError } = await supabase
+    // 기존 사용자 정보 조회
+    const { data: existingUser, error: fetchError } = await supabase
       .from('profiles')
-      .select('id, role, name, approved_at')
+      .select('*')
       .eq('id', userId)
       .single();
 
-    if (userCheckError || !targetUser) {
+    if (fetchError) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    // 입력 데이터 정리 (XSS 방지)
-    const sanitizedData: any = {};
-    if (validatedData.name) {
-      sanitizedData.name = sanitizeInput(validatedData.name);
-    }
-    if (validatedData.shop_name) {
-      sanitizedData.shop_name = sanitizeInput(validatedData.shop_name);
-    }
-    if (validatedData.region) {
-      sanitizedData.region = sanitizeInput(validatedData.region);
-    }
-    if (validatedData.role) {
-      sanitizedData.role = validatedData.role;
-    }
-    if (validatedData.status) {
-      sanitizedData.status = validatedData.status;
-    }
-    if (validatedData.commission_rate !== undefined) {
-      sanitizedData.commission_rate = validatedData.commission_rate;
-    }
+    // 업데이트할 필드만 추출
+    const updateData: any = {};
+    Object.keys(validatedData).forEach(key => {
+      if (validatedData[key as keyof typeof validatedData] !== undefined) {
+        updateData[key] = validatedData[key as keyof typeof validatedData];
+      }
+    });
 
-    // 역할 변경이 있는 경우 기록
-    const isRoleChange = validatedData.role && validatedData.role !== targetUser.role;
-    const oldRole = targetUser.role;
+    // 업데이트 시간 추가
+    updateData.updated_at = new Date().toISOString();
+
+    // 승인 시간 처리
+    if (updateData.status === 'approved' && existingUser.status !== 'approved') {
+      updateData.approved_at = new Date().toISOString();
+    }
 
     // 사용자 정보 업데이트
     const { data: updatedUser, error: updateError } = await supabase
       .from('profiles')
-      .update({
-        ...sanitizedData,
-        updated_at: new Date().toISOString(),
-        ...(validatedData.status === 'approved' && !targetUser.approved_at && {
-          approved_at: new Date().toISOString(),
-          approved_by: user.id
-        })
-      })
+      .update(updateData)
       .eq('id', userId)
       .select(`
         id, name, email, role, status, shop_name, region, 
@@ -302,8 +279,12 @@ export async function PUT(
       );
     }
 
-    // 역할 변경 시 감사 로그 기록
-    if (isRoleChange) {
+    // 감사 로그 기록
+    const changedFields = Object.keys(updateData).filter(key => 
+      key !== 'updated_at' && existingUser[key] !== updateData[key]
+    );
+
+    if (changedFields.length > 0) {
       const { error: auditError } = await supabase
         .from('audit_logs')
         .insert({
@@ -311,36 +292,37 @@ export async function PUT(
           record_id: userId,
           action: 'UPDATE',
           user_id: user.id,
-          old_values: { role: oldRole },
-          new_values: { role: validatedData.role },
-          changed_fields: ['role'],
+          old_values: Object.fromEntries(
+            changedFields.map(field => [field, existingUser[field]])
+          ),
+          new_values: Object.fromEntries(
+            changedFields.map(field => [field, updateData[field]])
+          ),
+          changed_fields: changedFields,
           metadata: {
-            operation: 'role_change',
-            target_user_name: targetUser.name,
+            operation: 'user_updated',
             admin_action: true,
             timestamp: new Date().toISOString()
           }
         });
 
       if (auditError) {
-        console.error('Failed to log role change:', auditError);
-        // 감사 로그 실패는 메인 작업에 영향을 주지 않음
+        console.error('Failed to log user update:', auditError);
       }
     }
 
-    // 성공 응답
     return NextResponse.json({
       success: true,
       data: updatedUser,
       meta: {
-        updatedAt: new Date().toISOString(),
-        updatedBy: user.id,
-        roleChanged: isRoleChange
+        updatedFields: changedFields,
+        updatedAt: updateData.updated_at,
+        updatedBy: user.id
       }
     });
 
   } catch (error) {
-    console.error('PUT API Error:', error);
+    console.error('PUT User API Error:', error);
     return NextResponse.json(
       { 
         success: false, 
@@ -352,15 +334,36 @@ export async function PUT(
   }
 }
 
-// 사용자 삭제 API (admin 전용)
+// 사용자 삭제 API
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const supabase = createServerComponentClient({
-      cookies: () => cookies(),
-    });
+    const { userId } = await params;
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
     // 현재 사용자 인증 확인
     const {
@@ -375,7 +378,7 @@ export async function DELETE(
       );
     }
 
-    // 현재 사용자의 프로필 확인 (admin 권한 체크)
+    // 현재 사용자의 프로필 확인
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -397,59 +400,52 @@ export async function DELETE(
       );
     }
 
-    // userId 매개변수 유효성 검증
-    const { userId } = params;
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // UUID 형식 검증
-    const uuidRegex = 
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID format' },
-        { status: 400 }
-      );
-    }
-
-    // 자신은 삭제할 수 없음
+    // 자기 자신 삭제 방지
     if (userId === user.id) {
       return NextResponse.json(
-        { success: false, error: 'Cannot delete yourself' },
+        { success: false, error: 'Cannot delete your own account' },
         { status: 400 }
       );
     }
 
-    // 삭제할 사용자가 존재하는지 확인
-    const { data: targetUser, error: userCheckError } = await supabase
+    // 기존 사용자 정보 조회
+    const { data: existingUser, error: fetchError } = await supabase
       .from('profiles')
-      .select('id, name, role')
+      .select('*')
       .eq('id', userId)
       .single();
 
-    if (userCheckError || !targetUser) {
+    if (fetchError) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    // 사용자 삭제 (프로필만 삭제, auth 사용자는 유지)
-    const { error: deleteError } = await supabase
+    // 프로필 삭제
+    const { error: deleteProfileError } = await supabase
       .from('profiles')
       .delete()
       .eq('id', userId);
 
-    if (deleteError) {
-      console.error('User delete error:', deleteError);
+    if (deleteProfileError) {
+      console.error('Profile deletion error:', deleteProfileError);
       return NextResponse.json(
-        { success: false, error: 'Failed to delete user' },
+        { success: false, error: 'Failed to delete user profile' },
         { status: 500 }
       );
+    }
+
+    // Auth 사용자 삭제
+    try {
+      const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(userId);
+      if (deleteAuthError) {
+        console.error('Auth user deletion error:', deleteAuthError);
+        // 프로필은 이미 삭제되었으므로 경고만 로그
+      }
+    } catch (authDeleteError) {
+      console.error('Failed to delete auth user:', authDeleteError);
+      // 프로필 삭제는 성공했으므로 계속 진행
     }
 
     // 감사 로그 기록
@@ -460,15 +456,11 @@ export async function DELETE(
         record_id: userId,
         action: 'DELETE',
         user_id: user.id,
-        old_values: { 
-          name: targetUser.name, 
-          role: targetUser.role 
-        },
+        old_values: existingUser,
         new_values: null,
-        changed_fields: null,
+        changed_fields: Object.keys(existingUser),
         metadata: {
           operation: 'user_deleted',
-          target_user_name: targetUser.name,
           admin_action: true,
           timestamp: new Date().toISOString()
         }
@@ -476,26 +468,20 @@ export async function DELETE(
 
     if (auditError) {
       console.error('Failed to log user deletion:', auditError);
-      // 감사 로그 실패는 메인 작업에 영향을 주지 않음
     }
 
-    // 성공 응답
     return NextResponse.json({
       success: true,
-      message: 'User successfully deleted',
+      message: 'User deleted successfully',
       meta: {
+        deletedUserId: userId,
         deletedAt: new Date().toISOString(),
-        deletedBy: user.id,
-        deletedUser: {
-          id: userId,
-          name: targetUser.name,
-          role: targetUser.role
-        }
+        deletedBy: user.id
       }
     });
 
   } catch (error) {
-    console.error('DELETE API Error:', error);
+    console.error('DELETE User API Error:', error);
     return NextResponse.json(
       { 
         success: false, 

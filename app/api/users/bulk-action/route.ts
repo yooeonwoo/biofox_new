@@ -1,48 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// 일괄 작업 데이터 검증 스키마
+// 벌크 액션 검증 스키마
 const bulkActionSchema = z.object({
-  user_ids: z
-    .array(z.string().uuid('유효하지 않은 사용자 ID 형식입니다'))
-    .min(1, '최소 1명의 사용자를 선택해야 합니다')
-    .max(100, '한 번에 최대 100명까지만 처리할 수 있습니다'),
-  action: z.enum(['approve', 'reject', 'change_role', 'delete'], {
-    errorMap: () => ({ message: '유효하지 않은 작업 유형입니다' })
-  }),
-  data: z.object({
-    role: z.enum(['admin', 'kol', 'ol', 'shop_owner'], {
-      errorMap: () => ({ message: '유효하지 않은 역할입니다' })
-    }).optional()
-  }).optional()
+  action: z.enum(['delete', 'approve', 'reject', 'suspend']),
+  userIds: z.array(z.string().uuid()).min(1, 'At least one user ID is required'),
+  reason: z.string().optional()
 });
 
-type BulkActionRequest = z.infer<typeof bulkActionSchema>;
-
-// 액션별 한국어 레이블 매핑
-const actionLabels = {
-  approve: '승인',
-  reject: '거절',
-  change_role: '역할 변경',
-  delete: '삭제'
-};
-
-// 역할 레이블 매핑
-const roleLabels = {
-  admin: '관리자',
-  kol: 'KOL',
-  ol: 'OL',
-  shop_owner: '상점 운영자'
-};
-
-// 일괄 작업 API
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({
-      cookies: () => cookies(),
-    });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
     // 현재 사용자 인증 확인
     const {
