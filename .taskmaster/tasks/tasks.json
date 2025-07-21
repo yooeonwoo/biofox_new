@@ -147,14 +147,105 @@
         "id": 4,
         "title": "Implement Bulk Action API",
         "description": "Create the API endpoint to perform bulk operations on multiple users including approval, rejection, role changes, and deletion.",
-        "details": "Create a new API endpoint at `/api/users/bulk-action/route.ts` to handle various bulk operations on multiple users.\n\nImplementation steps:\n1. Create the new API route file with POST method\n2. Implement strict authentication and authorization checks\n3. Validate the incoming request data:\n```typescript\nconst bulkActionSchema = z.object({\n  user_ids: z.array(z.string().uuid()).min(1),\n  action: z.enum(['approve', 'reject', 'change_role', 'delete']),\n  data: z.object({\n    role: z.enum(['admin', 'kol', 'ol', 'shop_owner']).optional()\n  }).optional()\n});\n```\n4. Create the Supabase RPC function if it doesn't exist:\n```sql\nCREATE OR REPLACE FUNCTION bulk_update_users(\n  user_ids UUID[],\n  action_type TEXT,\n  action_data JSONB DEFAULT '{}'::jsonb\n)\nRETURNS JSON AS $$\nDECLARE\n  successful_ids UUID[] := '{}';\n  failed_records JSON[] := '{}';\n  current_id UUID;\n  error_message TEXT;\n  affected_count INTEGER := 0;\nBEGIN\n  FOREACH current_id IN ARRAY user_ids\n  LOOP\n    BEGIN\n      CASE action_type\n        WHEN 'approve' THEN\n          UPDATE profiles SET status = 'approved' WHERE id = current_id;\n          \n        WHEN 'reject' THEN\n          UPDATE profiles SET status = 'rejected' WHERE id = current_id;\n          \n        WHEN 'change_role' THEN\n          IF action_data->>'role' IS NULL THEN\n            RAISE EXCEPTION 'Role is required for change_role action';\n          END IF;\n          UPDATE profiles SET role = action_data->>'role' WHERE id = current_id;\n          \n        WHEN 'delete' THEN\n          PERFORM delete_user_with_related_data(current_id);\n          \n        ELSE\n          RAISE EXCEPTION 'Unknown action type: %', action_type;\n      END CASE;\n      \n      affected_count := affected_count + 1;\n      successful_ids := array_append(successful_ids, current_id);\n      \n    EXCEPTION WHEN OTHERS THEN\n      error_message := SQLERRM;\n      failed_records := array_append(failed_records, \n        json_build_object('id', current_id, 'error', error_message));\n    END;\n  END LOOP;\n  \n  RETURN json_build_object(\n    'affected', affected_count,\n    'results', json_build_object(\n      'successful', successful_ids,\n      'failed', failed_records\n    )\n  );\nEND;\n$$ LANGUAGE plpgsql;\n```\n5. Call the RPC function from the API:\n```typescript\nconst { data, error } = await supabase.rpc('bulk_update_users', {\n  user_ids: validatedData.user_ids,\n  action_type: validatedData.action,\n  action_data: validatedData.data || {}\n});\n```\n6. Implement proper error handling and response formatting\n7. Add transaction support for atomicity\n8. Add audit logging for each affected user",
-        "testStrategy": "1. Unit test the API endpoint:\n   - Test each action type with valid inputs\n   - Test validation errors\n   - Test authorization checks\n\n2. Integration test with Supabase:\n   - Verify each bulk action works correctly\n   - Test with mixed success/failure scenarios\n   - Verify the response format matches requirements\n\n3. Performance testing:\n   - Test with varying numbers of users (10, 50, 100)\n   - Verify response time scales appropriately\n   - Test concurrent bulk operations\n\n4. UI testing:\n   - Verify bulk action UI correctly calls this API\n   - Check that progress indicators work\n   - Verify success/error summaries are displayed correctly",
-        "priority": "medium",
+        "status": "done",
         "dependencies": [
           3
         ],
-        "status": "pending",
-        "subtasks": []
+        "priority": "medium",
+        "details": "Create a new API endpoint at `/api/users/bulk-action/route.ts` to handle various bulk operations on multiple users.\n\nImplementation steps:\n1. Create the new API route file with POST method\n2. Implement strict authentication and authorization checks\n3. Validate the incoming request data:\n```typescript\nconst bulkActionSchema = z.object({\n  user_ids: z.array(z.string().uuid()).min(1).max(100),\n  action: z.enum(['approve', 'reject', 'change_role', 'delete']),\n  data: z.object({\n    role: z.enum(['admin', 'kol', 'ol', 'shop_owner']).optional()\n  }).optional()\n});\n```\n4. Create the Supabase RPC functions:\n\n   a. `delete_user_with_related_data(target_user_id UUID)` function:\n   - Handles deletion of all user-related data in proper dependency order\n   - Removes clinical photos, consent files, clinical cases\n   - Cleans up orders, order items, device sales\n   - Removes KOL device accumulators, commission calculations\n   - Deletes CRM cards, shop relationships\n   - Ensures safe deletion respecting dependencies\n\n   b. `bulk_update_users(user_ids UUID[], action_type TEXT, action_data JSONB, current_admin_id UUID)` function:\n```sql\nCREATE OR REPLACE FUNCTION bulk_update_users(\n  user_ids UUID[],\n  action_type TEXT,\n  action_data JSONB DEFAULT '{}'::jsonb,\n  current_admin_id UUID\n)\nRETURNS JSON AS $$\nDECLARE\n  successful_ids UUID[] := '{}';\n  failed_records JSON[] := '{}';\n  current_id UUID;\n  error_message TEXT;\n  affected_count INTEGER := 0;\nBEGIN\n  FOREACH current_id IN ARRAY user_ids\n  LOOP\n    -- Prevent actions on self\n    IF current_id = current_admin_id AND action_type IN ('delete', 'change_role') THEN\n      failed_records := array_append(failed_records, \n        json_build_object('id', current_id, 'error', 'Cannot perform this action on yourself'));\n      CONTINUE;\n    END IF;\n    \n    BEGIN\n      CASE action_type\n        WHEN 'approve' THEN\n          UPDATE profiles SET status = 'approved' WHERE id = current_id;\n          \n        WHEN 'reject' THEN\n          UPDATE profiles SET status = 'rejected' WHERE id = current_id;\n          \n        WHEN 'change_role' THEN\n          IF action_data->>'role' IS NULL THEN\n            RAISE EXCEPTION 'Role is required for change_role action';\n          END IF;\n          UPDATE profiles SET role = action_data->>'role' WHERE id = current_id;\n          \n        WHEN 'delete' THEN\n          PERFORM delete_user_with_related_data(current_id);\n          \n        ELSE\n          RAISE EXCEPTION 'Unknown action type: %', action_type;\n      END CASE;\n      \n      affected_count := affected_count + 1;\n      successful_ids := array_append(successful_ids, current_id);\n      \n    EXCEPTION WHEN OTHERS THEN\n      error_message := SQLERRM;\n      failed_records := array_append(failed_records, \n        json_build_object('id', current_id, 'error', error_message));\n    END;\n  END LOOP;\n  \n  RETURN json_build_object(\n    'affected', affected_count,\n    'results', json_build_object(\n      'successful', successful_ids,\n      'failed', failed_records\n    )\n  );\nEND;\n$$ LANGUAGE plpgsql;\n```\n\n5. Call the RPC function from the API:\n```typescript\nconst { data, error } = await supabase.rpc('bulk_update_users', {\n  user_ids: validatedData.user_ids,\n  action_type: validatedData.action,\n  action_data: validatedData.data || {},\n  current_admin_id: session.user.id\n});\n```\n6. Implement proper error handling and response formatting\n7. Add transaction support for atomicity\n8. Add audit logging for each affected user using Promise.allSettled for parallel processing\n9. Implement Auth user deletion when using the delete action\n10. Add Korean language support for messages and labels\n11. Provide detailed success/failure results in the response\n12. Include debugging information in development environment",
+        "testStrategy": "1. Unit test the API endpoint:\n   - Test each action type with valid inputs\n   - Test validation errors\n   - Test authorization checks\n   - Test prevention of self-deletion/role change\n   - Test maximum user limit (100)\n\n2. Integration test with Supabase:\n   - Verify each bulk action works correctly\n   - Test with mixed success/failure scenarios\n   - Verify the response format matches requirements\n   - Test Auth user deletion with delete action\n   - Verify audit logs are created for all successful actions\n\n3. Performance testing:\n   - Test with varying numbers of users (10, 50, 100)\n   - Verify response time scales appropriately\n   - Test concurrent bulk operations\n   - Verify parallel audit logging works correctly\n\n4. UI testing:\n   - Verify bulk action UI correctly calls this API\n   - Check that progress indicators work\n   - Verify success/error summaries are displayed correctly\n   - Test Korean language support\n\n5. Security testing:\n   - Verify UUID validation works correctly\n   - Test transaction safety and rollback behavior\n   - Verify admin-only access restrictions",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Supabase RPC functions",
+            "description": "Implemented delete_user_with_related_data and bulk_update_users RPC functions in Supabase",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement API endpoint with validation",
+            "description": "Created /api/users/bulk-action/route.ts with POST method, Zod validation, and admin authorization",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement core bulk actions",
+            "description": "Implemented approve, reject, change_role, and delete actions with proper error handling",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add Auth user deletion",
+            "description": "Added functionality to delete users from Supabase Auth when using delete action",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement audit logging",
+            "description": "Added detailed audit logging for all successful actions with parallel processing",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Add Korean language support",
+            "description": "Implemented Korean messages and labels for better user experience",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Add self-action prevention",
+            "description": "Implemented logic to prevent admins from deleting themselves or changing their own role",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Implement detailed response formatting",
+            "description": "Created comprehensive success/failure results in the API response",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 9,
+            "title": "Add user limit and performance optimizations",
+            "description": "Limited bulk actions to 100 users maximum and optimized performance",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 10,
+            "title": "Test with new Supabase project",
+            "description": "Verified all functionality works with new Supabase project cezxkgmzlkbjqataogtd",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 5,
@@ -236,7 +327,7 @@
     ],
     "metadata": {
       "created": "2025-07-18T10:54:20.972Z",
-      "updated": "2025-07-21T05:44:49.687Z",
+      "updated": "2025-07-21T05:53:36.243Z",
       "description": "Tasks for master context"
     }
   }
