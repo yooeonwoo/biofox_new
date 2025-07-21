@@ -39,4 +39,47 @@ Object.defineProperty(window, 'sessionStorage', {
 
 // 환경변수 모킹
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321';
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'mock-anon-key'; 
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'mock-anon-key';
+process.env.SUPABASE_SERVICE_ROLE_KEY = '';
+
+// Mock clinical-photos-api to operate in-memory and avoid Supabase dependency
+vi.mock('@/lib/clinical-photos-api', () => {
+  const store: Record<number, any> = {};
+  let idSeq = 1000;
+
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    createCase: async (data: any) => {
+      const id = ++idSeq;
+      const record = {
+        id,
+        customerName: data.customerName,
+        caseName: data.caseName,
+        concernArea: data.concernArea ?? '',
+        status: 'active',
+        ...data,
+      };
+      store[id] = record;
+      return record;
+    },
+
+    fetchCase: async (id: number) => {
+      return store[id] ?? null;
+    },
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    updateCase: async (id: number, patch: any) => {
+      if (!store[id]) return null;
+      store[id] = { ...store[id], ...patch };
+      return store[id];
+    },
+
+    deleteCase: async (id: number) => {
+      if (store[id]) {
+        delete store[id];
+        return true;
+      }
+      return false;
+    },
+  };
+}); 

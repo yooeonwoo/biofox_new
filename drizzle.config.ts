@@ -7,7 +7,7 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required');
 }
 
-// DATABASE_URL 형식: postgres://postgres:postgres@db.lgzzqoaiukuywmenxzay.supabase.co:5432/postgres
+// DATABASE_URL 예시: postgres://postgres:postgres@db.cezxkgmzlkbjqataogtd.supabase.co:5432/postgres
 const url = new URL(process.env.DATABASE_URL);
 const [username, password] = url.username && url.password ? [url.username, url.password] : [];
 const host = url.hostname;

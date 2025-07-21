@@ -7,7 +7,7 @@ test.describe('Personal Case Upload Flow', () => {
     await page.addInitScript(() => {
       localStorage.setItem('mockAuth', 'true');
       // Supabase session mock
-      localStorage.setItem('sb-lgzzqoaiukuywmenxzay-auth-token', JSON.stringify({
+      localStorage.setItem('sb-cezxkgmzlkbjqataogtd-auth-token', JSON.stringify({
         access_token: 'mock-token',
         user: {
           id: '00000000-0000-4000-8000-000000000001',

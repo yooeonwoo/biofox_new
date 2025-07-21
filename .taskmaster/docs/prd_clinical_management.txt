@@ -1,0 +1,1159 @@
+## 📋 BIOFOX KOL Clinical Management System 상세 명세서
+
+### 🏗️ 프로젝트 개요
+BIOFOX KOL 시스템의 임상 관리 모듈을 구축하여 전문점들의 시술 전후 사진과 임상 데이터를 체계적으로 관리하고, 동의서 기반의 데이터 활용 권한을 관리하며, KOL/OL이 소속 전문점의 임상 진행 상황을 효과적으로 모니터링할 수 있도록 한다. 특히 개인정보 보호와 임상 데이터의 품질 관리에 중점을 둔다.
+
+### 🎯 비즈니스 목표
+- **임상 데이터 체계화**: 표준화된 임상 기록으로 데이터 활용도 90% 향상
+- **동의 관리 자동화**: 동의서 처리 시간 95% 단축 (현재 30분 → 1분)
+- **임상 추적 효율화**: KOL의 소속 전문점 임상 현황 파악 시간 80% 단축
+- **데이터 품질 향상**: 임상 사진 표준화로 비교 분석 정확도 95% 달성
+
+### 📊 대상 사용자 및 규모
+- **Primary Users**: 
+  - Shop Owner (10,000명) - 임상 데이터 등록 및 관리
+  - KOL/OL (400명) - 소속 전문점 임상 현황 조회
+  - BIOFOX 관리자 (10명) - 전체 임상 데이터 관리
+- **예상 규모**:
+  - 월간 신규 임상: 5,000건
+  - 총 임상 사진: 500,000장
+  - 평균 회차: 5-10회/임상
+
+---
+
+## 🔐 기능 요구사항
+
+### 1. 임상 케이스 관리
+
+#### 1.1 임상 등록 시스템
+```typescript
+interface ClinicalCaseRegistration {
+  // 케이스 타입
+  types: {
+    self: {
+      name: '본인 임상'
+      consentRequired: false   // BR043
+      dataSharing: 'automatic'
+      restrictions: []
+    }
+    
+    customer: {
+      name: '고객 임상'
+      consentRequired: true    // BR043
+      dataSharing: 'consent-based'
+      restrictions: ['pii-protection']
+    }
+  }
+  
+  // 등록 폼
+  form: {
+    basic: {
+      subjectName: string
+      subjectType: 'self' | 'customer'
+      gender?: 'male' | 'female' | 'other'
+      ageGroup?: string
+      skinType?: string
+      concerns?: string[]
+    }
+    
+    treatment: {
+      product: string          // 관리 제품
+      protocol: string         // 시술 프로토콜
+      device?: string          // 사용 기기
+      startDate: Date
+      expectedSessions: number
+    }
+    
+    consent: {
+      status: 'consented' | 'no_consent' | 'pending'  // BR044
+      collectionDate?: Date
+      expiryDate?: Date
+      scope: ConsentScope[]
+    }
+  }
+  
+  // 데이터 보호
+  privacy: {
+    anonymization: {
+      enabled: boolean
+      method: 'hash' | 'tokenize'
+      fields: string[]
+    }
+    
+    encryption: {
+      atRest: boolean
+      algorithm: 'AES-256'
+      keyRotation: number      // days
+    }
+    
+    access: {
+      audit: boolean
+      watermark: boolean
+      download: 'restricted' | 'logged'
+    }
+  }
+}
+```
+
+#### 1.2 임상 진행 관리
+```typescript
+interface ClinicalProgress {
+  // 회차 관리
+  sessions: {
+    tracking: {
+      number: number           // 0 = Before, 1+ = 회차
+      date: Date
+      interval: number         // 이전 회차와의 간격(일)
+      
+      compliance: {
+        onSchedule: boolean
+        delayReason?: string
+        rescheduled?: boolean
+      }
+    }
+    
+    documentation: {
+      treatmentNotes: string
+      observations: string[]
+      measurements?: Measurement[]
+      satisfaction?: 1 | 2 | 3 | 4 | 5
+    }
+    
+    validation: {
+      maxSessions: null        // 무제한 (BR038)
+      minInterval?: number     // 최소 간격(일)
+      photoRequired: boolean
+    }
+  }
+  
+  // 상태 관리
+  status: {
+    current: 'in_progress' | 'completed' | 'paused' | 'cancelled'
+    
+    transitions: {
+      allowPause: boolean
+      allowResume: boolean
+      allowCancel: boolean
+      requireReason: boolean
+    }
+    
+    automation: {
+      autoComplete: {
+        enabled: boolean
+        afterSessions: number
+        inactivityDays: number
+      }
+    }
+  }
+  
+  // 알림 시스템
+  notifications: {
+    nextSession: {
+      enabled: boolean
+      daysBefore: number[]
+      channels: ('sms' | 'email' | 'app')[]
+    }
+    
+    milestones: {
+      sessions: number[]       // 특정 회차 도달
+      improvements: string[]   // 개선 목표 달성
+    }
+  }
+}
+```
+
+### 2. 임상 사진 관리
+
+#### 2.1 사진 업로드 시스템
+```typescript
+interface PhotoUploadSystem {
+  // 업로드 규칙
+  rules: {
+    types: ['front', 'left_side', 'right_side']  // BR040
+    required: {
+      before: ['front', 'left_side', 'right_side']
+      session: ['front']      // 최소 요구사항
+    }
+    
+    specifications: {
+      format: ['jpg', 'jpeg', 'png', 'webp']
+      maxSize: 10 * 1024 * 1024  // 10MB (BR041)
+      minResolution: {
+        width: 800
+        height: 600
+      }
+      maxResolution: {
+        width: 4096
+        height: 4096
+      }
+    }
+    
+    metadata: {
+      exif: 'preserve' | 'strip'
+      orientation: 'auto-correct'
+      timestamp: 'required'
+    }
+  }
+  
+  // 전처리
+  preprocessing: {
+    validation: {
+      format: boolean
+      size: boolean
+      resolution: boolean
+      quality: QualityCheck
+    }
+    
+    optimization: {
+      compression: {
+        quality: 85
+        progressive: true
+      }
+      
+      thumbnail: {
+        sizes: [150, 300, 600]
+        format: 'webp'
+      }
+      
+      watermark: {
+        enabled: boolean
+        text: string
+        position: 'corner' | 'center'
+        opacity: number
+      }
+    }
+    
+    ai: {
+      faceDetection: boolean
+      autoAlignment: boolean
+      qualityScore: boolean
+      consistency: boolean     // 이전 사진과 비교
+    }
+  }
+  
+  // 저장 및 관리
+  storage: {
+    structure: {
+      path: '/clinical/photos/{caseId}/{sessionNumber}/{photoType}'
+      naming: 'uuid' | 'timestamp' | 'custom'
+      versioning: boolean
+    }
+    
+    backup: {
+      enabled: boolean
+      retention: number        // days
+      redundancy: number       // copies
+    }
+    
+    cdn: {
+      enabled: boolean
+      regions: string[]
+      caching: CachePolicy
+    }
+  }
+}
+```
+
+#### 2.2 사진 뷰어 및 비교
+```typescript
+interface PhotoViewerComparison {
+  // 뷰어 기능
+  viewer: {
+    display: {
+      layout: 'grid' | 'slider' | 'comparison'
+      zoom: {
+        enabled: boolean
+        maxLevel: number
+        sync: boolean          // 여러 이미지 동시 줌
+      }
+      
+      annotations: {
+        enabled: boolean
+        tools: ['point', 'circle', 'arrow', 'text']
+        collaborative: boolean
+        save: boolean
+      }
+    }
+    
+    controls: {
+      brightness: boolean
+      contrast: boolean
+      filters: Filter[]
+      measurements: boolean    // 거리, 각도 측정
+    }
+    
+    navigation: {
+      timeline: boolean        // 회차별 네비게이션
+      thumbnails: boolean
+      keyboard: boolean
+      gestures: boolean
+    }
+  }
+  
+  // 비교 도구
+  comparison: {
+    modes: {
+      sideBySide: {
+        sessions: number[]     // 비교할 회차
+        sync: boolean          // 줌/팬 동기화
+        overlay: boolean       // 겹쳐보기
+      }
+      
+      slider: {
+        direction: 'horizontal' | 'vertical'
+        position: number       // 0-100
+        labels: boolean
+      }
+      
+      grid: {
+        columns: number
+        rows: number
+        labels: 'auto' | 'custom'
+      }
+    }
+    
+    analysis: {
+      difference: {
+        highlight: boolean
+        threshold: number
+        colorMap: 'heatmap' | 'binary'
+      }
+      
+      progress: {
+        chart: boolean
+        metrics: string[]
+        export: boolean
+      }
+    }
+  }
+  
+  // Export 기능
+  export: {
+    formats: {
+      image: ['jpg', 'png', 'pdf']
+      comparison: ['pdf', 'pptx']
+      report: ['pdf', 'docx']
+    }
+    
+    options: {
+      quality: 'web' | 'print' | 'original'
+      watermark: boolean
+      metadata: boolean
+      anonymize: boolean
+    }
+    
+    templates: ReportTemplate[]
+  }
+}
+```
+
+### 3. 동의서 관리
+
+#### 3.1 동의서 수집 시스템
+```typescript
+interface ConsentManagement {
+  // 동의서 타입
+  types: {
+    dataUsage: {
+      name: '데이터 활용 동의서'
+      required: boolean        // BR044
+      scope: ['view', 'analysis', 'marketing', 'research']
+      duration: number         // months
+      renewable: boolean
+    }
+    
+    photoUsage: {
+      name: '사진 활용 동의서'
+      required: boolean
+      scope: ['internal', 'education', 'marketing']
+      anonymization: 'required' | 'optional'
+    }
+  }
+  
+  // 수집 프로세스
+  collection: {
+    methods: {
+      digital: {
+        signature: 'touch' | 'type' | 'draw'
+        verification: 'sms' | 'email'
+        timestamp: boolean
+        ip: boolean
+      }
+      
+      paper: {
+        upload: boolean
+        formats: ['pdf', 'jpg', 'png']
+        ocr: boolean
+        verification: 'manual' | 'ai'
+      }
+    }
+    
+    validation: {
+      completeness: boolean
+      legibility: boolean
+      authenticity: boolean
+      expiry: boolean
+    }
+    
+    storage: {
+      encryption: boolean
+      location: 'secure'
+      retention: 'legal-requirement'
+      audit: 'detailed'
+    }
+  }
+  
+  // 동의 관리
+  management: {
+    tracking: {
+      status: 'active' | 'expired' | 'revoked'
+      history: ConsentHistory[]
+      reminders: ReminderSettings
+    }
+    
+    revocation: {
+      allowed: boolean
+      process: 'immediate' | 'review'
+      effects: {
+        dataRetention: 'anonymize' | 'delete'
+        notifications: string[]
+      }
+    }
+    
+    renewal: {
+      autoRemind: boolean
+      gracePeriod: number      // days
+      simplified: boolean
+    }
+  }
+}
+```
+
+#### 3.2 권한 기반 접근 제어
+```typescript
+interface ConsentBasedAccess {
+  // 접근 규칙
+  rules: {
+    noConsent: {
+      view: {
+        statistics: true       // 통계만 허용
+        details: false
+        photos: false
+      }
+      
+      export: false
+      share: false
+    }
+    
+    withConsent: {
+      view: {
+        statistics: true
+        details: true
+        photos: true
+      }
+      
+      export: {
+        allowed: true
+        watermark: boolean
+        audit: boolean
+      }
+      
+      share: {
+        internal: true
+        external: 'with-approval'
+      }
+    }
+  }
+  
+  // 역할별 권한
+  rolePermissions: {
+    shopOwner: {
+      ownData: 'full'
+      otherData: 'none'
+    }
+    
+    kol: {
+      ownData: 'full'
+      subordinateData: 'consent-based'  // BR047
+      otherData: 'none'
+    }
+    
+    admin: {
+      allData: 'full'          // BR048
+      override: boolean
+      audit: 'required'
+    }
+  }
+  
+  // 감사 추적
+  audit: {
+    access: {
+      log: 'detailed'
+      retention: 'permanent'
+      alerts: AlertRule[]
+    }
+    
+    export: {
+      track: boolean
+      approve: boolean
+      watermark: 'visible'
+    }
+  }
+}
+```
+
+### 4. 임상 현황 대시보드
+
+#### 4.1 KOL/OL 대시보드
+```typescript
+interface KOLClinicalDashboard {
+  // 전체 현황
+  overview: {
+    summary: {
+      totalShops: number
+      activeClinic: number     // 진행 중인 임상
+      completedClinic: number
+      totalSessions: number
+      
+      trends: {
+        monthly: TrendData
+        growth: number
+        forecast: number
+      }
+    }
+    
+    // 전문점별 상세
+    shopDetails: {
+      list: {
+        shop: ShopInfo
+        metrics: {
+          selfClinical: {
+            status: string
+            sessions: number
+            lastUpdate: Date
+          }
+          customerClinical: {
+            total: number
+            active: number
+            consented: number  // 동의한 건수만
+          }
+        }
+        
+        performance: {
+          compliance: number   // 프로토콜 준수율
+          satisfaction: number // 만족도
+          completion: number   // 완료율
+        }
+      }[]
+      
+      sorting: SortOption[]
+      filtering: FilterOption[]
+      grouping: 'region' | 'product' | 'status'
+    }
+  }
+  
+  // 임상 분석
+  analytics: {
+    progressTracking: {
+      averageSessions: number
+      completionRate: number
+      dropoutRate: number
+      
+      byProduct: {
+        product: string
+        metrics: ProgressMetric
+      }[]
+    }
+    
+    qualityMetrics: {
+      photoQuality: number     // 사진 품질 점수
+      documentationRate: number // 기록 충실도
+      protocolAdherence: number // 프로토콜 준수율
+    }
+    
+    insights: {
+      topPerformers: Shop[]
+      improvementAreas: string[]
+      recommendations: string[]
+    }
+  }
+  
+  // 빠른 액션
+  quickActions: {
+    viewDetails: boolean
+    exportReport: boolean
+    sendMessage: boolean
+    scheduleReview: boolean
+  }
+}
+```
+
+#### 4.2 관리자 통합 대시보드
+```typescript
+interface AdminClinicalDashboard {
+  // 전체 통계
+  statistics: {
+    global: {
+      totalCases: number
+      byType: {
+        self: number
+        customer: number
+      }
+      
+      byConsent: {
+        consented: number      // BR045
+        noConsent: number
+        pending: number
+      }
+      
+      byStatus: {
+        active: number
+        completed: number
+        paused: number
+      }
+    }
+    
+    // 지역별/제품별 분석
+    segmentation: {
+      byRegion: RegionData[]
+      byProduct: ProductData[]
+      byKOL: KOLData[]
+      
+      heatmap: {
+        metric: 'cases' | 'sessions' | 'satisfaction'
+        visualization: 'map' | 'treemap'
+      }
+    }
+  }
+  
+  // 품질 관리
+  quality: {
+    monitoring: {
+      photoQuality: {
+        score: number
+        issues: QualityIssue[]
+        trends: TrendData
+      }
+      
+      compliance: {
+        protocolAdherence: number
+        documentationCompleteness: number
+        consentCompliance: number
+      }
+    }
+    
+    alerts: {
+      lowQuality: Alert[]
+      missingData: Alert[]
+      expiredConsent: Alert[]
+      inactiveCase: Alert[]
+    }
+    
+    actions: {
+      bulkNotification: boolean
+      qualityReport: boolean
+      training: boolean
+    }
+  }
+  
+  // 보고서 생성
+  reporting: {
+    templates: {
+      monthly: ReportTemplate
+      quarterly: ReportTemplate
+      custom: ReportBuilder
+    }
+    
+    distribution: {
+      automated: boolean
+      recipients: Recipient[]
+      schedule: Schedule
+    }
+  }
+}
+```
+
+### 5. CRM 연동
+
+#### 5.1 임상 정보 연동
+```typescript
+interface CRMClinicalIntegration {
+  // 자동 연동
+  sync: {
+    triggers: {
+      caseCreated: boolean
+      sessionAdded: boolean
+      statusChanged: boolean
+      photoUploaded: boolean
+    }
+    
+    data: {
+      summary: {
+        hasClinic: boolean
+        clinicType: string
+        totalSessions: number
+        lastUpdate: Date
+      }
+      
+      link: {
+        directAccess: boolean  // "보러가기" 버튼
+        deepLink: string
+        permissions: 'inherit' | 'check'
+      }
+    }
+    
+    frequency: 'realtime' | 'batch'
+    errorHandling: ErrorStrategy
+  }
+  
+  // CRM 표시
+  display: {
+    widget: {
+      position: 'card' | 'sidebar'
+      
+      content: {
+        status: ClinicalStatus
+        progress: ProgressBar
+        preview: PhotoThumbnail[]
+        actions: QuickAction[]
+      }
+      
+      style: {
+        compact: boolean
+        expandable: boolean
+        theme: 'inherit' | 'custom'
+      }
+    }
+    
+    details: {
+      modal: boolean
+      embedded: boolean
+      fullscreen: boolean
+    }
+  }
+}
+```
+
+---
+
+## 🛠️ 기술 요구사항
+
+### Frontend 기술 스택
+```json
+{
+  "core": {
+    "react": "^18.3.0",
+    "typescript": "^5.3.0",
+    "next": "^14.2.0"
+  },
+  "mediaHandling": {
+    "react-dropzone": "^14.2.0",
+    "react-image-crop": "^10.1.0",
+    "react-zoom-pan-pinch": "^3.3.0",
+    "fabric": "^5.3.0"
+  },
+  "visualization": {
+    "react-photo-view": "^1.2.0",
+    "react-compare-slider": "^2.2.0",
+    "@pqina/pintura": "^8.0.0"
+  },
+  "forms": {
+    "react-hook-form": "^7.50.0",
+    "react-signature-canvas": "^1.0.0",
+    "react-pdf": "^7.7.0"
+  },
+  "optimization": {
+    "workbox": "^7.0.0",
+    "sharp": "^0.33.0",
+    "pica": "^9.0.0"
+  }
+}
+```
+
+### 백엔드 요구사항
+- **데이터베이스**: Xano PostgreSQL
+- **파일 저장소**: Supabase Storage / S3
+- **이미지 처리**: Sharp.js on serverless
+- **OCR**: Google Vision API
+- **CDN**: Cloudflare
+
+### 성능 목표
+| 작업 | 목표 시간 | 조건 |
+|------|----------|------|
+| 사진 업로드 | < 3초 | 10MB 파일 |
+| 썸네일 생성 | < 1초 | 3개 크기 |
+| 임상 목록 로딩 | < 1초 | 1000건 |
+| 사진 비교 뷰 | < 2초 | 4장 동시 |
+| Export PDF | < 10초 | 전체 임상 |
+
+### 저장소 요구사항
+- **용량**: 10TB 초기, 확장 가능
+- **백업**: 일일 증분, 주간 전체
+- **보존**: 7년 (법적 요구사항)
+- **암호화**: AES-256 at rest
+
+---
+
+## 🎨 UI/UX 요구사항
+
+### 디자인 원칙
+1. **직관성**: 복잡한 임상 데이터를 쉽게 이해
+2. **일관성**: 사진 촬영 가이드라인 제공
+3. **접근성**: 모바일에서도 사진 업로드 가능
+4. **신뢰성**: 데이터 보안 시각적 표시
+
+### 주요 화면 구성
+
+#### 임상 등록 플로우
+```typescript
+interface RegistrationFlow {
+  // 단계별 구성
+  steps: {
+    1: {
+      name: '기본 정보'
+      fields: ['type', 'name', 'gender', 'age']
+      validation: 'instant'
+    }
+    
+    2: {
+      name: '동의서'
+      conditional: true        // 고객 임상만
+      capture: 'signature' | 'upload'
+    }
+    
+    3: {
+      name: 'Before 사진'
+      guide: PhotoGuide
+      preview: boolean
+      retake: boolean
+    }
+    
+    4: {
+      name: '치료 계획'
+      fields: ['product', 'sessions', 'schedule']
+      summary: boolean
+    }
+  }
+  
+  // 진행 표시
+  progress: {
+    type: 'steps' | 'bar'
+    showRemaining: boolean
+    allowSkip: string[]        // 선택 단계
+  }
+  
+  // 저장 옵션
+  saving: {
+    autosave: boolean
+    draft: boolean
+    confirmation: boolean
+  }
+}
+```
+
+#### 사진 촬영 가이드
+```typescript
+interface PhotoGuide {
+  // 가이드 오버레이
+  overlay: {
+    type: 'outline' | 'grid' | 'reference'
+    
+    outline: {
+      face: boolean
+      alignment: 'center'
+      margin: number
+    }
+    
+    instructions: {
+      position: 'top' | 'bottom'
+      text: string[]
+      animation: boolean
+    }
+  }
+  
+  // 실시간 검증
+  validation: {
+    lighting: {
+      check: boolean
+      threshold: number
+      feedback: 'visual' | 'text'
+    }
+    
+    angle: {
+      check: boolean
+      tolerance: number
+      guide: boolean
+    }
+    
+    quality: {
+      blur: boolean
+      exposure: boolean
+      resolution: boolean
+    }
+  }
+  
+  // 촬영 도우미
+  assistant: {
+    timer: number              // 자동 촬영
+    voice: boolean             // 음성 안내
+    stabilization: boolean     // 손떨림 방지
+    burst: boolean             // 연속 촬영
+  }
+}
+```
+
+#### 임상 비교 뷰어
+```typescript
+interface ComparisonViewer {
+  // 레이아웃 옵션
+  layouts: {
+    split: {
+      orientation: 'vertical' | 'horizontal'
+      ratio: number            // 0-100
+      synchronized: boolean
+    }
+    
+    grid: {
+      columns: 2 | 3 | 4
+      aspectRatio: 'original' | '1:1' | '4:3'
+      spacing: number
+    }
+    
+    timeline: {
+      position: 'bottom' | 'side'
+      preview: 'thumbnail' | 'date'
+      navigation: 'click' | 'drag'
+    }
+  }
+  
+  // 도구 모음
+  tools: {
+    zoom: {
+      range: [50, 500]         // %
+      step: 10
+      sync: boolean
+    }
+    
+    measure: {
+      units: 'px' | 'cm' | 'inch'
+      tools: ['ruler', 'angle', 'area']
+      calibration: boolean
+    }
+    
+    annotate: {
+      shapes: Shape[]
+      text: boolean
+      collaborative: boolean
+      history: boolean
+    }
+  }
+  
+  // 분석 패널
+  analysis: {
+    histogram: boolean
+    colorPicker: boolean
+    difference: boolean
+    statistics: Statistic[]
+  }
+}
+```
+
+### 모바일 최적화
+```typescript
+interface MobileOptimization {
+  // 카메라 통합
+  camera: {
+    native: boolean
+    permissions: 'request' | 'check'
+    
+    features: {
+      flash: 'auto' | 'on' | 'off'
+      grid: boolean
+      level: boolean           // 수평계
+      zoom: boolean
+    }
+    
+    workflow: {
+      preview: boolean
+      retake: boolean
+      batch: boolean           // 여러 장 연속
+    }
+  }
+  
+  // 터치 인터페이스
+  touch: {
+    gestures: {
+      pinchZoom: boolean
+      swipeNavigate: boolean
+      doubleTap: 'zoom' | 'reset'
+    }
+    
+    targets: {
+      minSize: 44              // px
+      spacing: 8               // px
+    }
+  }
+  
+  // 오프라인 지원
+  offline: {
+    photos: {
+      queue: boolean
+      compression: 'adaptive'
+      retry: RetryStrategy
+    }
+    
+    data: {
+      cache: boolean
+      sync: 'wifi-only' | 'always'
+    }
+  }
+}
+```
+
+---
+
+## 🔒 보안 요구사항
+
+### 개인정보 보호
+1. **데이터 최소화**
+   - 필수 정보만 수집
+   - 자동 익명화 옵션
+   - 정기적 데이터 정리
+
+2. **접근 제어**
+   ```typescript
+   interface PrivacyControl {
+     dataAccess: {
+       pii: {
+         encryption: 'field-level'
+         masking: 'dynamic'
+         audit: 'detailed'
+       }
+       
+       photos: {
+         watermark: boolean
+         download: 'restricted'
+         sharing: 'consent-based'
+       }
+     }
+     
+     consent: {
+       granular: boolean       // 세부 동의
+       revocable: boolean     // 철회 가능
+       portable: boolean      // 데이터 이동권
+     }
+   }
+   ```
+
+3. **보안 조치**
+   - HIPAA 준수 (의료 데이터)
+   - PIPA 준수 (개인정보)
+   - ISO 27001 인증 준비
+
+### 임상 데이터 무결성
+- 변경 불가능한 감사 로그
+- 블록체인 기반 타임스탬프 (선택)
+- 디지털 서명 검증
+- 정기적 무결성 검사
+
+---
+
+## 📈 측정 가능한 성공 지표
+
+### 비즈니스 KPI
+| 지표 | 현재 | 목표 | 측정 방법 |
+|------|------|------|----------|
+| 임상 등록률 | 30% | 80% | 월간 신규/전체 |
+| 사진 품질 | 60% | 95% | AI 품질 점수 |
+| 동의율 | 40% | 70% | 동의/전체 고객 |
+| 데이터 활용도 | 20% | 80% | 조회/등록 비율 |
+
+### 사용자 만족도
+- 등록 프로세스 만족도: 90% 이상
+- 사진 업로드 편의성: 4.5/5 이상
+- 데이터 조회 속도 만족도: 95% 이상
+- 모바일 사용성: 4.0/5 이상
+
+---
+
+## 🚀 구현 로드맵
+
+### Phase 1: 기초 구축 (3주)
+**Week 1: 데이터 모델**
+- [ ] Clinical_Case 테이블 설계
+- [ ] Clinical_Photo 테이블 설계
+- [ ] Consent_File 테이블 설계
+- [ ] 기본 API 구현
+
+**Week 2: 등록 플로우**
+- [ ] 임상 등록 폼
+- [ ] 동의서 수집
+- [ ] 기본 사진 업로드
+
+**Week 3: 조회 기능**
+- [ ] 임상 목록
+- [ ] 상세 조회
+- [ ] 기본 필터
+
+### Phase 2: 핵심 기능 (4주)
+**Week 4-5: 사진 관리**
+- [ ] 고급 업로드 시스템
+- [ ] 사진 뷰어
+- [ ] 비교 도구
+- [ ] 품질 검증
+
+**Week 6: 권한 관리**
+- [ ] 동의 기반 접근
+- [ ] 역할별 권한
+- [ ] 감사 로그
+
+**Week 7: 대시보드**
+- [ ] KOL 대시보드
+- [ ] 관리자 대시보드
+- [ ] 통계 및 분석
+
+### Phase 3: 고급 기능 (2주)
+**Week 8: 연동 및 알림**
+- [ ] CRM 연동
+- [ ] 알림 시스템
+- [ ] 자동화 규칙
+
+**Week 9: 최적화**
+- [ ] 모바일 최적화
+- [ ] 성능 튜닝
+- [ ] 보안 강화
+
+### Phase 4: 완성 (1주)
+- [ ] 통합 테스트
+- [ ] 사용자 교육
+- [ ] 문서화
+- [ ] 배포
+
+---
+
+## 📋 완료 체크리스트
+
+### 기능 완성도
+- [ ] 모든 임상 타입 등록 가능
+- [ ] 무제한 회차 관리
+- [ ] 3장 사진 동시 업로드
+- [ ] 실시간 비교 뷰어
+- [ ] 동의서 기반 접근 제어
+
+### 품질 보증
+- [ ] 사진 품질 검증 95% 정확도
+- [ ] 업로드 성공률 99.9%
+- [ ] 데이터 무결성 100%
+- [ ] 개인정보 보호 준수
+
+### 사용자 경험
+- [ ] 모바일 카메라 통합
+- [ ] 오프라인 지원
+- [ ] 다국어 지원
+- [ ] 접근성 준수
+
+### 운영 준비
+- [ ] 백업 및 복구 절차
+- [ ] 모니터링 대시보드
+- [ ] 인시던트 대응 계획
+- [ ] 교육 자료 준비

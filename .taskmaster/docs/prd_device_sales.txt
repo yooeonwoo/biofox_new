@@ -1,0 +1,1188 @@
+## 📋 BIOFOX KOL Device Sales Management System 상세 명세서
+
+### 🏗️ 프로젝트 개요
+BIOFOX의 핵심 비즈니스인 의료기기 판매 관리 시스템을 구축하여 기기 판매 전 과정을 디지털화하고, KOL의 실적에 따른 자동 Tier 관리 시스템을 구현하며, 시리얼 넘버 기반의 완벽한 제품 추적 시스템을 확립한다. 특히 반품 프로세스 최적화와 재고 관리 자동화에 중점을 둔다.
+
+### 🎯 비즈니스 목표
+- **판매 프로세스 효율화**: 기기 판매 등록 시간 80% 단축 (현재 10분 → 2분)
+- **Tier 관리 자동화**: 수동 Tier 계산 100% 자동화로 인건비 월 500만원 절감
+- **재고 정확도**: 시리얼 넘버 기반 재고 추적으로 99.9% 정확도 달성
+- **반품률 감소**: 체계적 반품 관리로 반품률 30% 감소 (현재 8% → 5.6%)
+- **수익성 향상**: Tier 기반 인센티브로 KOL당 평균 판매량 25% 증가
+
+### 📊 대상 사용자 및 규모
+- **Primary Users**: 
+  - BIOFOX 영업 관리자 (20명) - 전체 판매 관리
+  - KOL (1,000명) - Tier 확인 및 실적 조회
+  - 물류팀 (10명) - 재고 및 배송 관리
+- **Secondary Users**: 
+  - OL/Shop Owner (10,000명) - 구매 이력 조회
+  - 회계팀 (5명) - 매출 및 수수료 확인
+- **예상 규모**:
+  - 월간 기기 판매: 50,000대
+  - 관리 SKU: 500개
+  - 연간 거래액: 600억원
+
+---
+
+## 🔐 기능 요구사항
+
+### 1. 기기 판매 관리 (CRUD)
+
+#### 1.1 판매 등록 시스템
+```typescript
+interface DeviceSale {
+  // 기본 정보
+  id: string
+  saleDate: Date
+  invoiceNumber: string
+  
+  // 판매 대상
+  customer: {
+    type: 'kol' | 'ol' | 'shop' | 'hospital' | 'clinic'
+    id: string
+    name: string
+    shopName?: string
+    licenseNumber?: string  // 의료기관 허가번호
+    taxId?: string         // 사업자번호
+  }
+  
+  // 제품 정보
+  device: {
+    productId: string
+    productName: string
+    model: string
+    category: DeviceCategory
+    
+    // 가격 정보
+    pricing: {
+      listPrice: number
+      sellingPrice: number
+      discount: {
+        type: 'percentage' | 'amount' | 'tier' | 'promotion'
+        value: number
+        reason: string
+        approvedBy?: string
+      }
+      vat: number
+      total: number
+    }
+  }
+  
+  // 시리얼 넘버
+  serialNumbers: {
+    primary: string
+    secondary?: string[]  // 구성품 S/N
+    warranty: {
+      startDate: Date
+      endDate: Date
+      type: 'standard' | 'extended'
+    }
+  }
+  
+  // 판매 조건
+  terms: {
+    paymentMethod: 'cash' | 'card' | 'transfer' | 'lease' | 'rental'
+    paymentTerms: 'immediate' | 'net30' | 'net60' | 'installment'
+    installmentPlan?: {
+      totalMonths: number
+      monthlyAmount: number
+      downPayment: number
+    }
+    
+    delivery: {
+      method: 'direct' | 'shipping' | 'pickup'
+      address?: Address
+      scheduledDate: Date
+      cost: number
+      installer?: string  // 설치 기사
+    }
+  }
+  
+  // 커미션 정보
+  commission: {
+    tier: TierLevel
+    rate: number
+    amount: number
+    eligibleDate: Date
+    splitWith?: {  // 공동 판매
+      userId: string
+      percentage: number
+    }[]
+  }
+  
+  // 상태 관리
+  status: {
+    sale: 'draft' | 'confirmed' | 'delivered' | 'installed' | 'completed'
+    payment: 'pending' | 'partial' | 'completed' | 'overdue'
+    commission: 'pending' | 'calculated' | 'approved' | 'paid'
+  }
+  
+  // 메타데이터
+  metadata: {
+    source: 'online' | 'offline' | 'exhibition' | 'referral'
+    campaign?: string
+    notes?: string
+    attachments: Attachment[]
+    tags: string[]
+  }
+}
+```
+
+#### 1.2 판매 수정 및 이력 관리
+```typescript
+interface SaleModification {
+  // 수정 권한
+  permissions: {
+    editableFields: Map<UserRole, string[]>
+    timeLimit: number  // 수정 가능 기간 (일)
+    requiresApproval: {
+      fields: string[]
+      approvers: UserRole[]
+      sla: number  // hours
+    }
+  }
+  
+  // 변경 추적
+  tracking: {
+    version: number
+    changes: Change[]
+    
+    rollback: {
+      enabled: boolean
+      maxVersions: number
+      retention: number  // days
+    }
+  }
+  
+  // 알림 설정
+  notifications: {
+    onChange: NotificationRule[]
+    significantChanges: {
+      priceThreshold: number  // %
+      serialNumberChange: boolean
+      customerChange: boolean
+    }
+  }
+}
+
+interface Change {
+  id: string
+  timestamp: Date
+  user: {
+    id: string
+    name: string
+    role: string
+  }
+  
+  type: 'create' | 'update' | 'cancel' | 'restore'
+  fields: {
+    name: string
+    oldValue: any
+    newValue: any
+  }[]
+  
+  reason: string
+  approvedBy?: {
+    id: string
+    name: string
+    timestamp: Date
+  }
+}
+```
+
+### 2. 반품 관리 시스템
+
+#### 2.1 반품 프로세스
+```typescript
+interface ReturnRequest {
+  id: string
+  originalSaleId: string
+  requestDate: Date
+  
+  // 반품 정보
+  reason: {
+    category: 'defective' | 'wrongItem' | 'damaged' | 'notNeeded' | 
+              'betterPrice' | 'other'
+    description: string
+    
+    // 불량 관련
+    defect?: {
+      type: string[]
+      discoveredDate: Date
+      affectedFunctions: string[]
+      safetyIssue: boolean
+    }
+  }
+  
+  // 제품 상태
+  condition: {
+    physical: 'new' | 'likeNew' | 'used' | 'damaged'
+    functional: 'working' | 'partial' | 'notWorking'
+    packaging: 'original' | 'damaged' | 'missing'
+    accessories: {
+      item: string
+      status: 'included' | 'missing' | 'damaged'
+    }[]
+    
+    photos: {
+      url: string
+      type: 'overall' | 'damage' | 'serialNumber' | 'packaging'
+      timestamp: Date
+    }[]
+  }
+  
+  // 처리 정보
+  processing: {
+    status: 'requested' | 'approved' | 'rejected' | 'inspecting' | 
+            'refunded' | 'exchanged' | 'repaired'
+    
+    inspection?: {
+      date: Date
+      inspector: string
+      report: string
+      decision: 'accept' | 'reject' | 'repair'
+      repairCost?: number
+    }
+    
+    resolution: {
+      type: 'refund' | 'exchange' | 'repair' | 'credit'
+      amount?: number
+      newSerialNumber?: string  // 교환 시
+      creditNote?: string
+    }
+  }
+  
+  // 물류 정보
+  logistics: {
+    pickup?: {
+      scheduledDate: Date
+      address: Address
+      carrier: string
+      trackingNumber: string
+      cost: number
+    }
+    
+    warehouse: {
+      receivedDate?: Date
+      location?: string
+      condition?: string
+    }
+  }
+  
+  // 재무 영향
+  financial: {
+    refundAmount: number
+    restockingFee?: number
+    shippingCost: number
+    repairCost?: number
+    totalImpact: number
+    
+    commission: {
+      reversed: boolean
+      amount: number
+      effectiveDate: Date
+    }
+  }
+}
+```
+
+#### 2.2 반품 승인 워크플로우
+```typescript
+interface ReturnWorkflow {
+  stages: {
+    name: string
+    order: number
+    
+    conditions: {
+      autoApprove?: {
+        enabled: boolean
+        criteria: Condition[]
+      }
+      
+      manualApproval?: {
+        required: boolean
+        approvers: ApproverRule[]
+        sla: number  // hours
+      }
+    }
+    
+    actions: {
+      onEntry: Action[]
+      onApproval: Action[]
+      onRejection: Action[]
+      onTimeout: Action[]
+    }
+    
+    notifications: {
+      customer: NotificationTemplate
+      internal: NotificationTemplate[]
+    }
+  }[]
+  
+  // 자동화 규칙
+  automation: {
+    // 자동 승인 조건
+    autoApproval: {
+      maxDaysSinceSale: number
+      maxAmount: number
+      allowedReasons: string[]
+      customerTier?: string[]
+    }
+    
+    // 에스컬레이션
+    escalation: {
+      trigger: 'timeout' | 'amount' | 'frequency'
+      to: string[]  // user roles
+      message: string
+    }
+  }
+}
+```
+
+### 3. Tier 관리 시스템
+
+#### 3.1 Tier 계산 엔진
+```typescript
+interface TierSystem {
+  // Tier 정의
+  tiers: {
+    id: string
+    name: string
+    level: number
+    
+    // 달성 조건
+    requirements: {
+      period: 'monthly' | 'quarterly' | 'yearly'
+      
+      sales?: {
+        units?: number
+        amount?: number
+        categories?: {
+          category: string
+          minUnits?: number
+          minAmount?: number
+        }[]
+      }
+      
+      performance?: {
+        returnRate?: number     // max %
+        customerSatisfaction?: number  // min score
+        trainingCompleted?: string[]
+      }
+    }
+    
+    // 혜택
+    benefits: {
+      commissionRate: number
+      bonusStructure?: {
+        type: 'fixed' | 'percentage'
+        value: number
+        conditions?: string
+      }
+      
+      pricing?: {
+        discount: number
+        specialPrices?: Map<string, number>
+      }
+      
+      marketing?: {
+        support: number  // 금액
+        materials: string[]
+        priority: number
+      }
+      
+      other?: {
+        training: string[]
+        events: string[]
+        recognition: string
+      }
+    }
+  }[]
+  
+  // 계산 로직
+  calculation: {
+    // 실시간 계산
+    realtime: {
+      enabled: boolean
+      triggers: ('sale' | 'return' | 'payment')[]
+      
+      preview: {
+        showProgress: boolean
+        showProjection: boolean
+        notifications: {
+          nearTierChange: number  // % of requirement
+          tierAchieved: boolean
+          tierLost: boolean
+        }
+      }
+    }
+    
+    // 정기 계산
+    scheduled: {
+      frequency: 'daily' | 'weekly' | 'monthly'
+      time: string  // HH:MM
+      
+      processing: {
+        batchSize: number
+        parallel: boolean
+        retryOnError: number
+      }
+    }
+    
+    // 특별 규칙
+    specialRules: {
+      gracePeriod?: number  // Tier 하락 유예 기간
+      fastTrack?: {         // 빠른 승급
+        enabled: boolean
+        conditions: Condition[]
+      }
+      protection?: {        // Tier 보호
+        minDuration: number  // 최소 유지 기간
+        reasons: string[]
+      }
+    }
+  }
+}
+```
+
+#### 3.2 Tier 변경 관리
+```typescript
+interface TierChange {
+  // 변경 이벤트
+  event: {
+    userId: string
+    previousTier: string
+    newTier: string
+    effectiveDate: Date
+    
+    reason: {
+      type: 'performance' | 'manual' | 'policy' | 'promotion'
+      details: string
+      calculation?: {
+        period: string
+        metrics: Map<string, number>
+      }
+    }
+  }
+  
+  // 영향 분석
+  impact: {
+    commission: {
+      previousRate: number
+      newRate: number
+      monthlyDifference: number
+      yearlyProjection: number
+    }
+    
+    benefits: {
+      gained: string[]
+      lost: string[]
+      monetary: number
+    }
+    
+    subordinates?: {
+      affected: number
+      commissionImpact: number
+    }
+  }
+  
+  // 커뮤니케이션
+  communication: {
+    // 알림 채널
+    channels: {
+      email: EmailTemplate
+      sms?: SMSTemplate
+      push?: PushTemplate
+      inApp: InAppTemplate
+    }
+    
+    // 맞춤 메시지
+    personalization: {
+      achievements: string[]
+      nextGoals: string[]
+      tips: string[]
+      specialOffers?: Offer[]
+    }
+    
+    // 팔로우업
+    followUp: {
+      schedule: Date[]
+      type: 'call' | 'email' | 'visit'
+      responsible: string
+    }
+  }
+}
+```
+
+### 4. Serial Number 관리
+
+#### 4.1 S/N 등록 및 검증
+```typescript
+interface SerialNumberManagement {
+  // S/N 구조
+  format: {
+    pattern: RegExp
+    segments: {
+      name: string
+      start: number
+      length: number
+      type: 'alphanumeric' | 'numeric' | 'alpha'
+      meaning?: string
+    }[]
+    
+    validation: {
+      checksum?: boolean
+      manufacturer?: boolean
+      uniqueness: 'global' | 'product' | 'batch'
+    }
+  }
+  
+  // 등록 프로세스
+  registration: {
+    // 수동 입력
+    manual: {
+      form: {
+        scanner?: boolean  // 바코드/QR 스캐너
+        ocr?: boolean     // 이미지 인식
+        voice?: boolean   // 음성 입력
+        
+        validation: {
+          realtime: boolean
+          duplicate: boolean
+          format: boolean
+          association: boolean  // 제품 연결 확인
+        }
+      }
+    }
+    
+    // 일괄 등록
+    bulk: {
+      methods: ('file' | 'api' | 'scanner')[]
+      
+      file: {
+        formats: ('csv' | 'excel' | 'txt')[]
+        maxRows: number
+        
+        mapping: {
+          auto: boolean
+          templates: Template[]
+        }
+      }
+      
+      validation: {
+        preCheck: boolean
+        parallel: boolean
+        stopOnError: boolean
+        
+        report: {
+          summary: boolean
+          details: boolean
+          downloadable: boolean
+        }
+      }
+    }
+  }
+  
+  // 추적 시스템
+  tracking: {
+    // 이력 기록
+    history: {
+      events: ('registered' | 'sold' | 'delivered' | 'installed' | 
+               'serviced' | 'returned' | 'disposed')[]
+      
+      record: {
+        event: string
+        timestamp: Date
+        location?: Location
+        user: string
+        details?: any
+        evidence?: Attachment[]
+      }[]
+    }
+    
+    // 상태 관리
+    status: {
+      current: 'available' | 'reserved' | 'sold' | 'installed' | 
+               'servicing' | 'returned' | 'defective' | 'disposed'
+      
+      transitions: {
+        from: string
+        to: string
+        conditions?: Condition[]
+        actions?: Action[]
+      }[]
+    }
+    
+    // 위치 추적
+    location: {
+      current: {
+        type: 'warehouse' | 'transit' | 'customer' | 'service'
+        id: string
+        name: string
+        address?: Address
+        coordinates?: Coordinates
+      }
+      
+      chain: Location[]  // 전체 이동 경로
+    }
+  }
+}
+```
+
+#### 4.2 S/N 기반 서비스
+```typescript
+interface SerialNumberServices {
+  // 보증 관리
+  warranty: {
+    check: (serialNumber: string) => WarrantyStatus
+    extend: (serialNumber: string, months: number) => WarrantyExtension
+    claim: (serialNumber: string, issue: string) => WarrantyClaim
+  }
+  
+  // 진품 인증
+  authentication: {
+    verify: (serialNumber: string) => AuthenticationResult
+    certificate: (serialNumber: string) => Certificate
+    
+    // 위조품 신고
+    report: {
+      suspicious: (details: SuspiciousProduct) => Report
+      confirmed: (evidence: Evidence[]) => Investigation
+    }
+  }
+  
+  // A/S 연동
+  service: {
+    history: (serialNumber: string) => ServiceRecord[]
+    schedule: (serialNumber: string, issue: string) => ServiceAppointment
+    parts: (serialNumber: string) => AvailableParts[]
+    
+    preventive: {
+      due: (serialNumber: string) => MaintenanceSchedule
+      remind: (serialNumber: string) => Notification
+    }
+  }
+  
+  // 리콜 관리
+  recall: {
+    check: (serialNumber: string) => RecallStatus
+    register: (serialNumbers: string[], issue: RecallIssue) => RecallCampaign
+    track: (campaignId: string) => RecallProgress
+  }
+}
+```
+
+### 5. 분석 및 리포팅
+
+#### 5.1 판매 분석 대시보드
+```typescript
+interface SalesAnalytics {
+  // 실시간 모니터링
+  realtime: {
+    // 오늘의 판매
+    today: {
+      units: number
+      revenue: number
+      comparison: {
+        yesterday: Percentage
+        lastWeek: Percentage
+        lastMonth: Percentage
+      }
+      
+      byHour: HourlyData[]
+      byCategory: CategoryData[]
+      byRegion: RegionData[]
+    }
+    
+    // 실시간 피드
+    feed: {
+      recentSales: Sale[]
+      bigDeals: Sale[]  // 고액 거래
+      firstTimeBuyers: Customer[]
+      
+      updateInterval: number
+      maxItems: number
+    }
+  }
+  
+  // 트렌드 분석
+  trends: {
+    // 시계열 분석
+    timeSeries: {
+      periods: ('daily' | 'weekly' | 'monthly' | 'quarterly')[]
+      metrics: ('units' | 'revenue' | 'avgPrice' | 'growth')[]
+      
+      comparison: {
+        period: 'yoy' | 'mom' | 'wow'
+        showVariance: boolean
+      }
+      
+      forecast: {
+        enabled: boolean
+        horizon: number
+        confidence: number[]
+      }
+    }
+    
+    // 제품 트렌드
+    products: {
+      topSelling: Product[]
+      rising: Product[]    // 급상승
+      declining: Product[]  // 하락세
+      
+      lifecycle: {
+        stage: 'introduction' | 'growth' | 'maturity' | 'decline'
+        recommendations: string[]
+      }
+    }
+    
+    // 고객 트렌드
+    customers: {
+      segments: Segment[]
+      behavior: BehaviorPattern[]
+      churn: ChurnAnalysis
+      ltv: LifetimeValue
+    }
+  }
+  
+  // KPI 대시보드
+  kpis: {
+    // 판매 KPI
+    sales: {
+      target: {
+        monthly: number
+        achieved: number
+        percentage: number
+        projection: number
+      }
+      
+      conversion: {
+        inquiryToQuote: number
+        quoteToOrder: number
+        orderToDelivery: number
+      }
+      
+      efficiency: {
+        avgSalesCycle: number  // days
+        avgDealSize: number
+        salesPerRep: number
+      }
+    }
+    
+    // Tier KPI
+    tiers: {
+      distribution: TierDistribution
+      movements: {
+        upgrades: number
+        downgrades: number
+        retention: number
+      }
+      
+      performance: {
+        byTier: Map<string, Performance>
+        correlation: {
+          tierVsSales: number
+          tierVsRetention: number
+        }
+      }
+    }
+    
+    // 품질 KPI
+    quality: {
+      returnRate: number
+      defectRate: number
+      customerSatisfaction: number
+      nps: number
+      
+      warranty: {
+        claimRate: number
+        avgResolutionTime: number
+        cost: number
+      }
+    }
+  }
+}
+```
+
+---
+
+## 🛠️ 기술 요구사항
+
+### Frontend 기술 스택
+```json
+{
+  "core": {
+    "react": "^18.3.0",
+    "typescript": "^5.3.0",
+    "next": "^14.2.0"
+  },
+  "state": {
+    "@tanstack/react-query": "^5.0.0",
+    "zustand": "^4.5.0",
+    "immer": "^10.0.0"
+  },
+  "forms": {
+    "react-hook-form": "^7.50.0",
+    "zod": "^3.22.0",
+    "@hookform/resolvers": "^3.3.0"
+  },
+  "visualization": {
+    "recharts": "^2.10.0",
+    "d3": "^7.8.0",
+    "@nivo/core": "^0.84.0"
+  },
+  "scanning": {
+    "react-qr-scanner": "^1.0.0",
+    "tesseract.js": "^5.0.0"
+  },
+  "optimization": {
+    "@tanstack/react-virtual": "^3.0.0",
+    "react-intersection-observer": "^9.5.0"
+  }
+}
+```
+
+### Backend 요구사항
+- **Database**: PostgreSQL 15+ with 파티셔닝
+- **Search**: Elasticsearch for S/N 검색
+- **Cache**: Redis for Tier 계산 캐싱
+- **Queue**: Bull Queue for 배치 처리
+- **Storage**: S3 호환 스토리지
+- **ML/AI**: TensorFlow.js for 예측 분석
+
+### 성능 목표
+| 작업 | 목표 | 조건 |
+|------|------|------|
+| 판매 등록 | < 2초 | 전체 프로세스 |
+| S/N 검증 | < 100ms | 1000만 개 중 |
+| Tier 계산 | < 500ms | 실시간 |
+| 반품 처리 | < 3초 | 승인 포함 |
+| 대시보드 로딩 | < 1초 | 초기 로딩 |
+
+### 확장성 요구사항
+- **동시 사용자**: 5,000명
+- **월간 거래**: 100,000건
+- **S/N 데이터**: 1,000만 개
+- **데이터 보관**: 10년
+
+---
+
+## 🎨 UI/UX 요구사항
+
+### 디자인 원칙
+1. **효율성 우선**
+   - 최소 클릭으로 판매 등록
+   - 자동 완성 및 추천
+   - 단축키 지원
+
+2. **시각적 피드백**
+   - Tier 진행률 시각화
+   - 실시간 상태 업데이트
+   - 드래그 앤 드롭 지원
+
+3. **모바일 최적화**
+   - 현장 판매 지원
+   - 오프라인 모드
+   - 카메라 스캔 기능
+
+### 주요 화면 설계
+
+#### 판매 등록 화면
+```typescript
+interface SalesRegistrationUI {
+  // 단계별 프로세스
+  wizard: {
+    steps: [
+      'customer',      // 고객 선택/등록
+      'product',       // 제품 선택
+      'pricing',       // 가격 협상
+      'serialNumber',  // S/N 입력
+      'delivery',      // 배송 정보
+      'confirmation'   // 최종 확인
+    ]
+    
+    navigation: {
+      next: boolean
+      previous: boolean
+      skip?: boolean
+      save?: boolean  // 임시 저장
+    }
+    
+    validation: {
+      realtime: boolean
+      onStep: boolean
+      final: boolean
+    }
+  }
+  
+  // 스마트 기능
+  smart: {
+    // 고객 추천
+    customerSuggestion: {
+      recent: Customer[]
+      nearby: Customer[]     // 위치 기반
+      potential: Customer[]  // AI 추천
+    }
+    
+    // 가격 가이드
+    pricingGuide: {
+      recommended: number
+      range: [number, number]
+      history: PriceHistory[]
+      competitor?: number
+    }
+    
+    // 번들 추천
+    bundleSuggestion: {
+      popular: Bundle[]
+      personalized: Bundle[]
+      savings: number
+    }
+  }
+}
+```
+
+#### Tier 대시보드
+```typescript
+interface TierDashboardUI {
+  // 현재 상태
+  current: {
+    tier: {
+      name: string
+      level: number
+      badge: string  // 이미지/아이콘
+      since: Date
+    }
+    
+    benefits: {
+      commission: number
+      discounts: Discount[]
+      perks: string[]
+    }
+    
+    performance: {
+      period: string
+      sales: number
+      target: number
+      percentage: number
+    }
+  }
+  
+  // 진행 상황
+  progress: {
+    // 다음 Tier까지
+    nextTier: {
+      name: string
+      requirements: Requirement[]
+      progress: Progress[]
+      estimated: Date
+    }
+    
+    // 시각화
+    visualization: {
+      type: 'circular' | 'linear' | 'gauge'
+      animated: boolean
+      milestones: Milestone[]
+    }
+    
+    // 상세 분석
+    breakdown: {
+      byCategory: CategoryProgress[]
+      byMonth: MonthlyProgress[]
+      trends: Trend[]
+    }
+  }
+  
+  // 액션 아이템
+  actions: {
+    recommendations: {
+      priority: 'high' | 'medium' | 'low'
+      action: string
+      impact: string
+      deadline?: Date
+    }[]
+    
+    goals: {
+      shortTerm: Goal[]  // 이번 달
+      longTerm: Goal[]   // 분기/연간
+      achieved: Goal[]
+    }
+  }
+}
+```
+
+---
+
+## 🔒 보안 요구사항
+
+### 데이터 보안
+1. **민감 정보 보호**
+   - 고객 정보 암호화 (AES-256)
+   - S/N 해싱 저장
+   - 가격 정보 접근 제한
+   - PII 마스킹
+
+2. **거래 보안**
+   ```typescript
+   interface TransactionSecurity {
+     // 거래 검증
+     validation: {
+       duplicateCheck: boolean
+       amountLimit: number
+       velocityCheck: {
+         maxPerDay: number
+         maxPerHour: number
+       }
+     }
+     
+     // 승인 체계
+     approval: {
+       thresholds: {
+         amount: number
+         discount: number
+         credit: number
+       }[]
+       
+       workflow: ApprovalWorkflow
+       timeout: number
+       escalation: EscalationRule[]
+     }
+     
+     // 감사 추적
+     audit: {
+       allTransactions: boolean
+       retention: number  // years
+       immutable: boolean
+       blockchain?: boolean
+     }
+   }
+   ```
+
+3. **접근 제어**
+   - Role-based permissions
+   - Field-level security
+   - IP 화이트리스팅
+   - 다단계 인증 (판매 승인)
+
+### 부정 방지
+1. **이상 거래 탐지**
+   - ML 기반 패턴 분석
+   - 실시간 알림
+   - 자동 차단 규칙
+
+2. **S/N 위조 방지**
+   - 블록체인 검증
+   - 제조사 API 연동
+   - 중복 등록 차단
+
+---
+
+## 📈 측정 가능한 성공 지표
+
+### 비즈니스 KPI
+| 지표 | 현재 | 목표 | 측정 주기 |
+|------|------|------|----------|
+| 월 평균 판매량 | 3,000대 | 5,000대 | 월간 |
+| 판매 등록 시간 | 10분 | 2분 | 일간 |
+| 반품률 | 8% | 5.6% | 월간 |
+| Tier 상승률 | 15% | 25% | 분기 |
+| S/N 정확도 | 95% | 99.9% | 실시간 |
+
+### 운영 효율성
+- **자동화율**: 수동 작업 90% 감소
+- **오류율**: 데이터 입력 오류 99% 감소
+- **처리 시간**: 평균 처리 시간 75% 단축
+- **고객 만족도**: NPS 30점 상승
+
+### ROI 분석
+- **예상 투자**: 5억원
+- **연간 절감액**: 3억원
+  - 인건비 절감: 1.5억원
+  - 오류 감소: 0.8억원
+  - 효율성 향상: 0.7억원
+- **ROI 달성**: 20개월
+
+---
+
+## 🚀 구현 로드맵
+
+### Phase 1: 기반 구축 (4주)
+**Week 1-2: 데이터 모델링 및 API**
+- [ ] 데이터베이스 스키마 설계
+- [ ] 기본 CRUD API 개발
+- [ ] S/N 검증 시스템 구축
+- [ ] 보안 레이어 구현
+
+**Week 3-4: 핵심 UI 개발**
+- [ ] 판매 등록 폼
+- [ ] 판매 목록 및 검색
+- [ ] 기본 대시보드
+- [ ] 모바일 반응형
+
+### Phase 2: 고급 기능 (4주)
+**Week 5-6: Tier 시스템**
+- [ ] Tier 계산 엔진
+- [ ] 실시간 업데이트
+- [ ] Tier 대시보드
+- [ ] 알림 시스템
+
+**Week 7-8: 반품 관리**
+- [ ] 반품 워크플로우
+- [ ] 승인 프로세스
+- [ ] 재고 연동
+- [ ] 리포팅
+
+### Phase 3: 최적화 및 분석 (3주)
+**Week 9-10: 분석 도구**
+- [ ] 판매 분석 대시보드
+- [ ] 예측 모델
+- [ ] 커스텀 리포트
+- [ ] API 연동
+
+**Week 11: 통합 테스트**
+- [ ] 성능 최적화
+- [ ] 보안 감사
+- [ ] 사용자 테스트
+- [ ] 버그 수정
+
+### Phase 4: 배포 및 안정화 (1주)
+- [ ] 프로덕션 배포
+- [ ] 모니터링 설정
+- [ ] 사용자 교육
+- [ ] 문서화 완성
+
+---
+
+## 📋 완료 체크리스트
+
+### 기능 요구사항
+- [ ] 판매 CRUD 완전 구현
+- [ ] S/N 관리 시스템 100% 작동
+- [ ] Tier 자동 계산 정확도 99.9%
+- [ ] 반품 프로세스 자동화
+- [ ] 실시간 대시보드 구현
+
+### 성능 요구사항
+- [ ] 모든 API 응답 < 500ms
+- [ ] 동시 사용자 5,000명 지원
+- [ ] 99.9% 가용성 달성
+- [ ] 데이터 무결성 100%
+
+### 보안 요구사항
+- [ ] OWASP Top 10 대응
+- [ ] 암호화 구현 완료
+- [ ] 접근 제어 테스트 통과
+- [ ] 감사 로그 100% 기록
+
+### 품질 보증
+- [ ] 단위 테스트 커버리지 > 90%
+- [ ] 통합 테스트 시나리오 100% 통과
+- [ ] 부하 테스트 목표 달성
+- [ ] 사용성 테스트 완료
+
+### 배포 준비
+- [ ] 운영 매뉴얼 작성
+- [ ] 교육 자료 준비
+- [ ] 모니터링 대시보드 구축
+- [ ] 롤백 계획 수립

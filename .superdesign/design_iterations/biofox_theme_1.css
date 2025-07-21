@@ -1,0 +1,88 @@
+:root {
+  /* Core Colors */
+  --background: #FFFFFF;
+  --foreground: #000000;
+  --card: #FFFFFF;
+  --card-foreground: #000000;
+  --popover: #FFFFFF;
+  --popover-foreground: #000000;
+  
+  /* Primary & Actions */
+  --primary: #007AFF;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F3F4F6;
+  --secondary-foreground: #374151;
+  --muted: #F5F5F7;
+  --muted-foreground: #6B7280;
+  --accent: #5856D6;
+  --accent-foreground: #FFFFFF;
+  
+  /* Semantic Colors */
+  --destructive: #FF3B30;
+  --destructive-foreground: #FFFFFF;
+  --success: #34C759;
+  --warning: #FF9500;
+  --info: #5856D6;
+  
+  /* Borders & Inputs */
+  --border: rgba(0, 0, 0, 0.1);
+  --input: #F5F5F7;
+  --ring: rgba(0, 122, 255, 0.1);
+  
+  /* Chart Colors */
+  --chart-1: #007AFF;
+  --chart-2: #34C759;
+  --chart-3: #5856D6;
+  --chart-4: #FF9500;
+  --chart-5: #FF3B30;
+  
+  /* Sidebar */
+  --sidebar: rgba(255, 255, 255, 0.72);
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #007AFF;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F3F4F6;
+  --sidebar-accent-foreground: #374151;
+  --sidebar-border: rgba(0, 0, 0, 0.1);
+  --sidebar-ring: rgba(0, 122, 255, 0.1);
+  
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+  --font-serif: 'New York', 'Times New Roman', serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  
+  /* Spacing & Radius */
+  --radius: 0.5rem;
+  --spacing: 0.5rem;
+  
+  /* Shadows - Apple style layered shadows */
+  --shadow-2xs: 0 0.5px 2.2px rgba(0, 0, 0, 0.02);
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 10px 20px rgba(0, 0, 0, 0.08), 0 3px 6px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+  
+  /* Additional Apple-style variables */
+  --surface: #F5F5F7;
+  --overlay: rgba(0, 0, 0, 0.3);
+  --nav-blur: rgba(255, 255, 255, 0.72);
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #007AFF 0%, #0051D5 100%);
+  --gradient-success: linear-gradient(135deg, #34C759 0%, #28A745 100%);
+  --gradient-accent: linear-gradient(135deg, #5856D6 0%, #4B49C4 100%);
+  
+  /* Radius variants */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Tracking */
+  --tracking-normal: 0em;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.04em;
+}

@@ -16,7 +16,7 @@ test.describe('Customer Case Upload Flow', () => {
       localStorage.setItem('mockAuth', 'true');
       
       // Supabase session mock (필요한 경우)
-      localStorage.setItem('sb-lgzzqoaiukuywmenxzay-auth-token', JSON.stringify({
+      localStorage.setItem('sb-cezxkgmzlkbjqataogtd-auth-token', JSON.stringify({
         access_token: 'mock-token',
         user: {
           id: '56',

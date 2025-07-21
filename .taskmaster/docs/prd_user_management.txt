@@ -1,0 +1,27 @@
+# Product Requirements Document: User Management
+
+**1. Overview**
+This document outlines the requirements for the user management module of the Biofox Education Manager application. The goal is to provide secure authentication, user registration, profile management, and role-based access for administrators and regular users.
+
+**2. Feature Requirements**
+
+| Feature ID | Feature Name | Description | Priority |
+|---|---|---|---|
+| F1 | User Authentication | Users must be able to log in using their email and password. Social login (Google, etc.) should also be supported. Secure session management is required. | Must |
+| F2 | User Registration | New users must be able to create an account through a registration form. Email verification should be implemented to ensure valid users. | Must |
+| F3 | Profile Management | Authenticated users must be able to view and update their profile information (e.g., name, profile picture). | Must |
+| F4 | Role-Based Access Control (RBAC) | The system must support at least two roles: 'admin' and 'user'. Admins have full access to manage users, while users have limited access to their own data. | Must |
+| F5 | Admin User Dashboard | An admin-only dashboard should display a list of all registered users. Admins should be able to search, filter, and view details for each user. | Must |
+| F6 | User Deactivation/Deletion (Admin) | Admins must have the ability to deactivate or permanently delete user accounts from the system. | Could |
+
+**3. User Flow**
+- **Registration:** A new user visits the site, clicks "Sign Up", fills out the form, and receives a verification email. After clicking the verification link, their account is activated.
+- **Login:** An existing user enters their credentials or uses a social login provider to access their account.
+- **Profile Edit:** A logged-in user navigates to their profile page and updates their information.
+- **Admin User Management:** An admin logs in, navigates to the user management dashboard, and can view/manage all users.
+
+**4. Technical Implementation Notes**
+- Authentication will be handled by Supabase Auth.
+- User data and profiles will be stored in Supabase database tables.
+- RBAC will be implemented using Supabase's custom claims or a separate roles table.
+- The frontend will be built with Next.js and Shadcn UI components.

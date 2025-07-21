@@ -1,3 +1,4 @@
+import '@/tests/setup';
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import {
   createCase,

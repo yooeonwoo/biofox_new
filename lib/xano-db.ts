@@ -7,11 +7,11 @@ import { Pool } from 'pg';
 
 // Xano 데이터베이스 연결 설정
 const DB_CONFIG = {
-  host: '34.64.147.136',
-  database: 'xano-xcj1-wluk-xdjk-db',
-  user: 'full-33f4a67d',
-  password: '7fa048da53a894e14aac1ba4ce160601',
-  port: 5432,
+  host: process.env.XANO_DB_HOST || '34.64.147.136',
+  database: process.env.XANO_DB_NAME || 'xano-xcj1-wluk-xdjk-db',
+  user: process.env.XANO_DB_USER || 'full-33f4a67d',
+  password: process.env.XANO_DB_PASSWORD || '7fa048da53a894e14aac1ba4ce160601',
+  port: parseInt(process.env.XANO_DB_PORT || '5432'),
   ssl: false
 };
 
@@ -228,4 +228,4 @@ export interface ClinicalSession {
   session_metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
-} 
+}

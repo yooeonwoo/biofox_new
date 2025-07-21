@@ -1,0 +1,935 @@
+## 📋 BIOFOX KOL Commission Management System 상세 명세서
+
+### 🏗️ 프로젝트 개요
+BIOFOX KOL 시스템의 수수료 관리 모듈을 구축하여 KOL/OL의 매출 기반 수수료를 자동으로 계산하고, 기기 판매 누적 대수에 따른 티어 관리를 구현하며, 본인샵 매출 환급 처리를 체계화한다. 특히 정확한 수수료 계산과 투명한 정산 프로세스에 중점을 둔다.
+
+### 🎯 비즈니스 목표
+- **수수료 계산 자동화**: 수동 계산 시간 99% 단축 (현재 5일/월 → 1시간/월)
+- **정산 정확도 향상**: 수수료 계산 오류율 0.01% 이하 달성
+- **실시간 수수료 추적**: 매출 발생 5분 이내 수수료 반영
+- **투명성 확보**: KOL/OL 실시간 수수료 조회 및 상세 내역 제공
+
+### 📊 대상 사용자 및 규모
+- **Primary Users**: 
+  - BIOFOX 관리자 (10명) - 수수료 관리 및 정산
+  - KOL (100명) - 수수료 조회 및 확인 (30% 수수료율)
+  - OL (300명) - 수수료 조회 및 확인 (20% 수수료율)
+- **예상 규모**:
+  - 월간 수수료 계산: 400건
+  - 월간 총 수수료: 10억원
+  - 기기 판매: 월 50대
+
+---
+
+## 🔐 기능 요구사항
+
+### 1. 수수료 계산 엔진
+
+#### 1.1 자동 계산 시스템
+```typescript
+interface CommissionCalculationEngine {
+  // 계산 트리거
+  triggers: {
+    orderCreated: boolean      // 주문 생성 시
+    orderUpdated: boolean      // 주문 수정 시
+    orderCancelled: boolean    // 주문 취소 시
+    deviceSold: boolean        // 기기 판매 시
+    scheduleMonthly: boolean   // 월말 정산
+  }
+  
+  // 계산 규칙
+  rules: {
+    product: {
+      kol: {
+        rate: number           // 30% (BR030)
+        minAmount?: number     // 최소 수수료
+        maxAmount?: number     // 최대 수수료
+      }
+      ol: {
+        rate: number           // 20% (BR030)
+        minAmount?: number
+        maxAmount?: number
+      }
+    }
+    
+    device: {
+      tiers: DeviceTier[]      // BR031 기준
+      accumulation: {
+        method: 'lifetime' | 'yearly' | 'monthly'
+        reset?: Date           // 리셋 날짜
+      }
+    }
+    
+    selfShop: {
+      detection: 'automatic' | 'manual'  // BR032
+      refundTiming: 'nextMonth' | 'immediate'
+      separateCalculation: boolean
+    }
+  }
+  
+  // 계산 옵션
+  options: {
+    precision: number          // 소수점 자리
+    rounding: 'up' | 'down' | 'nearest'
+    currency: 'KRW'
+    includeVAT: boolean
+    vatRate?: number
+  }
+}
+```
+
+#### 1.2 계산 프로세스
+```typescript
+interface CalculationProcess {
+  // 단계별 계산
+  steps: {
+    1: ValidateData         // 데이터 검증
+    2: DetermineType        // 수수료 타입 결정
+    3: CalculateBase        // 기본 수수료 계산
+    4: ApplyModifiers       // 조정 사항 적용
+    5: ValidateResult       // 결과 검증
+    6: SaveCalculation      // 계산 저장
+  }
+  
+  // 검증 규칙
+  validation: {
+    input: {
+      amount: { min: 0, max: 999999999 }
+      rate: { min: 0, max: 100 }
+      relationship: 'mustExist'
+    }
+    
+    output: {
+      commission: { min: 0, max: 999999999 }
+      consistency: boolean    // 재계산 시 동일 결과
+      audit: boolean         // 감사 추적 가능
+    }
+  }
+  
+  // 오류 처리
+  errorHandling: {
+    strategy: 'failSafe' | 'strict'
+    notification: boolean
+    retry: {
+      enabled: boolean
+      maxAttempts: number
+      backoff: 'linear' | 'exponential'
+    }
+  }
+}
+```
+
+### 2. 본인샵 관리
+
+#### 2.1 본인샵 식별 시스템
+```typescript
+interface SelfShopManagement {
+  // 자동 감지
+  autoDetection: {
+    criteria: {
+      nameMatching: {
+        enabled: boolean
+        similarity: number     // 0-100%
+        algorithm: 'levenshtein' | 'jaccard' | 'custom'
+      }
+      
+      ownerIdMatching: {
+        enabled: boolean
+        checkEmail: boolean
+        checkPhone: boolean
+      }
+      
+      addressMatching: {
+        enabled: boolean
+        precision: 'exact' | 'fuzzy'
+      }
+    }
+    
+    confidence: {
+      threshold: number        // 최소 신뢰도
+      requireManualReview: number  // 수동 검토 필요 수준
+    }
+  }
+  
+  // 수동 관리
+  manualManagement: {
+    override: boolean
+    history: SelfShopHistory[]
+    approval: {
+      required: boolean
+      approvers: string[]      // 승인 가능 역할
+    }
+  }
+  
+  // 수수료 처리
+  commissionHandling: {
+    calculation: 'separate' | 'excluded'
+    refund: {
+      timing: 'nextMonth' | 'quarterly'
+      method: 'credit' | 'transfer'
+      notification: boolean
+    }
+  }
+}
+```
+
+#### 2.2 본인샵 대시보드
+```typescript
+interface SelfShopDashboard {
+  // 현황 표시
+  overview: {
+    totalSelfShops: number
+    currentMonthSales: number
+    pendingRefunds: number
+    processedRefunds: number
+  }
+  
+  // 상세 목록
+  details: {
+    shop: {
+      id: string
+      name: string
+      owner: string
+      status: 'confirmed' | 'pending' | 'disputed'
+    }
+    
+    sales: {
+      thisMonth: number
+      lastMonth: number
+      trend: number
+    }
+    
+    commission: {
+      calculated: number
+      refundAmount: number
+      refundStatus: 'pending' | 'processed'
+      refundDate?: Date
+    }
+  }[]
+  
+  // 관리 기능
+  actions: {
+    confirmSelfShop: boolean
+    disputeSelfShop: boolean
+    processRefund: boolean
+    exportReport: boolean
+  }
+}
+```
+
+### 3. 기기 판매 및 티어 관리
+
+#### 3.1 티어 시스템
+```typescript
+interface DeviceTierSystem {
+  // 티어 정의 (BR031)
+  tiers: {
+    tier1: {
+      name: "1-4대"
+      range: { min: 1, max: 4 }
+      commission: 1500000      // 150만원/대
+      benefits: string[]
+    }
+    tier2: {
+      name: "5대 이상"
+      range: { min: 5, max: null }
+      commission: 2500000      // 250만원/대
+      benefits: string[]
+    }
+  }
+  
+  // 누적 관리
+  accumulation: {
+    current: number
+    history: AccumulationHistory[]
+    
+    tracking: {
+      byMonth: Map<string, number>
+      byQuarter: Map<string, number>
+      byYear: Map<string, number>
+    }
+    
+    milestones: {
+      reached: Milestone[]
+      upcoming: Milestone[]
+      notifications: boolean
+    }
+  }
+  
+  // 티어 변경
+  tierChange: {
+    automatic: boolean
+    notifications: {
+      user: boolean
+      admin: boolean
+      email: boolean
+      inApp: boolean
+    }
+    
+    effects: {
+      immediate: boolean       // 즉시 적용
+      retroactive: boolean    // 소급 적용
+      futureOnly: boolean     // 향후만 적용
+    }
+  }
+}
+```
+
+#### 3.2 기기 판매 관리
+```typescript
+interface DeviceSalesManagement {
+  // 판매 등록
+  registration: {
+    form: {
+      shopId: string          // 구매 전문점
+      quantity: number        // 수량 (음수 가능 - BR034)
+      saleDate: Date
+      invoice?: string        // 인보이스 번호
+      notes?: string
+    }
+    
+    validation: {
+      shopExists: boolean
+      quantityRange: { min: -999, max: 999 }
+      dateRange: { max: 'today' }
+    }
+    
+    approval: {
+      required: boolean
+      autoApprove: number     // 자동 승인 수량
+      approvers: string[]
+    }
+  }
+  
+  // 반품 처리 (BR034, BR035)
+  returns: {
+    allowNegative: boolean
+    affectsAccumulation: boolean
+    
+    process: {
+      validation: boolean
+      reason: 'required' | 'optional'
+      documentation: boolean
+    }
+    
+    tierAdjustment: {
+      automatic: boolean
+      recalculation: boolean
+      notification: boolean
+    }
+  }
+  
+  // 실적 추적
+  performance: {
+    rankings: {
+      byQuantity: KOLRanking[]
+      byRevenue: KOLRanking[]
+      period: 'monthly' | 'quarterly' | 'yearly'
+    }
+    
+    trends: {
+      growth: number
+      forecast: number
+      seasonality: SeasonalData
+    }
+  }
+}
+```
+
+### 4. 월별 정산 시스템
+
+#### 4.1 정산 프로세스
+```typescript
+interface MonthlySettlement {
+  // 정산 일정
+  schedule: {
+    calculationDay: number    // 매월 계산일 (예: 25일)
+    reviewPeriod: number      // 검토 기간 (일)
+    paymentDay: number        // 지급일 (예: 익월 1일)
+    
+    automation: {
+      enabled: boolean
+      notifications: NotificationSchedule
+      reminders: ReminderSettings
+    }
+  }
+  
+  // 정산 단계
+  process: {
+    dataCollection: {
+      sources: ['orders', 'devices', 'adjustments']
+      validation: boolean
+      reconciliation: boolean
+    }
+    
+    calculation: {
+      batch: boolean
+      parallel: boolean
+      verification: 'double' | 'triple'
+    }
+    
+    review: {
+      adminReview: boolean
+      userPreview: boolean
+      disputePeriod: number   // 일
+    }
+    
+    finalization: {
+      lockdown: boolean       // 확정 후 수정 불가
+      approval: ApprovalChain
+      documentation: boolean
+    }
+  }
+  
+  // 정산서 생성
+  statement: {
+    format: 'pdf' | 'excel' | 'both'
+    
+    sections: {
+      summary: boolean        // 요약
+      details: boolean        // 상세 내역
+      breakdown: boolean      // 항목별 분석
+      comparison: boolean     // 전월 대비
+    }
+    
+    delivery: {
+      email: boolean
+      portal: boolean
+      api: boolean
+    }
+  }
+}
+```
+
+#### 4.2 수동 조정 관리
+```typescript
+interface ManualAdjustment {
+  // 조정 타입
+  types: {
+    bonus: {
+      name: '특별 보너스'
+      requiresReason: true
+      approvalLevel: 2
+      maxAmount?: number
+    }
+    
+    penalty: {
+      name: '차감'
+      requiresReason: true
+      requiresDocumentation: true
+      approvalLevel: 3
+    }
+    
+    correction: {
+      name: '오류 수정'
+      requiresReference: true  // 원본 거래 참조
+      auditTrail: 'detailed'
+    }
+    
+    refund: {
+      name: '환불'
+      automatic: boolean
+      conditions: string[]
+    }
+  }
+  
+  // 조정 프로세스
+  process: {
+    request: {
+      form: AdjustmentForm
+      validation: ValidationRules
+      preview: boolean        // 미리보기
+    }
+    
+    approval: {
+      workflow: ApprovalWorkflow
+      notifications: boolean
+      escalation: EscalationRules
+    }
+    
+    application: {
+      timing: 'immediate' | 'nextSettlement'
+      recalculation: boolean
+      notification: boolean
+    }
+  }
+  
+  // 감사 추적
+  audit: {
+    logger: 'detailed' | 'standard'
+    retention: number         // 보관 기간 (월)
+    export: boolean
+    compliance: string[]      // 준수 규정
+  }
+}
+```
+
+### 5. 수수료 조회 및 리포트
+
+#### 5.1 실시간 대시보드
+```typescript
+interface CommissionDashboard {
+  // KPI 위젯
+  widgets: {
+    currentMonth: {
+      total: number
+      breakdown: {
+        product: number
+        device: number
+        adjustments: number
+      }
+      trend: 'up' | 'down' | 'stable'
+      progress: number        // 목표 대비 %
+    }
+    
+    yearToDate: {
+      total: number
+      monthly: ChartData
+      quarterly: ChartData
+      topPerformers: Performer[]
+    }
+    
+    pending: {
+      count: number
+      amount: number
+      items: PendingItem[]
+      actions: QuickAction[]
+    }
+  }
+  
+  // 상세 분석
+  analytics: {
+    breakdown: {
+      byShop: TreemapData
+      byProduct: PieData
+      byRegion: MapData
+      byTime: LineData
+    }
+    
+    comparison: {
+      periods: Period[]
+      metrics: Metric[]
+      visualization: 'chart' | 'table'
+    }
+    
+    forecast: {
+      nextMonth: number
+      confidence: number
+      factors: Factor[]
+    }
+  }
+  
+  // 인터랙티브 기능
+  interactive: {
+    drill: {
+      enabled: boolean
+      levels: ['year', 'quarter', 'month', 'day']
+      animation: boolean
+    }
+    
+    filters: {
+      quick: QuickFilter[]
+      advanced: AdvancedFilter[]
+      saved: SavedFilter[]
+    }
+    
+    export: {
+      formats: ['pdf', 'excel', 'pptx']
+      scheduling: boolean
+      sharing: boolean
+    }
+  }
+}
+```
+
+#### 5.2 상세 내역 조회
+```typescript
+interface CommissionDetails {
+  // 조회 옵션
+  query: {
+    pagination: {
+      pageSize: number
+      sorting: SortOption[]
+      grouping: GroupOption[]
+    }
+    
+    search: {
+      fullText: boolean
+      fields: SearchField[]
+      suggestions: boolean
+    }
+    
+    filters: {
+      dateRange: DateFilter
+      amountRange: AmountFilter
+      status: StatusFilter[]
+      category: CategoryFilter[]
+    }
+  }
+  
+  // 상세 정보
+  details: {
+    transaction: {
+      id: string
+      date: Date
+      type: 'product' | 'device' | 'adjustment'
+      reference: string       // 원본 거래 참조
+    }
+    
+    calculation: {
+      base: number
+      rate: number
+      commission: number
+      modifiers: Modifier[]
+      final: number
+    }
+    
+    metadata: {
+      shop: ShopInfo
+      product?: ProductInfo
+      device?: DeviceInfo
+      notes: string[]
+      attachments: Attachment[]
+    }
+  }
+  
+  // 액션
+  actions: {
+    view: boolean
+    print: boolean
+    dispute: boolean
+    export: boolean
+    share: boolean
+  }
+}
+```
+
+---
+
+## 🛠️ 기술 요구사항
+
+### Frontend 기술 스택
+```json
+{
+  "core": {
+    "react": "^18.3.0",
+    "typescript": "^5.3.0",
+    "next": "^14.2.0"
+  },
+  "stateManagement": {
+    "zustand": "^4.5.0",
+    "@tanstack/react-query": "^5.0.0"
+  },
+  "ui": {
+    "@radix-ui/react-*": "latest",
+    "tailwindcss": "^3.4.0",
+    "framer-motion": "^11.0.0"
+  },
+  "dataVisualization": {
+    "recharts": "^2.10.0",
+    "@nivo/core": "^0.84.0",
+    "react-flow": "^11.10.0"
+  },
+  "utilities": {
+    "decimal.js": "^10.4.0",
+    "date-fns": "^3.0.0",
+    "numeral": "^2.0.6"
+  }
+}
+```
+
+### 백엔드 요구사항
+- **데이터베이스**: Xano PostgreSQL
+- **정밀 계산**: DECIMAL(12,2) for 금액
+- **트랜잭션**: ACID 보장
+- **동시성 제어**: Optimistic locking
+- **배치 처리**: Xano Scheduled Tasks
+
+### 성능 목표
+| 작업 | 목표 시간 | 조건 |
+|------|----------|------|
+| 수수료 계산 | < 100ms | 단일 거래 |
+| 월별 정산 | < 5분 | 10,000건 |
+| 대시보드 로딩 | < 1초 | 전체 데이터 |
+| 상세 조회 | < 500ms | 100,000건 중 |
+| Export | < 30초 | 연간 데이터 |
+
+### 정확도 요구사항
+- **계산 정확도**: 소수점 2자리, 오차 0원
+- **데이터 일관성**: 100% 트랜잭션 보장
+- **동시성 처리**: Lost update 방지
+- **감사 추적**: 모든 변경 이력 보존
+
+---
+
+## 🎨 UI/UX 요구사항
+
+### 디자인 원칙
+1. **명확성**: 수수료 계산 과정 투명하게 표시
+2. **신뢰성**: 모든 숫자에 근거 제공
+3. **접근성**: 모바일에서도 상세 내역 조회 가능
+4. **효율성**: 자주 사용하는 기능 빠른 접근
+
+### 주요 화면 구성
+
+#### 수수료 대시보드
+```typescript
+interface DashboardLayout {
+  // 헤더 영역
+  header: {
+    period: PeriodSelector
+    quickStats: QuickStat[]
+    actions: ['refresh', 'export', 'settings']
+  }
+  
+  // 메인 콘텐츠
+  main: {
+    layout: 'grid' | 'flex'
+    
+    sections: {
+      summary: {
+        size: 'full'
+        widgets: ['total', 'breakdown', 'trend']
+      }
+      
+      analytics: {
+        size: 'half'
+        charts: ['line', 'pie', 'bar']
+      }
+      
+      details: {
+        size: 'half'
+        table: DetailTable
+      }
+    }
+  }
+  
+  // 사이드바
+  sidebar: {
+    collapsible: boolean
+    sections: ['filters', 'saved', 'help']
+  }
+}
+```
+
+#### 정산서 뷰어
+```typescript
+interface SettlementViewer {
+  // 문서 스타일
+  document: {
+    format: 'A4'
+    orientation: 'portrait'
+    
+    branding: {
+      logo: boolean
+      colors: BrandColors
+      watermark: boolean
+    }
+  }
+  
+  // 콘텐츠 구성
+  content: {
+    coverPage: boolean
+    tableOfContents: boolean
+    
+    sections: [
+      'executiveSummary',
+      'detailedBreakdown',
+      'transactionList',
+      'adjustments',
+      'comparison',
+      'appendix'
+    ]
+  }
+  
+  // 인터랙션
+  features: {
+    zoom: boolean
+    search: boolean
+    annotations: boolean
+    print: boolean
+    download: boolean
+    share: boolean
+  }
+}
+```
+
+### 모바일 최적화
+```typescript
+interface MobileOptimization {
+  // 반응형 레이아웃
+  responsive: {
+    breakpoints: {
+      mobile: 640
+      tablet: 768
+      desktop: 1024
+    }
+    
+    layouts: {
+      mobile: 'single-column'
+      tablet: 'two-column'
+      desktop: 'multi-column'
+    }
+  }
+  
+  // 터치 최적화
+  touch: {
+    targets: { minSize: 44 }  // px
+    gestures: ['swipe', 'pinch', 'tap']
+    feedback: 'haptic' | 'visual'
+  }
+  
+  // 성능 최적화
+  performance: {
+    lazyLoading: boolean
+    virtualScrolling: boolean
+    offlineSupport: boolean
+  }
+}
+```
+
+---
+
+## 🔒 보안 요구사항
+
+### 데이터 보안
+1. **금액 정보 암호화**
+   - At rest: AES-256
+   - In transit: TLS 1.3
+   - 필드 레벨 암호화
+
+2. **접근 제어**
+   ```typescript
+   interface AccessControl {
+     roles: {
+       admin: {
+         create: true
+         read: true
+         update: true
+         delete: true
+         adjust: true
+         export: true
+       }
+       kol: {
+         create: false
+         read: 'own'      // 본인 것만
+         update: false
+         delete: false
+         adjust: false
+         export: 'own'
+       }
+     }
+     
+     dataScope: {
+       temporal: 'unlimited' | 'limited'
+       organizational: 'all' | 'subordinates' | 'own'
+       financial: 'full' | 'summary' | 'none'
+     }
+   }
+   ```
+
+3. **감사 로그**
+   - 모든 조회 기록
+   - 계산 과정 추적
+   - 조정 사유 필수 기록
+   - 7년 보관
+
+### 규정 준수
+- **세법 준수**: 전자세금계산서 연동 준비
+- **개인정보보호**: PIPA 준수
+- **금융정보보호**: 금액 마스킹 옵션
+- **내부통제**: 이중 승인 프로세스
+
+---
+
+## 📈 측정 가능한 성공 지표
+
+### 비즈니스 KPI
+| 지표 | 현재 | 목표 | 측정 방법 |
+|------|------|------|----------|
+| 정산 처리 시간 | 5일 | 1일 | 시스템 로그 |
+| 계산 정확도 | 95% | 99.99% | 오류 보고 |
+| 분쟁 발생률 | 10% | 1% | 이의제기 건수 |
+| 사용자 만족도 | 60% | 90% | 분기별 조사 |
+
+### 시스템 성과
+- **가용성**: 99.9% uptime
+- **응답시간**: p95 < 1초
+- **처리량**: 10,000 TPS
+- **정확도**: 0 계산 오류
+
+---
+
+## 🚀 구현 로드맵
+
+### Phase 1: 기초 구축 (2주)
+**Week 1: 데이터 모델**
+- [ ] Commission 테이블 설계
+- [ ] 계산 로직 구현
+- [ ] 기본 API 개발
+
+**Week 2: 기본 UI**
+- [ ] 수수료 목록 화면
+- [ ] 상세 조회 화면
+- [ ] 기본 필터링
+
+### Phase 2: 핵심 기능 (3주)
+**Week 3: 자동 계산**
+- [ ] 실시간 계산 엔진
+- [ ] 본인샵 감지
+- [ ] 티어 관리
+
+**Week 4: 정산 시스템**
+- [ ] 월별 정산 프로세스
+- [ ] 정산서 생성
+- [ ] 수동 조정
+
+**Week 5: 대시보드**
+- [ ] 실시간 차트
+- [ ] KPI 위젯
+- [ ] 분석 도구
+
+### Phase 3: 고급 기능 (2주)
+**Week 6: 리포트**
+- [ ] 정산서 뷰어
+- [ ] Export 기능
+- [ ] 이메일 발송
+
+**Week 7: 최적화**
+- [ ] 성능 튜닝
+- [ ] 보안 강화
+- [ ] 테스트
+
+### Phase 4: 통합 (1주)
+- [ ] 주문 시스템 연동
+- [ ] 사용자 교육
+- [ ] 단계적 배포
+
+---
+
+## 📋 완료 체크리스트
+
+### 기능 완성도
+- [ ] 모든 수수료 자동 계산 정상 동작
+- [ ] 본인샵 자동 감지 95% 정확도
+- [ ] 티어 변경 실시간 반영
+- [ ] 월별 정산 5분 내 완료
+- [ ] 정산서 PDF 생성 30초 내
+
+### 품질 보증
+- [ ] 단위 테스트 커버리지 > 90%
+- [ ] 금액 계산 정확도 100%
+- [ ] 동시성 테스트 통과
+- [ ] 보안 감사 통과
+
+### 사용자 준비
+- [ ] 사용자 매뉴얼 작성
+- [ ] 비디오 튜토리얼 제작
+- [ ] FAQ 문서 준비
+- [ ] 교육 일정 수립
+
+### 운영 준비
+- [ ] 모니터링 설정
+- [ ] 알림 시스템 구축
+- [ ] 백업 절차 수립
+- [ ] 장애 대응 매뉴얼
