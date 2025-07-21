@@ -463,28 +463,28 @@ export default function UsersPage() {
       </Card>
 
       {/* Pagination */}
-      {pagination.totalPages > 1 && (
+      {pagination && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            총 {pagination.total}명 중 {(pagination.page - 1) * pagination.limit + 1}-
-            {Math.min(pagination.page * pagination.limit, pagination.total)}명 표시
+            총 {pagination.total || 0}명 중 {((pagination.page || 1) - 1) * (pagination.limit || 20) + 1}-
+            {Math.min((pagination.page || 1) * (pagination.limit || 20), pagination.total || 0)}명 표시
           </p>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handlePageChange(pagination.page - 1)}
+              onClick={() => handlePageChange((pagination.page || 1) - 1)}
               disabled={!pagination.hasPrev}
             >
               이전
             </Button>
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+              {Array.from({ length: Math.min(5, pagination.totalPages || 1) }, (_, i) => {
                 const page = i + 1;
                 return (
                   <Button
                     key={page}
-                    variant={page === pagination.page ? 'default' : 'outline'}
+                    variant={page === (pagination.page || 1) ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handlePageChange(page)}
                   >
@@ -496,7 +496,7 @@ export default function UsersPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handlePageChange(pagination.page + 1)}
+              onClick={() => handlePageChange((pagination.page || 1) + 1)}
               disabled={!pagination.hasNext}
             >
               다음
