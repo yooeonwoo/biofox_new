@@ -64,6 +64,12 @@ export default function UsersPage() {
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
+    // pagination이 초기화되지 않은 경우 방어
+    if (!pagination || typeof pagination.page === 'undefined') {
+      console.log('Pagination not initialized yet');
+      return;
+    }
+    
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -151,11 +157,19 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, filters, toast]);
+  }, [pagination?.page, pagination?.limit, filters, toast, supabase]);
 
+  // 컴포넌트 마운트 시 초기 로딩
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+  }, []);
+
+  // pagination이나 filters 변경 시 리로딩
+  useEffect(() => {
+    if (pagination && typeof pagination.page !== 'undefined') {
+      fetchUsers();
+    }
+  }, [pagination?.page, pagination?.limit, filters]);
 
   // Handlers
   const handleSearch = () => {
