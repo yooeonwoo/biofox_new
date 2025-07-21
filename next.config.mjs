@@ -5,6 +5,27 @@ const nextConfig = {
   reactStrictMode: true,
   allowedDevOrigins: ["192.168.1.15:3003", "localhost:3003", "*.local"],
 
+  // WebSocket and HMR settings
+  experimental: {
+    // Enable WebSocket fallback
+    webpackBuildWorker: false,
+  },
+
+  // Development server configuration
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // WebSocket configuration for development
+      config.infrastructureLogging = {
+        level: 'error',
+      };
+      
+      // Disable cache for WebSocket issues
+      config.cache = false;
+    }
+    
+    return config;
+  },
+
   // Image Optimization
   images: {
     formats: ['image/avif', 'image/webp'],
