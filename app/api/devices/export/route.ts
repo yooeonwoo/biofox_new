@@ -1,9 +1,9 @@
-import { createServerClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    const supabase = createServerClient()
+    const supabase = await createClient()
     
     // 인증 체크
     const { data: { user } } = await supabase.auth.getUser()
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     if (error) throw error
 
     // KOL 정보 추가
-    const salesWithKol = await Promise.all((sales || []).map(async (sale) => {
+    const salesWithKol = await Promise.all((sales || []).map(async (sale: any) => {
       const { data: relationship } = await supabase
         .from('shop_relationships')
         .select(`
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         '비고'
       ]
 
-      const rows = salesWithKol.map(sale => [
+      const rows = salesWithKol.map((sale: any) => [
         sale.sale_date,
         sale.shop?.shop_name || '',
         sale.shop?.name || '',
@@ -111,7 +111,7 @@ export async function GET(request: Request) {
       // CSV 문자열 생성
       const csvContent = [
         headers.join(','),
-        ...rows.map(row => row.map(cell => 
+        ...rows.map((row: any) => row.map((cell: any) => 
           typeof cell === 'string' && cell.includes(',') 
             ? `"${cell.replace(/"/g, '""')}"` 
             : cell

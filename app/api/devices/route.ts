@@ -1,9 +1,9 @@
-import { createServerClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    const supabase = createServerClient()
+    const supabase = await createClient()
     
     // 인증 체크
     const { data: { user } } = await supabase.auth.getUser()
@@ -146,7 +146,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServerClient()
+    const supabase = await createClient()
     
     // 인증 체크
     const { data: { user } } = await supabase.auth.getUser()
