@@ -1,9 +1,9 @@
-import { createServerClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    const supabase = createServerClient()
+    const supabase = await createClient()
     
     // 인증 체크
     const { data: { user } } = await supabase.auth.getUser()
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
         '예금주'
       ]
 
-      const rows = (commissions || []).map(c => {
+      const rows = (commissions || []).map((c: any) => {
         const bankInfo = c.kol.bank_info || {}
         const adjustmentTotal = (c.adjustments || []).reduce((sum: number, adj: any) => sum + adj.amount, 0)
         
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
       // CSV 문자열 생성
       const csvContent = [
         headers.join(','),
-        ...rows.map(row => row.map(cell => 
+        ...rows.map((row: any) => row.map((cell: any) => 
           typeof cell === 'string' && cell.includes(',') 
             ? `"${cell.replace(/"/g, '""')}"` 
             : cell
