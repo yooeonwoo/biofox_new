@@ -49,6 +49,53 @@ biofox-kol/
 
 - Node.js 18.0.0 이상
 - npm, yarn, 또는 pnpm
+- Convex 계정 (https://convex.dev)
+
+## 🔧 환경 변수 설정
+
+### 로컬 개발 환경 (.env.local)
+
+프로젝트 루트에 `.env.local` 파일이 자동으로 생성됩니다:
+
+```env
+# Convex Development Configuration
+CONVEX_DEPLOYMENT=dev:quiet-dog-358
+NEXT_PUBLIC_CONVEX_URL=https://quiet-dog-358.convex.cloud
+
+# Legacy Supabase (마이그레이션 중)
+NEXT_PUBLIC_SUPABASE_URL=https://cezxkgmzlkbjqataogtd.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Convex 서버 환경 변수
+
+**개발 환경** 설정된 환경 변수:
+
+- `NODE_ENV=development`
+- `LOG_LEVEL=debug`
+- `APP_ENV=development`
+
+**프로덕션 환경** 설정된 환경 변수:
+
+- `NODE_ENV=production`
+- `LOG_LEVEL=error`
+- `APP_ENV=production`
+
+### 추가 환경 변수 관리
+
+```bash
+# 개발 환경 변수 확인
+npx convex env list
+
+# 프로덕션 환경 변수 확인
+npx convex env list --prod
+
+# 환경 변수 추가
+npx convex env set VARIABLE_NAME "variable_value"
+
+# 프로덕션 환경 변수 추가
+npx convex env set VARIABLE_NAME "variable_value" --prod
+```
 
 ### 설치
 
