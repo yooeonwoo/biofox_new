@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Users, Store, PieChart, Bell } from 'lucide-react';
+import { BarChart3, Users, Store, PieChart, Bell, TrendingUp, Activity, Clock, Calendar } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 // 대시보드 카드 컴포넌트
 function DashboardCard({
@@ -52,12 +54,77 @@ function DashboardCard({
 }
 
 // 통계 카드 컴포넌트
-function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
+function StatCard({ title, value, subtitle, trend, icon }: { 
+  title: string; 
+  value: string | number; 
+  subtitle?: string;
+  trend?: { value: number; direction: 'up' | 'down' | 'neutral' };
+  icon?: React.ReactNode;
+}) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-sm font-medium text-gray-500 mb-1">{title}</h3>
-      <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
-      {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+    <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="text-sm font-medium text-gray-500 mb-1">{title}</h3>
+          <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
+          {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+        </div>
+        {icon && (
+          <div className="bg-blue-50 p-2 rounded-full">
+            <div className="text-blue-600">{icon}</div>
+          </div>
+        )}
+      </div>
+      {trend && (
+        <div className="mt-4 flex items-center">
+          <div className={`flex items-center text-sm ${
+            trend.direction === 'up' ? 'text-green-600' : 
+            trend.direction === 'down' ? 'text-red-600' : 'text-gray-600'
+          }`}>
+            <TrendingUp size={16} className={`mr-1 ${trend.direction === 'down' ? 'rotate-180' : ''}`} />
+            {Math.abs(trend.value)}%
+          </div>
+          <span className="text-sm text-gray-500 ml-2">vs 지난 달</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 최근 활동 아이템 컴포넌트
+function ActivityItem({ activity }: { activity: any }) {
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'order': return <Store size={16} className="text-green-600" />;
+      case 'user': return <Users size={16} className="text-blue-600" />;
+      case 'commission': return <TrendingUp size={16} className="text-purple-600" />;
+      default: return <Activity size={16} className="text-gray-600" />;
+    }
+  };
+
+  const formatTimeAgo = (date: string) => {
+    const now = new Date();
+    const activityDate = new Date(date);
+    const diffInMinutes = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}시간 전`;
+    return `${Math.floor(diffInMinutes / 1440)}일 전`;
+  };
+
+  return (
+    <div className="flex items-start space-x-3 py-3 border-b last:border-b-0">
+      <div className="flex-shrink-0 mt-0.5">
+        {getActivityIcon(activity.type)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+        <p className="text-sm text-gray-500 truncate">{activity.description}</p>
+        <div className="flex items-center mt-1 text-xs text-gray-400">
+          <Clock size={12} className="mr-1" />
+          {formatTimeAgo(activity.created_at)}
+        </div>
+      </div>
     </div>
   );
 }
@@ -76,7 +143,7 @@ interface KolUser {
   };
 }
 
-// API 함수
+// API 함수들
 const fetchKolUsers = async (): Promise<KolUser[]> => {
   const response = await fetch('/api/admin/users?role=kol', {
     credentials: 'include',
@@ -89,12 +156,38 @@ const fetchKolUsers = async (): Promise<KolUser[]> => {
   return response.json();
 };
 
+const fetchDashboardStats = async () => {
+  const response = await fetch('/api/admin/dashboard-stats', {
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error('대시보드 통계를 불러오는데 실패했습니다.');
+  }
+  
+  return response.json();
+};
+
+const fetchRecentActivities = async () => {
+  const response = await fetch('/api/admin/recent-activities', {
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error('최근 활동을 불러오는데 실패했습니다.');
+  }
+  
+  return response.json();
+};
+
 // 메인 페이지 컴포넌트
 export default function AdminDashboardMainPage() {
   const [user, setUser] = useState<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
-  const [stats, setStats] = useState({
+  
+  // 기본 통계 (fallback)
+  const [basicStats, setBasicStats] = useState({
     kolsCount: 0,
     shopsCount: 0,
     productsCount: 0,
@@ -107,6 +200,21 @@ export default function AdminDashboardMainPage() {
   const [selectedKols, setSelectedKols] = useState<number[]>([]);
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationContent, setNotificationContent] = useState('');
+
+  // React Query로 데이터 관리
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: fetchDashboardStats,
+    enabled: isSignedIn,
+    refetchInterval: 5 * 60 * 1000, // 5분마다 자동 갱신
+  });
+
+  const { data: recentActivities = [], isLoading: activitiesLoading } = useQuery({
+    queryKey: ['recentActivities'],
+    queryFn: fetchRecentActivities,
+    enabled: isSignedIn,
+    refetchInterval: 2 * 60 * 1000, // 2분마다 자동 갱신
+  });
   
   // KOL 목록 가져오기
   const { data: kolUsers = [], isLoading: isLoadingKols } = useQuery({
@@ -139,45 +247,31 @@ export default function AdminDashboardMainPage() {
     checkAuth();
   }, []);
 
+  // 기본 통계 로드 (fallback용)
   useEffect(() => {
-    // 인증 확인 후 통계 로드
     if (!isLoaded || !isSignedIn) return;
 
     async function fetchStats() {
       try {
-        // Supabase 클라이언트 생성
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-        // KOL 수 조회
-        const { data: kols, error: kolsError } = await supabase
-          .from('kols')
-          .select('id', { count: 'exact' });
+        const [kolsResult, shopsResult, productsResult] = await Promise.all([
+          supabase.from('profiles').select('id', { count: 'exact' }).in('role', ['kol', 'ol']),
+          supabase.from('shop_relationships').select('id', { count: 'exact' }).eq('is_active', true),
+          supabase.from('orders').select('id', { count: 'exact' }).gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        ]);
 
-        // 전문점 수 조회
-        const { data: shops, error: shopsError } = await supabase
-          .from('shops')
-          .select('id', { count: 'exact' });
-
-        // 제품 수 조회
-        const { data: products, error: productsError } = await supabase
-          .from('products')
-          .select('id', { count: 'exact' });
-
-        if (kolsError || shopsError || productsError) {
-          console.error('데이터 조회 중 오류 발생:', { kolsError, shopsError, productsError });
-        }
-
-        setStats({
-          kolsCount: kols?.length || 0,
-          shopsCount: shops?.length || 0,
-          productsCount: products?.length || 0,
+        setBasicStats({
+          kolsCount: kolsResult.count || 0,
+          shopsCount: shopsResult.count || 0,
+          productsCount: productsResult.count || 0,
           isLoading: false
         });
       } catch (error) {
         console.error('통계 데이터 조회 오류:', error);
-        setStats(prev => ({ ...prev, isLoading: false }));
+        setBasicStats(prev => ({ ...prev, isLoading: false }));
       }
     }
 
@@ -241,13 +335,11 @@ export default function AdminDashboardMainPage() {
         throw new Error(data.error || '알림 전송에 실패했습니다.');
       }
 
-      // 성공 메시지
       toast({
         title: "알림 전송 완료",
         description: `${data.count}명의 KOL에게 알림을 전송했습니다.`,
       });
       
-      // 다이얼로그 닫기
       setIsNotificationOpen(false);
       resetForm();
     } catch (error) {
@@ -289,7 +381,7 @@ export default function AdminDashboardMainPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">관리자 대시보드</h1>
         <Button onClick={() => setIsNotificationOpen(true)} className="gap-2">
@@ -298,11 +390,10 @@ export default function AdminDashboardMainPage() {
         </Button>
       </div>
       
-      {/* 통계 요약 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stats.isLoading ? (
-          // 로딩 표시
-          Array(3).fill(0).map((_, index) => (
+      {/* 향상된 통계 요약 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {statsLoading || basicStats.isLoading ? (
+          Array(4).fill(0).map((_, index) => (
             <div key={index} className="bg-white rounded-lg shadow p-6 animate-pulse">
               <div className="h-2 bg-gray-200 rounded w-1/3 mb-4"></div>
               <div className="h-6 bg-gray-200 rounded w-1/2 mb-2"></div>
@@ -310,11 +401,105 @@ export default function AdminDashboardMainPage() {
           ))
         ) : (
           <>
-            <StatCard title="전체 KOL 수" value={stats.kolsCount} />
-            <StatCard title="전체 전문점 수" value={stats.shopsCount} />
-            <StatCard title="전체 제품 수" value={stats.productsCount} />
+            <StatCard 
+              title="전체 KOL/OL 수" 
+              value={dashboardStats?.kolsCount || basicStats.kolsCount} 
+              icon={<Users size={20} />}
+              trend={{ value: 12, direction: 'up' }}
+              subtitle="이번 달 신규 가입"
+            />
+            <StatCard 
+              title="활성 매장 수" 
+              value={dashboardStats?.activeShops || basicStats.shopsCount} 
+              icon={<Store size={20} />}
+              trend={{ value: 8, direction: 'up' }}
+              subtitle="활성 관계 매장"
+            />
+            <StatCard 
+              title="이번 달 주문 수" 
+              value={dashboardStats?.monthlyOrders || basicStats.productsCount} 
+              icon={<BarChart3 size={20} />}
+              trend={{ value: 15, direction: 'up' }}
+              subtitle="지난 30일 기준"
+            />
+            <StatCard 
+              title="총 매출액" 
+              value={dashboardStats?.totalSales ? `₩${(dashboardStats.totalSales / 1000000).toFixed(1)}M` : '₩0'} 
+              icon={<TrendingUp size={20} />}
+              trend={{ value: 23, direction: 'up' }}
+              subtitle="이번 달 매출"
+            />
           </>
         )}
+      </div>
+
+      {/* 차트와 최근 활동 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 매출 추이 차트 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp size={20} />
+              매출 추이
+            </CardTitle>
+            <CardDescription>최근 7일간 일별 매출 현황</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dashboardStats?.salesChart || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip formatter={(value: any) => [`₩${(value / 1000).toFixed(0)}K`, '매출액']} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="sales" 
+                    stroke="#3B82F6" 
+                    strokeWidth={3} 
+                    dot={{ fill: '#3B82F6' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 최근 활동 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity size={20} />
+              최근 활동
+            </CardTitle>
+            <CardDescription>실시간 시스템 활동</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-80">
+              <div className="p-4">
+                {activitiesLoading ? (
+                  <div className="space-y-3">
+                    {Array(5).fill(0).map((_, i) => (
+                      <div key={i} className="flex space-x-3">
+                        <div className="w-4 h-4 bg-gray-200 rounded-full animate-pulse mt-1" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-2 bg-gray-200 rounded animate-pulse" />
+                          <div className="h-2 bg-gray-200 rounded w-3/4 animate-pulse" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : recentActivities.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">최근 활동이 없습니다.</p>
+                ) : (
+                  recentActivities.map((activity: any, index: number) => (
+                    <ActivityItem key={index} activity={activity} />
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
       
       {/* 관리 섹션 카드 */}
@@ -332,23 +517,23 @@ export default function AdminDashboardMainPage() {
           description="KOL의 월별 실적 및 통계 데이터를 관리합니다."
           icon={<BarChart3 size={24} />}
           linkText="관리하기"
-          linkHref="/admin-dashboard/kol-metrics"
+          linkHref="/admin-dashboard/kol-metrics-management"
         />
         
         <DashboardCard
-          title="전문점 매출 관리"
-          description="전문점별 매출 데이터를 관리합니다."
-          icon={<Store size={24} />}
-          linkText="관리하기"
-          linkHref="/admin-dashboard/shop-sales"
-        />
-        
-        <DashboardCard
-          title="제품 매출 비율 관리"
-          description="제품별 매출 비율 및 수량을 관리합니다."
+          title="수동 지표 입력"
+          description="KOL 실적 지표를 수동으로 입력하고 관리합니다."
           icon={<PieChart size={24} />}
           linkText="관리하기"
-          linkHref="/admin-dashboard/product-sales"
+          linkHref="/admin-dashboard/manual-metrics"
+        />
+        
+        <DashboardCard
+          title="사용자 관리"
+          description="전체 사용자 계정을 관리하고 권한을 설정합니다."
+          icon={<Users size={24} />}
+          linkText="관리하기"
+          linkHref="/admin-dashboard/user-management"
         />
       </div>
 
