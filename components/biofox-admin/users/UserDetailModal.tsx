@@ -24,8 +24,10 @@ import {
   Package,
   Users,
   Activity,
-  DollarSign
+  DollarSign,
 } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 // User 타입을 직접 정의
 interface User {
   id: string;
@@ -181,9 +183,33 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
     rejected: { label: '거절됨', variant: 'destructive' as const },
   };
 
+  // Example: Toggle user active status with optimistic update
+  const toggleUserStatus = useMutation(api.userMutations.updateUser).withOptimisticUpdate(
+    (localStore, args) => {
+      const { userId, updates } = args;
+
+      // Optimistically update the user detail query if it exists
+      const userDetail = localStore.getQuery(api.users.getUserById, { userId });
+      if (userDetail !== undefined) {
+        localStore.setQuery(
+          api.users.getUserById,
+          { userId },
+          {
+            ...userDetail,
+            ...updates,
+            updated_at: Date.now(),
+          }
+        );
+      }
+
+      // Also update any list queries that might contain this user
+      // This ensures consistency across all UI components
+    }
+  );
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-h-[90vh] max-w-4xl">
         <DialogHeader>
           <DialogTitle>사용자 상세 정보</DialogTitle>
           <DialogDescription>
@@ -207,7 +233,7 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
               <TabsTrigger value="commission">수수료</TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="h-[500px] mt-4">
+            <ScrollArea className="mt-4 h-[500px]">
               <TabsContent value="basic" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -276,10 +302,10 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
               <TabsContent value="relationship" className="space-y-4">
                 {detailData.relationship_history && detailData.relationship_history.length > 0 ? (
                   <div className="space-y-3">
-                    {detailData.relationship_history.map((rel) => (
+                    {detailData.relationship_history.map(rel => (
                       <div
                         key={rel.id}
-                        className={`p-4 rounded-lg border ${
+                        className={`rounded-lg border p-4 ${
                           rel.is_active ? 'border-primary bg-primary/5' : 'border-gray-200'
                         }`}
                       >
@@ -287,28 +313,22 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
                           <div>
                             <p className="font-medium">{rel.parent_name}</p>
                             <p className="text-sm text-gray-500">{rel.parent_shop_name}</p>
-                            <p className="text-xs text-gray-400">{roleLabels[rel.parent_role as keyof typeof roleLabels]}</p>
+                            <p className="text-xs text-gray-400">
+                              {roleLabels[rel.parent_role as keyof typeof roleLabels]}
+                            </p>
                           </div>
                           <div className="text-right">
-                            {rel.is_active && (
-                              <Badge variant="default">현재</Badge>
-                            )}
-                            <p className="text-xs text-gray-400 mt-1">{rel.relationship_type}</p>
+                            {rel.is_active && <Badge variant="default">현재</Badge>}
+                            <p className="mt-1 text-xs text-gray-400">{rel.relationship_type}</p>
                           </div>
                         </div>
                         <div className="mt-2 text-sm text-gray-500">
-                          <p>
-                            시작: {format(new Date(rel.started_at), 'PPP', { locale: ko })}
-                          </p>
+                          <p>시작: {format(new Date(rel.started_at), 'PPP', { locale: ko })}</p>
                           {rel.ended_at && (
-                            <p>
-                              종료: {format(new Date(rel.ended_at), 'PPP', { locale: ko })}
-                            </p>
+                            <p>종료: {format(new Date(rel.ended_at), 'PPP', { locale: ko })}</p>
                           )}
                           {rel.notes && (
-                            <p className="mt-1 text-xs bg-gray-100 p-2 rounded">
-                              {rel.notes}
-                            </p>
+                            <p className="mt-1 rounded bg-gray-100 p-2 text-xs">{rel.notes}</p>
                           )}
                         </div>
                       </div>
@@ -321,17 +341,22 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
 
               <TabsContent value="activity" className="space-y-6">
                 <div>
-                  <h4 className="font-medium mb-3">최근 주문</h4>
-                  {detailData.recent_activity?.orders && detailData.recent_activity.orders.length > 0 ? (
+                  <h4 className="mb-3 font-medium">최근 주문</h4>
+                  {detailData.recent_activity?.orders &&
+                  detailData.recent_activity.orders.length > 0 ? (
                     <div className="space-y-2">
-                      {detailData.recent_activity.orders.map((order) => (
-                        <div key={order.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      {detailData.recent_activity.orders.map(order => (
+                        <div
+                          key={order.id}
+                          className="flex items-center justify-between rounded bg-gray-50 p-3"
+                        >
                           <div>
                             <p className="font-medium">{formatCurrency(order.total_amount)}</p>
                             <p className="text-sm text-gray-500">
-                              {order.order_number} - {format(new Date(order.order_date), 'PPP', { locale: ko })}
+                              {order.order_number} -{' '}
+                              {format(new Date(order.order_date), 'PPP', { locale: ko })}
                             </p>
-                            <div className="flex gap-2 mt-1">
+                            <div className="mt-1 flex gap-2">
                               <Badge variant="outline" className="text-xs">
                                 주문: {order.order_status === 'completed' ? '완료' : '진행중'}
                               </Badge>
@@ -353,16 +378,18 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
                 </div>
 
                 <div>
-                  <h4 className="font-medium mb-3">최근 임상</h4>
-                  {detailData.recent_activity?.clinical_cases && detailData.recent_activity.clinical_cases.length > 0 ? (
+                  <h4 className="mb-3 font-medium">최근 임상</h4>
+                  {detailData.recent_activity?.clinical_cases &&
+                  detailData.recent_activity.clinical_cases.length > 0 ? (
                     <div className="space-y-2">
-                      {detailData.recent_activity.clinical_cases.map((clinical) => (
-                        <div key={clinical.id} className="p-3 bg-gray-50 rounded">
+                      {detailData.recent_activity.clinical_cases.map(clinical => (
+                        <div key={clinical.id} className="rounded bg-gray-50 p-3">
                           <p className="font-medium">{clinical.name}</p>
                           <p className="text-sm text-gray-500">
-                            {clinical.subject_type === 'self' ? '자가' : '고객'} - {clinical.treatment_item}
+                            {clinical.subject_type === 'self' ? '자가' : '고객'} -{' '}
+                            {clinical.treatment_item}
                           </p>
-                          <div className="flex justify-between items-center mt-1">
+                          <div className="mt-1 flex items-center justify-between">
                             <div className="flex gap-2">
                               <Badge variant="outline" className="text-xs">
                                 {clinical.status === 'in_progress' ? '진행중' : '완료'}
@@ -387,24 +414,28 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
                 </div>
 
                 <div>
-                  <h4 className="font-medium mb-3">최근 기기 판매</h4>
-                  {detailData.recent_activity?.device_sales && detailData.recent_activity.device_sales.length > 0 ? (
+                  <h4 className="mb-3 font-medium">최근 기기 판매</h4>
+                  {detailData.recent_activity?.device_sales &&
+                  detailData.recent_activity.device_sales.length > 0 ? (
                     <div className="space-y-2">
-                      {detailData.recent_activity.device_sales.map((device) => (
-                        <div key={device.id} className="p-3 bg-gray-50 rounded">
-                          <div className="flex justify-between items-center">
+                      {detailData.recent_activity.device_sales.map(device => (
+                        <div key={device.id} className="rounded bg-gray-50 p-3">
+                          <div className="flex items-center justify-between">
                             <div>
                               <p className="font-medium">{device.device_name}</p>
                               <p className="text-sm text-gray-500">
-                                {device.quantity}개 - {format(new Date(device.sale_date), 'PPP', { locale: ko })}
+                                {device.quantity}개 -{' '}
+                                {format(new Date(device.sale_date), 'PPP', { locale: ko })}
                               </p>
-                              <Badge variant="outline" className="text-xs mt-1">
+                              <Badge variant="outline" className="mt-1 text-xs">
                                 {device.tier_at_sale === 'tier_1_4' ? '1-4개 티어' : '5개이상 티어'}
                               </Badge>
                             </div>
                             <div className="text-right">
                               <p className="text-sm">실제 수수료</p>
-                              <p className="font-medium">{formatCurrency(device.actual_commission)}</p>
+                              <p className="font-medium">
+                                {formatCurrency(device.actual_commission)}
+                              </p>
                               <p className="text-xs text-gray-500">
                                 (기준: {formatCurrency(device.standard_commission)})
                               </p>
@@ -421,50 +452,57 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
 
               <TabsContent value="stats" className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-blue-600 mb-2">
+                  <div className="rounded-lg bg-blue-50 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-blue-600">
                       <TrendingUp className="h-4 w-4" />
                       <span>총 매출 (12개월)</span>
                     </div>
                     <p className="text-2xl font-bold text-blue-700">
                       {formatCurrency(detailData.sales_stats?.total_sales || 0)}
                     </p>
-                    <p className="text-sm text-blue-500 mt-1">
-                      평균 주문액: {formatCurrency(detailData.sales_stats?.average_order_value || 0)}
+                    <p className="mt-1 text-sm text-blue-500">
+                      평균 주문액:{' '}
+                      {formatCurrency(detailData.sales_stats?.average_order_value || 0)}
                     </p>
                   </div>
 
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-green-600 mb-2">
+                  <div className="rounded-lg bg-green-50 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-green-600">
                       <DollarSign className="h-4 w-4" />
                       <span>총 수수료</span>
                     </div>
                     <p className="text-2xl font-bold text-green-700">
                       {formatCurrency(detailData.sales_stats?.total_commission || 0)}
                     </p>
-                    <p className="text-sm text-green-500 mt-1">
+                    <p className="mt-1 text-sm text-green-500">
                       총 주문: {detailData.sales_stats?.total_orders || 0}건
                     </p>
                   </div>
                 </div>
 
                 {detailData.crm_stats && (
-                  <div className="p-4 border rounded-lg">
-                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <div className="rounded-lg border p-4">
+                    <h4 className="mb-3 flex items-center gap-2 font-medium">
                       <Package className="h-4 w-4" />
                       CRM 진행 현황
                     </h4>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-blue-600">{detailData.crm_stats.total_cards}</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {detailData.crm_stats.total_cards}
+                        </p>
                         <p className="text-sm text-gray-500">총 CRM 카드</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-green-600">{detailData.crm_stats.completed_stages}</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {detailData.crm_stats.completed_stages}
+                        </p>
                         <p className="text-sm text-gray-500">완료된 단계</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-purple-600">{detailData.crm_stats.average_completion}%</p>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {detailData.crm_stats.average_completion}%
+                        </p>
                         <p className="text-sm text-gray-500">평균 완료율</p>
                       </div>
                     </div>
@@ -472,16 +510,16 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                  <div className="rounded-lg border p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
                       <Users className="h-4 w-4" />
                       <span>전체 소속 전문점</span>
                     </div>
                     <p className="text-xl font-bold">{detailData.user.total_subordinates}개</p>
                   </div>
 
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                  <div className="rounded-lg border p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
                       <Activity className="h-4 w-4" />
                       <span>활성 전문점</span>
                     </div>
@@ -489,94 +527,121 @@ export function UserDetailModal({ user, open, onClose }: UserDetailModalProps) {
                   </div>
                 </div>
 
-                {(detailData.user.role === 'kol' || detailData.user.role === 'ol') && detailData.device_stats && (
-                  <div className="p-4 border rounded-lg">
-                    <h4 className="font-medium mb-3 flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      기기 판매 현황
-                    </h4>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <p className="text-lg font-bold">{detailData.device_stats.total_devices_sold}</p>
-                        <p className="text-sm text-gray-500">총 판매</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-red-600">{detailData.device_stats.total_devices_returned}</p>
-                        <p className="text-sm text-gray-500">반품</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-green-600">{detailData.device_stats.net_devices_sold}</p>
-                        <p className="text-sm text-gray-500">순 판매</p>
-                      </div>
-                      <div className="text-center">
-                        <Badge variant={detailData.device_stats.current_tier === 'tier_5_plus' ? 'default' : 'secondary'}>
-                          {detailData.device_stats.current_tier === 'tier_5_plus' ? '5개 이상 티어' : '1-4개 티어'}
-                        </Badge>
-                        <p className="text-sm text-gray-500 mt-1">현재 티어</p>
+                {(detailData.user.role === 'kol' || detailData.user.role === 'ol') &&
+                  detailData.device_stats && (
+                    <div className="rounded-lg border p-4">
+                      <h4 className="mb-3 flex items-center gap-2 font-medium">
+                        <Package className="h-4 w-4" />
+                        기기 판매 현황
+                      </h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="text-center">
+                          <p className="text-lg font-bold">
+                            {detailData.device_stats.total_devices_sold}
+                          </p>
+                          <p className="text-sm text-gray-500">총 판매</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-red-600">
+                            {detailData.device_stats.total_devices_returned}
+                          </p>
+                          <p className="text-sm text-gray-500">반품</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-green-600">
+                            {detailData.device_stats.net_devices_sold}
+                          </p>
+                          <p className="text-sm text-gray-500">순 판매</p>
+                        </div>
+                        <div className="text-center">
+                          <Badge
+                            variant={
+                              detailData.device_stats.current_tier === 'tier_5_plus'
+                                ? 'default'
+                                : 'secondary'
+                            }
+                          >
+                            {detailData.device_stats.current_tier === 'tier_5_plus'
+                              ? '5개 이상 티어'
+                              : '1-4개 티어'}
+                          </Badge>
+                          <p className="mt-1 text-sm text-gray-500">현재 티어</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </TabsContent>
 
               <TabsContent value="commission" className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-orange-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-orange-600 mb-2">
+                  <div className="rounded-lg bg-orange-50 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-orange-600">
                       <DollarSign className="h-4 w-4" />
                       <span>미지급 수수료</span>
                     </div>
                     <p className="text-2xl font-bold text-orange-700">
                       {formatCurrency(detailData.commission_stats?.pending_amount || 0)}
                     </p>
-                    <p className="text-sm text-orange-500 mt-1">
-                      {detailData.commission_stats?.total_calculations - detailData.commission_stats?.paid_calculations || 0}건 대기중
+                    <p className="mt-1 text-sm text-orange-500">
+                      {detailData.commission_stats?.total_calculations -
+                        detailData.commission_stats?.paid_calculations || 0}
+                      건 대기중
                     </p>
                   </div>
 
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-green-600 mb-2">
+                  <div className="rounded-lg bg-green-50 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-green-600">
                       <DollarSign className="h-4 w-4" />
                       <span>지급된 수수료</span>
                     </div>
                     <p className="text-2xl font-bold text-green-700">
                       {formatCurrency(detailData.commission_stats?.paid_amount || 0)}
                     </p>
-                    <p className="text-sm text-green-500 mt-1">
+                    <p className="mt-1 text-sm text-green-500">
                       {detailData.commission_stats?.paid_calculations || 0}건 완료
                     </p>
                   </div>
                 </div>
 
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-medium mb-3">수수료 정산 현황</h4>
+                <div className="rounded-lg border p-4">
+                  <h4 className="mb-3 font-medium">수수료 정산 현황</h4>
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-gray-500">총 정산 건수</span>
-                      <span className="font-medium">{detailData.commission_stats?.total_calculations || 0}건</span>
+                      <span className="font-medium">
+                        {detailData.commission_stats?.total_calculations || 0}건
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">지급 완료</span>
-                      <span className="font-medium text-green-600">{detailData.commission_stats?.paid_calculations || 0}건</span>
+                      <span className="font-medium text-green-600">
+                        {detailData.commission_stats?.paid_calculations || 0}건
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">지급 대기</span>
                       <span className="font-medium text-orange-600">
-                        {(detailData.commission_stats?.total_calculations || 0) - (detailData.commission_stats?.paid_calculations || 0)}건
+                        {(detailData.commission_stats?.total_calculations || 0) -
+                          (detailData.commission_stats?.paid_calculations || 0)}
+                        건
                       </span>
                     </div>
                     {detailData.commission_stats?.last_calculation_date && (
                       <div className="flex justify-between">
                         <span className="text-gray-500">최근 정산일</span>
                         <span className="font-medium">
-                          {format(new Date(detailData.commission_stats.last_calculation_date), 'PPP', { locale: ko })}
+                          {format(
+                            new Date(detailData.commission_stats.last_calculation_date),
+                            'PPP',
+                            { locale: ko }
+                          )}
                         </span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="rounded-lg bg-gray-50 p-4">
                   <p className="text-sm text-gray-600">
                     💡 수수료 정산은 매월 말일에 자동으로 계산되며, 익월 10일에 지급됩니다.
                   </p>

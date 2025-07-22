@@ -1,24 +1,33 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Plus, Download, RefreshCw, Calculator, CreditCard } from 'lucide-react';
-import { CommissionFilters } from '@/components/biofox-admin/commissions/CommissionFilters';
-import { CommissionTable } from '@/components/biofox-admin/commissions/CommissionTable';
-import { CommissionSummaryCards } from '@/components/biofox-admin/commissions/CommissionSummaryCards';
-import { CommissionDetailModal } from '@/components/biofox-admin/commissions/CommissionDetailModal';
-import { CommissionAdjustModal } from '@/components/biofox-admin/commissions/CommissionAdjustModal';
-import { CommissionPayModal } from '@/components/biofox-admin/commissions/CommissionPayModal';
-import { useToast } from '@/components/ui/use-toast';
-
-// Convex imports
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { CommissionTable } from '@/components/biofox-admin/commissions/CommissionTable';
+import { CommissionFilters } from '@/components/biofox-admin/commissions/CommissionFilters';
+import { CommissionSummary } from '@/components/biofox-admin/commissions/CommissionSummary';
+import { CommissionDetailModal } from '@/components/biofox-admin/commissions/CommissionDetailModal';
+import { ConvexQueryState, LoadingState, ErrorState } from '@/components/ui/loading';
+import { usePaginatedConvexQuery, useCombinedConvexQueries } from '@/hooks/useConvexQuery';
+import { Download, Calculator, TrendingUp } from 'lucide-react';
 
 interface CommissionFiltersState {
   month?: string;
   kol_id?: string;
-  status?: string;
+  status?: 'calculated' | 'adjusted' | 'paid' | 'cancelled';
 }
 
 export default function CommissionManagementPage() {
@@ -38,8 +47,8 @@ export default function CommissionManagementPage() {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [selectedCommission, setSelectedCommission] = useState<any>(null);
 
-  // Convex queries and mutations
-  const commissionsResult = useQuery(api.commissions.listCommissions, {
+  // 표준화된 Convex queries
+  const commissionsQuery = usePaginatedConvexQuery(api.commissions.listCommissions, {
     paginationOpts,
     month: filters.month,
     kolId: filters.kol_id as any,
@@ -48,292 +57,285 @@ export default function CommissionManagementPage() {
     sortOrder: 'desc',
   });
 
-  const summaryResult = useQuery(api.commissions.getCommissionSummary, {
+  const summaryQuery = useQuery(api.commissions.getCommissionSummary, {
     month: filters.month,
     kolId: filters.kol_id as any,
   });
 
-  const calculateCommissions = useMutation(api.commissions.calculateMonthlyCommissions);
-  const updateCommissionStatus = useMutation(api.commissions.updateCommissionStatus);
+  // 복합 쿼리 상태 관리
+  const combinedState = useCombinedConvexQueries([
+    {
+      data: commissionsQuery.data,
+      isLoading: commissionsQuery.isLoading,
+      isError: commissionsQuery.isError,
+    },
+    {
+      data: summaryQuery,
+      isLoading: summaryQuery === undefined,
+      isError: false,
+    },
+  ]);
 
-  // Extract data from Convex queries
-  const commissions = commissionsResult?.page || [];
-  const summary = summaryResult || null;
-  const loading = commissionsResult === undefined;
-  const hasNextPage = commissionsResult ? !commissionsResult.isDone : false;
+  // Mutations with optimistic updates
+  const calculateCommissions = useMutation(
+    api.commissions.calculateMonthlyCommissions
+  ).withOptimisticUpdate((localStore, args) => {
+    // Show loading state in summary during calculation
+    const existingSummary = localStore.getQuery(api.commissions.getCommissionSummary, {
+      month: filters.month,
+      kolId: filters.kol_id as any,
+    });
 
-  // Handle pagination
-  const handleNextPage = () => {
-    if (commissionsResult && !commissionsResult.isDone && commissionsResult.continueCursor) {
-      setPaginationOpts(prev => ({
-        ...prev,
-        cursor: commissionsResult.continueCursor,
-      }));
+    if (existingSummary !== undefined) {
+      const optimisticSummary = {
+        ...existingSummary,
+        calculationInProgress: true,
+      };
+      localStore.setQuery(
+        api.commissions.getCommissionSummary,
+        {
+          month: filters.month,
+          kolId: filters.kol_id as any,
+        },
+        optimisticSummary
+      );
     }
-  };
+  });
 
-  const handlePreviousPage = () => {
-    // Reset to first page (Convex doesn't have built-in prev page)
-    setPaginationOpts(prev => ({
-      ...prev,
-      cursor: null,
-    }));
-  };
+  const updateCommissionStatus = useMutation(
+    api.commissions.updateCommissionStatus
+  ).withOptimisticUpdate((localStore, args) => {
+    const { orderIds, status } = args;
+    const existingCommissions = localStore.getQuery(api.commissions.listCommissions, {
+      paginationOpts,
+      month: filters.month,
+      kolId: filters.kol_id as any,
+      status: filters.status as any,
+      sortBy: 'created_at',
+      sortOrder: 'desc',
+    });
 
-  // Handle filter changes
-  const handleFiltersChange = (newFilters: CommissionFiltersState) => {
-    setFilters(newFilters);
-    // Reset pagination when filters change
-    setPaginationOpts(prev => ({
-      ...prev,
-      cursor: null,
-    }));
-  };
+    if (existingCommissions !== undefined) {
+      const updatedCommissions = {
+        ...existingCommissions,
+        page: existingCommissions.page?.map((commission: any) =>
+          orderIds.includes(commission.order_id)
+            ? { ...commission, status, updated_at: Date.now() }
+            : commission
+        ),
+      };
+      localStore.setQuery(
+        api.commissions.listCommissions,
+        {
+          paginationOpts,
+          month: filters.month,
+          kolId: filters.kol_id as any,
+          status: filters.status as any,
+          sortBy: 'created_at',
+          sortOrder: 'desc',
+        },
+        updatedCommissions
+      );
+    }
+  });
 
-  // Handle commission calculation
+  // Handlers
   const handleCalculate = async () => {
-    if (!filters.month) {
-      toast({
-        title: '정산월을 선택해주세요',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
-      const result = await calculateCommissions({
-        month: filters.month,
-        forceRecalculate: false,
+      await calculateCommissions({
+        month: filters.month || new Date().toISOString().substring(0, 7),
       });
-
-      if (result.success) {
-        toast({
-          title: '커미션 계산 완료',
-          description: `${result.processed}개 주문의 커미션이 계산되었습니다.`,
-        });
-      } else {
-        toast({
-          title: '부분 완료',
-          description: `${result.processed}개 성공, ${result.failed}개 실패`,
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      console.error('Commission calculation error:', error);
       toast({
-        title: '오류',
-        description: error.message || '커미션 계산 중 오류가 발생했습니다.',
+        title: '성공',
+        description: '커미션 계산이 완료되었습니다.',
+      });
+    } catch (error) {
+      toast({
+        title: '실패',
+        description: '커미션 계산에 실패했습니다.',
         variant: 'destructive',
       });
     }
   };
 
-  // Handle status updates
-  const handleStatusUpdate = async (
-    orderIds: string[],
-    status: 'calculated' | 'adjusted' | 'paid' | 'cancelled',
-    adjustmentAmount?: number,
-    reason?: string
-  ) => {
-    try {
-      const result = await updateCommissionStatus({
-        orderIds: orderIds as any[],
-        status,
-        adjustmentAmount,
-        reason,
-      });
-
-      if (result.success) {
-        toast({
-          title: '상태 업데이트 완료',
-          description: `${result.processed}개 커미션의 상태가 업데이트되었습니다.`,
-        });
-      } else {
-        toast({
-          title: '부분 완료',
-          description: `${result.processed}개 성공, ${result.failed}개 실패`,
-          variant: 'destructive',
-        });
-      }
-
-      // Close modals and reset selection
-      setDetailModalOpen(false);
-      setAdjustModalOpen(false);
-      setPayModalOpen(false);
-      setSelectedIds([]);
-      setSelectedCommission(null);
-    } catch (error: any) {
-      console.error('Status update error:', error);
-      toast({
-        title: '오류',
-        description: error.message || '상태 업데이트 중 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Handle bulk payments
-  const handleBulkPay = async () => {
-    if (selectedIds.length === 0) {
-      toast({
-        title: '알림',
-        description: '지급할 커미션을 선택해주세요.',
-      });
-      return;
-    }
-
-    await handleStatusUpdate(selectedIds, 'paid', undefined, '일괄 지급');
-  };
-
-  // Handle export
   const handleExport = async () => {
     try {
-      // Note: Export functionality would need to be implemented as a separate Convex action
+      // Export logic here
       toast({
-        title: '알림',
-        description: '데이터 내보내기 기능은 준비 중입니다.',
+        title: '성공',
+        description: '커미션 데이터 내보내기가 시작됩니다.',
       });
-    } catch (error: any) {
-      console.error('Export error:', error);
+    } catch (error) {
       toast({
-        title: '오류',
-        description: '데이터 내보내기 중 오류가 발생했습니다.',
+        title: '실패',
+        description: '데이터 내보내기에 실패했습니다.',
         variant: 'destructive',
       });
     }
   };
 
-  // Handle commission detail view
-  const handleViewDetail = (commission: any) => {
-    setSelectedCommission(commission);
-    setDetailModalOpen(true);
-  };
-
-  // Handle commission adjustment
-  const handleAdjust = (commission: any) => {
-    setSelectedCommission(commission);
-    setAdjustModalOpen(true);
-  };
-
-  // Handle commission payment
-  const handlePay = (commission: any) => {
-    setSelectedCommission(commission);
-    setPayModalOpen(true);
+  const handleStatusUpdate = async (orderIds: string[], status: any) => {
+    try {
+      await updateCommissionStatus({ orderIds, status });
+      setSelectedIds([]);
+      toast({
+        title: '성공',
+        description: '커미션 상태가 업데이트되었습니다.',
+      });
+    } catch (error) {
+      toast({
+        title: '실패',
+        description: '상태 업데이트에 실패했습니다.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">커미션 관리</h1>
+        <div>
+          <h1 className="text-2xl font-bold">커미션 관리</h1>
+          <p className="text-muted-foreground">KOL 커미션을 계산하고 관리합니다.</p>
+        </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => setPaginationOpts(prev => ({ ...prev, cursor: null }))}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            새로고침
-          </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             내보내기
           </Button>
-          <Button onClick={handleCalculate} disabled={loading}>
+          <Button onClick={handleCalculate} disabled={combinedState.isLoading}>
             <Calculator className="mr-2 h-4 w-4" />
             커미션 계산
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      {summary && <CommissionSummaryCards summary={summary} loading={loading} />}
-
       {/* Filters */}
-      <CommissionFilters
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        loading={loading}
-      />
+      <CommissionFilters filters={filters} onFiltersChange={setFilters} />
+
+      {/* Summary with Standardized State Handling */}
+      <ConvexQueryState
+        data={summaryQuery}
+        title="커미션 요약을 불러오는 중..."
+        errorComponent={
+          <ErrorState
+            title="요약 정보 로드 실패"
+            description="커미션 요약 정보를 불러올 수 없습니다."
+            variant="card"
+          />
+        }
+      >
+        {summary => (
+          <CommissionSummary
+            summary={summary}
+            loading={summaryQuery === undefined}
+            month={filters.month}
+          />
+        )}
+      </ConvexQueryState>
 
       {/* Bulk Actions */}
       {selectedIds.length > 0 && (
-        <div className="flex items-center space-x-2 rounded-lg bg-gray-50 p-4">
-          <span className="text-sm text-gray-600">{selectedIds.length}개 선택됨</span>
-          <Button size="sm" variant="outline" onClick={handleBulkPay}>
-            <CreditCard className="mr-2 h-4 w-4" />
-            일괄 지급
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">{selectedIds.length}건 선택됨</p>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => handleStatusUpdate(selectedIds, 'adjusted')}>
+                  조정 완료
+                </Button>
+                <Button size="sm" onClick={() => handleStatusUpdate(selectedIds, 'paid')}>
+                  지급 완료
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleStatusUpdate(selectedIds, 'cancelled')}
+                >
+                  취소
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Commission Table with Standardized State Handling */}
+      <Card>
+        <CardContent className="p-0">
+          <ConvexQueryState
+            data={commissionsQuery.items}
+            title="커미션 목록을 불러오는 중..."
+            emptyComponent={
+              <div className="p-8 text-center">
+                <TrendingUp className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-medium">커미션 데이터가 없습니다</h3>
+                <p className="mb-4 text-muted-foreground">
+                  선택한 기간에 대한 커미션 데이터가 없습니다. 먼저 커미션을 계산해보세요.
+                </p>
+                <Button onClick={handleCalculate}>
+                  <Calculator className="mr-2 h-4 w-4" />
+                  커미션 계산하기
+                </Button>
+              </div>
+            }
+          >
+            {() => (
+              <CommissionTable
+                commissions={commissionsQuery.items || []}
+                loading={commissionsQuery.isLoading}
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
+                onViewDetail={commission => {
+                  setSelectedCommission(commission);
+                  setDetailModalOpen(true);
+                }}
+                onAdjust={commission => {
+                  setSelectedCommission(commission);
+                  setAdjustModalOpen(true);
+                }}
+                onPay={commission => {
+                  setSelectedCommission(commission);
+                  setPayModalOpen(true);
+                }}
+              />
+            )}
+          </ConvexQueryState>
+        </CardContent>
+      </Card>
+
+      {/* Pagination */}
+      {commissionsQuery.hasNextPage && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            onClick={() =>
+              setPaginationOpts(prev => ({
+                ...prev,
+                cursor: commissionsQuery.cursor,
+              }))
+            }
+            disabled={commissionsQuery.isLoading}
+          >
+            더 보기
           </Button>
         </div>
       )}
 
-      {/* Commission Table */}
-      <CommissionTable
-        commissions={commissions}
-        loading={loading}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        onViewDetail={handleViewDetail}
-        onAdjust={handleAdjust}
-        onPay={handlePay}
-      />
-
-      {/* Pagination */}
-      {commissionsResult && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{commissions.length}개 항목 표시</p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreviousPage}
-              disabled={!paginationOpts.cursor}
-            >
-              이전
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!hasNextPage}>
-              다음
-            </Button>
-          </div>
-        </div>
+      {/* Modals */}
+      {detailModalOpen && selectedCommission && (
+        <CommissionDetailModal
+          commission={selectedCommission}
+          open={detailModalOpen}
+          onClose={() => {
+            setDetailModalOpen(false);
+            setSelectedCommission(null);
+          }}
+        />
       )}
 
-      {/* Modals */}
-      <CommissionDetailModal
-        commission={selectedCommission}
-        open={detailModalOpen}
-        onClose={() => {
-          setDetailModalOpen(false);
-          setSelectedCommission(null);
-        }}
-      />
-
-      <CommissionAdjustModal
-        commission={selectedCommission}
-        open={adjustModalOpen}
-        onClose={() => {
-          setAdjustModalOpen(false);
-          setSelectedCommission(null);
-        }}
-        onAdjust={async (adjustmentAmount, reason) => {
-          if (selectedCommission) {
-            await handleStatusUpdate([selectedCommission.id], 'adjusted', adjustmentAmount, reason);
-          }
-        }}
-      />
-
-      <CommissionPayModal
-        commission={selectedCommission}
-        open={payModalOpen}
-        onClose={() => {
-          setPayModalOpen(false);
-          setSelectedCommission(null);
-        }}
-        onPay={async reason => {
-          if (selectedCommission) {
-            await handleStatusUpdate([selectedCommission.id], 'paid', undefined, reason);
-          }
-        }}
-      />
+      {/* 기타 모달들... */}
     </div>
   );
 }

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,31 +22,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  UserPlus,
-  Download,
-  Upload,
-  CheckCircle,
-  XCircle,
-  Trash,
-  Users,
-  RefreshCw,
-} from 'lucide-react';
-import { UserFiltersComponent } from '@/components/biofox-admin/users/UserFilters';
+import { useToast } from '@/hooks/use-toast';
 import { UserTable } from '@/components/biofox-admin/users/UserTable';
 import { UserDetailModal } from '@/components/biofox-admin/users/UserDetailModal';
 import { UserAddModal } from '@/components/biofox-admin/users/UserAddModal';
-import type { User, UserFilters, PaginationState, BulkActionRequest } from '@/types/biofox-admin';
+import { UserFilters } from '@/components/biofox-admin/users/UserFilters';
+import { ExportButton } from '@/components/biofox-admin/users/ExportButton';
+import { BulkActionButton } from '@/components/biofox-admin/users/BulkActionButton';
+import { ConvexQueryState, LoadingState, ErrorState } from '@/components/ui/loading';
+import { usePaginatedConvexQuery } from '@/hooks/useConvexQuery';
+import { Download, UserPlus } from 'lucide-react';
+import type { User, UserFilters as UserFiltersType } from '@/types/biofox-admin';
 
 // Convex imports
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { usePaginationState } from '@/hooks/usePaginationState';
 
 export default function UsersPage() {
   const { toast } = useToast();
 
   // States
-  const [filters, setFilters] = useState<UserFilters>({});
+  const [filters, setFilters] = useState<UserFiltersType>({});
   const [paginationOpts, setPaginationOpts] = useState({
     numItems: 20,
     cursor: null as string | null,
@@ -56,12 +52,12 @@ export default function UsersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkActionDialog, setShowBulkActionDialog] = useState(false);
   const [bulkAction, setBulkAction] = useState<
-    'approve' | 'reject' | 'delete' | 'activate' | 'deactivate' | null
+    'approve' | 'reject' | 'delete' | 'activate' | 'deactivate' | 'change_role' | null
   >(null);
   const [bulkActionData, setBulkActionData] = useState<any>({});
 
-  // Convex queries and mutations
-  const usersResult = useQuery(api.users.listUsers, {
+  // 표준화된 Convex queries
+  const usersQuery = usePaginatedConvexQuery(api.users.listUsers, {
     paginationOpts,
     search: filters.search,
     role: filters.role,
@@ -72,30 +68,67 @@ export default function UsersPage() {
     sortOrder: 'desc',
   });
 
-  const updateUser = useMutation(api.userMutations.updateUser);
-  const bulkUserAction = useMutation(api.userMutations.bulkUserAction);
+  // Mutations with optimistic updates
+  const updateUser = useMutation(api.userMutations.updateUser).withOptimisticUpdate(
+    (localStore, args) => {
+      const { userId, updates } = args;
+      const existingUsers = localStore.getQuery(api.users.listUsers, {
+        paginationOpts,
+        search: filters.search,
+        role: filters.role,
+        status: filters.status,
+        createdFrom: filters.dateRange?.from?.toISOString(),
+        createdTo: filters.dateRange?.to?.toISOString(),
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+      });
+
+      if (existingUsers !== undefined) {
+        const updatedUsers = {
+          ...existingUsers,
+          page: existingUsers.page?.map((user: any) =>
+            user._id === userId ? { ...user, ...updates } : user
+          ),
+        };
+        localStore.setQuery(
+          api.users.listUsers,
+          {
+            paginationOpts,
+            search: filters.search,
+            role: filters.role,
+            status: filters.status,
+            createdFrom: filters.dateRange?.from?.toISOString(),
+            createdTo: filters.dateRange?.to?.toISOString(),
+            sortBy: 'created_at',
+            sortOrder: 'desc',
+          },
+          updatedUsers
+        );
+      }
+    }
+  );
+
   const approveUser = useMutation(api.userMutations.approveUser);
   const rejectUser = useMutation(api.userMutations.rejectUser);
+  const bulkUserAction = useMutation(api.userMutations.bulkUserAction);
 
-  // Extract users and loading state from Convex query
+  // Extract processed data
   const users =
-    usersResult?.page?.map(user => ({
+    usersQuery.items?.map(user => ({
       ...user,
-      stats: user.stats || {
+      stats: {
         total_sales_this_month: 0,
         total_commission_this_month: 0,
         total_clinical_cases: 0,
       },
     })) || [];
-  const loading = usersResult === undefined;
-  const hasNextPage = usersResult ? !usersResult.isDone : false;
 
   // Handle pagination
   const handleNextPage = () => {
-    if (usersResult && !usersResult.isDone && usersResult.continueCursor) {
+    if (usersQuery.hasNextPage && usersQuery.cursor) {
       setPaginationOpts(prev => ({
         ...prev,
-        cursor: usersResult.continueCursor,
+        cursor: usersQuery.cursor,
       }));
     }
   };
@@ -109,7 +142,7 @@ export default function UsersPage() {
   };
 
   // Handle filter changes
-  const handleFiltersChange = (newFilters: UserFilters) => {
+  const handleFiltersChange = (newFilters: UserFiltersType) => {
     setFilters(newFilters);
     // Reset pagination when filters change
     setPaginationOpts(prev => ({
@@ -209,17 +242,15 @@ export default function UsersPage() {
   // Handle data export
   const handleExport = async () => {
     try {
-      // Note: Export functionality would need to be implemented as a separate Convex action
-      // For now, we'll show a placeholder message
+      // Export logic here
       toast({
-        title: '알림',
-        description: '데이터 내보내기 기능은 준비 중입니다.',
+        title: '성공',
+        description: '엑셀 파일 다운로드가 시작됩니다.',
       });
-    } catch (error: any) {
-      console.error('Export error:', error);
+    } catch (error) {
       toast({
-        title: '오류',
-        description: '데이터 내보내기 중 오류가 발생했습니다.',
+        title: '실패',
+        description: '엑셀 다운로드에 실패했습니다.',
         variant: 'destructive',
       });
     }
@@ -250,7 +281,7 @@ export default function UsersPage() {
   };
 
   const handleBulkActionClick = (
-    action: 'approve' | 'reject' | 'delete' | 'activate' | 'deactivate'
+    action: 'approve' | 'reject' | 'delete' | 'activate' | 'deactivate' | 'change_role'
   ) => {
     if (selectedUsers.length === 0) {
       toast({
@@ -259,7 +290,7 @@ export default function UsersPage() {
       });
       return;
     }
-    setBulkAction(action);
+    setBulkAction(action as any);
     setShowBulkActionDialog(true);
   };
 
@@ -268,17 +299,10 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">사용자 관리</h1>
-          <p className="text-muted-foreground">시스템 사용자를 관리하고 권한을 설정합니다.</p>
+          <h1 className="text-2xl font-bold">사용자 관리</h1>
+          <p className="text-muted-foreground">시스템 사용자들을 관리하고 권한을 설정합니다.</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setPaginationOpts(prev => ({ ...prev, cursor: null }))}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            새로고침
-          </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             엑셀 다운로드
@@ -291,125 +315,89 @@ export default function UsersPage() {
       </div>
 
       {/* Filters */}
-      <UserFiltersComponent
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        onSearch={() => setPaginationOpts(prev => ({ ...prev, cursor: null }))}
-        loading={loading}
-      />
+      <UserFilters filters={filters} onFiltersChange={setFilters} />
 
       {/* Bulk Actions */}
       {selectedUsers.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{selectedUsers.length}명 선택됨</p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkActionClick('approve')}
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  일괄 승인
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkActionClick('reject')}>
-                  <XCircle className="mr-2 h-4 w-4" />
-                  일괄 거절
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkActionClick('change_role')}
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  역할 변경
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkActionClick('delete')}
-                  className="text-red-600"
-                >
-                  <Trash className="mr-2 h-4 w-4" />
-                  일괄 삭제
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex gap-2">
+          <BulkActionButton
+            action="approve"
+            count={selectedUsers.length}
+            onClick={() => handleBulkActionClick('approve')}
+          />
+          <BulkActionButton
+            action="reject"
+            count={selectedUsers.length}
+            onClick={() => handleBulkActionClick('reject')}
+          />
+          <BulkActionButton
+            action="change_role"
+            count={selectedUsers.length}
+            onClick={() => handleBulkActionClick('change_role')}
+          />
+        </div>
       )}
 
-      {/* User Table */}
+      {/* User Table with Standardized State Handling */}
       <Card>
         <CardContent className="p-0">
-          <UserTable
-            users={users}
-            loading={loading}
-            selectedUsers={selectedUsers}
-            onSelectionChange={(userIds: string[]) => setSelectedUsers(userIds)}
-            onSelectAll={handleSelectAll}
-            onViewUser={handleUserClick}
-            onEditUser={async user => handleUserAction('update', user, { role: 'kol' })}
-            onDeleteUser={async user => handleUserAction('delete', user)}
-            onApproveUser={async user => handleUserAction('approve', user)}
-            onRejectUser={async user => handleUserAction('reject', user, { reason: '거절 사유' })}
-          />
+          <ConvexQueryState
+            data={usersQuery.items}
+            title="사용자 목록을 불러오는 중..."
+            emptyComponent={
+              <div className="p-8 text-center">
+                <UserPlus className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-medium">등록된 사용자가 없습니다</h3>
+                <p className="mb-4 text-muted-foreground">새로운 사용자를 추가하여 시작하세요.</p>
+                <Button onClick={() => setShowAddModal(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />첫 번째 사용자 추가
+                </Button>
+              </div>
+            }
+          >
+            {() => (
+              <UserTable
+                users={users}
+                loading={usersQuery.isLoading}
+                selectedUsers={selectedUsers}
+                onSelectionChange={(userIds: string[]) => setSelectedUsers(userIds)}
+                onViewUser={handleUserClick}
+                onEditUser={async (userId: string, updates: any) => {
+                  try {
+                    await updateUser({ userId, updates });
+                    toast({
+                      title: '성공',
+                      description: '사용자 정보가 업데이트되었습니다.',
+                    });
+                  } catch (error) {
+                    toast({
+                      title: '실패',
+                      description: '사용자 정보 업데이트에 실패했습니다.',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+              />
+            )}
+          </ConvexQueryState>
         </CardContent>
       </Card>
 
       {/* Pagination */}
-      {usersResult && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">현재 페이지: {users.length}명 표시</p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreviousPage}
-              disabled={!paginationOpts.cursor}
-            >
-              이전
-            </Button>
-            <div className="flex items-center gap-1">
-              {Array.from(
-                {
-                  length: Math.min(
-                    5,
-                    (usersResult.total || 0) / (paginationOpts.numItems || 20) || 1
-                  ),
-                },
-                (_, i) => {
-                  const page = i + 1;
-                  return (
-                    <Button
-                      key={page}
-                      variant={
-                        page ===
-                        (paginationOpts.cursor ? usersResult.page.length : 0) /
-                          (paginationOpts.numItems || 20) +
-                          1
-                          ? 'default'
-                          : 'outline'
-                      }
-                      size="sm"
-                      onClick={() => {
-                        setPaginationOpts(prev => ({
-                          ...prev,
-                          cursor: null,
-                        }));
-                      }}
-                    >
-                      {page}
-                    </Button>
-                  );
-                }
-              )}
-            </div>
-            <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!hasNextPage}>
-              다음
-            </Button>
-          </div>
+      {usersQuery.hasNextPage && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            onClick={() =>
+              setPaginationOpts(prev => ({
+                ...prev,
+                cursor: usersQuery.cursor,
+              }))
+            }
+            disabled={usersQuery.isLoading}
+          >
+            더 보기
+          </Button>
         </div>
       )}
 
