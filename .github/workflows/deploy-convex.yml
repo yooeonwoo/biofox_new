@@ -78,10 +78,8 @@ jobs:
         run: npm ci
         
       - name: 🔍 Validate Convex functions
-        run: npx convex dev --until-success
+        run: npm run test:convex
         working-directory: ./
-        env:
-          CONVEX_DEPLOYMENT: dev:preview-${{ github.run_id }}
           
   # Preview 배포 (PR용)
   deploy-preview:
@@ -108,13 +106,14 @@ jobs:
       - name: 📚 Install dependencies
         run: npm ci
         
-      - name: 🚀 Deploy to Convex Preview
-        id: preview-deploy
-        run: |
-          npx convex deploy --cmd-url-env-var-name DEPLOYMENT_URL
-          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+             - name: 🚀 Deploy to Convex Preview
+         id: preview-deploy
+         run: |
+           npm run deploy:preview
+           echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+         env:
+           CONVEX_PREVIEW_DEPLOYMENT_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+           DEPLOYMENT_URL: ""
           
       - name: 💬 Comment PR with preview URL
         uses: actions/github-script@v7
@@ -160,13 +159,14 @@ jobs:
           # 스테이징 테스트 환경변수
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.STAGING_CONVEX_URL }}
           
-      - name: 🚀 Deploy to Convex Staging
-        id: staging-deploy
-        run: |
-          npx convex deploy --cmd-url-env-var-name DEPLOYMENT_URL
-          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_STAGING_DEPLOY_KEY }}
+             - name: 🚀 Deploy to Convex Staging
+         id: staging-deploy
+         run: |
+           npm run deploy:staging
+           echo "deployment-url=$CONVEX_STAGING_URL" >> $GITHUB_OUTPUT
+         env:
+           CONVEX_STAGING_DEPLOYMENT_KEY: ${{ secrets.CONVEX_STAGING_DEPLOY_KEY }}
+           CONVEX_STAGING_URL: ${{ secrets.CONVEX_STAGING_URL }}
           
       - name: ✅ Verify staging deployment
         run: node scripts/verify-deployment.js
@@ -205,37 +205,15 @@ jobs:
           npm run lint
           npx tsc --noEmit
           
-      - name: 📸 Backup current deployment
-        id: backup
-        run: |
-          CURRENT_DEPLOYMENT=$(npx convex deployments list --format=json | jq -r '.[0].id')
-          echo "backup-deployment-id=$CURRENT_DEPLOYMENT" >> $GITHUB_OUTPUT
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PRODUCTION_DEPLOY_KEY }}
-          
-      - name: 🚀 Deploy to Convex Production
-        id: production-deploy
-        run: |
-          npx convex deploy --cmd-url-env-var-name DEPLOYMENT_URL
-          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PRODUCTION_DEPLOY_KEY }}
-          
-      - name: ✅ Verify production deployment
-        id: verify
-        run: node scripts/verify-deployment.js
-        env:
-          DEPLOYMENT_URL: ${{ steps.production-deploy.outputs.deployment-url }}
-          VERIFICATION_TIMEOUT: 120000
-          
-      - name: 🔄 Rollback on failure
-        if: failure() && steps.verify.conclusion == 'failure'
-        run: |
-          echo "❌ Production deployment verification failed. Rolling back..."
-          npx convex deploy --to ${{ steps.backup.outputs.backup-deployment-id }}
-          exit 1
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PRODUCTION_DEPLOY_KEY }}
+             - name: 🚀 Deploy to Convex Production
+         id: production-deploy
+         run: |
+           npm run deploy
+           echo "deployment-url=$CONVEX_URL" >> $GITHUB_OUTPUT
+         env:
+           CONVEX_DEPLOYMENT_KEY: ${{ secrets.CONVEX_PRODUCTION_DEPLOY_KEY }}
+           CONVEX_URL: ${{ secrets.CONVEX_URL }}
+           NODE_ENV: production
           
   # 배포 알림
   notify-deployment:
