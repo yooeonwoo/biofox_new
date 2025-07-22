@@ -9,6 +9,7 @@
  */
 
 import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server';
+import type * as auth from '../auth.js';
 import type * as orders from '../orders.js';
 import type * as profiles from '../profiles.js';
 
@@ -21,6 +22,7 @@ import type * as profiles from '../profiles.js';
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   orders: typeof orders;
   profiles: typeof profiles;
 }>;

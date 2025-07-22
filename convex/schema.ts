@@ -5,22 +5,35 @@ import { authTables } from '@convex-dev/auth/server';
 export default defineSchema({
   // Convex Auth 시스템 테이블
   ...authTables,
-  // 사용자 프로필 - 핵심 사용자 정보 및 역할 관리
+  // 비즈니스 프로필 - Convex Auth users 테이블과 연결된 비즈니스 로직용 프로필
   profiles: defineTable({
+    userId: v.id('users'), // Convex Auth users 테이블 참조
+    // 기본 정보 (Auth users 테이블에서도 있지만 비즈니스 로직용)
     email: v.string(),
     name: v.string(),
+    display_name: v.optional(v.string()), // 사용자 지정 표시 이름
+    // 역할 및 상태
     role: v.union(v.literal('admin'), v.literal('kol'), v.literal('ol'), v.literal('shop_owner')),
     status: v.union(v.literal('pending'), v.literal('approved'), v.literal('rejected')),
+    // 매장 정보
     shop_name: v.string(),
     region: v.optional(v.string()),
     naver_place_link: v.optional(v.string()),
+    // 승인 관리
     approved_at: v.optional(v.number()),
     approved_by: v.optional(v.id('profiles')),
+    // 수수료 및 관리
     commission_rate: v.optional(v.number()),
     total_subordinates: v.optional(v.number()),
     active_subordinates: v.optional(v.number()),
+    // 프로필 관리 정보
+    created_at: v.number(),
+    last_active: v.optional(v.number()),
+    profile_image_url: v.optional(v.string()),
+    bio: v.optional(v.string()),
     metadata: v.optional(v.any()),
   })
+    .index('by_userId', ['userId']) // Auth users 테이블과의 연결
     .index('by_email', ['email'])
     .index('by_role', ['role'])
     .index('by_status', ['status']),
