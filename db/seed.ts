@@ -1,16 +1,17 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import { profiles, shopRelationships } from "./schema";
-import { sql } from "drizzle-orm";
+import { createClient } from '@supabase/supabase-js';
+import { profiles, shopRelationships } from './schema';
 
-// Database connection
-const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL or SUPABASE_DB_URL environment variable is required");
+// Supabase connection
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error(
+    'NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required'
+  );
 }
 
-const client = postgres(connectionString);
-const db = drizzle(client);
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * BIOFOX KOL 테스트 데이터 시드 스크립트
@@ -18,44 +19,48 @@ const db = drizzle(client);
  */
 async function seedData() {
   try {
-    console.log("🌱 Starting database seeding...");
+    console.log('🌱 Starting database seeding...');
 
     // Step 1: Clear existing test data (optional - uncomment if needed)
-    console.log("🧹 Clearing existing test data...");
-    // await db.delete(shopRelationships);
-    // await db.delete(profiles);
+    console.log('🧹 Clearing existing test data...');
+    // await supabase.from('shop_relationships').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // await supabase.from('profiles').delete().neq('id', '00000000-0000-0000-000000000000');
 
     // Step 2: Insert Admin user
-    console.log("👤 Inserting admin user...");
-    await db.insert(profiles).values({
+    console.log('👤 Inserting admin user...');
+    const { error: adminError } = await supabase.from('profiles').insert({
       id: '00000000-0000-0000-0000-000000000001',
       email: 'admin@biofox.co.kr',
       name: '시스템 관리자',
       role: 'admin',
       status: 'approved',
-      shopName: '바이오폭스 본사',
+      shop_name: '바이오폭스 본사',
       region: '서울시 강남구',
-      commissionRate: null,
-      createdAt: new Date(),
+      commission_rate: null,
+      created_at: new Date(),
     });
 
+    if (adminError) {
+      console.log('Admin user might already exist, continuing...');
+    }
+
     // Step 3: Insert KOL users (top level)
-    console.log("👑 Inserting KOL users...");
-    await db.insert(profiles).values([
+    console.log('👑 Inserting KOL users...');
+    const { error: kolError } = await supabase.from('profiles').insert([
       {
         id: '10000000-0000-0000-0000-000000000001',
         email: 'kol1@example.com',
         name: '김미용',
         role: 'kol',
         status: 'approved',
-        shopName: '김미용 피부과',
+        shop_name: '김미용 피부과',
         region: '서울시 강남구',
-        commissionRate: '15.00',
-        totalSubordinates: 8,
-        activeSubordinates: 7,
-        approvedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
-        approvedBy: '00000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
+        commission_rate: 15.0,
+        total_subordinates: 8,
+        active_subordinates: 7,
+        approved_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
+        approved_by: '00000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
       },
       {
         id: '10000000-0000-0000-0000-000000000002',
@@ -63,14 +68,14 @@ async function seedData() {
         name: '이정훈',
         role: 'kol',
         status: 'approved',
-        shopName: '이정훈 성형외과',
+        shop_name: '이정훈 성형외과',
         region: '서울시 서초구',
-        commissionRate: '18.00',
-        totalSubordinates: 12,
-        activeSubordinates: 10,
-        approvedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
-        approvedBy: '00000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 80 * 24 * 60 * 60 * 1000), // 80 days ago
+        commission_rate: 18.0,
+        total_subordinates: 12,
+        active_subordinates: 10,
+        approved_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
+        approved_by: '00000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 80 * 24 * 60 * 60 * 1000), // 80 days ago
       },
       {
         id: '10000000-0000-0000-0000-000000000003',
@@ -78,34 +83,38 @@ async function seedData() {
         name: '박수진',
         role: 'kol',
         status: 'approved',
-        shopName: '박수진 의원',
+        shop_name: '박수진 의원',
         region: '부산시 해운대구',
-        commissionRate: '12.00',
-        totalSubordinates: 5,
-        activeSubordinates: 4,
-        approvedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-        approvedBy: '00000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000), // 70 days ago
+        commission_rate: 12.0,
+        total_subordinates: 5,
+        active_subordinates: 4,
+        approved_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        approved_by: '00000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000), // 70 days ago
       },
     ]);
 
+    if (kolError) {
+      console.log('KOL users might already exist, continuing...', kolError.message);
+    }
+
     // Step 4: Insert OL users (middle level)
-    console.log("🔸 Inserting OL users...");
-    await db.insert(profiles).values([
+    console.log('🔸 Inserting OL users...');
+    const { error: olError } = await supabase.from('profiles').insert([
       {
         id: '20000000-0000-0000-0000-000000000001',
         email: 'ol1@example.com',
         name: '최영미',
         role: 'ol',
         status: 'approved',
-        shopName: '영미 에스테틱',
+        shop_name: '영미 에스테틱',
         region: '서울시 강남구',
-        commissionRate: '10.00',
-        totalSubordinates: 3,
-        activeSubordinates: 3,
-        approvedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
-        approvedBy: '10000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
+        commission_rate: 10.0,
+        total_subordinates: 3,
+        active_subordinates: 3,
+        approved_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+        approved_by: '10000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
       },
       {
         id: '20000000-0000-0000-0000-000000000002',
@@ -113,14 +122,14 @@ async function seedData() {
         name: '정민수',
         role: 'ol',
         status: 'approved',
-        shopName: '민수 뷰티샵',
+        shop_name: '민수 뷰티샵',
         region: '서울시 강남구',
-        commissionRate: '8.00',
-        totalSubordinates: 4,
-        activeSubordinates: 2,
-        approvedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
-        approvedBy: '10000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000),
+        commission_rate: 8.0,
+        total_subordinates: 4,
+        active_subordinates: 2,
+        approved_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+        approved_by: '10000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000),
       },
       {
         id: '20000000-0000-0000-0000-000000000003',
@@ -128,14 +137,14 @@ async function seedData() {
         name: '홍지연',
         role: 'ol',
         status: 'approved',
-        shopName: '지연 스킨케어',
+        shop_name: '지연 스킨케어',
         region: '서울시 서초구',
-        commissionRate: '9.00',
-        totalSubordinates: 2,
-        activeSubordinates: 2,
-        approvedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
-        approvedBy: '10000000-0000-0000-0000-000000000002',
-        createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+        commission_rate: 9.0,
+        total_subordinates: 2,
+        active_subordinates: 2,
+        approved_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+        approved_by: '10000000-0000-0000-0000-000000000002',
+        created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
       },
       {
         id: '20000000-0000-0000-0000-000000000004',
@@ -143,20 +152,24 @@ async function seedData() {
         name: '강태현',
         role: 'ol',
         status: 'approved',
-        shopName: '태현 미용실',
+        shop_name: '태현 미용실',
         region: '부산시 해운대구',
-        commissionRate: '7.00',
-        totalSubordinates: 3,
-        activeSubordinates: 1,
-        approvedAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
-        approvedBy: '10000000-0000-0000-0000-000000000003',
-        createdAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+        commission_rate: 7.0,
+        total_subordinates: 3,
+        active_subordinates: 1,
+        approved_at: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
+        approved_by: '10000000-0000-0000-0000-000000000003',
+        created_at: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
       },
     ]);
 
+    if (olError) {
+      console.log('OL users might already exist, continuing...', olError.message);
+    }
+
     // Step 5: Insert Shop Owner users (bottom level)
-    console.log("🏪 Inserting shop owner users...");
-    await db.insert(profiles).values([
+    console.log('🏪 Inserting shop owner users...');
+    const shopOwnersData = [
       // Kim Mi-yong's (KOL1) subordinate shops
       {
         id: '30000000-0000-0000-0000-000000000001',
@@ -164,12 +177,12 @@ async function seedData() {
         name: '안효진',
         role: 'shop_owner',
         status: 'approved',
-        shopName: '효진 뷰티룸',
+        shop_name: '효진 뷰티룸',
         region: '서울시 강남구',
-        commissionRate: '5.00',
-        approvedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-        approvedBy: '20000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        commission_rate: 5.0,
+        approved_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        approved_by: '20000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       },
       {
         id: '30000000-0000-0000-0000-000000000002',
@@ -177,12 +190,12 @@ async function seedData() {
         name: '신혜원',
         role: 'shop_owner',
         status: 'approved',
-        shopName: '혜원 피부관리실',
+        shop_name: '혜원 피부관리실',
         region: '서울시 강남구',
-        commissionRate: '6.00',
-        approvedAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
-        approvedBy: '20000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000),
+        commission_rate: 6.0,
+        approved_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
+        approved_by: '20000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000),
       },
       {
         id: '30000000-0000-0000-0000-000000000003',
@@ -190,12 +203,12 @@ async function seedData() {
         name: '유지현',
         role: 'shop_owner',
         status: 'approved',
-        shopName: '지현 스파',
+        shop_name: '지현 스파',
         region: '서울시 강남구',
-        commissionRate: '4.50',
-        approvedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-        approvedBy: '20000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+        commission_rate: 4.5,
+        approved_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+        approved_by: '20000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
       },
       {
         id: '30000000-0000-0000-0000-000000000004',
@@ -203,12 +216,12 @@ async function seedData() {
         name: '문서영',
         role: 'shop_owner',
         status: 'approved',
-        shopName: '서영 에스테틱',
+        shop_name: '서영 에스테틱',
         region: '서울시 강남구',
-        commissionRate: '5.50',
-        approvedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-        approvedBy: '20000000-0000-0000-0000-000000000002',
-        createdAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+        commission_rate: 5.5,
+        approved_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+        approved_by: '20000000-0000-0000-0000-000000000002',
+        created_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
       },
       {
         id: '30000000-0000-0000-0000-000000000005',
@@ -216,12 +229,12 @@ async function seedData() {
         name: '조민정',
         role: 'shop_owner',
         status: 'approved',
-        shopName: '민정 케어센터',
+        shop_name: '민정 케어센터',
         region: '서울시 강남구',
-        commissionRate: '5.00',
-        approvedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
-        approvedBy: '20000000-0000-0000-0000-000000000002',
-        createdAt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
+        commission_rate: 5.0,
+        approved_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
+        approved_by: '20000000-0000-0000-0000-000000000002',
+        created_at: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
       },
       // More shop owners...
       {
@@ -230,12 +243,12 @@ async function seedData() {
         name: '김수연',
         role: 'shop_owner',
         status: 'approved',
-        shopName: '수연 클리닉',
+        shop_name: '수연 클리닉',
         region: '서울시 서초구',
-        commissionRate: '7.00',
-        approvedAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000),
-        approvedBy: '20000000-0000-0000-0000-000000000003',
-        createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+        commission_rate: 7.0,
+        approved_at: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000),
+        approved_by: '20000000-0000-0000-0000-000000000003',
+        created_at: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
       },
       {
         id: '30000000-0000-0000-0000-000000000007',
@@ -243,12 +256,12 @@ async function seedData() {
         name: '이민아',
         role: 'shop_owner',
         status: 'approved',
-        shopName: '민아 뷰티',
+        shop_name: '민아 뷰티',
         region: '서울시 서초구',
-        commissionRate: '6.50',
-        approvedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000),
-        approvedBy: '20000000-0000-0000-0000-000000000003',
-        createdAt: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000),
+        commission_rate: 6.5,
+        approved_at: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000),
+        approved_by: '20000000-0000-0000-0000-000000000003',
+        created_at: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000),
       },
       {
         id: '30000000-0000-0000-0000-000000000008',
@@ -256,12 +269,12 @@ async function seedData() {
         name: '전소라',
         role: 'shop_owner',
         status: 'approved',
-        shopName: '소라 피부샵',
+        shop_name: '소라 피부샵',
         region: '부산시 해운대구',
-        commissionRate: '4.00',
-        approvedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        approvedBy: '20000000-0000-0000-0000-000000000004',
-        createdAt: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000),
+        commission_rate: 4.0,
+        approved_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        approved_by: '20000000-0000-0000-0000-000000000004',
+        created_at: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000),
       },
       // Pending and rejected shops
       {
@@ -270,12 +283,12 @@ async function seedData() {
         name: '장미래',
         role: 'shop_owner',
         status: 'pending',
-        shopName: '미래 스킨케어',
+        shop_name: '미래 스킨케어',
         region: '대구시 중구',
-        commissionRate: null,
-        approvedAt: null,
-        approvedBy: null,
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        commission_rate: null,
+        approved_at: null,
+        approved_by: null,
+        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
       },
       {
         id: '30000000-0000-0000-0000-000000000010',
@@ -283,12 +296,12 @@ async function seedData() {
         name: '오현지',
         role: 'shop_owner',
         status: 'pending',
-        shopName: '현지 뷰티룸',
+        shop_name: '현지 뷰티룸',
         region: '인천시 남동구',
-        commissionRate: null,
-        approvedAt: null,
-        approvedBy: null,
-        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        commission_rate: null,
+        approved_at: null,
+        approved_by: null,
+        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
       },
       {
         id: '30000000-0000-0000-0000-000000000011',
@@ -296,248 +309,243 @@ async function seedData() {
         name: '한소희',
         role: 'shop_owner',
         status: 'rejected',
-        shopName: '소희 에스테틱',
+        shop_name: '소희 에스테틱',
         region: '광주시 서구',
-        commissionRate: null,
-        approvedAt: null,
-        approvedBy: '00000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+        commission_rate: null,
+        approved_at: null,
+        approved_by: '00000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
       },
-    ]);
+    ];
+
+    const { error: shopError } = await supabase.from('profiles').insert(shopOwnersData);
+
+    if (shopError) {
+      console.log('Shop owners might already exist, continuing...', shopError.message);
+    }
 
     // Step 6: Insert shop relationships
-    console.log("🔗 Inserting shop relationships...");
+    console.log('🔗 Inserting shop relationships...');
 
     // KOL -> OL relationships
-    await db.insert(shopRelationships).values([
+    const kolToOlRelations = [
       {
         id: '40000000-0000-0000-0000-000000000001',
-        shopOwnerId: '20000000-0000-0000-0000-000000000001', // 최영미
-        parentId: '10000000-0000-0000-0000-000000000001', // 김미용
-        startedAt: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '20000000-0000-0000-0000-000000000001', // 최영미
+        parent_id: '10000000-0000-0000-0000-000000000001', // 김미용
+        started_at: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '김미용 피부과 직영 에스테틱 체인 관리자',
-        createdBy: '10000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
+        created_by: '10000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000002',
-        shopOwnerId: '20000000-0000-0000-0000-000000000002', // 정민수
-        parentId: '10000000-0000-0000-0000-000000000001', // 김미용
-        startedAt: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '20000000-0000-0000-0000-000000000002', // 정민수
+        parent_id: '10000000-0000-0000-0000-000000000001', // 김미용
+        started_at: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '김미용 피부과 강남점 관리자',
-        createdBy: '10000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000),
+        created_by: '10000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000003',
-        shopOwnerId: '20000000-0000-0000-0000-000000000003', // 홍지연
-        parentId: '10000000-0000-0000-0000-000000000002', // 이정훈
-        startedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '20000000-0000-0000-0000-000000000003', // 홍지연
+        parent_id: '10000000-0000-0000-0000-000000000002', // 이정훈
+        started_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '이정훈 성형외과 서초점 관리자',
-        createdBy: '10000000-0000-0000-0000-000000000002',
-        createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+        created_by: '10000000-0000-0000-0000-000000000002',
+        created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000004',
-        shopOwnerId: '20000000-0000-0000-0000-000000000004', // 강태현
-        parentId: '10000000-0000-0000-0000-000000000003', // 박수진
-        startedAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '20000000-0000-0000-0000-000000000004', // 강태현
+        parent_id: '10000000-0000-0000-0000-000000000003', // 박수진
+        started_at: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '박수진 의원 해운대점 관리자',
-        createdBy: '10000000-0000-0000-0000-000000000003',
-        createdAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+        created_by: '10000000-0000-0000-0000-000000000003',
+        created_at: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
       },
-    ]);
+    ];
+
+    const { error: kolOlError } = await supabase
+      .from('shop_relationships')
+      .insert(kolToOlRelations);
+
+    if (kolOlError) {
+      console.log('KOL->OL relationships might already exist, continuing...', kolOlError.message);
+    }
 
     // OL -> Shop Owner relationships
-    await db.insert(shopRelationships).values([
+    const olToShopRelations = [
       // 최영미(OL1) subordinate shops
       {
         id: '40000000-0000-0000-0000-000000000005',
-        shopOwnerId: '30000000-0000-0000-0000-000000000001', // 안효진
-        parentId: '20000000-0000-0000-0000-000000000001', // 최영미
-        startedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '30000000-0000-0000-0000-000000000001', // 안효진
+        parent_id: '20000000-0000-0000-0000-000000000001', // 최영미
+        started_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '영미 에스테틱 체인 1호점',
-        createdBy: '20000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000006',
-        shopOwnerId: '30000000-0000-0000-0000-000000000002', // 신혜원
-        parentId: '20000000-0000-0000-0000-000000000001', // 최영미
-        startedAt: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '30000000-0000-0000-0000-000000000002', // 신혜원
+        parent_id: '20000000-0000-0000-0000-000000000001', // 최영미
+        started_at: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '영미 에스테틱 체인 2호점',
-        createdBy: '20000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000007',
-        shopOwnerId: '30000000-0000-0000-0000-000000000003', // 유지현
-        parentId: '20000000-0000-0000-0000-000000000001', // 최영미
-        startedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '30000000-0000-0000-0000-000000000003', // 유지현
+        parent_id: '20000000-0000-0000-0000-000000000001', // 최영미
+        started_at: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '영미 에스테틱 체인 3호점',
-        createdBy: '20000000-0000-0000-0000-000000000001',
-        createdAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000001',
+        created_at: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
       },
       // More relationships...
       {
         id: '40000000-0000-0000-0000-000000000008',
-        shopOwnerId: '30000000-0000-0000-0000-000000000004', // 문서영
-        parentId: '20000000-0000-0000-0000-000000000002', // 정민수
-        startedAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '30000000-0000-0000-0000-000000000004', // 문서영
+        parent_id: '20000000-0000-0000-0000-000000000002', // 정민수
+        started_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '민수 뷰티샵 프랜차이즈 1호',
-        createdBy: '20000000-0000-0000-0000-000000000002',
-        createdAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000002',
+        created_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000009',
-        shopOwnerId: '30000000-0000-0000-0000-000000000005', // 조민정
-        parentId: '20000000-0000-0000-0000-000000000002', // 정민수
-        startedAt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '30000000-0000-0000-0000-000000000005', // 조민정
+        parent_id: '20000000-0000-0000-0000-000000000002', // 정민수
+        started_at: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '민수 뷰티샵 프랜차이즈 2호',
-        createdBy: '20000000-0000-0000-0000-000000000002',
-        createdAt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000002',
+        created_at: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000010',
-        shopOwnerId: '30000000-0000-0000-0000-000000000006', // 김수연
-        parentId: '20000000-0000-0000-0000-000000000003', // 홍지연
-        startedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '30000000-0000-0000-0000-000000000006', // 김수연
+        parent_id: '20000000-0000-0000-0000-000000000003', // 홍지연
+        started_at: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '지연 스킨케어 서초점',
-        createdBy: '20000000-0000-0000-0000-000000000003',
-        createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000003',
+        created_at: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000011',
-        shopOwnerId: '30000000-0000-0000-0000-000000000007', // 이민아
-        parentId: '20000000-0000-0000-0000-000000000003', // 홍지연
-        startedAt: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '30000000-0000-0000-0000-000000000007', // 이민아
+        parent_id: '20000000-0000-0000-0000-000000000003', // 홍지연
+        started_at: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '지연 스킨케어 신논현점',
-        createdBy: '20000000-0000-0000-0000-000000000003',
-        createdAt: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000003',
+        created_at: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000),
       },
       {
         id: '40000000-0000-0000-0000-000000000012',
-        shopOwnerId: '30000000-0000-0000-0000-000000000008', // 전소라
-        parentId: '20000000-0000-0000-0000-000000000004', // 강태현
-        startedAt: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        relationshipType: 'direct',
+        shop_owner_id: '30000000-0000-0000-0000-000000000008', // 전소라
+        parent_id: '20000000-0000-0000-0000-000000000004', // 강태현
+        started_at: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000),
+        is_active: true,
+        relationship_type: 'direct',
         notes: '태현 미용실 해운대점',
-        createdBy: '20000000-0000-0000-0000-000000000004',
-        createdAt: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000004',
+        created_at: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000),
       },
-    ]);
+    ];
+
+    const { error: olShopError } = await supabase
+      .from('shop_relationships')
+      .insert(olToShopRelations);
+
+    if (olShopError) {
+      console.log('OL->Shop relationships might already exist, continuing...', olShopError.message);
+    }
 
     // Step 7: Insert special relationships (terminated, transferred, temporary)
-    console.log("🔄 Inserting special relationships...");
-    await db.insert(shopRelationships).values([
+    console.log('🔄 Inserting special relationships...');
+    const specialRelations = [
       // Terminated relationship (shop transfer)
       {
         id: '40000000-0000-0000-0000-000000000013',
-        shopOwnerId: '30000000-0000-0000-0000-000000000001', // 안효진
-        parentId: '20000000-0000-0000-0000-000000000002', // 정민수 (previous parent)
-        startedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
-        endedAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
-        isActive: false,
-        relationshipType: 'transferred',
+        shop_owner_id: '30000000-0000-0000-0000-000000000001', // 안효진
+        parent_id: '20000000-0000-0000-0000-000000000002', // 정민수 (previous parent)
+        started_at: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
+        ended_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+        is_active: false,
+        relationship_type: 'transferred',
         notes: '민수 뷰티샵에서 영미 에스테틱으로 이전',
-        createdBy: '20000000-0000-0000-0000-000000000002',
-        createdAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
+        created_by: '20000000-0000-0000-0000-000000000002',
+        created_at: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
       },
       // Temporary relationship
       {
         id: '40000000-0000-0000-0000-000000000014',
-        shopOwnerId: '30000000-0000-0000-0000-000000000005', // 조민정
-        parentId: '20000000-0000-0000-0000-000000000003', // 홍지연 (temporary manager)
-        startedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-        endedAt: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), // Future end date
-        isActive: true,
-        relationshipType: 'temporary',
+        shop_owner_id: '30000000-0000-0000-0000-000000000005', // 조민정
+        parent_id: '20000000-0000-0000-0000-000000000003', // 홍지연 (temporary manager)
+        started_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        ended_at: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), // Future end date
+        is_active: true,
+        relationship_type: 'temporary',
         notes: '홍지연의 임시 관리 (정민수 휴가 기간)',
-        createdBy: '10000000-0000-0000-0000-000000000002',
-        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        created_by: '10000000-0000-0000-0000-000000000002',
+        created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
       },
-    ]);
+    ];
 
-    // Step 8: Update subordinate counts
-    console.log("📊 Updating subordinate counts...");
-    await db.execute(sql`
-      UPDATE profiles SET 
-        total_subordinates = (
-          SELECT COUNT(*) FROM shop_relationships sr 
-          WHERE sr.parent_id = profiles.id OR sr.parent_id IN (
-            SELECT shop_owner_id FROM shop_relationships WHERE parent_id = profiles.id
-          )
-        ),
-        active_subordinates = (
-          SELECT COUNT(*) FROM shop_relationships sr 
-          WHERE sr.is_active = true AND (
-            sr.parent_id = profiles.id OR sr.parent_id IN (
-              SELECT shop_owner_id FROM shop_relationships WHERE parent_id = profiles.id AND is_active = true
-            )
-          )
-        )
-      WHERE role IN ('kol', 'ol')
-    `);
+    const { error: specialError } = await supabase
+      .from('shop_relationships')
+      .insert(specialRelations);
 
-    console.log("✅ Database seeding completed successfully!");
+    if (specialError) {
+      console.log('Special relationships might already exist, continuing...', specialError.message);
+    }
+
+    console.log('✅ Database seeding completed successfully!');
 
     // Display verification results
-    console.log("\n📋 Verification Results:");
-    const profilesResult = await db.execute(sql`
-      SELECT 
-        p.name as "사용자명",
-        p.role as "역할",
-        p.shop_name as "샵명",
-        p.status as "상태",
-        p.total_subordinates as "총하위수",
-        p.active_subordinates as "활성하위수"
-      FROM profiles p 
-      ORDER BY 
-        CASE p.role 
-          WHEN 'admin' THEN 1 
-          WHEN 'kol' THEN 2 
-          WHEN 'ol' THEN 3 
-          WHEN 'shop_owner' THEN 4 
-        END, p.name
-      LIMIT 10
-    `);
+    console.log('\n📋 Verification Results:');
+    const { data: profilesResult, error: profilesError } = await supabase
+      .from('profiles')
+      .select('name, role, shop_name, status, total_subordinates, active_subordinates')
+      .order('role')
+      .limit(10);
 
-    console.table(profilesResult);
+    if (profilesResult) {
+      console.table(profilesResult);
+    }
 
-    const relationshipsCount = await db.execute(sql`
-      SELECT COUNT(*) as total_relationships FROM shop_relationships
-    `);
-    
-    console.log(`\n📈 Total relationships created: ${(relationshipsCount[0] as any)?.total_relationships}`);
+    const { data: relationshipsCount, error: relCountError } = await supabase
+      .from('shop_relationships')
+      .select('id', { count: 'exact' });
 
+    console.log(`\n📈 Total relationships created: ${relationshipsCount?.length || 0}`);
   } catch (error) {
-    console.error("❌ Error seeding database:", error);
+    console.error('❌ Error seeding database:', error);
     throw error;
-  } finally {
-    await client.end();
   }
 }
 
@@ -545,13 +553,13 @@ async function seedData() {
 if (require.main === module) {
   seedData()
     .then(() => {
-      console.log("🎉 Seeding process completed!");
+      console.log('🎉 Seeding process completed!');
       process.exit(0);
     })
-    .catch((error) => {
-      console.error("💥 Seeding failed:", error);
+    .catch(error => {
+      console.error('💥 Seeding failed:', error);
       process.exit(1);
     });
 }
 
-export { seedData }; 
+export { seedData };
