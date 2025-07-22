@@ -3,240 +3,578 @@
     "tasks": [
       {
         "id": 1,
-        "title": "Project Repository and Environment Setup",
-        "description": "Finalize the remaining environment setup for the BIOFOX KOL Admin Dashboard monorepo. Complete CI/CD pipeline (GitHub Actions), Husky pre-commit hooks, and Docker Compose for local development. All other core project configurations are already in place.",
-        "status": "done",
-        "dependencies": [],
+        "title": "Setup Project Repository",
+        "description": "Initialize the project repository with necessary configuration files and folder structure.",
+        "details": "Create a new repository or branch for the migration project. Set up the basic folder structure including src/, public/, and config/ directories. Initialize package.json with required dependencies. Configure git hooks and linting rules. Create README.md with project overview and setup instructions.",
+        "testStrategy": "Verify that the repository can be cloned and the project can be built without errors. Ensure all configuration files are properly formatted and valid.",
         "priority": "high",
-        "details": "- Monorepo is already set up with Next.js 15, React 19, TypeScript 5.8, PostgreSQL (via Supabase), ESLint, Prettier, Storybook 8+, and testing tools (Vitest, Playwright, Testing Library).\n- UI stack (Shadcn/ui, TailwindCSS, Radix UI) and development scripts are configured.\n- Remaining setup:\n  - Add and configure GitHub Actions for CI/CD (lint, test, build, deploy as needed).\n  - Integrate Husky for pre-commit hooks (lint, type-check, test).\n  - Create Docker Compose setup for local development (API, DB, Redis if needed).\n- Ensure all new scripts and configs are documented in the repository README.",
-        "testStrategy": "Verify that:\n- GitHub Actions pipeline runs and passes on PRs (lint, type-check, test, build).\n- Husky pre-commit hooks block commits on lint/type errors.\n- All services start and connect correctly via Docker Compose for local development.",
+        "dependencies": [],
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
-            "title": "Configure GitHub Actions CI/CD Pipeline",
-            "description": "Set up GitHub Actions workflows for linting, type-checking, testing, and building the monorepo. Ensure the pipeline runs on PRs and main branch pushes.",
-            "status": "done",
+            "title": "Create New Repository or Branch",
+            "description": "Initialize a new repository or create a dedicated branch for the migration project to ensure isolated and trackable development.",
             "dependencies": [],
-            "details": "<info added on 2025-07-21T09:50:58.185Z>\nGitHub Actions CI/CD pipeline has been fully configured with the following workflows and files:\n\nci.yml – Main CI pipeline (ESLint, TypeScript, Vitest, Playwright, build)\ndeploy.yml – Production deployment workflow (Vercel integration)\ncode-quality.yml – Code quality, security, and performance audits (SonarCloud, Snyk, Lighthouse)\nlighthouserc.json – Lighthouse CI performance thresholds\n.github/README.md – CI/CD setup guide and usage documentation\n\nKey features:\n- Automatic CI runs on PRs and pushes to main/master/develop/xono branches\n- Code quality checks (lint, type-check, test)\n- Automated E2E testing\n- Security vulnerability scanning (npm audit, Snyk)\n- Performance auditing (Lighthouse CI)\n- Automatic production deployment on main branch\n\nAdditional required setup:\n- Configure GitHub Secrets for environment variables (Supabase, Vercel, etc.)[1][2]\n- Set branch protection rules\n- Optionally link SonarCloud/Snyk accounts\n\nCI/CD pipeline setup is complete.\n</info added on 2025-07-21T09:50:58.185Z>",
-            "testStrategy": ""
+            "details": "Use Git to create a new repository or branch. Initialize version control and set up remote origin if applicable.",
+            "status": "done",
+            "testStrategy": "Verify repository or branch creation by cloning and checking commit history."
           },
           {
             "id": 2,
-            "title": "Integrate Husky Pre-commit Hooks",
-            "description": "Add Husky to enforce pre-commit checks for lint, type-check, and tests. Ensure developers cannot commit code that fails these checks.",
+            "title": "Establish Project Folder Structure",
+            "description": "Set up the foundational directory structure including src/, public/, and config/ to organize source code, static assets, and configuration files.",
+            "dependencies": ["1.1"],
+            "details": "Create directories: src/ for source code, public/ for static files, and config/ for configuration. Ensure structure matches project conventions and requirements.[1]",
             "status": "done",
-            "dependencies": [],
-            "details": "<info added on 2025-07-21T09:53:59.187Z>\nHusky pre-commit hooks have been fully configured to enforce code quality and commit standards in the repository. The setup includes installation of husky and lint-staged as dev dependencies, husky initialization to create the .husky directory, and lint-staged rules in package.json for file-type-specific checks. The pre-commit hook is set to run ESLint, Prettier, TypeScript type checks, and tests, while the commit-msg hook enforces conventional commit message formats. Additional scripts for type-check and prepare have been added to package.json.\n\nOn commit, only staged files are checked with ESLint and Prettier, type-checking and tests are run, and commit messages are validated for conventional format. Currently, there are 318 TypeScript errors and some ESLint compatibility issues with the latest Next.js/ESLint versions, which may block commits due to pre-commit hook failures. Further work is needed to resolve TypeScript errors, address ESLint compatibility, and plan a gradual code quality improvement strategy. The base Husky pre-commit hook setup is complete.\n</info added on 2025-07-21T09:53:59.187Z>",
-            "testStrategy": ""
+            "testStrategy": "Check that all required directories exist and are empty or contain placeholder files as needed."
           },
           {
             "id": 3,
-            "title": "Set Up Docker Compose for Local Development",
-            "description": "Create a Docker Compose configuration to run the Next.js app, PostgreSQL (Supabase), and Redis (if required) for local development. Ensure all services are networked and environment variables are managed securely.",
+            "title": "Initialize package.json and Install Dependencies",
+            "description": "Generate a package.json file and install initial dependencies required for the project.",
+            "dependencies": ["1.2"],
+            "details": "Run npm init to create package.json, then install core dependencies (e.g., express, dotenv, etc.) using npm or yarn. Ensure package.json accurately reflects project metadata and dependencies.[1][2][4]",
             "status": "done",
-            "dependencies": [],
-            "details": "<info added on 2025-07-21T09:54:51.002Z>\nDocker Compose setup for local development has been intentionally skipped based on user request. Since the project already uses a cloud-based Supabase database, setting up a local PostgreSQL container is not required at this time. Developers will connect directly to the Supabase cloud instance for development. Docker Compose configuration can be added later if local containers become necessary.\n</info added on 2025-07-21T09:54:51.002Z>",
-            "testStrategy": ""
+            "testStrategy": "Run npm install and verify that node_modules is created and dependencies are listed in package.json."
+          },
+          {
+            "id": 4,
+            "title": "Configure Git Hooks and Linting Rules",
+            "description": "Set up automated code quality checks and pre-commit hooks to enforce coding standards.",
+            "dependencies": ["1.3"],
+            "details": "Install and configure tools like ESLint and Prettier. Set up git hooks using Husky or similar to run linting and formatting checks before commits.",
+            "status": "done",
+            "testStrategy": "Attempt a commit with code that violates linting rules and verify that hooks prevent the commit until issues are resolved."
+          },
+          {
+            "id": 5,
+            "title": "Create README.md with Project Overview and Setup Instructions",
+            "description": "Draft a README.md file that documents the project purpose, structure, and setup steps for new contributors.",
+            "dependencies": ["1.4"],
+            "details": "Include sections for project description, folder structure, installation steps, usage instructions, and contribution guidelines.",
+            "status": "done",
+            "testStrategy": "Review README.md for completeness and clarity. Have a new developer follow the instructions to verify successful setup."
           }
         ]
       },
       {
         "id": 2,
-        "title": "Database Schema & Index Implementation",
-        "description": "The shop_relationships table, indexes, constraints, triggers, and audit fields are already fully implemented in Supabase. Remaining work is to synchronize the local Drizzle ORM schema files with the current Supabase schema, add seed scripts, write DB-level constraint tests, and document the schema.",
-        "status": "done",
-        "dependencies": [
-          1
-        ],
+        "title": "Setup Convex Backend",
+        "description": "Initialize and configure Convex as the backend service for the application.",
+        "details": "Install Convex SDK using npm/yarn. Create convex/ directory with initial schema definitions. Set up authentication configuration. Initialize Convex project with `npx convex init`. Configure environment variables for development and production environments. Create basic data models and schema validation.",
+        "testStrategy": "Verify Convex connection works by running a simple query. Ensure authentication flow is properly configured. Test schema validation with sample data.",
         "priority": "high",
-        "details": "- Update the local Drizzle ORM schema files to exactly match the current Supabase shop_relationships table structure, including all fields, indexes, constraints, and triggers.\n- Write seed scripts to generate representative test data for shop_relationships.\n- Implement DB-level tests to verify all constraints and business rules (e.g., unique active relationship, referential integrity, no self-relationship, valid periods).\n- Document the shop_relationships schema, including field descriptions, constraints, indexes, and business logic enforcement.\n- No further migration or table creation is required; focus is on code-level synchronization and documentation.",
-        "testStrategy": "Verify Drizzle schema matches Supabase via introspection and schema diff tools; run seed scripts and confirm data loads as expected; execute DB-level tests to ensure all constraints and business rules are enforced; review schema documentation for completeness and accuracy.",
+        "dependencies": [1],
+        "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "Update Drizzle ORM schema files to match Supabase shop_relationships table",
-            "description": "Synchronize the local Drizzle schema definition with the current Supabase implementation, including all fields, indexes, constraints, and triggers.",
-            "status": "done",
+            "title": "Install Convex SDK and Dependencies",
+            "description": "Install the Convex SDK and any required dependencies using npm or yarn in the project directory.",
             "dependencies": [],
-            "details": "<info added on 2025-07-21T10:01:30.070Z>\nDrizzle ORM schema files have been fully updated and synchronized with the current Supabase database structure. All tables, enums, constraints, and relationships are now defined according to the latest Supabase implementation. The schema has been migrated from integer-based IDs to UUIDs, with all foreign key relationships and business rules accurately reflected. Additional fields for timestamps, auditing, and metadata have been incorporated, and support for array and JSONB types has been added. All TypeScript errors related to SQL helpers and imports have been resolved. The local Drizzle schema is now fully aligned with Supabase, ensuring consistency across development and production environments.\n</info added on 2025-07-21T10:01:30.070Z>",
-            "testStrategy": ""
+            "details": "Run 'npm install convex' or 'yarn add convex' in the root of your project to add Convex as a dependency. Ensure Node.js and package manager are installed.",
+            "status": "pending",
+            "testStrategy": "Verify that the Convex package appears in package.json and that 'npm install' completes without errors."
           },
           {
             "id": 2,
-            "title": "Write seed scripts for shop_relationships test data",
-            "description": "Create scripts to populate the shop_relationships table with representative test data for development and testing purposes.",
-            "status": "done",
-            "dependencies": [],
-            "details": "<info added on 2025-07-21T10:05:14.117Z>\nTest data seed scripts have been fully implemented, providing both comprehensive SQL-based and type-safe TypeScript-based seeding for the shop_relationships table. Scripts are located at db/migrations/seed-test-data.sql (SQL) and db/seed.ts (TypeScript with Drizzle ORM). New npm scripts db:seed and db:seed-sql have been added for easy execution. The seeded dataset includes 1 admin, 3 KOLs, 4 OLs, 8 approved shop owners, 3 additional shop users in pending/rejected states, 14 hierarchical relationships (KOL→OL, OL→Shop Owner), and special relationship patterns (ended, transferred, temporary). Business scenarios covered: normal hierarchy, approval workflow (pending/approved/rejected), relationship history (transferred/temporary), subordinate statistics, and diverse region distribution. Validation queries for hierarchy and relationship integrity are included. Run seeding via npm run db:seed (TypeScript) or npm run db:seed-sql (SQL).\n</info added on 2025-07-21T10:05:14.117Z>",
-            "testStrategy": ""
+            "title": "Initialize Convex Project Structure",
+            "description": "Set up the initial Convex project structure and configuration files.",
+            "dependencies": ["2.1"],
+            "details": "Run 'npx convex init' to initialize the Convex project. This will create the convex/ directory with starter files and configuration.",
+            "status": "pending",
+            "testStrategy": "Check that the convex/ directory and configuration files are created. Confirm that 'npx convex dev' starts the local Convex backend without errors."
           },
           {
             "id": 3,
-            "title": "Implement DB-level tests for constraints and business rules",
-            "description": "Write and execute tests to verify that all database-level constraints and business rules are enforced as expected (e.g., unique active relationship, referential integrity, no self-relationship, valid periods).",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "title": "Define Initial Schema and Data Models",
+            "description": "Create initial schema definitions and basic data models in the convex/ directory.",
+            "dependencies": ["2.2"],
+            "details": "Edit or create schema files in convex/ to define collections and their fields. Implement basic schema validation for each data model.",
+            "status": "pending",
+            "testStrategy": "Validate schema definitions by running Convex and checking for schema errors. Test with sample data to ensure validation works."
           },
           {
             "id": 4,
-            "title": "Document shop_relationships schema",
-            "description": "Produce comprehensive documentation for the shop_relationships schema, including field definitions, constraints, indexes, triggers, and business logic.",
-            "status": "done",
-            "dependencies": [],
-            "details": "",
-            "testStrategy": ""
+            "title": "Configure Authentication",
+            "description": "Set up authentication for the Convex backend, including any required keys or provider integrations.",
+            "dependencies": ["2.2"],
+            "details": "Configure authentication in Convex, such as setting up admin keys or integrating with OAuth providers. Update configuration files as needed.",
+            "status": "pending",
+            "testStrategy": "Test authentication flow by attempting to access protected endpoints and verifying that only authenticated users can proceed."
+          },
+          {
+            "id": 5,
+            "title": "Set Up Environment Variables for Development and Production",
+            "description": "Configure environment variables for both development and production environments to manage backend URLs and secrets.",
+            "dependencies": ["2.2"],
+            "details": "Create and update .env.local and .env.production files with variables like VITE_CONVEX_URL and Convex admin keys. Ensure sensitive data is not committed to version control.",
+            "status": "pending",
+            "testStrategy": "Verify that the application connects to the correct Convex backend in both development and production modes by checking environment-specific behavior."
           }
         ]
       },
       {
         "id": 3,
-        "title": "API Design & Implementation (Relationships CRUD & Tree)",
-        "description": "All required RESTful API endpoints for relationships (list, tree, history, create/update) are fully implemented. Business logic (cycle prevention, role validation, audit logging) is robustly enforced in the service layer. No further implementation is needed.",
-        "status": "done",
-        "dependencies": [
-          2
-        ],
+        "title": "Implement User Authentication",
+        "description": "Set up user authentication system using Convex and integrate with the frontend.",
+        "details": "Configure Convex auth provider (likely OAuth with Google, GitHub, etc.). Create authentication hooks for React frontend. Implement login, logout, and session management functionality. Set up protected routes and authorization checks. Create user profile data model in Convex.",
+        "testStrategy": "Test user registration, login, and logout flows. Verify session persistence works correctly. Test access control for protected routes. Ensure user data is properly stored and retrieved from Convex.",
         "priority": "high",
-        "details": "- Express 4+ with OpenAPI 3.1 spec is used for endpoint documentation.\n- Endpoints implemented: GET /api/relationships, GET /api/relationships/tree, GET /api/relationships/history, POST /api/relationships.\n- Request validation is handled via Zod or Joi.\n- Middleware for admin authentication/authorization (JWT) is in place.\n- Business rules enforced: cycle/self-reference prevention, role checks, automatic closure of existing relationships.\n- Redis (v7+) is integrated for caching tree data.\n- PostgreSQL CTEs are used for efficient tree queries.\n- All changes are logged to an audit_log table, tracking created_by.\n- Filtering, pagination, and profile JOINs are supported where appropriate.\n- Tree endpoint supports recursive hierarchy, depth limiting, and sales statistics.",
-        "testStrategy": "All endpoints are covered by unit and integration tests using Jest or Vitest. Tests verify business rule enforcement, error handling, authentication, and audit logging. Pagination, filtering, and tree depth/statistics are also tested.",
-        "subtasks": []
+        "dependencies": [2],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure Convex Authentication Provider",
+            "description": "Set up Convex Auth in the backend, enabling OAuth providers such as Google and GitHub.",
+            "dependencies": [],
+            "details": "Install Convex Auth, configure supported authentication methods (e.g., OAuth with Google, GitHub) in the Convex backend, and ensure environment variables are set for provider credentials.",
+            "status": "pending",
+            "testStrategy": "Verify that authentication endpoints are available and OAuth flows initiate correctly for each provider."
+          },
+          {
+            "id": 2,
+            "title": "Create User Profile Data Model in Convex",
+            "description": "Design and implement a user profile schema in Convex to store authenticated user data.",
+            "dependencies": ["3.1"],
+            "details": "Define a Convex schema for user profiles, including fields for user ID, email, display name, and any additional metadata required by the application.",
+            "status": "pending",
+            "testStrategy": "Test creation and retrieval of user profiles upon successful authentication; ensure data is stored and queried correctly."
+          },
+          {
+            "id": 3,
+            "title": "Develop Authentication Hooks for React Frontend",
+            "description": "Implement reusable React hooks to manage authentication state and expose login, logout, and session management functionality.",
+            "dependencies": ["3.1"],
+            "details": "Create hooks (e.g., useAuth) that interact with Convex Auth, handle login/logout actions, and provide session information to components.",
+            "status": "pending",
+            "testStrategy": "Test login and logout flows in the UI; verify session state updates and persists across page reloads."
+          },
+          {
+            "id": 4,
+            "title": "Integrate Protected Routes and Authorization Checks",
+            "description": "Implement route protection and authorization logic in the frontend to restrict access to authenticated users.",
+            "dependencies": ["3.3"],
+            "details": "Set up route guards or higher-order components to check authentication state before rendering protected pages; enforce authorization rules based on user roles or permissions if needed.",
+            "status": "pending",
+            "testStrategy": "Attempt to access protected routes as unauthenticated and authenticated users; verify correct redirection and access control."
+          },
+          {
+            "id": 5,
+            "title": "Synchronize User Session and Profile Data",
+            "description": "Ensure frontend session state is synchronized with Convex user profile data and update UI accordingly.",
+            "dependencies": ["3.2", "3.3"],
+            "details": "Fetch user profile data after authentication, update React state, and display user information in the UI; handle session expiration and profile updates.",
+            "status": "pending",
+            "testStrategy": "Test that user profile data loads correctly after login, updates on profile changes, and clears on logout."
+          }
+        ]
       },
       {
         "id": 4,
-        "title": "Frontend Component: RelationshipTreeView",
-        "description": "Build a virtualized, collapsible tree view with drag-and-drop for relationship management. Integrate real-time search, status, and performance display per node.",
-        "details": "- Use React 18+ with react-dnd (v16+) for drag-and-drop.\n- Use react-window (v1.8+) or react-virtualized for large tree virtualization.\n- Fetch tree data via API with lazy loading (on expand).\n- Display node status (active/inactive), role-based color, and monthly sales (from API).\n- Implement search with debounce and highlight.\n- Provide drag feedback and error handling UI.\n- Ensure accessibility (ARIA roles, keyboard navigation).",
-        "testStrategy": "Write component/unit tests with React Testing Library; perform manual drag-and-drop and search scenarios; test with large datasets for performance.",
+        "title": "Migrate Database Schema",
+        "description": "Design and implement the database schema in Convex based on existing data models.",
+        "details": "Analyze existing database schema. Create corresponding Convex schema definitions. Implement data validation rules. Set up indexes for efficient queries. Define relationships between data models. Create migration scripts if needed to transfer existing data to Convex.",
+        "testStrategy": "Validate schema definitions against sample data. Test CRUD operations on all data models. Verify indexes are working correctly by analyzing query performance. Test data integrity constraints.",
         "priority": "high",
-        "dependencies": [
-          3
-        ],
-        "status": "in-progress",
-        "subtasks": []
+        "dependencies": [2],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Analyze Existing Database Schema",
+            "description": "Review and document the current database schema, including tables, fields, data types, indexes, and relationships.",
+            "dependencies": [],
+            "details": "Gather all existing data models and schema definitions from the current database. Identify all entities, their attributes, and how they interrelate. Note any custom constraints or validation rules in use.",
+            "status": "pending",
+            "testStrategy": "Cross-check documented schema against the live database to ensure completeness and accuracy."
+          },
+          {
+            "id": 2,
+            "title": "Design Convex Schema Definitions",
+            "description": "Translate the existing schema into Convex schema definitions, adapting data types, relationships, and constraints as needed.",
+            "dependencies": ["4.1"],
+            "details": "Create Convex schema files that mirror the structure and relationships of the original database. Adjust for any differences in supported data types or modeling approaches between the original system and Convex.",
+            "status": "pending",
+            "testStrategy": "Validate Convex schema definitions by running schema checks and ensuring compatibility with sample data."
+          },
+          {
+            "id": 3,
+            "title": "Implement Data Validation Rules and Indexes",
+            "description": "Define and implement data validation rules and indexes in Convex to ensure data integrity and efficient querying.",
+            "dependencies": ["4.2"],
+            "details": "Add validation logic to Convex schema definitions to enforce required fields, data formats, and referential integrity. Set up indexes on frequently queried fields to optimize performance.",
+            "status": "pending",
+            "testStrategy": "Test validation rules with sample data and verify that indexes improve query performance using Convex's query analysis tools."
+          },
+          {
+            "id": 4,
+            "title": "Define Relationships Between Data Models",
+            "description": "Establish and document relationships (e.g., one-to-many, many-to-many) between data models in the Convex schema.",
+            "dependencies": ["4.3"],
+            "details": "Use Convex's schema capabilities to represent relationships, ensuring that foreign keys or reference fields are correctly set up. Document relationship mappings for future reference.",
+            "status": "pending",
+            "testStrategy": "Test CRUD operations involving related models to confirm relationships are enforced and navigable as expected."
+          },
+          {
+            "id": 5,
+            "title": "Create and Test Migration Scripts",
+            "description": "Develop scripts to migrate existing data to Convex, handling data transformation and ensuring consistency.",
+            "dependencies": ["4.4"],
+            "details": "Write migration scripts that extract data from the current database, transform it to fit the Convex schema, and import it into Convex. Include error handling, logging, and the ability to resume or roll back if needed.",
+            "status": "pending",
+            "testStrategy": "Run migration scripts on a sample dataset, verify data integrity and completeness in Convex, and test rollback procedures in case of failure."
+          }
+        ]
       },
       {
         "id": 5,
-        "title": "Frontend Component: RelationshipChangeModal",
-        "description": "Implement modal for changing parent relationship. Support parent search, reason input, current relationship display, and validation (cycle/self-reference prevention).",
-        "details": "- Use React 18+ with MUI or Ant Design modal/dialog.\n- Integrate async search for parent selection (debounced API calls).\n- Show current parent and relationship info.\n- Validate input (required reason, prevent cycles/self-reference via API pre-check).\n- Display error messages and allow cancel/undo.\n- Ensure accessibility and responsive design.",
-        "testStrategy": "Component/unit tests for modal logic; integration tests for parent search and validation; manual tests for error scenarios.",
-        "priority": "high",
-        "dependencies": [
-          4
-        ],
+        "title": "Implement API Endpoints",
+        "description": "Create Convex query and mutation functions to replace existing API endpoints.",
+        "details": "Identify all required API endpoints from existing application. Implement corresponding Convex query functions for data retrieval. Create mutation functions for data modification operations. Add proper error handling and validation. Implement pagination for list endpoints if needed. Document all API functions.",
+        "testStrategy": "Test each API endpoint with valid and invalid inputs. Verify error handling works correctly. Test performance with large datasets. Ensure all business logic is correctly implemented.",
+        "priority": "medium",
+        "dependencies": [4],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Identify and Catalog Existing API Endpoints",
+            "description": "Review the current application to list all API endpoints, including their methods, input/output schemas, and business logic requirements.",
+            "dependencies": [],
+            "details": "Analyze the existing backend codebase and documentation to extract a comprehensive inventory of all endpoints that need to be replaced with Convex functions.",
+            "status": "pending",
+            "testStrategy": "Cross-reference the compiled list with application usage and documentation to ensure completeness."
+          },
+          {
+            "id": 2,
+            "title": "Implement Convex Query Functions for Data Retrieval",
+            "description": "Develop Convex query functions to handle all data retrieval operations corresponding to the identified endpoints.",
+            "dependencies": ["5.1"],
+            "details": "For each read/list endpoint, create a Convex query function that matches the required input parameters and output structure. Ensure efficient data access and consider adding indexes as needed.",
+            "status": "pending",
+            "testStrategy": "Test each query with valid and invalid parameters, and verify that the returned data matches expectations."
+          },
+          {
+            "id": 3,
+            "title": "Implement Convex Mutation Functions for Data Modification",
+            "description": "Create Convex mutation functions to handle create, update, and delete operations for all relevant endpoints.",
+            "dependencies": ["5.1"],
+            "details": "For each write endpoint, implement a mutation function that performs the necessary data modifications, ensuring transactional integrity and adherence to business rules.",
+            "status": "pending",
+            "testStrategy": "Test mutations with various input scenarios, including edge cases and invalid data, to confirm correct behavior and data consistency."
+          },
+          {
+            "id": 4,
+            "title": "Add Error Handling, Validation, and Pagination",
+            "description": "Integrate robust error handling, input validation, and pagination logic into all query and mutation functions as appropriate.",
+            "dependencies": ["5.2", "5.3"],
+            "details": "Implement input validation using Convex's type system, add try/catch blocks or equivalent error handling, and ensure paginated responses for list endpoints where necessary.",
+            "status": "pending",
+            "testStrategy": "Deliberately trigger errors and invalid inputs to verify error responses. Test pagination with large datasets to ensure correct slicing and navigation."
+          },
+          {
+            "id": 5,
+            "title": "Document and Review All API Functions",
+            "description": "Write clear documentation for each Convex query and mutation function, including usage examples, input/output schemas, and error cases.",
+            "dependencies": ["5.4"],
+            "details": "Prepare developer-facing documentation and inline code comments for all implemented API functions. Conduct a peer review to ensure clarity and completeness.",
+            "status": "pending",
+            "testStrategy": "Have another developer follow the documentation to implement a sample integration, and gather feedback for improvements."
+          }
+        ]
       },
       {
         "id": 6,
-        "title": "Frontend Component: RelationshipHistoryTable",
-        "description": "Develop paginated, sortable table showing relationship change history, with before/after comparison and reason display.",
-        "details": "- Use React 18+ with MUI DataGrid or Ant Design Table.\n- Fetch paginated history via API.\n- Display columns: timestamp, previous parent, new parent, reason, changed by.\n- Support sorting (by time), filtering (by shop/parent), and pagination.\n- Highlight changes visually.\n- Ensure accessibility and responsive layout.",
-        "testStrategy": "Component/unit tests for table rendering; integration tests for API pagination/sorting; manual tests for large datasets.",
+        "title": "Update Frontend Integration",
+        "description": "Refactor frontend code to use Convex hooks and client instead of previous API calls.",
+        "details": "Install Convex React hooks. Replace existing API calls with Convex useQuery and useMutation hooks. Update data fetching logic to work with Convex's real-time capabilities. Implement optimistic UI updates where appropriate. Handle loading and error states consistently.",
+        "testStrategy": "Test UI components with mocked Convex data. Verify real-time updates work correctly. Test error handling and loading states. Ensure all frontend features work with the new Convex backend.",
         "priority": "medium",
-        "dependencies": [
-          3
-        ],
+        "dependencies": [3, 5],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install and Configure Convex React Client",
+            "description": "Set up the Convex React client and provider in the frontend application to enable use of Convex hooks.",
+            "dependencies": [],
+            "details": "Install the Convex package, initialize the Convex project, and wrap the app with ConvexProvider using ConvexReactClient. Ensure configuration files like convex.json and .env.local are set up correctly.",
+            "status": "pending",
+            "testStrategy": "Verify the app builds and runs without errors. Confirm ConvexProvider is accessible throughout the component tree.[1][4]"
+          },
+          {
+            "id": 2,
+            "title": "Replace Existing API Calls with Convex useQuery and useMutation Hooks",
+            "description": "Refactor all frontend data fetching and mutation logic to use Convex's useQuery and useMutation hooks instead of previous API calls.",
+            "dependencies": ["6.1"],
+            "details": "Identify all locations where API calls are made. Replace them with useQuery for data fetching and useMutation for data updates, using the generated api object for type safety.",
+            "status": "pending",
+            "testStrategy": "Test each refactored component to ensure data loads and updates correctly using Convex hooks.[2][4]"
+          },
+          {
+            "id": 3,
+            "title": "Update Data Fetching Logic for Real-time Capabilities",
+            "description": "Modify data fetching logic to leverage Convex's real-time updates, ensuring UI reflects live data changes.",
+            "dependencies": ["6.2"],
+            "details": "Ensure useQuery hooks are used in a way that automatically updates UI when backend data changes. Remove any manual polling or refresh logic.",
+            "status": "pending",
+            "testStrategy": "Simulate backend data changes and verify that the UI updates in real time without manual refresh.[2]"
+          },
+          {
+            "id": 4,
+            "title": "Implement Optimistic UI Updates",
+            "description": "Enhance user experience by implementing optimistic UI updates for relevant mutations.",
+            "dependencies": ["6.3"],
+            "details": "Identify mutations where optimistic updates improve UX. Update components to reflect changes immediately, rolling back if the mutation fails.",
+            "status": "pending",
+            "testStrategy": "Test UI responsiveness during mutations and verify rollback occurs on errors."
+          },
+          {
+            "id": 5,
+            "title": "Standardize Loading and Error State Handling",
+            "description": "Ensure all components handle loading and error states consistently when using Convex hooks.",
+            "dependencies": ["6.4"],
+            "details": "Update components to display appropriate loading indicators and error messages based on the state returned by useQuery and useMutation hooks.",
+            "status": "pending",
+            "testStrategy": "Test all components for correct loading and error state behavior, including edge cases such as network failures.[2]"
+          }
+        ]
       },
       {
         "id": 7,
-        "title": "Business Rule Enforcement & Validation Layer",
-        "description": "Implement robust business rule enforcement: role validation, cycle/self-reference prevention, single active relationship, admin-only changes, and audit logging.",
-        "details": "- Centralize business logic in service layer (backend).\n- Use graph traversal (DFS/BFS) to detect cycles before relationship changes.\n- Validate roles via user profile lookup (KOL/OL only as parent).\n- Enforce admin-only access via middleware.\n- Log all changes with user, timestamp, and reason.\n- Write reusable validation utilities with unit tests.",
-        "testStrategy": "Unit/integration tests for all business rules; attempt invalid operations and verify rejection; audit log inspection.",
-        "priority": "high",
-        "dependencies": [
-          3
-        ],
+        "title": "Implement Real-time Features",
+        "description": "Leverage Convex's real-time capabilities to enhance the application with live updates.",
+        "details": "Identify features that would benefit from real-time updates. Implement Convex subscriptions for these features. Update UI components to handle real-time data changes. Add visual indicators for real-time updates. Optimize performance for real-time data flow.",
+        "testStrategy": "Test real-time updates with multiple clients. Verify data consistency across clients. Measure performance impact of real-time features. Test behavior when connection is lost and regained.",
+        "priority": "medium",
+        "dependencies": [6],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Identify Real-time Candidate Features",
+            "description": "Analyze the application to determine which features would benefit most from real-time updates using Convex.",
+            "dependencies": [],
+            "details": "Review current and planned features to select those where live data synchronization will improve user experience, such as collaborative editing, notifications, or activity feeds.",
+            "status": "pending",
+            "testStrategy": "Document selected features and justify their inclusion based on user impact and technical feasibility."
+          },
+          {
+            "id": 2,
+            "title": "Implement Convex Real-time Subscriptions",
+            "description": "Set up Convex query functions and integrate real-time subscriptions for the identified features.",
+            "dependencies": ["7.1"],
+            "details": "Use Convex's built-in real-time capabilities to subscribe to relevant data changes. Ensure that query functions are properly structured to trigger updates across clients automatically[1][2][3].",
+            "status": "pending",
+            "testStrategy": "Verify that data changes are instantly reflected across multiple clients for each subscribed feature."
+          },
+          {
+            "id": 3,
+            "title": "Update UI Components for Real-time Data",
+            "description": "Modify UI components to consume and react to real-time data updates from Convex.",
+            "dependencies": ["7.2"],
+            "details": "Refactor components to use Convex hooks (e.g., useQuery) and ensure they re-render appropriately when data changes[2][3][4].",
+            "status": "pending",
+            "testStrategy": "Test UI responsiveness and correctness by simulating concurrent data changes from multiple clients."
+          },
+          {
+            "id": 4,
+            "title": "Add Visual Indicators for Live Updates",
+            "description": "Enhance the user interface with visual cues that indicate when real-time updates occur.",
+            "dependencies": ["7.3"],
+            "details": "Implement indicators such as loading spinners, update badges, or animated highlights to inform users of live data changes.",
+            "status": "pending",
+            "testStrategy": "Check that visual indicators appear and behave correctly during real-time data updates and disappear when updates are complete."
+          },
+          {
+            "id": 5,
+            "title": "Optimize and Test Real-time Performance",
+            "description": "Profile and optimize the application's performance for real-time data flow, ensuring scalability and responsiveness.",
+            "dependencies": ["7.4"],
+            "details": "Monitor network and rendering performance, optimize query functions, and minimize unnecessary re-renders. Test with multiple concurrent clients and large data sets.",
+            "status": "pending",
+            "testStrategy": "Measure latency, bandwidth usage, and UI responsiveness under load. Validate data consistency and recovery from connection interruptions."
+          }
+        ]
       },
       {
         "id": 8,
-        "title": "Performance Optimization: Caching & Virtualization",
-        "description": "Optimize API and frontend for large-scale data: Redis caching for tree data, API response optimization, frontend virtualization, and lazy loading.",
-        "details": "- Use Redis (v7+) for caching tree and frequently accessed queries.\n- Implement cache invalidation on relationship changes.\n- Use PostgreSQL CTEs and indexes for efficient queries.\n- Frontend: ensure react-window/react-virtualized is used for large trees.\n- Implement lazy loading of child nodes in tree view.\n- Monitor API response times and optimize as needed.",
-        "testStrategy": "Load test API endpoints (tree, history) with large datasets; measure response times; profile frontend rendering with >10,000 nodes.",
-        "priority": "medium",
-        "dependencies": [
-          4,
-          3
-        ],
+        "title": "Implement Data Migration Script",
+        "description": "Create scripts to migrate existing data from the current database to Convex.",
+        "details": "Analyze current data structure and volume. Create export scripts for current database. Implement import scripts for Convex. Handle data transformation and normalization during migration. Add validation to ensure data integrity. Create rollback mechanism in case of migration failure.",
+        "testStrategy": "Test migration with sample data subset. Verify all data is correctly migrated. Test rollback functionality. Measure migration performance and optimize if needed. Validate data integrity after migration.",
+        "priority": "high",
+        "dependencies": [4],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Analyze Current Data Structure and Volume",
+            "description": "Review the existing database schema and assess the volume and types of data to be migrated to Convex.",
+            "dependencies": [],
+            "details": "Connect to the current database, document all collections/tables, fields, and relationships. Estimate the total data size and identify any special data types or constraints.",
+            "status": "pending",
+            "testStrategy": "Verify that all relevant data structures and volumes are accurately documented by cross-checking with database statistics and sample queries."
+          },
+          {
+            "id": 2,
+            "title": "Develop Data Export Scripts for Current Database",
+            "description": "Create scripts to extract and export data from the current database in a format suitable for migration.",
+            "dependencies": ["8.1"],
+            "details": "Implement export logic using appropriate database clients (e.g., MongoClient for MongoDB). Ensure data is filtered as needed and exported in batches to handle large volumes.",
+            "status": "pending",
+            "testStrategy": "Run export scripts on a subset of data and verify the output files for completeness and correctness."
+          },
+          {
+            "id": 3,
+            "title": "Implement Data Transformation and Normalization",
+            "description": "Transform and normalize exported data to match Convex schema requirements, handling any necessary data cleaning or restructuring.",
+            "dependencies": ["8.2"],
+            "details": "Write transformation scripts to map fields, convert data types, and normalize values as required by the Convex schema. Address any inconsistencies or legacy data issues.",
+            "status": "pending",
+            "testStrategy": "Validate transformed data against Convex schema definitions and run sample imports to ensure compatibility."
+          },
+          {
+            "id": 4,
+            "title": "Create Import Scripts for Convex",
+            "description": "Develop scripts to import the transformed data into Convex, ensuring proper handling of authentication and batch processing.",
+            "dependencies": ["8.3"],
+            "details": "Use Convex client libraries to authenticate and insert data. Implement batching and error handling to manage large imports and partial failures.",
+            "status": "pending",
+            "testStrategy": "Test import scripts with sample data, verify successful insertion, and check for data integrity in Convex."
+          },
+          {
+            "id": 5,
+            "title": "Implement Data Validation and Rollback Mechanism",
+            "description": "Add validation steps to ensure data integrity post-migration and implement a rollback mechanism to restore the previous state in case of migration failure.",
+            "dependencies": ["8.4"],
+            "details": "Validate migrated data by comparing record counts and checksums. Develop scripts or procedures to revert changes if errors are detected during or after migration.",
+            "status": "pending",
+            "testStrategy": "Simulate migration failures and verify that rollback restores the original state. Perform post-migration validation to confirm data integrity."
+          }
+        ]
       },
       {
         "id": 9,
-        "title": "Security & Access Control Implementation",
-        "description": "Implement robust authentication (JWT/OAuth2), admin-only access to relationship management, and secure audit logging. Ensure all endpoints are protected and sensitive actions are logged.",
-        "details": "- Use Passport.js (v0.7+) or NextAuth.js for authentication.\n- Restrict all relationship-changing endpoints to admin users.\n- Store audit logs in a separate, immutable table.\n- Regularly review and test access control policies.\n- Ensure secure handling of tokens and sensitive data.",
-        "testStrategy": "Penetration tests for endpoint access; attempt unauthorized actions; verify audit logs for all changes.",
-        "priority": "high",
-        "dependencies": [
-          3
-        ],
+        "title": "Setup Deployment Pipeline",
+        "description": "Configure CI/CD pipeline for deploying the Convex application.",
+        "details": "Set up GitHub Actions or similar CI/CD tool. Configure build and test automation. Set up Convex deployment process. Create staging and production environments. Implement environment-specific configuration. Add deployment verification tests.",
+        "testStrategy": "Test the entire CI/CD pipeline with a sample change. Verify automatic deployments work correctly. Test rollback functionality. Ensure environment variables are correctly set for each environment.",
+        "priority": "medium",
+        "dependencies": [2, 6],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure CI/CD Tool",
+            "description": "Set up GitHub Actions or a similar CI/CD tool to automate the build, test, and deployment processes for the Convex application.",
+            "dependencies": [],
+            "details": "Create pipeline configuration files in the repository. Define triggers for code commits and pull requests to initiate the pipeline.",
+            "status": "pending",
+            "testStrategy": "Verify that the pipeline is triggered automatically on code changes and that initial jobs execute successfully."
+          },
+          {
+            "id": 2,
+            "title": "Implement Build and Test Automation",
+            "description": "Automate the build process and configure the pipeline to run unit, integration, and end-to-end tests for the Convex application.",
+            "dependencies": ["9.1"],
+            "details": "Add steps to the CI/CD pipeline for compiling code, running static analysis, and executing all relevant test suites.",
+            "status": "pending",
+            "testStrategy": "Ensure all tests run automatically in the pipeline and fail the build if any test fails."
+          },
+          {
+            "id": 3,
+            "title": "Set Up Convex Deployment Process",
+            "description": "Integrate Convex deployment commands into the pipeline to automate backend deployment.",
+            "dependencies": ["9.2"],
+            "details": "Add steps to deploy the Convex backend using Convex CLI commands. Ensure deployment keys and secrets are securely managed.",
+            "status": "pending",
+            "testStrategy": "Deploy to a test environment and verify that the Convex backend is updated and operational."
+          },
+          {
+            "id": 4,
+            "title": "Create Staging and Production Environments",
+            "description": "Establish separate staging and production environments for the Convex application, each with its own configuration.",
+            "dependencies": ["9.3"],
+            "details": "Configure the pipeline to deploy to a staging environment for testing and to production for live releases. Use environment variables and deployment keys to differentiate environments.",
+            "status": "pending",
+            "testStrategy": "Deploy to both environments and confirm that environment-specific settings are applied correctly."
+          },
+          {
+            "id": 5,
+            "title": "Implement Deployment Verification and Rollback",
+            "description": "Add automated deployment verification tests and configure rollback procedures in case of failed deployments.",
+            "dependencies": ["9.4"],
+            "details": "Integrate post-deployment checks to validate successful deployment. Set up rollback steps to revert to the previous version if verification fails.",
+            "status": "pending",
+            "testStrategy": "Test deployment verification with a sample change and simulate a failed deployment to ensure rollback works as expected."
+          }
+        ]
       },
       {
         "id": 10,
-        "title": "Monitoring, Logging, and Metrics Integration",
-        "description": "Integrate monitoring for API performance, error tracking, and usage metrics. Track tree loading time, relationship change success, and user actions.",
-        "details": "- Use Prometheus + Grafana for API metrics (response time, error rate).\n- Integrate Sentry (v7+) for error tracking (frontend/backend).\n- Log key business events (relationship changes, errors) to ELK stack or similar.\n- Expose metrics endpoints for dashboards.\n- Track frontend usage (drag-and-drop success, search latency) via analytics (e.g., PostHog).",
-        "testStrategy": "Simulate errors and slow queries; verify metrics in dashboards; check alerting for failures.",
-        "priority": "medium",
-        "dependencies": [
-          3,
-          4
-        ],
+        "title": "Comprehensive Testing and Documentation",
+        "description": "Create comprehensive tests and documentation for the migrated application.",
+        "details": "Write unit tests for all Convex functions. Create integration tests for key user flows. Document API endpoints and data models. Update user documentation to reflect changes. Create developer onboarding guide for the new architecture. Document known limitations and future improvements.",
+        "testStrategy": "Review all documentation for accuracy and completeness. Verify test coverage meets requirements. Run all tests in CI pipeline. Conduct user acceptance testing with stakeholders.",
+        "priority": "low",
+        "dependencies": [3, 5, 6, 7, 8, 9],
         "status": "pending",
-        "subtasks": []
-      },
-      {
-        "id": 11,
-        "title": "Comprehensive Testing: Unit, Integration, and User Flows",
-        "description": "Develop automated tests for backend (unit/integration), frontend (component/e2e), and full user flows (relationship change, drag-and-drop, history view).",
-        "details": "- Backend: Jest or Vitest for unit/integration tests; use Supertest for API.\n- Frontend: React Testing Library, Cypress for e2e.\n- Cover all business rules, error cases, and edge scenarios.\n- Test with large datasets for performance.\n- Include accessibility tests (axe-core).",
-        "testStrategy": "Run all test suites in CI; require >90% coverage; manual exploratory tests for complex flows.",
-        "priority": "high",
-        "dependencies": [
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "status": "pending",
-        "subtasks": []
-      },
-      {
-        "id": 12,
-        "title": "Documentation & Admin Training Materials",
-        "description": "Prepare comprehensive technical documentation (API, DB schema, business rules), user guides for admins, and onboarding materials. Include OpenAPI docs and UI walkthroughs.",
-        "details": "- Use Swagger/OpenAPI for API docs (auto-generated).\n- Document DB schema, constraints, and business logic.\n- Create admin user guides (with screenshots, video walkthroughs).\n- Maintain README and contribution guidelines.\n- Store docs in repo (Markdown) and publish via Storybook or Docusaurus.",
-        "testStrategy": "Peer review of docs; admin user testing for clarity; verify all endpoints and flows are documented.",
-        "priority": "medium",
-        "dependencies": [
-          4,
-          5,
-          6,
-          7,
-          8,
-          9,
-          11
-        ],
-        "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Write Unit Tests for Convex Functions",
+            "description": "Develop comprehensive unit tests for all Convex query and mutation functions to ensure correctness and reliability.",
+            "dependencies": [],
+            "details": "Identify all Convex functions in the migrated application and create unit tests covering typical, edge, and error cases using the Convex testing framework.",
+            "status": "pending",
+            "testStrategy": "Run all unit tests in the CI pipeline and verify 100% function coverage. Review test results for failures and address any uncovered scenarios."
+          },
+          {
+            "id": 2,
+            "title": "Create Integration Tests for Key User Flows",
+            "description": "Design and implement integration tests that simulate key user flows across the application to validate end-to-end behavior.",
+            "dependencies": ["10.1"],
+            "details": "Map out critical user journeys and interactions. Write integration tests that cover these flows, including authentication, data creation, and updates.",
+            "status": "pending",
+            "testStrategy": "Execute integration tests in staging and CI environments. Confirm that all flows work as expected and that regressions are caught."
+          },
+          {
+            "id": 3,
+            "title": "Document API Endpoints and Data Models",
+            "description": "Produce detailed documentation for all API endpoints and data models used in the migrated application.",
+            "dependencies": ["10.1"],
+            "details": "List all available API endpoints, their parameters, request/response formats, and error codes. Document data models, including field types and relationships.",
+            "status": "pending",
+            "testStrategy": "Review documentation for completeness and accuracy. Validate against actual API behavior and data structures."
+          },
+          {
+            "id": 4,
+            "title": "Update User Documentation",
+            "description": "Revise and expand user-facing documentation to reflect changes introduced by the migration.",
+            "dependencies": ["10.2", "10.3"],
+            "details": "Update guides, FAQs, and help content to match the new application behavior, features, and workflows.",
+            "status": "pending",
+            "testStrategy": "Have stakeholders and end-users review updated documentation for clarity and usability. Incorporate feedback as needed."
+          },
+          {
+            "id": 5,
+            "title": "Create Developer Onboarding Guide and Document Limitations",
+            "description": "Develop a comprehensive onboarding guide for developers and document known limitations and areas for future improvement.",
+            "dependencies": ["10.3"],
+            "details": "Outline setup steps, architecture overview, coding standards, and troubleshooting tips. Clearly state current limitations and planned enhancements.",
+            "status": "pending",
+            "testStrategy": "Solicit feedback from new developers following the guide. Periodically review and update documentation as the project evolves."
+          }
+        ]
       }
     ],
     "metadata": {
-      "created": "2025-07-18T10:54:20.972Z",
-      "updated": "2025-07-21T10:09:07.489Z",
+      "created": "2025-07-22T05:15:56.692Z",
+      "updated": "2025-07-22T05:20:51.010Z",
       "description": "Tasks for master context"
     }
   }

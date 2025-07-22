@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "generatedAt": "2025-07-22T05:16:27.419Z",
+    "tasksAnalyzed": 10,
+    "totalTasks": 10,
+    "analysisCount": 10,
+    "thresholdScore": 6,
+    "projectName": "Taskmaster",
+    "usedResearch": true
+  },
+  "complexityAnalysis": [
+    {
+      "taskId": 1,
+      "taskTitle": "Setup Project Repository",
+      "complexityScore": 4,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the repository setup into subtasks such as: creating the repository/branch, establishing folder structure, initializing package.json and dependencies, configuring git hooks and linting, and drafting the README.md.",
+      "reasoning": "This task is foundational but follows well-established patterns and tools. Complexity is moderate due to the need for correct configuration and automation, but it is not algorithmically complex. Each step is discrete and can be parallelized or assigned to different team members."
+    },
+    {
+      "taskId": 2,
+      "taskTitle": "Setup Convex Backend",
+      "complexityScore": 5,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Expand this task into subtasks: install Convex SDK, create convex/ directory and initial schema, configure authentication, initialize Convex project, set up environment variables, and define basic data models with validation.",
+      "reasoning": "Setting up a backend with a new technology involves several configuration and integration steps. While each step is straightforward, the combination increases complexity, especially with authentication and environment management."
+    },
+    {
+      "taskId": 3,
+      "taskTitle": "Implement User Authentication",
+      "complexityScore": 7,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Decompose authentication into: configuring OAuth providers, implementing backend auth logic, creating frontend auth hooks, building login/logout/session UI, setting up protected routes, defining user profile schema, and testing flows.",
+      "reasoning": "Authentication is inherently complex due to security, integration between frontend and backend, and the need for robust testing. Industry best practices require careful handling of sessions, tokens, and access control."
+    },
+    {
+      "taskId": 4,
+      "taskTitle": "Migrate Database Schema",
+      "complexityScore": 7,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Break down schema migration into: analyzing current schema, designing Convex schema, implementing validation rules, setting up indexes, defining relationships, and preparing migration scripts.",
+      "reasoning": "Schema migration requires deep understanding of both source and target models, careful mapping, and validation. Indexing and relationships add to the complexity, as does the need for migration scripts."
+    },
+    {
+      "taskId": 5,
+      "taskTitle": "Implement API Endpoints",
+      "complexityScore": 6,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Expand into: identifying endpoints, implementing query functions, creating mutation functions, adding error handling, implementing validation, adding pagination, and documenting APIs.",
+      "reasoning": "Replacing existing APIs involves mapping, implementation, and validation. Error handling and pagination are non-trivial, and documentation is essential for maintainability."
+    },
+    {
+      "taskId": 6,
+      "taskTitle": "Update Frontend Integration",
+      "complexityScore": 6,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide into: installing Convex hooks, replacing API calls, updating data fetching logic, implementing optimistic UI, handling loading/error states, and testing integration.",
+      "reasoning": "Frontend refactoring is complex due to the need to update data flows, ensure real-time updates, and maintain UI/UX consistency. Optimistic updates and error handling add to the challenge."
+    },
+    {
+      "taskId": 7,
+      "taskTitle": "Implement Real-time Features",
+      "complexityScore": 7,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Expand into: identifying real-time features, implementing subscriptions, updating UI components, adding visual indicators, optimizing performance, and testing multi-client scenarios.",
+      "reasoning": "Real-time features require careful design for data consistency, UI responsiveness, and performance. Testing across clients and handling network issues increases complexity."
+    },
+    {
+      "taskId": 8,
+      "taskTitle": "Implement Data Migration Script",
+      "complexityScore": 8,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Break down into: analyzing source data, creating export scripts, implementing import scripts, handling data transformation, validating data integrity, creating rollback mechanisms, and testing migration.",
+      "reasoning": "Data migration is high risk and complex due to data transformation, validation, and the need for rollback. Ensuring integrity and performance is critical, especially with large datasets."
+    },
+    {
+      "taskId": 9,
+      "taskTitle": "Setup Deployment Pipeline",
+      "complexityScore": 6,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide into: selecting CI/CD tool, configuring build automation, setting up Convex deployment, creating staging/production environments, implementing environment configs, and adding deployment verification tests.",
+      "reasoning": "CI/CD setup is moderately complex, involving automation, environment management, and deployment verification. Industry standards require robust testing and rollback capabilities."
+    },
+    {
+      "taskId": 10,
+      "taskTitle": "Comprehensive Testing and Documentation",
+      "complexityScore": 7,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Expand into: writing unit tests, creating integration tests, documenting API endpoints, updating user docs, preparing onboarding guide, documenting limitations, and conducting user acceptance testing.",
+      "reasoning": "Comprehensive testing and documentation are critical for maintainability and onboarding. Covering all flows, documenting changes, and ensuring test coverage require significant effort and coordination."
+    }
+  ]
+}
