@@ -1,0 +1,89 @@
+{
+  "exportedAt": "2025-07-22T07:14:23.638Z",
+  "exportMethod": "MCP",
+  "totalTables": 16,
+  "totalRecords": 1,
+  "convexFormat": true,
+  "tables": [
+    {
+      "name": "profiles",
+      "recordCount": 1,
+      "hasData": true
+    },
+    {
+      "name": "shop_relationships",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "products",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "orders",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "order_items",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "device_sales",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "crm_cards",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "self_growth_cards",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "clinical_cases",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "clinical_photos",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "consent_files",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "notifications",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "audit_logs",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "commission_calculations",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "kol_device_accumulator",
+      "recordCount": 0,
+      "hasData": false
+    },
+    {
+      "name": "file_metadata",
+      "recordCount": 0,
+      "hasData": false
+    }
+  ]
+}

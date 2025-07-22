@@ -1,0 +1,75 @@
+{
+  "timestamp": 1753169032302,
+  "overallStatus": "success",
+  "totalOriginalRecords": 1,
+  "totalMigratedRecords": 1,
+  "tablesValidated": 6,
+  "tablesWithErrors": 0,
+  "validationResults": [
+    {
+      "tableName": "profiles",
+      "originalCount": 1,
+      "migratedCount": 1,
+      "isValid": true,
+      "errors": [],
+      "warnings": [],
+      "missingRecords": [],
+      "duplicateRecords": []
+    },
+    {
+      "tableName": "shop_relationships",
+      "originalCount": 0,
+      "migratedCount": 0,
+      "isValid": true,
+      "errors": [],
+      "warnings": [],
+      "missingRecords": [],
+      "duplicateRecords": []
+    },
+    {
+      "tableName": "products",
+      "originalCount": 0,
+      "migratedCount": 0,
+      "isValid": true,
+      "errors": [],
+      "warnings": [],
+      "missingRecords": [],
+      "duplicateRecords": []
+    },
+    {
+      "tableName": "orders",
+      "originalCount": 0,
+      "migratedCount": 0,
+      "isValid": true,
+      "errors": [],
+      "warnings": [],
+      "missingRecords": [],
+      "duplicateRecords": []
+    },
+    {
+      "tableName": "clinical_cases",
+      "originalCount": 0,
+      "migratedCount": 0,
+      "isValid": true,
+      "errors": [],
+      "warnings": [],
+      "missingRecords": [],
+      "duplicateRecords": []
+    },
+    {
+      "tableName": "notifications",
+      "originalCount": 0,
+      "migratedCount": 0,
+      "isValid": true,
+      "errors": [],
+      "warnings": [],
+      "missingRecords": [],
+      "duplicateRecords": []
+    }
+  ],
+  "summary": {
+    "recordCountMismatch": 0,
+    "dataIntegrityIssues": 0,
+    "referentialIntegrityIssues": 0
+  }
+}

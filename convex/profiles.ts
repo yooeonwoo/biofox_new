@@ -1,19 +1,18 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 
-// 모든 프로필 조회
+// 모든 프로필 조회 (관리자 전용)
 export const getAllProfiles = query({
-  args: {},
   handler: async ctx => {
     return await ctx.db.query('profiles').collect();
   },
 });
 
 // ID로 프로필 조회
-export const getProfile = query({
-  args: { id: v.id('profiles') },
+export const getProfileById = query({
+  args: { profileId: v.id('profiles') },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    return await ctx.db.get(args.profileId);
   },
 });
 
@@ -30,20 +29,20 @@ export const getProfilesByRole = query({
   },
 });
 
-// 이메일로 프로필 조회
-export const getProfileByEmail = query({
-  args: { email: v.string() },
-  handler: async (ctx, args) => {
+// 승인 대기 중인 프로필 조회
+export const getPendingProfiles = query({
+  handler: async ctx => {
     return await ctx.db
       .query('profiles')
-      .withIndex('by_email', q => q.eq('email', args.email))
-      .unique();
+      .withIndex('by_status', q => q.eq('status', 'pending'))
+      .collect();
   },
 });
 
 // 새 프로필 생성
 export const createProfile = mutation({
   args: {
+    userId: v.id('users'),
     email: v.string(),
     name: v.string(),
     role: v.union(v.literal('admin'), v.literal('kol'), v.literal('ol'), v.literal('shop_owner')),
@@ -53,7 +52,10 @@ export const createProfile = mutation({
     commission_rate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
+
     const profileId = await ctx.db.insert('profiles', {
+      userId: args.userId,
       email: args.email,
       name: args.name,
       role: args.role,
@@ -65,6 +67,8 @@ export const createProfile = mutation({
       total_subordinates: 0,
       active_subordinates: 0,
       metadata: {},
+      created_at: now,
+      updated_at: now,
     });
 
     return profileId;
@@ -74,48 +78,64 @@ export const createProfile = mutation({
 // 프로필 업데이트
 export const updateProfile = mutation({
   args: {
-    id: v.id('profiles'),
+    profileId: v.id('profiles'),
     name: v.optional(v.string()),
     shop_name: v.optional(v.string()),
     region: v.optional(v.string()),
     naver_place_link: v.optional(v.string()),
     commission_rate: v.optional(v.number()),
-    status: v.optional(v.union(v.literal('pending'), v.literal('approved'), v.literal('rejected'))),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
+    const { profileId, ...updateData } = args;
 
-    // 빈 값 제거
-    const filteredUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([_, value]) => value !== undefined)
-    );
+    const now = Date.now();
+    const updateFields: any = {
+      updated_at: now,
+    };
 
-    await ctx.db.patch(id, filteredUpdates);
-    return id;
-  },
-});
+    // 제공된 필드들만 업데이트
+    if (updateData.name !== undefined) updateFields.name = updateData.name;
+    if (updateData.shop_name !== undefined) updateFields.shop_name = updateData.shop_name;
+    if (updateData.region !== undefined) updateFields.region = updateData.region;
+    if (updateData.naver_place_link !== undefined)
+      updateFields.naver_place_link = updateData.naver_place_link;
+    if (updateData.commission_rate !== undefined)
+      updateFields.commission_rate = updateData.commission_rate;
 
-// 프로필 승인
-export const approveProfile = mutation({
-  args: {
-    id: v.id('profiles'),
-    approved_by: v.id('profiles'),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
-      status: 'approved',
-      approved_at: Date.now(),
-      approved_by: args.approved_by,
-    });
-    return args.id;
+    await ctx.db.patch(profileId, updateFields);
+
+    return profileId;
   },
 });
 
 // 프로필 삭제
 export const deleteProfile = mutation({
-  args: { id: v.id('profiles') },
+  args: { profileId: v.id('profiles') },
   handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
-    return args.id;
+    await ctx.db.delete(args.profileId);
+    return { success: true };
+  },
+});
+
+// 프로필 승인/거절
+export const approveProfile = mutation({
+  args: {
+    profileId: v.id('profiles'),
+    approved: v.boolean(),
+    approvedBy: v.id('profiles'),
+    commission_rate: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    await ctx.db.patch(args.profileId, {
+      status: args.approved ? 'approved' : 'rejected',
+      approved_at: args.approved ? now : undefined,
+      approved_by: args.approvedBy,
+      commission_rate: args.commission_rate,
+      updated_at: now,
+    });
+
+    return { success: true };
   },
 });

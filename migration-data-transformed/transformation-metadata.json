@@ -1,0 +1,43 @@
+{
+  "transformedAt": "2025-07-22T07:17:10.772Z",
+  "schemaVersion": "1.0.0",
+  "convexCompatible": true,
+  "totalOriginalRecords": 1,
+  "totalTransformedRecords": 1,
+  "transformationResults": {
+    "profiles": {
+      "original": 1,
+      "transformed": 1,
+      "errors": []
+    },
+    "shop_relationships": {
+      "original": 0,
+      "transformed": 0,
+      "errors": []
+    },
+    "products": {
+      "original": 0,
+      "transformed": 0,
+      "errors": []
+    },
+    "orders": {
+      "original": 0,
+      "transformed": 0,
+      "errors": []
+    },
+    "clinical_cases": {
+      "original": 0,
+      "transformed": 0,
+      "errors": []
+    },
+    "notifications": {
+      "original": 0,
+      "transformed": 0,
+      "errors": []
+    }
+  },
+  "validation": {
+    "allTablesProcessed": true,
+    "noErrors": true
+  }
+}

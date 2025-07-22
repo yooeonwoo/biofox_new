@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "00000000-0000-0000-0000-000000000001",
+    "_creationTime": 1753159599826,
+    "userId": "00000000-0000-0000-0000-000000000001",
+    "email": "admin@biofox.co.kr",
+    "name": "시스템 관리자",
+    "role": "admin",
+    "status": "approved",
+    "shopName": "바이오폭스 본사",
+    "region": "서울시 강남구",
+    "naverPlaceLink": null,
+    "approvedAt": null,
+    "approvedBy": null,
+    "commissionRate": null,
+    "totalSubordinates": 0,
+    "activeSubordinates": 0,
+    "metadata": {}
+  }
+]
