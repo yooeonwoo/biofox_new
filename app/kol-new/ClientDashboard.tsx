@@ -26,6 +26,12 @@ import {
   NotificationBadge,
   StatusTransition,
 } from '@/components/ui/realtime-indicator';
+// 성능 모니터링 훅들
+import {
+  usePerformanceMonitor,
+  usePerformanceThresholds,
+  usePerformanceRecommendations,
+} from '@/hooks/usePerformanceMonitor';
 import SalesChart from '../../components/sales-chart';
 import StoreRankingTable from '../../components/store-ranking-table';
 import { Button } from '@/components/ui/button';
@@ -90,6 +96,24 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
   const dashboardStats = useQuery(api.realtime.getKolDashboardStats);
   const recentOrders = useQuery(api.realtime.getRecentOrderUpdates, { limit: 5 });
   const unreadNotifications = useQuery(api.realtime.getUnreadNotificationCount);
+
+  // 🚀 성능 모니터링
+  const dashboardMetrics = usePerformanceMonitor('getKolDashboardStats', dashboardStats, {
+    enabled: true,
+    trackMemory: true,
+  });
+  const ordersMetrics = usePerformanceMonitor('getRecentOrderUpdates', recentOrders);
+  const notificationsMetrics = usePerformanceMonitor(
+    'getUnreadNotificationCount',
+    unreadNotifications
+  );
+
+  // 성능 경고 및 권장사항
+  const dashboardWarnings = usePerformanceThresholds(dashboardMetrics);
+  const ordersWarnings = usePerformanceThresholds(ordersMetrics);
+  const notificationsWarnings = usePerformanceThresholds(notificationsMetrics);
+  const allWarnings = [...dashboardWarnings, ...ordersWarnings, ...notificationsWarnings];
+  const kolPerformanceRecommendations = usePerformanceRecommendations(allWarnings);
 
   // 실시간 업데이트 상태 감지
   const [isUpdating, setIsUpdating] = useState(false);

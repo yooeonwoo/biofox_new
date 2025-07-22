@@ -24,6 +24,12 @@ import {
   ActivityIcon,
   StatusTransition,
 } from '@/components/ui/realtime-indicator';
+// 성능 모니터링 훅들
+import {
+  usePerformanceMonitor,
+  usePerformanceThresholds,
+  usePerformanceRecommendations,
+} from '@/hooks/usePerformanceMonitor';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -243,6 +249,25 @@ export default function AdminDashboardMainPage() {
   const dashboardStats = useQuery(api.realtime.getDashboardStats);
   const recentActivities = useQuery(api.realtime.getRecentActivities, { limit: 10 });
 
+  // 🚀 성능 모니터링
+  const statsMetrics = usePerformanceMonitor('getDashboardStats', dashboardStats, {
+    enabled: true,
+    trackMemory: true,
+    logInterval: 10000, // 10초마다 로그
+  });
+  const activitiesMetrics = usePerformanceMonitor('getRecentActivities', recentActivities, {
+    enabled: true,
+    trackMemory: false,
+  });
+
+  // 성능 경고 및 권장사항
+  const statsWarnings = usePerformanceThresholds(statsMetrics);
+  const activitiesWarnings = usePerformanceThresholds(activitiesMetrics);
+  const performanceRecommendations = usePerformanceRecommendations([
+    ...statsWarnings,
+    ...activitiesWarnings,
+  ]);
+
   // 실시간 업데이트 상태 감지
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastActivities, setLastActivities] = useState<any[]>([]);
@@ -411,6 +436,34 @@ export default function AdminDashboardMainPage() {
           알림 보내기
         </Button>
       </div>
+
+      {/* 🚀 성능 경고 (개발 환경에서만 표시) */}
+      {process.env.NODE_ENV === 'development' &&
+        (statsWarnings.length > 0 || activitiesWarnings.length > 0) && (
+          <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4">
+            <div className="mb-2 flex items-center gap-2 font-medium text-yellow-800">
+              <Clock size={16} />
+              성능 경고
+            </div>
+            <div className="space-y-1">
+              {[...statsWarnings, ...activitiesWarnings].map((warning, index) => (
+                <div key={index} className="text-sm text-yellow-700">
+                  {warning}
+                </div>
+              ))}
+              {performanceRecommendations.length > 0 && (
+                <div className="mt-3 border-t border-yellow-200 pt-3">
+                  <div className="mb-2 text-sm font-medium text-yellow-800">개선 권장사항:</div>
+                  {performanceRecommendations.map((rec, index) => (
+                    <div key={index} className="text-sm text-yellow-700">
+                      • {rec}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       {/* 🚀 실시간 통계 요약 */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
