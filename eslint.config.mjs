@@ -59,7 +59,7 @@ const eslintConfig = [
       "no-console": "off",
     },
   },
-  ...storybook.configs["flat/recommended"]
+  ...storybook.configs.recommended
 ];
 
 export default eslintConfig;

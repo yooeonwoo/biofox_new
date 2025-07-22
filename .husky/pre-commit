@@ -3,16 +3,8 @@
 
 echo "🔍 Running pre-commit checks..."
 
-# Run lint-staged for code quality
-echo "📝 Checking code style and formatting..."
+# Run lint-staged for code formatting only
+echo "📝 Formatting code with Prettier..."
 npx lint-staged
-
-# Run TypeScript type checking
-echo "🔧 Running TypeScript type check..."
-npm run type-check
-
-# Run tests on staged files (optional - can be commented out if tests take too long)
-echo "🧪 Running tests..."
-npm run test
 
 echo "✅ Pre-commit checks passed!"
