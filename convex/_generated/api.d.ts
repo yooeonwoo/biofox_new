@@ -11,9 +11,12 @@
 import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server';
 import type * as auth from '../auth.js';
 import type * as migration from '../migration.js';
+import type * as orderMutations from '../orderMutations.js';
 import type * as orders from '../orders.js';
 import type * as profiles from '../profiles.js';
 import type * as relationships from '../relationships.js';
+import type * as userMutations from '../userMutations.js';
+import type * as users from '../users.js';
 import type * as validation from '../validation.js';
 
 /**
@@ -27,9 +30,12 @@ import type * as validation from '../validation.js';
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   migration: typeof migration;
+  orderMutations: typeof orderMutations;
   orders: typeof orders;
   profiles: typeof profiles;
   relationships: typeof relationships;
+  userMutations: typeof userMutations;
+  users: typeof users;
   validation: typeof validation;
 }>;
 export declare const api: FilterApi<typeof fullApi, FunctionReference<any, 'public'>>;
