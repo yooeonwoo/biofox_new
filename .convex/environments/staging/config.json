@@ -1,0 +1,23 @@
+{
+  "name": "Staging",
+  "description": "스테이징 테스트 환경",
+  "environment": "staging",
+  "domain": "staging",
+  "createdAt": "2025-07-22T09:10:41.782Z",
+  "features": {
+    "enableDebug": true,
+    "enableAnalytics": false,
+    "enableBackups": true,
+    "enableRealtime": true
+  },
+  "deployment": {
+    "auto": true,
+    "requireApproval": false,
+    "backupBeforeDeploy": false
+  },
+  "monitoring": {
+    "enableMetrics": true,
+    "enableLogs": true,
+    "logLevel": "debug"
+  }
+}

@@ -1,0 +1,46 @@
+# GitHub Environment Configuration for Production
+name: production
+description: "프로덕션 환경 - 실제 서비스 운영 환경"
+
+# 강화된 보호 규칙
+protection_rules:
+  # 필수 리뷰어 (최소 1명 이상)
+  required_reviewers:
+    users: []  # 관리자 및 시니어 개발자 추가 필요
+    teams: []  # 승인 권한이 있는 팀 추가 필요
+  
+  # 배포 대기 시간 (5분)
+  wait_timer: 300
+  
+  # 브랜치 제한 (main 브랜치만)
+  deployment_branch_policy:
+    protected_branches: true
+    custom_branch_policies: false
+    custom_branches:
+      - "main"
+
+# 환경 변수
+variables:
+  NODE_ENV: "production"
+  NEXT_PUBLIC_ENV: "production"
+  DEPLOYMENT_TARGET: "production"
+  ENABLE_DEBUG: "false"
+  LOG_LEVEL: "error"
+  OPTIMIZE_BUNDLE: "true"
+  ENABLE_ANALYTICS: "true"
+
+# 환경별 URL 설정 (Secrets로 관리)
+# secrets:
+#   CONVEX_DEPLOYMENT_KEY: "production deployment key"
+#   CONVEX_URL: "https://prod-project-id.convex.cloud"
+#   NEXT_PUBLIC_CONVEX_URL: "https://prod-project-id.convex.cloud"
+
+# 배포 히스토리 보존 (더 많이)
+deployment_history_limit: 20
+
+# 추가 보안 설정
+security:
+  # 승인 후 자동 배포 방지
+  prevent_self_review: true
+  # 동시 배포 방지
+  single_deployment_per_environment: true 

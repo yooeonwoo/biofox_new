@@ -1,0 +1,23 @@
+{
+  "name": "Production",
+  "description": "프로덕션 서비스 환경",
+  "environment": "production",
+  "domain": "prod",
+  "createdAt": "2025-07-22T09:10:41.783Z",
+  "features": {
+    "enableDebug": false,
+    "enableAnalytics": true,
+    "enableBackups": true,
+    "enableRealtime": true
+  },
+  "deployment": {
+    "auto": false,
+    "requireApproval": true,
+    "backupBeforeDeploy": true
+  },
+  "monitoring": {
+    "enableMetrics": true,
+    "enableLogs": false,
+    "logLevel": "error"
+  }
+}

@@ -1,0 +1,24 @@
+# GitHub Environment Configuration for Staging
+name: staging
+description: "스테이징 환경 - 통합 테스트 및 QA를 위한 환경"
+
+protection_rules:
+  required_reviewers:
+    users: []
+    teams: []
+  wait_timer: 0
+  deployment_branch_policy:
+    protected_branches: false
+    custom_branch_policies: true
+    custom_branches:
+      - "develop"
+      - "staging/*"
+
+variables:
+  NODE_ENV: "staging"
+  NEXT_PUBLIC_ENV: "staging"
+  DEPLOYMENT_TARGET: "staging"
+  ENABLE_DEBUG: "true"
+  LOG_LEVEL: "debug"
+
+deployment_history_limit: 10 

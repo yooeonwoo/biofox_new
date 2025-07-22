@@ -38,11 +38,11 @@ class ConvexDeployer {
 
     const key = keyMap[this.environment];
 
-    if (!key) {
+    if (!key && !isDryRun) {
       throw new Error(`🚨 ${this.environment} 환경의 배포 키가 설정되지 않았습니다.`);
     }
 
-    return key;
+    return key || 'dry-run-key'; // 드라이런 모드에서는 더미 키 사용
   }
 
   async deploy() {
@@ -92,8 +92,10 @@ class ConvexDeployer {
     const requiredVars = this.getRequiredEnvironmentVariables();
     const missing = requiredVars.filter(varName => !process.env[varName]);
 
-    if (missing.length > 0) {
+    if (missing.length > 0 && !isDryRun) {
       throw new Error(`필수 환경 변수가 누락되었습니다: ${missing.join(', ')}`);
+    } else if (missing.length > 0 && isDryRun) {
+      console.log(`  ⚠️ 드라이런 모드: 누락된 환경 변수 ${missing.join(', ')}를 무시합니다.`);
     }
 
     // Convex CLI 설치 확인
