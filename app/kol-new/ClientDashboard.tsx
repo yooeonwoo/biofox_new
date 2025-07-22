@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
-// TODO: Supabase 인증으로 교체 예정
 import Link from 'next/link';
-import { 
+import {
   CoinsIcon,
   TrendingUp,
   TrendingDown,
@@ -12,30 +11,34 @@ import {
   Wallet,
   ArrowRight,
   ClipboardList,
-  AlertTriangle
-} from "lucide-react";
-import SalesChart from "../../components/sales-chart";
-import StoreRankingTable from "../../components/store-ranking-table";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DialogTitle } from "@/components/ui/dialog";
-import KolMobileMenu from "../components/layout/KolMobileMenu";
-import { useDashboardData } from "@/hooks/useDashboardData";
+  AlertTriangle,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
+// Convex imports로 교체
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import SalesChart from '../../components/sales-chart';
+import StoreRankingTable from '../../components/store-ranking-table';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { DialogTitle } from '@/components/ui/dialog';
+import KolMobileMenu from '../components/layout/KolMobileMenu';
 
-// 🚀 서버 데이터와 클라이언트 상태를 결합한 하이브리드 컴포넌트
+// 🚀 실시간 데이터를 사용하는 KOL 대시보드
 
 interface ClientDashboardProps {
-  initialData: any; // 서버에서 전달받은 초기 데이터
+  initialData?: any; // 서버에서 전달받은 초기 데이터 (선택적)
 }
 
 // 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
-  if (value === 0) return "0원";
-  
+  if (value === 0) return '0원';
+
   const man = Math.floor(value / 10000);
   const rest = value % 10000;
-  
+
   if (man > 0) {
     if (rest > 0) {
       return `${man.toLocaleString()}만 ${rest}원`;
@@ -46,28 +49,53 @@ const formatToManUnit = (value: number): string => {
   }
 };
 
+// 실시간 연결 상태 표시기
+function RealtimeStatus({ lastUpdated }: { lastUpdated?: number }) {
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return (
+    <div className="mb-2 flex items-center space-x-2 text-xs text-gray-500">
+      {isOnline ? (
+        <Wifi className="h-3 w-3 text-green-500" />
+      ) : (
+        <WifiOff className="h-3 w-3 text-red-500" />
+      )}
+      <span>
+        {isOnline ? '실시간 연결됨' : '연결 끊김'}
+        {lastUpdated && (
+          <span className="ml-2">• {new Date(lastUpdated).toLocaleTimeString()}</span>
+        )}
+      </span>
+    </div>
+  );
+}
+
 export default function ClientDashboard({ initialData }: ClientDashboardProps) {
-  // TODO: Supabase 인증으로 교체 예정
   const [isKol, setIsKol] = useState<boolean | null>(true); // 임시로 KOL로 설정
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // 🚀 React Query 사용 - 서버 데이터가 있으면 초기값으로 사용
-  const { 
-    data: dashboardCompleteData, 
-    isLoading: loading, 
-    error, 
-    refetch 
-  } = useDashboardData(initialData);
+
+  // 🚀 Convex 실시간 쿼리로 교체 - KOL 대시보드 데이터
+  const dashboardStats = useQuery(api.realtime.getKolDashboardStats);
+  const recentOrders = useQuery(api.realtime.getRecentOrderUpdates, { limit: 5 });
+  const unreadNotifications = useQuery(api.realtime.getUnreadNotificationCount);
 
   // TODO: Supabase 인증 로직 구현
   useEffect(() => {
     setIsKol(true); // 임시로 KOL로 설정
   }, []);
-
-  // 🚀 서버 데이터와 클라이언트 데이터 결합
-  const finalData = dashboardCompleteData || initialData;
-  const dashboardData = finalData?.dashboard;
-  const shopsData = finalData?.shops?.shops || [];
 
   // TODO: Supabase 로그아웃 함수 구현
   const handleSignOut = async () => {
@@ -77,11 +105,6 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
-  };
-
-  // 데이터 다시 로드
-  const handleRetry = () => {
-    refetch();
   };
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
@@ -105,8 +128,11 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
     return redirect('/');
   }
 
-  // 서버 데이터도 없고 클라이언트 로딩 중인 경우
-  if (!initialData && loading) {
+  // 🚀 실시간 데이터 상태 처리
+  const loading = dashboardStats === undefined;
+
+  // 데이터 로딩 중인 경우
+  if (loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -114,53 +140,13 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
             <CardTitle className="text-center">데이터 로딩 중...</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center text-muted-foreground">대시보드 정보를 불러오는 중입니다.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // 에러가 발생한 경우
-  if (!initialData && error) {
-    const errorMessage = error instanceof Error ? error.message : '데이터를 불러오는데 실패했습니다.';
-    
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <div className="flex justify-center items-center text-destructive mb-2">
-              <AlertTriangle className="h-8 w-8 mr-2" />
-              <CardTitle className="text-center text-destructive">에러 발생</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-center text-muted-foreground">{errorMessage}</p>
-            <div className="bg-amber-50 p-4 rounded-md border border-amber-200">
-              <p className="text-sm text-amber-800">
-                <strong>가능한 해결책:</strong>
-              </p>
-              <ul className="list-disc list-inside text-sm text-amber-700 mt-2">
-                <li>페이지 새로고침을 시도해보세요.</li>
-                <li>로그아웃 후 다시 로그인해보세요.</li>
-                <li>계속 오류가 발생하면 관리자에게 문의하세요.</li>
-              </ul>
+            <p className="text-center text-muted-foreground">
+              실시간 대시보드 정보를 불러오는 중입니다.
+            </p>
+            <div className="mt-4 flex justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-center space-x-4">
-            <Button 
-              variant="outline" 
-              onClick={handleSignOut}
-            >
-              로그아웃
-            </Button>
-            <Button 
-              variant="default" 
-              onClick={handleRetry}
-            >
-              다시 시도
-            </Button>
-          </CardFooter>
         </Card>
       </div>
     );
@@ -169,14 +155,10 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
-          {dashboardData?.kol?.shopName || "..."} - {dashboardData?.kol?.name || "..."} KOL
-          {initialData && (
-            <span className="ml-2 text-sm text-green-600 bg-green-100 px-2 py-1 rounded">
-              서버 렌더링
-            </span>
-          )}
+        <h1 className="text-lg font-bold sm:text-xl md:text-2xl">
+          {dashboardStats?.kol?.shopName || '...'} - {dashboardStats?.kol?.name || '...'} KOL
         </h1>
+        <RealtimeStatus lastUpdated={dashboardStats?.lastUpdated} />
       </div>
 
       {/* 상단 메트릭 카드 영역 */}
@@ -185,124 +167,254 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
-                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 매출:</span>
-                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
-                  {dashboardData?.sales?.currentMonth !== undefined 
-                    ? formatToManUnit(dashboardData.sales.currentMonth)
-                    : "0원"}
+              <div className="flex w-full flex-col overflow-hidden md:flex-row md:items-baseline md:gap-2">
+                <span className="whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                  당월 매출:
+                </span>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                  {dashboardStats?.sales?.currentMonth !== undefined
+                    ? formatToManUnit(dashboardStats.sales.currentMonth)
+                    : '0원'}
                 </span>
               </div>
-              <div className="rounded-full bg-yellow-100 p-1 sm:p-1.5 text-yellow-700 flex-shrink-0">
-                 <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="flex-shrink-0 rounded-full bg-yellow-100 p-1 text-yellow-700 sm:p-1.5">
+                <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
               </div>
             </div>
-            
-            <div className="mt-1 invisible h-[21px] sm:h-[24px]">
-              <div className="flex items-center text-[10px] sm:text-xs">
-                <span>&nbsp;</span>
-              </div>
+
+            <div className="mt-1 flex items-center text-[10px] sm:text-xs">
+              <span
+                className={`flex items-center ${
+                  (dashboardStats?.sales?.growth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
+                {(dashboardStats?.sales?.growth || 0) >= 0 ? (
+                  <TrendingUp className="mr-1 h-3 w-3" />
+                ) : (
+                  <TrendingDown className="mr-1 h-3 w-3" />
+                )}
+                {Math.abs(dashboardStats?.sales?.growth || 0).toFixed(1)}% vs 지난 달
+              </span>
             </div>
-            
-            <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
+
+            <div className="my-3 h-[1px] bg-gray-200 sm:my-4" />
 
             <div className="flex items-center justify-between">
-              <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
-                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 수당:</span>
-                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
-                  {dashboardData?.allowance?.currentMonth !== undefined 
-                    ? formatToManUnit(dashboardData.allowance.currentMonth)
-                    : "0원"}
+              <div className="flex w-full flex-col overflow-hidden md:flex-row md:items-baseline md:gap-2">
+                <span className="whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                  당월 수당:
+                </span>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                  {dashboardStats?.commission?.currentMonth !== undefined
+                    ? formatToManUnit(dashboardStats.commission.currentMonth)
+                    : '0원'}
                 </span>
               </div>
-              <div className="rounded-full bg-purple-100 p-1 sm:p-1.5 text-purple-700 flex-shrink-0">
-                 <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="flex-shrink-0 rounded-full bg-green-100 p-1 text-green-700 sm:p-1.5">
+                <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
               </div>
             </div>
-            {dashboardData?.allowance?.growth !== undefined && (
-              <div className={`mt-1 flex items-center text-[10px] sm:text-xs ${dashboardData.allowance.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {dashboardData.allowance.growth >= 0 ? (
-                  <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                ) : (
-                  <TrendingDown className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                )}
-                <span>전월 대비 {Math.abs(dashboardData.allowance.growth) >= 10000 
-                  ? formatToManUnit(Math.abs(dashboardData.allowance.growth)) 
-                  : Math.abs(dashboardData.allowance.growth).toLocaleString() + '원'} {dashboardData.allowance.growth >= 0 ? '증가' : '감소'}</span>
-              </div>
-            )}
+            <div className="mt-1 text-[10px] text-gray-500 sm:text-xs">
+              상태: {dashboardStats?.commission?.status === 'paid' ? '지급완료' : '계산완료'}
+            </div>
           </CardContent>
         </Card>
 
-        {/* 카드 2: 현황 & 주문 */}
+        {/* 카드 2: 전문점 현황 */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-               <div className="flex items-baseline gap-2">
-                <span className="text-sm sm:text-lg md:text-xl font-bold">전문점 현황:</span>
-                <span className="text-sm sm:text-lg md:text-xl font-bold">
-                   {dashboardData?.shops?.total || 0}곳
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-bold sm:text-lg md:text-xl">전문점 현황:</span>
+                <span className="text-sm font-bold sm:text-lg md:text-xl">
+                  {dashboardStats?.shops?.total || 0}곳
                 </span>
               </div>
-              <div className="rounded-full bg-blue-100 p-1 sm:p-1.5 text-blue-700">
-                 <Store className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="rounded-full bg-blue-100 p-1 text-blue-700 sm:p-1.5">
+                <Store className="h-3 w-3 sm:h-4 sm:w-4" />
               </div>
             </div>
-            <div className="mt-1 text-[10px] sm:text-xs text-orange-500">
-              최근 전문점 계약 정보를 확인 중입니다.
-            </div>
-            
-            <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
+            <div className="mt-1 text-[10px] text-blue-600 sm:text-xs">🚀 실시간 업데이트됨</div>
 
-             <div className="flex items-center justify-between">
-               <div className="flex items-baseline gap-2">
-                <span className="text-sm sm:text-lg md:text-xl font-bold">당월 주문 전문점:</span>
-                <span className="text-sm sm:text-lg md:text-xl font-bold">
-                  {dashboardData?.shops?.ordering || 0}곳
+            <div className="my-3 h-[1px] bg-gray-200 sm:my-4" />
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-bold sm:text-lg md:text-xl">당월 주문 전문점:</span>
+                <span className="text-sm font-bold sm:text-lg md:text-xl">
+                  {dashboardStats?.shops?.ordering || 0}곳
                 </span>
               </div>
-              <div className="rounded-full bg-green-100 p-1 sm:p-1.5 text-green-700">
-                 <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="rounded-full bg-green-100 p-1 text-green-700 sm:p-1.5">
+                <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
               </div>
             </div>
-            <div className="mt-1 text-[10px] sm:text-xs text-red-500">
-              {dashboardData?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
+            <div className="mt-1 text-[10px] text-red-500 sm:text-xs">
+              {dashboardStats?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* 🚀 실시간 최근 주문 현황 */}
+      {recentOrders && recentOrders.length > 0 && (
+        <div className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                최근 주문 현황
+                <span className="text-sm font-normal text-gray-500">(실시간)</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentOrders.slice(0, 3).map((order: any, index: number) => (
+                  <div
+                    key={`${order._id}-${index}`}
+                    className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        주문 #{order.order_number || order._id.slice(-6)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(order.created_at).toLocaleDateString()} • ₩
+                        {order.total_amount?.toLocaleString()}
+                      </p>
+                    </div>
+                    <div
+                      className={`rounded px-2 py-1 text-xs ${
+                        order.order_status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {order.order_status === 'completed' ? '완료' : '처리중'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 🚀 실시간 알림 상태 */}
+      {unreadNotifications && unreadNotifications.count > 0 && (
+        <div className="mb-6">
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  <span className="font-medium text-orange-900">
+                    읽지 않은 알림 {unreadNotifications.count}개
+                  </span>
+                </div>
+                <Link href="/kol-new/notifications">
+                  <Button variant="outline" size="sm" className="border-orange-300 text-orange-700">
+                    확인하기
+                    <ArrowRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* 전문점 매출 순위 영역 */}
-      <div className="mb-6">
-        {/* 전문점 매출 순위 카드 */}
-        <Card className="flex flex-col h-full"> 
-          <CardContent className="flex flex-1 flex-col p-0 overflow-auto">
-            <StoreRankingTable shops={shopsData} />
-          </CardContent>
-          <CardFooter className="mt-auto border-t px-6 py-3">
-            <div className="ml-auto">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/kol-new/stores"> 
-                  모든 전문점 보기
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
+      <div className="mb-6 space-y-4">
+        <h2 className="text-lg font-bold">전문점 매출 순위</h2>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* 매출 차트 */}
+          <div className="order-2 lg:order-1">
+            <SalesChart
+              data={
+                dashboardStats?.sales
+                  ? [
+                      {
+                        month: '이번 달',
+                        sales: dashboardStats.sales.currentMonth,
+                        growth: dashboardStats.sales.growth,
+                      },
+                    ]
+                  : []
+              }
+            />
+          </div>
+
+          {/* 전문점 순위 테이블 */}
+          <div className="order-1 lg:order-2">
+            <StoreRankingTable
+              stores={[
+                {
+                  name: dashboardStats?.kol?.shopName || '내 매장',
+                  sales: dashboardStats?.sales?.currentMonth || 0,
+                  isOwn: true,
+                },
+              ]}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Chart */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-sm sm:text-base md:text-lg">나의 월별 수당</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80">
-            <SalesChart kolId={dashboardData?.kol?.id} />
-          </div>
-        </CardContent>
-      </Card>
+      {/* 하단 네비게이션 카드들 */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link href="/kol-new/sales-journal" className="block">
+          <Card className="cursor-pointer transition-all hover:shadow-md">
+            <CardContent className="p-4 text-center">
+              <ClipboardList className="mx-auto mb-2 h-8 w-8 text-blue-600" />
+              <h3 className="font-medium">영업 일지</h3>
+              <p className="mt-1 text-sm text-gray-600">활동 기록 관리</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/kol-new/stores" className="block">
+          <Card className="cursor-pointer transition-all hover:shadow-md">
+            <CardContent className="p-4 text-center">
+              <Store className="mx-auto mb-2 h-8 w-8 text-green-600" />
+              <h3 className="font-medium">전문점 관리</h3>
+              <p className="mt-1 text-sm text-gray-600">매장 현황 확인</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/kol-new/customer-manager" className="block">
+          <Card className="cursor-pointer transition-all hover:shadow-md">
+            <CardContent className="p-4 text-center">
+              <CoinsIcon className="mx-auto mb-2 h-8 w-8 text-purple-600" />
+              <h3 className="font-medium">고객 관리</h3>
+              <p className="mt-1 text-sm text-gray-600">고객 정보 관리</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/kol-new/notifications" className="block">
+          <Card className="cursor-pointer transition-all hover:shadow-md">
+            <CardContent className="relative p-4 text-center">
+              <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-orange-600" />
+              <h3 className="font-medium">알림</h3>
+              <p className="mt-1 text-sm text-gray-600">시스템 알림</p>
+              {unreadNotifications && unreadNotifications.count > 0 && (
+                <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                  {unreadNotifications.count > 9 ? '9+' : unreadNotifications.count}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* 모바일 메뉴 */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+          <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
+          <KolMobileMenu />
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

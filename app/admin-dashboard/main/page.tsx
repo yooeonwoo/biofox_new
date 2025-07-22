@@ -2,20 +2,54 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Users, Store, PieChart, Bell, TrendingUp, Activity, Clock, Calendar } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
-import { useQuery } from '@tanstack/react-query';
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/components/ui/use-toast";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import {
+  BarChart3,
+  Users,
+  Store,
+  PieChart,
+  Bell,
+  TrendingUp,
+  Activity,
+  Clock,
+  Calendar,
+} from 'lucide-react';
+// Convex imports로 교체
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/components/ui/use-toast';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from 'recharts';
 
 // 대시보드 카드 컴포넌트
 function DashboardCard({
@@ -32,21 +66,23 @@ function DashboardCard({
   linkHref: string;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6 transition-all hover:shadow-md">
-      <div className="flex items-center mb-4">
-        <div className="bg-blue-100 p-3 rounded-full mr-4 text-blue-600">
-          {icon}
-        </div>
+    <div className="rounded-lg bg-white p-6 shadow transition-all hover:shadow-md">
+      <div className="mb-4 flex items-center">
+        <div className="mr-4 rounded-full bg-blue-100 p-3 text-blue-600">{icon}</div>
         <h3 className="text-lg font-medium text-gray-900">{title}</h3>
       </div>
-      <p className="text-gray-600 mb-4">{description}</p>
-      <Link 
+      <p className="mb-4 text-gray-600">{description}</p>
+      <Link
         href={linkHref}
-        className="text-blue-600 hover:text-blue-800 flex items-center font-medium"
+        className="flex items-center font-medium text-blue-600 hover:text-blue-800"
       >
         {linkText}
-        <svg className="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"></path>
+        <svg className="ml-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+            clipRule="evenodd"
+          ></path>
         </svg>
       </Link>
     </div>
@@ -54,129 +90,143 @@ function DashboardCard({
 }
 
 // 통계 카드 컴포넌트
-function StatCard({ title, value, subtitle, trend, icon }: { 
-  title: string; 
-  value: string | number; 
+function StatCard({
+  title,
+  value,
+  subtitle,
+  trend,
+  icon,
+}: {
+  title: string;
+  value: string | number;
   subtitle?: string;
   trend?: { value: number; direction: 'up' | 'down' | 'neutral' };
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+    <div className="rounded-lg bg-white p-6 shadow transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-1">{title}</h3>
-          <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
+          <h3 className="mb-1 text-sm font-medium text-gray-500">{title}</h3>
+          <p className="mb-1 text-2xl font-bold text-gray-900">{value}</p>
           {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
         </div>
         {icon && (
-          <div className="bg-blue-50 p-2 rounded-full">
+          <div className="rounded-full bg-blue-50 p-2">
             <div className="text-blue-600">{icon}</div>
           </div>
         )}
       </div>
       {trend && (
         <div className="mt-4 flex items-center">
-          <div className={`flex items-center text-sm ${
-            trend.direction === 'up' ? 'text-green-600' : 
-            trend.direction === 'down' ? 'text-red-600' : 'text-gray-600'
-          }`}>
-            <TrendingUp size={16} className={`mr-1 ${trend.direction === 'down' ? 'rotate-180' : ''}`} />
+          <div
+            className={`flex items-center text-sm ${
+              trend.direction === 'up'
+                ? 'text-green-600'
+                : trend.direction === 'down'
+                  ? 'text-red-600'
+                  : 'text-gray-600'
+            }`}
+          >
+            <TrendingUp
+              size={16}
+              className={`mr-1 ${trend.direction === 'down' ? 'rotate-180' : ''}`}
+            />
             {Math.abs(trend.value)}%
           </div>
-          <span className="text-sm text-gray-500 ml-2">vs 지난 달</span>
+          <span className="ml-2 text-sm text-gray-500">vs 지난 달</span>
         </div>
       )}
     </div>
   );
 }
 
-// 최근 활동 아이템 컴포넌트
+// 최근 활동 아이템 컴포넌트 (Convex 데이터 형식에 맞게 수정)
 function ActivityItem({ activity }: { activity: any }) {
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'order': return <Store size={16} className="text-green-600" />;
-      case 'user': return <Users size={16} className="text-blue-600" />;
-      case 'commission': return <TrendingUp size={16} className="text-purple-600" />;
-      default: return <Activity size={16} className="text-gray-600" />;
+      case 'order_created':
+        return <Store size={16} className="text-green-600" />;
+      case 'user_registered':
+        return <Users size={16} className="text-blue-600" />;
+      case 'commission_updated':
+        return <TrendingUp size={16} className="text-purple-600" />;
+      default:
+        return <Activity size={16} className="text-gray-600" />;
     }
   };
 
-  const formatTimeAgo = (date: string) => {
-    const now = new Date();
-    const activityDate = new Date(date);
-    const diffInMinutes = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}시간 전`;
-    return `${Math.floor(diffInMinutes / 1440)}일 전`;
+  const formatTimeAgo = (timestamp: number) => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days > 0) return `${days}일 전`;
+    if (hours > 0) return `${hours}시간 전`;
+    if (minutes > 0) return `${minutes}분 전`;
+    return '방금 전';
   };
 
   return (
-    <div className="flex items-start space-x-3 py-3 border-b last:border-b-0">
-      <div className="flex-shrink-0 mt-0.5">
-        {getActivityIcon(activity.type)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-        <p className="text-sm text-gray-500 truncate">{activity.description}</p>
-        <div className="flex items-center mt-1 text-xs text-gray-400">
-          <Clock size={12} className="mr-1" />
-          {formatTimeAgo(activity.created_at)}
+    <div className="flex items-start space-x-3 rounded-lg p-3 transition-colors hover:bg-gray-50">
+      <div className="mt-1 flex-shrink-0">{getActivityIcon(activity.type)}</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between">
+          <p className="truncate text-sm font-medium text-gray-900">{activity.title}</p>
+          <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
+            {formatTimeAgo(activity.timestamp)}
+          </span>
         </div>
+        <p className="mt-1 line-clamp-2 text-sm text-gray-600">{activity.description}</p>
       </div>
     </div>
   );
 }
 
-// KOL 타입 정의
-interface KolUser {
-  id: number;
-  clerk_id: string;
-  email: string;
-  name: string;
-  role: string;
-  kol?: {
-    id: number;
-    name: string;
-    shop_name: string;
-  };
+// 실시간 상태 표시기 컴포넌트
+function RealtimeIndicator({ lastUpdated }: { lastUpdated?: number }) {
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return (
+    <div className="flex items-center space-x-2 text-xs text-gray-500">
+      <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+      <span>
+        {isOnline ? '실시간 연결됨' : '연결 끊김'}
+        {lastUpdated && (
+          <span className="ml-2">
+            • 마지막 업데이트: {new Date(lastUpdated).toLocaleTimeString()}
+          </span>
+        )}
+      </span>
+    </div>
+  );
 }
 
-// API 함수들
-const fetchKolUsers = async (): Promise<KolUser[]> => {
-  const response = await fetch('/api/admin/users?role=kol', {
+// KOL 목록 가져오기 (fallback용 - 기존 API 사용)
+const fetchKolUsers = async () => {
+  const response = await fetch('/api/admin/users/kols', {
     credentials: 'include',
   });
-  
+
   if (!response.ok) {
     throw new Error('KOL 목록을 불러오는데 실패했습니다.');
   }
-  
-  return response.json();
-};
 
-const fetchDashboardStats = async () => {
-  const response = await fetch('/api/admin/dashboard-stats', {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error('대시보드 통계를 불러오는데 실패했습니다.');
-  }
-  
-  return response.json();
-};
-
-const fetchRecentActivities = async () => {
-  const response = await fetch('/api/admin/recent-activities', {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error('최근 활동을 불러오는데 실패했습니다.');
-  }
-  
   return response.json();
 };
 
@@ -185,15 +235,7 @@ export default function AdminDashboardMainPage() {
   const [user, setUser] = useState<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
-  
-  // 기본 통계 (fallback)
-  const [basicStats, setBasicStats] = useState({
-    kolsCount: 0,
-    shopsCount: 0,
-    productsCount: 0,
-    isLoading: true
-  });
-  
+
   // 알림 보내기 다이얼로그 상태
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [targetType, setTargetType] = useState<'all' | 'individual'>('all');
@@ -201,34 +243,31 @@ export default function AdminDashboardMainPage() {
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationContent, setNotificationContent] = useState('');
 
-  // React Query로 데이터 관리
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
-    queryKey: ['dashboardStats'],
-    queryFn: fetchDashboardStats,
-    enabled: isSignedIn,
-    refetchInterval: 5 * 60 * 1000, // 5분마다 자동 갱신
-  });
+  // 🚀 Convex 실시간 쿼리로 교체
+  const dashboardStats = useQuery(api.realtime.getDashboardStats);
+  const recentActivities = useQuery(api.realtime.getRecentActivities, { limit: 10 });
 
-  const { data: recentActivities = [], isLoading: activitiesLoading } = useQuery({
-    queryKey: ['recentActivities'],
-    queryFn: fetchRecentActivities,
-    enabled: isSignedIn,
-    refetchInterval: 2 * 60 * 1000, // 2분마다 자동 갱신
-  });
-  
-  // KOL 목록 가져오기
-  const { data: kolUsers = [], isLoading: isLoadingKols } = useQuery({
-    queryKey: ['kolUsers'],
-    queryFn: fetchKolUsers,
-    enabled: isNotificationOpen && targetType === 'individual',
-  });
+  // KOL 목록 (알림 발송용 - 기존 API 사용)
+  const [kolUsers, setKolUsers] = useState<any[]>([]);
+  const [isLoadingKols, setIsLoadingKols] = useState(false);
+
+  // KOL 목록 로드 (알림 다이얼로그 열릴 때만)
+  useEffect(() => {
+    if (isNotificationOpen && targetType === 'individual') {
+      setIsLoadingKols(true);
+      fetchKolUsers()
+        .then(setKolUsers)
+        .catch(console.error)
+        .finally(() => setIsLoadingKols(false));
+    }
+  }, [isNotificationOpen, targetType]);
 
   // 사용자 인증 확인
   useEffect(() => {
     async function checkAuth() {
       try {
         const response = await fetch('/api/user', {
-          credentials: 'include'
+          credentials: 'include',
         });
         if (response.ok) {
           const userData = await response.json();
@@ -247,225 +286,194 @@ export default function AdminDashboardMainPage() {
     checkAuth();
   }, []);
 
-  // 기본 통계 로드 (fallback용)
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-
-    async function fetchStats() {
-      try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-        const [kolsResult, shopsResult, productsResult] = await Promise.all([
-          supabase.from('profiles').select('id', { count: 'exact' }).in('role', ['kol', 'ol']),
-          supabase.from('shop_relationships').select('id', { count: 'exact' }).eq('is_active', true),
-          supabase.from('orders').select('id', { count: 'exact' }).gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-        ]);
-
-        setBasicStats({
-          kolsCount: kolsResult.count || 0,
-          shopsCount: shopsResult.count || 0,
-          productsCount: productsResult.count || 0,
-          isLoading: false
-        });
-      } catch (error) {
-        console.error('통계 데이터 조회 오류:', error);
-        setBasicStats(prev => ({ ...prev, isLoading: false }));
-      }
-    }
-
-    fetchStats();
-  }, [isLoaded, isSignedIn]);
-
-  // 폼 검증
-  const validateForm = () => {
-    if (!notificationTitle.trim() || notificationTitle.length > 255) {
-      toast({
-        title: "오류",
-        description: "제목은 1-255자 사이여야 합니다.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    if (!notificationContent.trim() || notificationContent.length > 1000) {
-      toast({
-        title: "오류",
-        description: "내용은 1-1000자 사이여야 합니다.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    if (targetType === 'individual' && selectedKols.length === 0) {
-      toast({
-        title: "오류",
-        description: "최소 1명 이상의 KOL을 선택해주세요.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    return true;
-  };
-
-  // 알림 전송
+  // 알림 보내기 핸들러
   const handleSendNotification = async () => {
-    if (!validateForm()) return;
-    
+    if (!notificationTitle.trim() || !notificationContent.trim()) {
+      toast({
+        title: '오류',
+        description: '제목과 내용을 모두 입력해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      const response = await fetch('/api/admin/notifications', {
+      const requestData = {
+        title: notificationTitle,
+        content: notificationContent,
+        targetType,
+        ...(targetType === 'individual' && { targetIds: selectedKols }),
+      };
+
+      const response = await fetch('/api/admin/send-invitation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          targetType,
-          selectedKols: targetType === 'individual' ? selectedKols : undefined,
-          title: notificationTitle.trim(),
-          content: notificationContent.trim(),
-        }),
+        body: JSON.stringify(requestData),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || '알림 전송에 실패했습니다.');
+        const errorData = await response.json();
+        throw new Error(errorData.error || '알림 전송에 실패했습니다.');
       }
 
       toast({
-        title: "알림 전송 완료",
-        description: `${data.count}명의 KOL에게 알림을 전송했습니다.`,
+        title: '성공',
+        description: '알림이 성공적으로 전송되었습니다.',
       });
-      
+
+      // 다이얼로그 초기화
       setIsNotificationOpen(false);
-      resetForm();
+      setNotificationTitle('');
+      setNotificationContent('');
+      setSelectedKols([]);
+      setTargetType('all');
     } catch (error) {
       console.error('알림 전송 오류:', error);
       toast({
-        title: "오류 발생",
-        description: error instanceof Error ? error.message : "알림 전송에 실패했습니다.",
-        variant: "destructive",
+        title: '오류',
+        description: error instanceof Error ? error.message : '알림 전송 중 오류가 발생했습니다.',
+        variant: 'destructive',
       });
     }
   };
 
-  // 폼 초기화
-  const resetForm = () => {
-    setTargetType('all');
-    setSelectedKols([]);
-    setNotificationTitle('');
-    setNotificationContent('');
-  };
+  // 로딩 상태
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  // KOL 선택 토글
-  const toggleKolSelection = (kolId: number) => {
-    setSelectedKols(prev => {
-      if (prev.includes(kolId)) {
-        return prev.filter(id => id !== kolId);
-      } else {
-        return [...prev, kolId];
-      }
-    });
-  };
+  // 로그인하지 않은 경우
+  if (!isSignedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-md">
+          <div className="text-center">
+            <h1 className="mb-4 text-2xl font-bold text-gray-900">로그인이 필요합니다</h1>
+            <p className="mb-6 text-gray-600">관리자 대시보드에 접근하려면 로그인해주세요.</p>
+            <Link
+              href="/signin"
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              로그인하기
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // 전체 선택/해제
-  const toggleSelectAll = () => {
-    if (selectedKols.length === kolUsers.length) {
-      setSelectedKols([]);
-    } else {
-      setSelectedKols(kolUsers.map(user => user.id));
-    }
-  };
+  // 🚀 실시간 데이터 상태 처리
+  const statsLoading = dashboardStats === undefined;
+  const activitiesLoading = recentActivities === undefined;
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">관리자 대시보드</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">관리자 대시보드</h1>
+          <RealtimeIndicator lastUpdated={dashboardStats?.lastUpdated} />
+        </div>
         <Button onClick={() => setIsNotificationOpen(true)} className="gap-2">
           <Bell className="h-4 w-4" />
           알림 보내기
         </Button>
       </div>
-      
-      {/* 향상된 통계 요약 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {statsLoading || basicStats.isLoading ? (
-          Array(4).fill(0).map((_, index) => (
-            <div key={index} className="bg-white rounded-lg shadow p-6 animate-pulse">
-              <div className="h-2 bg-gray-200 rounded w-1/3 mb-4"></div>
-              <div className="h-6 bg-gray-200 rounded w-1/2 mb-2"></div>
-            </div>
-          ))
+
+      {/* 🚀 실시간 통계 요약 */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+        {statsLoading ? (
+          Array(4)
+            .fill(0)
+            .map((_, index) => (
+              <div key={index} className="animate-pulse rounded-lg bg-white p-6 shadow">
+                <div className="mb-4 h-2 w-1/3 rounded bg-gray-200"></div>
+                <div className="mb-2 h-6 w-1/2 rounded bg-gray-200"></div>
+              </div>
+            ))
         ) : (
           <>
-            <StatCard 
-              title="전체 KOL/OL 수" 
-              value={dashboardStats?.kolsCount || basicStats.kolsCount} 
+            <StatCard
+              title="전체 KOL/OL 수"
+              value={dashboardStats?.kolsCount || 0}
               icon={<Users size={20} />}
-              trend={{ value: 12, direction: 'up' }}
-              subtitle="이번 달 신규 가입"
+              trend={{
+                value: dashboardStats?.orderGrowthRate || 0,
+                direction: (dashboardStats?.orderGrowthRate || 0) >= 0 ? 'up' : 'down',
+              }}
+              subtitle="활성 사용자"
             />
-            <StatCard 
-              title="활성 매장 수" 
-              value={dashboardStats?.activeShops || basicStats.shopsCount} 
+            <StatCard
+              title="활성 매장 수"
+              value={dashboardStats?.activeShops || 0}
               icon={<Store size={20} />}
-              trend={{ value: 8, direction: 'up' }}
               subtitle="활성 관계 매장"
             />
-            <StatCard 
-              title="이번 달 주문 수" 
-              value={dashboardStats?.monthlyOrders || basicStats.productsCount} 
+            <StatCard
+              title="이번 달 주문 수"
+              value={dashboardStats?.monthlyOrders || 0}
               icon={<BarChart3 size={20} />}
-              trend={{ value: 15, direction: 'up' }}
+              trend={{
+                value: dashboardStats?.orderGrowthRate || 0,
+                direction: (dashboardStats?.orderGrowthRate || 0) >= 0 ? 'up' : 'down',
+              }}
               subtitle="지난 30일 기준"
             />
-            <StatCard 
-              title="총 매출액" 
-              value={dashboardStats?.totalSales ? `₩${(dashboardStats.totalSales / 1000000).toFixed(1)}M` : '₩0'} 
+            <StatCard
+              title="이번 달 매출액"
+              value={
+                dashboardStats?.monthlyRevenue
+                  ? `₩${(dashboardStats.monthlyRevenue / 1000000).toFixed(1)}M`
+                  : '₩0'
+              }
               icon={<TrendingUp size={20} />}
-              trend={{ value: 23, direction: 'up' }}
-              subtitle="이번 달 매출"
+              subtitle="월간 총 매출"
             />
           </>
         )}
       </div>
 
       {/* 차트와 최근 활동 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 매출 추이 차트 */}
-        <Card className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        {/* 매출 차트 */}
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp size={20} />
-              매출 추이
+              <BarChart3 size={20} />
+              최근 7일 매출 추이
             </CardTitle>
-            <CardDescription>최근 7일간 일별 매출 현황</CardDescription>
+            <CardDescription>일별 매출 변화</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+            {statsLoading ? (
+              <div className="h-80 animate-pulse rounded bg-gray-100"></div>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={dashboardStats?.salesChart || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip formatter={(value: any) => [`₩${(value / 1000).toFixed(0)}K`, '매출액']} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="sales" 
-                    stroke="#3B82F6" 
-                    strokeWidth={3} 
+                  <Tooltip formatter={(value: any) => [`₩${value?.toLocaleString()}`, '매출']} />
+                  <Line
+                    type="monotone"
+                    dataKey="sales"
+                    stroke="#3B82F6"
+                    strokeWidth={2}
                     dot={{ fill: '#3B82F6' }}
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* 최근 활동 */}
+        {/* 🚀 실시간 최근 활동 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -479,21 +487,23 @@ export default function AdminDashboardMainPage() {
               <div className="p-4">
                 {activitiesLoading ? (
                   <div className="space-y-3">
-                    {Array(5).fill(0).map((_, i) => (
-                      <div key={i} className="flex space-x-3">
-                        <div className="w-4 h-4 bg-gray-200 rounded-full animate-pulse mt-1" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-2 bg-gray-200 rounded animate-pulse" />
-                          <div className="h-2 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    {Array(5)
+                      .fill(0)
+                      .map((_, i) => (
+                        <div key={i} className="flex space-x-3">
+                          <div className="mt-1 h-4 w-4 animate-pulse rounded-full bg-gray-200" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-2 animate-pulse rounded bg-gray-200" />
+                            <div className="h-2 w-3/4 animate-pulse rounded bg-gray-200" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
-                ) : recentActivities.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">최근 활동이 없습니다.</p>
+                ) : recentActivities && recentActivities.length === 0 ? (
+                  <p className="py-8 text-center text-gray-500">최근 활동이 없습니다.</p>
                 ) : (
-                  recentActivities.map((activity: any, index: number) => (
-                    <ActivityItem key={index} activity={activity} />
+                  recentActivities?.map((activity: any, index: number) => (
+                    <ActivityItem key={`${activity.id}-${index}`} activity={activity} />
                   ))
                 )}
               </div>
@@ -501,39 +511,55 @@ export default function AdminDashboardMainPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* 관리 섹션 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <DashboardCard
-          title="KOL 및 전문점 관리"
-          description="KOL과 전문점 정보를 추가, 수정, 조회합니다."
-          icon={<Users size={24} />}
-          linkText="관리하기"
-          linkHref="/admin-dashboard/entities"
-        />
-        
-        <DashboardCard
-          title="KOL 월별 지표 관리"
-          description="KOL의 월별 실적 및 통계 데이터를 관리합니다."
-          icon={<BarChart3 size={24} />}
-          linkText="관리하기"
-          linkHref="/admin-dashboard/kol-metrics-management"
-        />
-        
-        <DashboardCard
-          title="수동 지표 입력"
-          description="KOL 실적 지표를 수동으로 입력하고 관리합니다."
-          icon={<PieChart size={24} />}
-          linkText="관리하기"
-          linkHref="/admin-dashboard/manual-metrics"
-        />
-        
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <DashboardCard
           title="사용자 관리"
-          description="전체 사용자 계정을 관리하고 권한을 설정합니다."
+          description="KOL 및 OL 승인, 관리, 권한 설정"
           icon={<Users size={24} />}
-          linkText="관리하기"
+          linkText="사용자 관리로 이동"
           linkHref="/admin-dashboard/user-management"
+        />
+
+        <DashboardCard
+          title="KOL 대시보드"
+          description="개별 KOL 성과 모니터링"
+          icon={<BarChart3 size={24} />}
+          linkText="KOL 대시보드"
+          linkHref="/admin-dashboard/kol-dashboard"
+        />
+
+        <DashboardCard
+          title="수동 실적 입력"
+          description="매출 및 커미션 수동 입력"
+          icon={<PieChart size={24} />}
+          linkText="실적 입력"
+          linkHref="/admin-dashboard/manual-metrics"
+        />
+
+        <DashboardCard
+          title="KOL 데이터 입력"
+          description="KOL 관련 데이터 관리"
+          icon={<Store size={24} />}
+          linkText="데이터 입력"
+          linkHref="/admin-dashboard/kol-data-entry"
+        />
+
+        <DashboardCard
+          title="KOL 실적 관리"
+          description="KOL 실적 및 성과 관리"
+          icon={<Activity size={24} />}
+          linkText="실적 관리"
+          linkHref="/admin-dashboard/kol-metrics-management"
+        />
+
+        <DashboardCard
+          title="엔티티 관리"
+          description="시스템 엔티티 및 설정 관리"
+          icon={<Calendar size={24} />}
+          linkText="엔티티 관리"
+          linkHref="/admin-dashboard/entities"
         />
       </div>
 
@@ -542,64 +568,50 @@ export default function AdminDashboardMainPage() {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>알림 보내기</DialogTitle>
-            <DialogDescription>
-              KOL에게 알림을 보냅니다. 대상을 선택하고 내용을 입력해주세요.
-            </DialogDescription>
+            <DialogDescription>KOL들에게 알림을 전송할 수 있습니다.</DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {/* 대상 선택 */}
+
+          <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="target">대상 선택</Label>
-              <Select value={targetType} onValueChange={(value: 'all' | 'individual') => {
-                setTargetType(value);
-                setSelectedKols([]);
-              }}>
+              <Label htmlFor="target-type">대상 선택</Label>
+              <Select
+                value={targetType}
+                onValueChange={(value: 'all' | 'individual') => setTargetType(value)}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="대상을 선택하세요" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">전체 KOL</SelectItem>
-                  <SelectItem value="individual">개별 KOL 선택</SelectItem>
+                  <SelectItem value="individual">개별 선택</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* 개별 KOL 선택 */}
             {targetType === 'individual' && (
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label>KOL 선택 ({selectedKols.length}명 선택됨)</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleSelectAll}
-                  >
-                    {selectedKols.length === kolUsers.length ? '전체 해제' : '전체 선택'}
-                  </Button>
-                </div>
-                <ScrollArea className="h-[200px] border rounded-md p-4">
+                <Label>KOL 선택</Label>
+                <ScrollArea className="h-[200px] rounded-md border p-4">
                   {isLoadingKols ? (
-                    <p className="text-sm text-muted-foreground text-center">KOL 목록을 불러오는 중...</p>
-                  ) : kolUsers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center">KOL이 없습니다.</p>
+                    <div className="py-4 text-center">로딩 중...</div>
                   ) : (
                     <div className="space-y-2">
-                      {kolUsers.map((user) => (
-                        <div key={user.id} className="flex items-center space-x-2">
+                      {kolUsers.map(kol => (
+                        <div key={kol.id} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`kol-${user.id}`}
-                            checked={selectedKols.includes(user.id)}
-                            onCheckedChange={() => toggleKolSelection(user.id)}
+                            id={`kol-${kol.id}`}
+                            checked={selectedKols.includes(kol.id)}
+                            onCheckedChange={checked => {
+                              if (checked) {
+                                setSelectedKols([...selectedKols, kol.id]);
+                              } else {
+                                setSelectedKols(selectedKols.filter(id => id !== kol.id));
+                              }
+                            }}
                           />
-                          <label
-                            htmlFor={`kol-${user.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                          >
-                            {user.kol?.name || user.name || '이름 없음'} 
-                            {user.kol?.shop_name && <span className="text-muted-foreground ml-1">({user.kol.shop_name})</span>}
-                          </label>
+                          <Label htmlFor={`kol-${kol.id}`} className="text-sm">
+                            {kol.name} ({kol.shop_name})
+                          </Label>
                         </div>
                       ))}
                     </div>
@@ -608,51 +620,36 @@ export default function AdminDashboardMainPage() {
               </div>
             )}
 
-            {/* 제목 입력 */}
             <div className="space-y-2">
-              <Label htmlFor="title">제목</Label>
+              <Label htmlFor="notification-title">제목</Label>
               <Input
-                id="title"
-                placeholder="알림 제목을 입력하세요"
+                id="notification-title"
                 value={notificationTitle}
-                onChange={(e) => setNotificationTitle(e.target.value)}
-                maxLength={255}
+                onChange={e => setNotificationTitle(e.target.value)}
+                placeholder="알림 제목을 입력하세요"
               />
-              <p className="text-xs text-muted-foreground text-right">
-                {notificationTitle.length}/255
-              </p>
             </div>
 
-            {/* 내용 입력 */}
             <div className="space-y-2">
-              <Label htmlFor="content">내용</Label>
+              <Label htmlFor="notification-content">내용</Label>
               <Textarea
-                id="content"
-                placeholder="알림 내용을 입력하세요"
+                id="notification-content"
                 value={notificationContent}
-                onChange={(e) => setNotificationContent(e.target.value)}
-                maxLength={1000}
-                rows={5}
+                onChange={e => setNotificationContent(e.target.value)}
+                placeholder="알림 내용을 입력하세요"
+                rows={4}
               />
-              <p className="text-xs text-muted-foreground text-right">
-                {notificationContent.length}/1000
-              </p>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsNotificationOpen(false);
-              resetForm();
-            }}>
+            <Button variant="outline" onClick={() => setIsNotificationOpen(false)}>
               취소
             </Button>
-            <Button onClick={handleSendNotification}>
-              알림 보내기
-            </Button>
+            <Button onClick={handleSendNotification}>알림 보내기</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-} 
+}
