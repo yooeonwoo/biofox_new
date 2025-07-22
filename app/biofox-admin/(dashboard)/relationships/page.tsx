@@ -73,6 +73,27 @@ export default function RelationshipsPage() {
     setShowFormModal(true);
   };
 
+  // 전문점 추가 (KOL/OL 하위에)
+  const handleAddShop = () => {
+    if (!selectedNode) return;
+
+    // 부모를 미리 설정한 상태로 모달 열기
+    setEditingRelationship({
+      id: '',
+      shop_owner_id: '',
+      parent_id: selectedNode.id,
+      notes: null,
+      shop_owner: null as any,
+      parent: {
+        id: selectedNode.id,
+        name: selectedNode.name,
+        role: selectedNode.role,
+        shop_name: selectedNode.shop_name,
+      },
+    } as any);
+    setShowFormModal(true);
+  };
+
   // 관계 수정
   const handleEditRelationship = () => {
     if (!selectedNodeRelationship) {
@@ -110,6 +131,11 @@ export default function RelationshipsPage() {
     });
   };
 
+  // 선택된 노드가 KOL 또는 OL인지 확인
+  const isParentRole = selectedNode && (selectedNode.role === 'kol' || selectedNode.role === 'ol');
+  // 선택된 노드가 SHOP인지 확인
+  const isShopRole = selectedNode && selectedNode.role === 'shop_owner';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -125,15 +151,32 @@ export default function RelationshipsPage() {
           <Button onClick={handleCreateRelationship} className="gap-2">
             <Plus className="h-4 w-4" />새 관계 추가
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleEditRelationship}
-            disabled={!selectedNodeRelationship}
-            className="gap-2"
-          >
-            <Edit className="h-4 w-4" />
-            수정
-          </Button>
+
+          {/* KOL/OL 선택 시 전문점 추가 버튼 */}
+          {isParentRole && (
+            <Button
+              variant="outline"
+              onClick={handleAddShop}
+              className="gap-2 border-blue-200 text-blue-600 hover:border-blue-300 hover:text-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              전문점 추가
+            </Button>
+          )}
+
+          {/* SHOP 선택 시 수정 버튼 */}
+          {isShopRole && (
+            <Button
+              variant="outline"
+              onClick={handleEditRelationship}
+              disabled={!selectedNodeRelationship}
+              className="gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              관계 수정
+            </Button>
+          )}
+
           <Button
             variant="outline"
             onClick={handleDeleteRelationship}
@@ -219,15 +262,31 @@ export default function RelationshipsPage() {
 
                   {/* 선택된 노드 액션 버튼들 */}
                   <div className="space-y-2 border-t pt-4">
-                    <Button
-                      onClick={handleEditRelationship}
-                      className="w-full gap-2"
-                      variant="outline"
-                      disabled={!selectedNodeRelationship}
-                    >
-                      <Edit className="h-4 w-4" />
-                      관계 수정
-                    </Button>
+                    {/* KOL/OL인 경우 전문점 추가 버튼 */}
+                    {isParentRole && (
+                      <Button
+                        onClick={handleAddShop}
+                        className="w-full gap-2 border-blue-200 text-blue-600 hover:border-blue-300 hover:text-blue-700"
+                        variant="outline"
+                      >
+                        <Plus className="h-4 w-4" />
+                        하위 전문점 추가
+                      </Button>
+                    )}
+
+                    {/* SHOP인 경우 관계 수정 버튼 */}
+                    {isShopRole && (
+                      <Button
+                        onClick={handleEditRelationship}
+                        className="w-full gap-2"
+                        variant="outline"
+                        disabled={!selectedNodeRelationship}
+                      >
+                        <Edit className="h-4 w-4" />
+                        관계 수정
+                      </Button>
+                    )}
+
                     <Button
                       onClick={handleDeleteRelationship}
                       className="w-full gap-2 text-red-600 hover:text-red-700"
@@ -256,6 +315,27 @@ export default function RelationshipsPage() {
               <Button onClick={handleCreateRelationship} className="w-full gap-2">
                 <Plus className="h-4 w-4" />새 에스테틱 관계 추가
               </Button>
+
+              {/* KOL/OL 선택 시 전문점 추가 버튼 */}
+              {isParentRole && (
+                <Button
+                  onClick={handleAddShop}
+                  className="w-full gap-2 border-blue-200 text-blue-600 hover:border-blue-300 hover:text-blue-700"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4" />
+                  {selectedNode?.name}에 전문점 추가
+                </Button>
+              )}
+
+              {/* SHOP 선택 시 관계 수정 버튼 */}
+              {isShopRole && selectedNodeRelationship && (
+                <Button onClick={handleEditRelationship} className="w-full gap-2" variant="outline">
+                  <Edit className="h-4 w-4" />
+                  {selectedNode?.name} 관계 수정
+                </Button>
+              )}
+
               <Button onClick={refreshTree} variant="outline" className="w-full">
                 조직도 새로고침
               </Button>

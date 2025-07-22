@@ -23,11 +23,9 @@ async function seedData() {
 
     // Step 1: Clear existing test data (optional - uncomment if needed)
     console.log('🧹 Clearing existing test data...');
-    await supabase
-      .from('shop_relationships')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // 기존 데이터 삭제를 주석 처리
+    // await supabase.from('shop_relationships').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // await supabase.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
     // Step 2: Insert admin user first
     console.log('👤 Inserting admin user...');
@@ -49,99 +47,87 @@ async function seedData() {
       console.log('Admin user might already exist, continuing...', adminError.message);
     }
 
-    // Step 3: 2단계 구조로 KOL과 Shop 생성 (OL은 KOL의 일종으로 취급)
-    console.log('👑 Inserting KOL users...');
+    // Step 3: Insert test profiles
+    console.log('👥 Creating test profiles...');
 
-    // KOL 1: 김미용 - 에스테틱 전문가
-    const { error: kol1Error } = await supabase.from('profiles').upsert(
-      {
-        id: 'b3d8760c-ee3a-4a51-b8b4-27bd5fb2512e',
-        email: 'kol1@biofox.co.kr',
-        name: '김미용',
-        role: 'kol',
-        status: 'approved',
-        shop_name: '김미용 에스테틱',
-        region: '서울시 강남구',
-        commission_rate: 15.0,
-        total_subordinates: 3,
-        active_subordinates: 3,
-        approved_by: '00000000-0000-0000-0000-000000000001',
-        created_at: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      { onConflict: 'id' }
-    );
+    // KOL - 김미용
+    const kolUser = {
+      id: 'b3d8760c-ee3a-4a51-b8b4-27bd5fb2512e',
+      email: 'kol1@biofox.co.kr',
+      name: '김미용',
+      role: 'kol' as const,
+      status: 'approved' as const,
+      shop_name: '김미용 에스테틱',
+      region: '서울시 강남구',
+      commission_rate: 15.0,
+      created_at: new Date().toISOString(),
+    };
 
-    if (kol1Error) {
-      console.log('KOL users might already exist, continuing...', kol1Error.message);
+    // OL - 이정민 (OL이면서 에스테틱 센터 운영)
+    const olUser = {
+      id: '20000000-0000-0000-0000-000000000111',
+      email: 'ol.jung@example.com',
+      name: '이정민',
+      role: 'ol' as const,
+      status: 'approved' as const,
+      shop_name: '이정민 에스테틱 센터',
+      region: '서울시 서초구',
+      commission_rate: 12.0,
+      created_at: new Date().toISOString(),
+    };
+
+    // SHOP - 박영희
+    const shopUser1 = {
+      id: '30000000-0000-0000-0000-000000000111',
+      email: 'shop.park@example.com',
+      name: '박영희',
+      role: 'shop_owner' as const,
+      status: 'approved' as const,
+      shop_name: '박영희 에스테틱',
+      region: '서울시 강남구',
+      commission_rate: 8.0,
+      created_at: new Date().toISOString(),
+    };
+
+    // 추가 SHOP - 최지혜 (전문점 추가 테스트용)
+    const shopUser2 = {
+      id: '31000000-0000-0000-0000-000000000111',
+      email: 'shop.choi@example.com',
+      name: '최지혜',
+      role: 'shop_owner' as const,
+      status: 'approved' as const,
+      shop_name: '최지혜 뷰티샵',
+      region: '서울시 서초구',
+      commission_rate: 8.0,
+      created_at: new Date().toISOString(),
+    };
+
+    // 추가 SHOP - 정민수 (전문점 추가 테스트용)
+    const shopUser3 = {
+      id: '32000000-0000-0000-0000-000000000111',
+      email: 'shop.jung@example.com',
+      name: '정민수',
+      role: 'shop_owner' as const,
+      status: 'approved' as const,
+      shop_name: '정민수 스킨케어',
+      region: '경기도 성남시',
+      commission_rate: 8.0,
+      created_at: new Date().toISOString(),
+    };
+
+    const testProfiles = [kolUser, olUser, shopUser1, shopUser2, shopUser3];
+
+    const { error: profilesError } = await supabase
+      .from('profiles')
+      .upsert(testProfiles, { onConflict: 'id' });
+
+    if (profilesError) {
+      console.log('Some profiles insertion failed:', profilesError.message);
+    } else {
+      console.log(`✅ Created ${testProfiles.length} test profiles`);
     }
 
-    // OL 1: 이정민 - KOL이면서 동시에 에스테틱 샵 운영
-    const { error: ol1Error } = await supabase.from('profiles').upsert(
-      {
-        id: '20000000-0000-0000-0000-000000000111',
-        email: 'ol.jung@example.com',
-        name: '이정민',
-        role: 'ol',
-        status: 'approved',
-        shop_name: '이정민 에스테틱 센터',
-        region: '서울시 강남구',
-        commission_rate: 10.0,
-        total_subordinates: 0,
-        active_subordinates: 0,
-        approved_by: '00000000-0000-0000-0000-000000000001',
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    );
-
-    if (ol1Error) {
-      console.log('OL users might already exist, continuing...', ol1Error.message);
-    }
-
-    console.log('🏪 Inserting shop owner users...');
-
-    // Shop 1: 박영희 - 일반 에스테틱 샵
-    const { error: shop1Error } = await supabase.from('profiles').upsert(
-      {
-        id: '30000000-0000-0000-0000-000000000111',
-        email: 'shop.park@example.com',
-        name: '박영희',
-        role: 'shop_owner',
-        status: 'approved',
-        shop_name: '박영희 에스테틱',
-        region: '서울시 강남구',
-        commission_rate: 5.0,
-        total_subordinates: 0,
-        active_subordinates: 0,
-        approved_by: '00000000-0000-0000-0000-000000000001',
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    );
-
-    // Shop 2: 최수진 - 일반 에스테틱 샵
-    const { error: shop2Error } = await supabase.from('profiles').upsert(
-      {
-        id: '30000000-0000-0000-0000-000000000222',
-        email: 'shop.choi@example.com',
-        name: '최수진',
-        role: 'shop_owner',
-        status: 'approved',
-        shop_name: '수진 스킨케어',
-        region: '서울시 서초구',
-        commission_rate: 5.5,
-        total_subordinates: 0,
-        active_subordinates: 0,
-        approved_by: '00000000-0000-0000-0000-000000000001',
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    );
-
-    if (shop1Error || shop2Error) {
-      console.log('Shop owners might already exist, continuing...');
-    }
-
+    // Step 4: 2단계 관계 생성 (KOL ↔ Shop)
     console.log('🔗 Creating 2-level relationships...');
 
     // 2단계 관계: KOL ↔ Shop 직접 관계
@@ -169,7 +155,7 @@ async function seedData() {
     const { error: rel2Error } = await supabase.from('shop_relationships').upsert(
       {
         id: '11000000-0000-0000-0000-000000000002',
-        shop_owner_id: '20000000-0000-0000-0000-000000000111', // 이정민 (OL이면서 Shop)
+        shop_owner_id: '20000000-0000-0000-0000-000000000111', // 이정민 (OL)
         parent_id: 'b3d8760c-ee3a-4a51-b8b4-27bd5fb2512e', // 김미용 (KOL)
         started_at: new Date().toISOString(),
         is_active: true,
@@ -183,53 +169,18 @@ async function seedData() {
 
     if (rel2Error) {
       console.log('Relationship 2 error:', rel2Error.message);
-    }
-
-    // 3. 김미용(KOL) -> 최수진(Shop) 관계
-    const { error: rel3Error } = await supabase.from('shop_relationships').upsert(
-      {
-        id: '11000000-0000-0000-0000-000000000003',
-        shop_owner_id: '30000000-0000-0000-0000-000000000222', // 최수진 (Shop)
-        parent_id: 'b3d8760c-ee3a-4a51-b8b4-27bd5fb2512e', // 김미용 (KOL)
-        started_at: new Date().toISOString(),
-        is_active: true,
-        relationship_type: 'direct',
-        notes: 'KOL 김미용 직속 스킨케어 샵',
-        created_by: '00000000-0000-0000-0000-000000000001',
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    );
-
-    if (rel3Error) {
-      console.log('Relationship 3 error:', rel3Error.message);
-    }
-
-    if (rel1Error || rel2Error || rel3Error) {
-      console.log('Some relationships had errors, continuing...');
     } else {
-      console.log('All relationships created successfully!');
+      console.log('✅ Created 2 test relationships (2-level structure)');
     }
 
-    console.log('✅ Database seeding completed successfully!');
-
-    // Step 4: Verification
-    const { data: profilesData } = await supabase
-      .from('profiles')
-      .select('name, role, shop_name, status, total_subordinates, active_subordinates')
-      .order('role, name');
-
-    const { data: relationshipsData } = await supabase
-      .from('shop_relationships')
-      .select('*')
-      .eq('is_active', true);
-
-    console.log('\n📋 Verification Results:');
-    console.table(profilesData);
-    console.log(`\n📈 Total relationships created: ${relationshipsData?.length || 0}`);
-    console.log('🎉 Seeding process completed!');
+    console.log('🎯 Seed data generation completed!');
+    console.log('📊 Current structure:');
+    console.log('   김미용 (KOL) - 김미용 에스테틱');
+    console.log('   ├── 박영희 (SHOP) - 박영희 에스테틱');
+    console.log('   └── 이정민 (OL) - 이정민 에스테틱 센터');
+    console.log('💡 Available for adding: 최지혜 뷰티샵, 정민수 스킨케어');
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('❌ Seeding failed:', error);
     throw error;
   }
 }

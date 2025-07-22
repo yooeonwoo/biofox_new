@@ -53,7 +53,9 @@ export function RelationshipFormModal({
     reason: '',
   });
 
-  const isEditing = !!editingRelationship;
+  const isEditing = !!editingRelationship && editingRelationship.id !== '';
+  const isAddingShop =
+    !!editingRelationship && editingRelationship.id === '' && editingRelationship.parent_id;
 
   // 프로필 목록 가져오기
   useEffect(() => {
@@ -156,27 +158,44 @@ export function RelationshipFormModal({
     profile => profile.role === 'kol' || profile.role === 'ol'
   );
 
-  // 에스테틱이 될 수 있는 프로필들 (모든 역할)
-  const availableShops = profiles;
+  // 에스테틱이 될 수 있는 프로필들
+  const availableShops = isAddingShop
+    ? profiles.sort((a, b) => {
+        // 전문점 추가 모드에서는 SHOP 역할을 우선 표시
+        if (a.role === 'shop_owner' && b.role !== 'shop_owner') return -1;
+        if (a.role !== 'shop_owner' && b.role === 'shop_owner') return 1;
+        return a.name.localeCompare(b.name);
+      })
+    : profiles;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isEditing ? '관계 수정' : '새 관계 추가'}</DialogTitle>
+          <DialogTitle>
+            {isAddingShop
+              ? `${editingRelationship?.parent?.name}에 전문점 추가`
+              : isEditing
+                ? '관계 수정'
+                : '새 관계 추가'}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* 에스테틱 선택 */}
           <div className="space-y-2">
-            <Label htmlFor="shop_owner">에스테틱 *</Label>
+            <Label htmlFor="shop_owner">{isAddingShop ? '추가할 전문점 *' : '에스테틱 *'}</Label>
             <Select
               value={formData.shop_owner_id}
               onValueChange={value => setFormData(prev => ({ ...prev, shop_owner_id: value }))}
-              disabled={isEditing} // 수정 시에는 에스테틱 변경 불가
+              disabled={isEditing && !isAddingShop} // 수정 시에는 에스테틱 변경 불가 (전문점 추가는 제외)
             >
               <SelectTrigger>
-                <SelectValue placeholder="에스테틱을 선택하세요" />
+                <SelectValue
+                  placeholder={
+                    isAddingShop ? '추가할 전문점을 선택하세요' : '에스테틱을 선택하세요'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {availableShops.map(profile => (
@@ -184,7 +203,15 @@ export function RelationshipFormModal({
                     <div className="flex items-center gap-2">
                       <span>{profile.name}</span>
                       <span className="text-xs text-gray-500">({profile.shop_name})</span>
-                      <span className="rounded bg-gray-100 px-1 text-xs">
+                      <span
+                        className={`rounded px-1 text-xs ${
+                          profile.role === 'shop_owner'
+                            ? 'bg-blue-100 text-blue-700'
+                            : profile.role === 'kol'
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-green-100 text-green-700'
+                        }`}
+                      >
                         {profile.role === 'kol' ? 'KOL' : profile.role === 'ol' ? 'OL' : 'SHOP'}
                       </span>
                     </div>
@@ -197,28 +224,59 @@ export function RelationshipFormModal({
           {/* 상위 에스테틱 선택 */}
           <div className="space-y-2">
             <Label htmlFor="parent">상위 에스테틱</Label>
-            <Select
-              value={formData.parent_id}
-              onValueChange={value => setFormData(prev => ({ ...prev, parent_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="상위 에스테틱을 선택하세요 (선택사항)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">상위 없음 (최상위)</SelectItem>
-                {availableParents.map(profile => (
-                  <SelectItem key={profile.id} value={profile.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{profile.name}</span>
-                      <span className="text-xs text-gray-500">({profile.shop_name})</span>
-                      <span className="rounded bg-gray-100 px-1 text-xs">
-                        {profile.role === 'kol' ? 'KOL' : 'OL'}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isAddingShop && editingRelationship?.parent ? (
+              // 전문점 추가 모드에서는 상위가 고정됨
+              <div className="rounded-md border bg-gray-50 p-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{editingRelationship.parent.name}</span>
+                  <span className="text-xs text-gray-500">
+                    ({editingRelationship.parent.shop_name})
+                  </span>
+                  <span
+                    className={`rounded px-1 text-xs ${
+                      editingRelationship.parent.role === 'kol'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}
+                  >
+                    {editingRelationship.parent.role === 'kol' ? 'KOL' : 'OL'}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  이 {editingRelationship.parent.role === 'kol' ? 'KOL' : 'OL'} 하위에 전문점이
+                  추가됩니다.
+                </div>
+              </div>
+            ) : (
+              <Select
+                value={formData.parent_id}
+                onValueChange={value => setFormData(prev => ({ ...prev, parent_id: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="상위 에스테틱을 선택하세요 (선택사항)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">상위 없음 (최상위)</SelectItem>
+                  {availableParents.map(profile => (
+                    <SelectItem key={profile.id} value={profile.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{profile.name}</span>
+                        <span className="text-xs text-gray-500">({profile.shop_name})</span>
+                        <span
+                          className={`rounded px-1 text-xs ${
+                            profile.role === 'kol'
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}
+                        >
+                          {profile.role === 'kol' ? 'KOL' : 'OL'}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* 사유/메모 */}
@@ -226,7 +284,11 @@ export function RelationshipFormModal({
             <Label htmlFor="reason">사유 / 메모</Label>
             <Textarea
               id="reason"
-              placeholder="관계 설정 사유나 메모를 입력하세요"
+              placeholder={
+                isAddingShop
+                  ? '전문점 추가 사유나 메모를 입력하세요'
+                  : '관계 설정 사유나 메모를 입력하세요'
+              }
               value={formData.reason}
               onChange={e => setFormData(prev => ({ ...prev, reason: e.target.value }))}
               rows={3}
@@ -238,12 +300,18 @@ export function RelationshipFormModal({
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               취소
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button
+              type="submit"
+              disabled={loading}
+              className={isAddingShop ? 'bg-blue-600 hover:bg-blue-700' : ''}
+            >
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isEditing ? '수정 중...' : '생성 중...'}
+                  {isAddingShop ? '추가 중...' : isEditing ? '수정 중...' : '생성 중...'}
                 </>
+              ) : isAddingShop ? (
+                '전문점 추가'
               ) : isEditing ? (
                 '수정'
               ) : (
