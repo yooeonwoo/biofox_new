@@ -1,545 +1,440 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { redirect } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@supabase/supabase-js';
-import { 
-  Bell,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Eye,
-  EyeOff,
-  RefreshCw,
-  Search,
-  Filter,
-  Check
-} from "lucide-react";
-import { format, formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { toast } from "@/components/ui/use-toast";
-import KolHeader from "../../components/layout/KolHeader";
-import KolSidebar from "../../components/layout/KolSidebar";
-import KolFooter from "../../components/layout/KolFooter";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DialogClose } from "@radix-ui/react-dialog";
-import KolMobileMenu from "../../components/layout/KolMobileMenu";
-import NotificationPermission from "@/components/NotificationPermission";
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Bell,
+  CheckCircle2,
+  Trash2,
+  Filter,
+  Calendar,
+  FileText,
+  CreditCard,
+  BarChart3,
+  MessageSquare,
+  Settings,
+  RefreshCw,
+} from 'lucide-react';
 
-// 알림 데이터 타입 정의
+// Convex imports
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+
 interface Notification {
-  id: number;
+  id: string;
+  type: string;
   title: string;
-  content: string;
-  read: boolean;
-  created_at: string;
-  updated_at: string;
-  timeAgo?: string;
+  message: string;
+  isRead: boolean;
+  priority: 'low' | 'normal' | 'high';
+  createdAt: number;
+  relatedType?: string;
+  relatedId?: any;
+  metadata?: any;
 }
 
-// API 함수들
-const fetchNotifications = async (): Promise<Notification[]> => {
-  const response = await fetch('/api/kol-new/notifications', {
-    credentials: 'include',
-    headers: { 'Cache-Control': 'no-cache' }
-  });
-  
-  if (!response.ok) {
-    throw new Error('알림을 불러오는데 실패했습니다.');
-  }
-  
-  const data = await response.json();
-  
-  // 알림 데이터에 timeAgo 추가
-  return data.map((notification: Notification) => ({
-    ...notification,
-    timeAgo: formatDistanceToNow(new Date(notification.created_at), { 
-      addSuffix: true, 
-      locale: ko 
-    })
-  }));
-};
-
-const markAsReadAPI = async (id: number): Promise<void> => {
-  const response = await fetch(`/api/kol-new/notifications/${id}/read`, {
-    method: 'PUT',
-    credentials: 'include'
-  });
-  
-  if (!response.ok) {
-    throw new Error('알림 읽음 처리에 실패했습니다.');
-  }
-};
-
-const markAllAsReadAPI = async (): Promise<void> => {
-  const response = await fetch('/api/kol-new/notifications/read-all', {
-    method: 'PUT',
-    credentials: 'include'
-  });
-  
-  if (!response.ok) {
-    throw new Error('전체 알림 읽음 처리에 실패했습니다.');
-  }
-};
-
 export default function NotificationsPage() {
-  // 임시 사용자 정보 (로컬 개발용)
-  const tempUser = {
-    isLoaded: true,
-    isSignedIn: true,
-    role: "kol",
-    firstName: "테스트",
-    username: "testuser"
-  };
-
-  const queryClient = useQueryClient();
-  
-  const [isKol, setIsKol] = useState<boolean | null>(null);
-  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [kolInfo, setKolInfo] = useState<{name: string, shopName: string} | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-
-  // 사용자 역할 확인
-  useEffect(() => {
-    if (tempUser.isLoaded && tempUser.isSignedIn) {
-      setIsKol(tempUser.role === "kol");
-    }
-  }, []);
-
-  // React Query로 알림 데이터 가져오기
-  const { 
-    data: notifications = [], 
-    isLoading: loading, 
-    error,
-    refetch 
-  } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: fetchNotifications,
-    enabled: tempUser.isLoaded && tempUser.isSignedIn && isKol === true,
-    staleTime: 5 * 60 * 1000, // 5분
-    cacheTime: 10 * 60 * 1000, // 10분
-    refetchInterval: 30 * 1000, // 30초마다 자동 갱신
-    refetchIntervalInBackground: false, // 백그라운드에서는 자동 갱신 안함
+  const [activeTab, setActiveTab] = useState('all');
+  const [paginationOpts, setPaginationOpts] = useState({
+    numItems: 20,
+    cursor: null as string | null,
   });
 
-  // 개별 알림 읽음 처리 mutation
-  const markAsReadMutation = useMutation({
-    mutationFn: markAsReadAPI,
-    onSuccess: () => {
-      // 성공 시 알림 목록 다시 가져오기
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      
-      toast({
-        title: "알림 읽음",
-        description: "알림이 읽음으로 표시되었습니다.",
-      });
-    },
-    onError: (error) => {
-      console.error('알림 읽음 처리 실패:', error);
-      toast({
-        title: "오류 발생",
-        description: "알림 읽음 처리에 실패했습니다.",
-      });
-    }
+  // Convex queries and mutations
+  const allNotificationsResult = useQuery(api.notifications.getUserNotifications, {
+    paginationOpts,
+    sortBy: 'created_at',
+    sortOrder: 'desc',
   });
 
-  // 전체 알림 읽음 처리 mutation
-  const markAllAsReadMutation = useMutation({
-    mutationFn: markAllAsReadAPI,
-    onSuccess: () => {
-      // 성공 시 알림 목록 다시 가져오기
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      
-      toast({
-        title: "모든 알림 읽음",
-        description: "모든 알림이 읽음으로 표시되었습니다.",
-      });
-    },
-    onError: (error) => {
-      console.error('전체 알림 읽음 처리 실패:', error);
-      toast({
-        title: "오류 발생",
-        description: "전체 알림 읽음 처리에 실패했습니다.",
-      });
-    }
+  const unreadNotificationsResult = useQuery(api.notifications.getUserNotifications, {
+    paginationOpts,
+    isRead: false,
+    sortBy: 'created_at',
+    sortOrder: 'desc',
   });
 
-  // KOL 정보 가져오기
-  useEffect(() => {
-    if (tempUser.isLoaded && tempUser.isSignedIn && isKol) {
-      const fetchKolInfo = async () => {
-        try {
-          // 대시보드 API를 사용하여 KOL 정보 가져오기
-          const response = await fetch('/api/kol-new/dashboard', { 
-            credentials: 'include',
-            headers: { 'Cache-Control': 'no-cache' } 
-          });
-          
-          if (!response.ok) {
-            throw new Error('KOL 정보를 불러오는데 실패했습니다.');
-          }
-          
-          const data = await response.json();
-          
-          setKolInfo({
-            name: data.kolInfo?.name || tempUser?.firstName || tempUser?.username || '테스트 사용자',
-            shopName: data.kolInfo?.shop_name || '테스트 샵'
-          });
-          
-          // 현재 사용자의 DB ID 저장 (Realtime 필터링용)
-          setCurrentUserId(data.userId);
-        } catch (error) {
-          console.error('KOL 정보 조회 중 오류:', error);
-          
-          // 에러 발생 시 기본 정보 설정
-          setKolInfo({
-            name: tempUser?.firstName || tempUser?.username || '테스트 사용자',
-            shopName: '테스트 샵'
-          });
-        }
-      };
-      
-      fetchKolInfo();
-    }
-  }, [tempUser.isLoaded, tempUser.isSignedIn, isKol]);
+  const unreadCountResult = useQuery(api.notifications.getUnreadNotificationCount, {});
 
-  // Supabase Realtime 구독
-  useEffect(() => {
-    if (!tempUser.isLoaded || !tempUser.isSignedIn || !isKol || !currentUserId) return;
+  const markAsRead = useMutation(api.notifications.markNotificationAsRead);
+  const markAllAsRead = useMutation(api.notifications.markAllNotificationsAsRead);
+  const deleteNotification = useMutation(api.notifications.deleteNotification);
 
-    // Supabase 클라이언트 생성
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Realtime 채널 생성 및 구독
-    const channel = supabase
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${currentUserId}` // 현재 사용자의 알림만 필터링
-        },
-        (payload) => {
-          console.log('새 알림 수신:', payload);
-          
-          // React Query 캐시 무효화 - 알림 목록 다시 가져오기
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
-          
-          // 브라우저 푸시 알림 표시 (권한이 허용된 경우)
-          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            try {
-              new Notification(payload.new.title || '새 알림', {
-                body: payload.new.content || '새로운 알림을 확인해보세요.',
-                icon: '/favicon.ico', // 프로젝트 파비콘 사용
-                badge: '/favicon.ico',
-                tag: `notification-${payload.new.id}`, // 중복 방지
-                requireInteraction: false, // 자동으로 사라짐
-                silent: false,
-              });
-            } catch (error) {
-              console.error('브라우저 알림 표시 실패:', error);
-            }
-          }
-          
-          // 새 알림 토스트 메시지 (인앱 알림)
-          toast({
-            title: "새 알림이 도착했습니다",
-            description: payload.new.title || "새로운 알림을 확인해보세요.",
-            action: (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  // 새 알림을 바로 표시
-                  const newNotification = {
-                    ...payload.new,
-                    timeAgo: '방금 전'
-                  } as Notification;
-                  viewNotificationDetail(newNotification);
-                }}
-              >
-                보기
-              </Button>
-            ),
-          });
-        }
-      )
-      .subscribe((status) => {
-        console.log('Realtime 구독 상태:', status);
-      });
-
-    // 컴포넌트 언마운트시 구독 해제
-    return () => {
-      console.log('Realtime 구독 해제');
-      supabase.removeChannel(channel);
-    };
-  }, [tempUser.isLoaded, tempUser.isSignedIn, isKol, currentUserId, queryClient, viewNotificationDetail]);
-
-  // 개별 알림 읽음 처리
-  const markAsRead = (id: number) => {
-    markAsReadMutation.mutate(id);
-  };
-
-  // 전체 알림 읽음 처리
-  const markAllAsRead = () => {
-    markAllAsReadMutation.mutate();
-  };
-
-  // 데이터 새로고침
-  const refreshData = async () => {
-    const { isFetching } = await refetch();
-    
-    if (!isFetching) {
-      toast({
-        title: "새로고침 완료",
-        description: "알림 데이터가 업데이트되었습니다.",
-      });
+  // Extract data based on active tab
+  const getNotifications = () => {
+    switch (activeTab) {
+      case 'unread':
+        return unreadNotificationsResult?.page || [];
+      case 'all':
+      default:
+        return allNotificationsResult?.page || [];
     }
   };
 
-  // 알림 상세보기
-  const viewNotificationDetail = useCallback((notification: Notification) => {
-    setSelectedNotification(notification);
-    setIsDetailOpen(true);
-    
-    // 읽지 않은 알림인 경우 읽음으로 표시
-    if (!notification.read) {
-      markAsReadMutation.mutate(notification.id);
-    }
-  }, [markAsReadMutation]);
+  const notifications = getNotifications();
+  const loading = allNotificationsResult === undefined;
+  const unreadCount = unreadCountResult?.unreadCount || 0;
 
-  // 필터링된 알림 목록
-  const filteredNotifications = notifications
-    .filter(notification => {
-      if (filter === 'read') return notification.read;
-      if (filter === 'unread') return !notification.read;
-      return true;
-    })
-    .filter(notification => 
-      notification.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      notification.content.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-  // 로그아웃 함수
-  const handleSignOut = async () => {
+  // Handle mark as read
+  const handleMarkAsRead = async (notificationId: string) => {
     try {
-      // 임시 로그아웃 처리
-      console.log('로그아웃 처리');
-      window.location.href = '/';
+      await markAsRead({ notificationId: notificationId as any });
     } catch (error) {
-      console.error('로그아웃 중 오류가 발생했습니다:', error);
+      console.error('알림 읽음 처리 실패:', error);
     }
   };
 
-  // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!tempUser.isLoaded || isKol === null) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">로딩 중...</CardTitle>
+  // Handle mark all as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead({});
+    } catch (error) {
+      console.error('모든 알림 읽음 처리 실패:', error);
+    }
+  };
+
+  // Handle delete notification
+  const handleDelete = async (notificationId: string) => {
+    try {
+      await deleteNotification({
+        notificationId: notificationId as any,
+        permanent: false, // 소프트 삭제
+      });
+    } catch (error) {
+      console.error('알림 삭제 실패:', error);
+    }
+  };
+
+  // Handle pagination
+  const handleLoadMore = () => {
+    const currentResult =
+      activeTab === 'unread' ? unreadNotificationsResult : allNotificationsResult;
+    if (currentResult && !currentResult.isDone && currentResult.continueCursor) {
+      setPaginationOpts(prev => ({
+        ...prev,
+        cursor: currentResult.continueCursor,
+      }));
+    }
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'order_created':
+        return <FileText className="h-5 w-5" />;
+      case 'commission_paid':
+        return <CreditCard className="h-5 w-5" />;
+      case 'clinical_progress':
+        return <BarChart3 className="h-5 w-5" />;
+      case 'approval_required':
+        return <MessageSquare className="h-5 w-5" />;
+      case 'status_changed':
+        return <Settings className="h-5 w-5" />;
+      case 'reminder':
+        return <Calendar className="h-5 w-5" />;
+      default:
+        return <Bell className="h-5 w-5" />;
+    }
+  };
+
+  // Get notification priority color
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'border-l-red-500 bg-red-50';
+      case 'normal':
+        return 'border-l-blue-500 bg-blue-50';
+      case 'low':
+        return 'border-l-gray-500 bg-gray-50';
+      default:
+        return 'border-l-gray-500 bg-gray-50';
+    }
+  };
+
+  // Get type display name
+  const getTypeDisplayName = (type: string) => {
+    const typeMap: Record<string, string> = {
+      system: '시스템',
+      crm_update: 'CRM 업데이트',
+      order_created: '주문 생성',
+      commission_paid: '커미션 지급',
+      clinical_progress: '임상 진행',
+      approval_required: '승인 요청',
+      status_changed: '상태 변경',
+      reminder: '알림',
+    };
+    return typeMap[type] || type;
+  };
+
+  return (
+    <div className="container mx-auto max-w-4xl p-6">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">알림</h1>
+          <p className="mt-1 text-gray-600">
+            {unreadCount > 0
+              ? `${unreadCount}개의 읽지 않은 알림이 있습니다`
+              : '모든 알림을 확인했습니다'}
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => setPaginationOpts({ numItems: 20, cursor: null })}
+            disabled={loading}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            새로고침
+          </Button>
+          {unreadCount > 0 && (
+            <Button onClick={handleMarkAllAsRead} disabled={loading}>
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              모두 읽음
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">전체 알림</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center text-muted-foreground">사용자 정보를 확인하는 중입니다.</p>
+            <div className="text-2xl font-bold">{allNotificationsResult?.page.length || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">읽지 않음</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{unreadCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">우선순위 높음</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {unreadCountResult?.hasHighPriority ? '있음' : '없음'}
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="all">전체 알림</TabsTrigger>
+          <TabsTrigger value="unread" className="relative">
+            읽지 않음
+            {unreadCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="ml-2 flex h-5 w-5 items-center justify-center p-0 text-xs"
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-6">
+          <NotificationList
+            notifications={notifications}
+            loading={loading}
+            onMarkAsRead={handleMarkAsRead}
+            onDelete={handleDelete}
+            getNotificationIcon={getNotificationIcon}
+            getPriorityColor={getPriorityColor}
+            getTypeDisplayName={getTypeDisplayName}
+          />
+        </TabsContent>
+
+        <TabsContent value="unread" className="mt-6">
+          <NotificationList
+            notifications={notifications}
+            loading={loading}
+            onMarkAsRead={handleMarkAsRead}
+            onDelete={handleDelete}
+            getNotificationIcon={getNotificationIcon}
+            getPriorityColor={getPriorityColor}
+            getTypeDisplayName={getTypeDisplayName}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Load More Button */}
+      {!loading && notifications.length > 0 && (
+        <div className="mt-6 text-center">
+          <Button
+            variant="outline"
+            onClick={handleLoadMore}
+            disabled={allNotificationsResult?.isDone}
+          >
+            더 보기
+          </Button>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && notifications.length === 0 && (
+        <div className="py-12 text-center">
+          <Bell className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+          <h3 className="mb-2 text-lg font-medium text-gray-900">
+            {activeTab === 'unread' ? '읽지 않은 알림이 없습니다' : '알림이 없습니다'}
+          </h3>
+          <p className="text-gray-600">
+            {activeTab === 'unread'
+              ? '모든 알림을 확인했습니다.'
+              : '새로운 알림이 있을 때 여기에 표시됩니다.'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Notification List Component
+interface NotificationListProps {
+  notifications: Notification[];
+  loading: boolean;
+  onMarkAsRead: (id: string) => void;
+  onDelete: (id: string) => void;
+  getNotificationIcon: (type: string) => JSX.Element;
+  getPriorityColor: (priority: string) => string;
+  getTypeDisplayName: (type: string) => string;
+}
+
+function NotificationList({
+  notifications,
+  loading,
+  onMarkAsRead,
+  onDelete,
+  getNotificationIcon,
+  getPriorityColor,
+  getTypeDisplayName,
+}: NotificationListProps) {
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(5)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-4">
+                <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/4 rounded bg-gray-200"></div>
+                  <div className="h-3 w-1/2 rounded bg-gray-200"></div>
+                  <div className="h-3 w-1/4 rounded bg-gray-200"></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     );
   }
 
-  // KOL이 아닌 경우 홈으로 리다이렉트
-  if (!isKol) {
-    return redirect('/');
-  }
-
   return (
-    <div className="p-4 md:p-6">
-      <div className="mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold">알림</h1>
-        <p className="text-sm text-muted-foreground">중요한 알림과 업데이트를 확인하세요.</p>
-      </div>
-
-      {/* 브라우저 푸시 알림 권한 요청 */}
-      <NotificationPermission />
-
-      {/* 검색 및 필터 영역 */}
-      <div className="mb-6 flex flex-col space-y-4">
-        <div className="relative w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="알림 검색..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 sm:space-x-2">
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | 'unread' | 'read')} className="flex-1">
-            <TabsList className="w-full sm:w-auto grid grid-cols-3">
-              <TabsTrigger value="all">전체</TabsTrigger>
-              <TabsTrigger value="unread">안 읽은 알림</TabsTrigger>
-              <TabsTrigger value="read">읽은 알림</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          <div className="flex items-center justify-between sm:justify-end space-x-2">
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={refreshData}
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-            
-            <Button 
-              variant="outline"
-              onClick={markAllAsRead}
-              disabled={!notifications.some(n => !n.read) || markAllAsReadMutation.isLoading}
-              className="whitespace-nowrap flex-1 sm:flex-initial"
-            >
-              <CheckCircle className="mr-1 h-4 w-4" />
-              모두 읽음
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* 알림 목록 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>알림 목록</CardTitle>
-          <CardDescription>
-            {filter === 'all' ? '모든 알림' : filter === 'unread' ? '읽지 않은 알림' : '읽은 알림'}
-            {` (${filteredNotifications.length}개)`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="mt-4 text-sm text-muted-foreground">알림을 불러오는 중입니다...</p>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <AlertCircle className="h-8 w-8 text-destructive" />
-              <p className="mt-4 text-sm text-destructive">{error instanceof Error ? error.message : '알림을 불러오는데 실패했습니다.'}</p>
-              <Button 
-                className="mt-4"
-                variant="outline"
-                onClick={() => refetch()}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                다시 시도
-              </Button>
-            </div>
-          ) : filteredNotifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="rounded-full bg-blue-50 p-4 dark:bg-blue-900/20">
-                <Bell className="h-10 w-10 text-blue-500 dark:text-blue-400" />
-              </div>
-              <p className="mt-6 text-center text-base font-medium">
-                {filter === 'all' ? '현재 알림이 없습니다.' : 
-                 filter === 'unread' ? '읽지 않은 알림이 없습니다.' : 
-                 '읽은 알림이 없습니다.'}
-              </p>
-              <p className="mt-2 max-w-md text-center text-sm text-muted-foreground">
-                {searchTerm ? '검색 조건에 맞는 알림이 없습니다.' : 
-                 '새로운 알림이 도착하면 여기에 표시됩니다.'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredNotifications.map((notification) => (
-                <div 
-                  key={notification.id}
-                  className={`flex items-start space-x-4 rounded-lg border p-4 transition-colors hover:bg-gray-50 cursor-pointer ${
-                    !notification.read ? 'bg-blue-50 border-blue-200' : 'bg-white'
+    <div className="space-y-4">
+      {notifications.map(notification => (
+        <Card
+          key={notification.id}
+          className={`border-l-4 transition-all hover:shadow-md ${
+            !notification.isRead ? getPriorityColor(notification.priority) : 'border-l-gray-300'
+          }`}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex flex-1 items-start space-x-4">
+                <div
+                  className={`flex-shrink-0 rounded-full p-2 ${
+                    notification.priority === 'high'
+                      ? 'bg-red-100 text-red-600'
+                      : notification.priority === 'normal'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-gray-100 text-gray-600'
                   }`}
-                  onClick={() => viewNotificationDetail(notification)}
                 >
-                  <div className="flex-shrink-0">
-                    {!notification.read ? (
-                      <div className="h-2 w-2 bg-blue-500 rounded-full mt-2" />
-                    ) : (
-                      <div className="h-2 w-2 bg-gray-300 rounded-full mt-2" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className={`text-sm font-medium truncate ${
-                        !notification.read ? 'text-gray-900' : 'text-gray-700'
-                      }`}>
+                  {getNotificationIcon(notification.type)}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <h3
+                        className={`text-lg font-medium ${
+                          !notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                        }`}
+                      >
                         {notification.title}
-                      </h4>
-                      <time className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                        {notification.timeAgo}
-                      </time>
-                    </div>
-                    <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                      {notification.content}
-                    </p>
-                    <div className="mt-2 flex items-center space-x-2">
-                      {!notification.read && (
-                        <Badge variant="secondary" className="text-xs">
-                          새 알림
-                        </Badge>
+                      </h3>
+                      {!notification.isRead && (
+                        <div className="h-2 w-2 rounded-full bg-blue-600"></div>
                       )}
                     </div>
+                    <Badge variant="outline" className="text-xs">
+                      {getTypeDisplayName(notification.type)}
+                    </Badge>
                   </div>
-                  <div className="flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!notification.read) {
-                          markAsRead(notification.id);
-                        }
-                      }}
+
+                  <p className="mt-2 leading-relaxed text-gray-600">{notification.message}</p>
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
+                      {formatDistanceToNow(new Date(notification.createdAt), {
+                        addSuffix: true,
+                        locale: ko,
+                      })}
+                    </span>
+                    <Badge
+                      variant={notification.priority === 'high' ? 'destructive' : 'secondary'}
+                      className="text-xs"
                     >
-                      {notification.read ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+                      {notification.priority === 'high'
+                        ? '높음'
+                        : notification.priority === 'normal'
+                          ? '보통'
+                          : '낮음'}
+                    </Badge>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
 
-      {/* 알림 상세 모달 */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedNotification?.title}</DialogTitle>
-            <DialogDescription>
-              {selectedNotification?.timeAgo}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm">{selectedNotification?.content}</p>
-          </div>
-        </DialogContent>
-      </Dialog>
+              <div className="ml-4 flex items-center space-x-2">
+                {!notification.isRead && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onMarkAsRead(notification.id)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(notification.id)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
-} 
+}

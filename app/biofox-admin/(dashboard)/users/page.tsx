@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -21,368 +21,261 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  UserPlus, 
-  Download, 
+import {
+  UserPlus,
+  Download,
   Upload,
   CheckCircle,
   XCircle,
   Trash,
   Users,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { UserFiltersComponent } from '@/components/biofox-admin/users/UserFilters';
 import { UserTable } from '@/components/biofox-admin/users/UserTable';
 import { UserDetailModal } from '@/components/biofox-admin/users/UserDetailModal';
 import { UserAddModal } from '@/components/biofox-admin/users/UserAddModal';
 import type { User, UserFilters, PaginationState, BulkActionRequest } from '@/types/biofox-admin';
-import { createClient as createSupabaseClient } from '@/utils/supabase/client';
+
+// Convex imports
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 export default function UsersPage() {
   const { toast } = useToast();
-  const supabase = createSupabaseClient();
-  
+
   // States
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<UserFilters>({});
-  const [pagination, setPagination] = useState<PaginationState>({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0,
-    hasNext: false,
-    hasPrev: false,
+  const [paginationOpts, setPaginationOpts] = useState({
+    numItems: 20,
+    cursor: null as string | null,
   });
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkActionDialog, setShowBulkActionDialog] = useState(false);
-  const [bulkAction, setBulkAction] = useState<BulkActionRequest['action'] | null>(null);
+  const [bulkAction, setBulkAction] = useState<
+    'approve' | 'reject' | 'delete' | 'activate' | 'deactivate' | null
+  >(null);
   const [bulkActionData, setBulkActionData] = useState<any>({});
 
-  // Fetch users
-  const fetchUsers = useCallback(async () => {
-    // pagination이 초기화되지 않은 경우 방어
-    if (!pagination || typeof pagination.page === 'undefined') {
-      console.log('Pagination not initialized yet');
-      return;
+  // Convex queries and mutations
+  const usersResult = useQuery(api.users.listUsers, {
+    paginationOpts,
+    search: filters.search,
+    role: filters.role,
+    status: filters.status,
+    createdFrom: filters.dateRange?.from?.toISOString(),
+    createdTo: filters.dateRange?.to?.toISOString(),
+    sortBy: 'created_at',
+    sortOrder: 'desc',
+  });
+
+  const updateUser = useMutation(api.userMutations.updateUser);
+  const bulkUserAction = useMutation(api.userMutations.bulkUserAction);
+  const approveUser = useMutation(api.userMutations.approveUser);
+  const rejectUser = useMutation(api.userMutations.rejectUser);
+
+  // Extract users and loading state from Convex query
+  const users =
+    usersResult?.page?.map(user => ({
+      ...user,
+      stats: user.stats || {
+        total_sales_this_month: 0,
+        total_commission_this_month: 0,
+        total_clinical_cases: 0,
+      },
+    })) || [];
+  const loading = usersResult === undefined;
+  const hasNextPage = usersResult ? !usersResult.isDone : false;
+
+  // Handle pagination
+  const handleNextPage = () => {
+    if (usersResult && !usersResult.isDone && usersResult.continueCursor) {
+      setPaginationOpts(prev => ({
+        ...prev,
+        cursor: usersResult.continueCursor,
+      }));
     }
-    
-    setLoading(true);
+  };
+
+  const handlePreviousPage = () => {
+    // For simplicity, reset to first page (Convex doesn't have built-in prev page)
+    setPaginationOpts(prev => ({
+      ...prev,
+      cursor: null,
+    }));
+  };
+
+  // Handle filter changes
+  const handleFiltersChange = (newFilters: UserFilters) => {
+    setFilters(newFilters);
+    // Reset pagination when filters change
+    setPaginationOpts(prev => ({
+      ...prev,
+      cursor: null,
+    }));
+  };
+
+  // Handle user actions
+  const handleUserAction = async (action: string, user: User, data?: any) => {
     try {
-      const params = new URLSearchParams({
-        page: (pagination.page || 1).toString(),
-        limit: (pagination.limit || 20).toString(),
-      });
+      switch (action) {
+        case 'approve':
+          await approveUser({
+            userId: user.id as any,
+            commission_rate: data?.commission_rate,
+          });
+          toast({
+            title: '성공',
+            description: '사용자가 승인되었습니다.',
+          });
+          break;
 
-      // Add filters
-      console.log('Current filters:', filters); // 디버깅용
-      if (filters.status) params.append('status', filters.status);
-      if (filters.role) params.append('role', filters.role);
-      if (filters.search) params.append('search', filters.search);
-      if (filters.hasRelationship !== undefined) {
-        params.append('hasRelationship', filters.hasRelationship.toString());
+        case 'reject':
+          await rejectUser({
+            userId: user.id as any,
+            reason: data?.reason,
+          });
+          toast({
+            title: '성공',
+            description: '사용자가 거절되었습니다.',
+          });
+          break;
+
+        case 'update':
+          await updateUser({
+            userId: user.id as any,
+            updates: data,
+          });
+          toast({
+            title: '성공',
+            description: '사용자 정보가 업데이트되었습니다.',
+          });
+          break;
+
+        default:
+          console.warn('Unknown action:', action);
       }
-      if (filters.dateRange?.from) {
-        params.append('createdFrom', filters.dateRange.from.toISOString());
-      }
-      if (filters.dateRange?.to) {
-        params.append('createdTo', filters.dateRange.to.toISOString());
-      }
-
-      // Include access token in header for server-side auth
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-
-      const response = await fetch(`/api/users?${params}`, {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        // 개발 환경에서는 401, 500 에러를 무시하고 더미 데이터 사용
-        if (process.env.NODE_ENV === 'development' && (response.status === 401 || response.status === 500)) {
-          console.warn('Development mode: Using dummy data due to API error', response.status);
-          
-          // 더미 데이터 설정
-          const dummyUsers: User[] = [
-            {
-              id: 'mock-1',
-              email: 'admin@test.com',
-              name: '테스트 관리자',
-              role: 'admin' as const,
-              status: 'approved' as const,
-              shop_name: '테스트 샵',
-              region: '서울',
-              naver_place_link: undefined,
-              approved_at: new Date().toISOString(),
-              approved_by: undefined,
-              commission_rate: 10,
-              total_subordinates: 0,
-              active_subordinates: 0,
-              current_relationship: undefined,
-              stats: {
-                total_sales_this_month: 0,
-                total_commission_this_month: 0,
-                total_clinical_cases: 0
-              },
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ];
-          
-          setUsers(dummyUsers);
-          setPagination({ page: 1, limit: 20, total: 1, totalPages: 1 });
-          return;
-        }
-        
-        // 프로덕션에서는 에러 throw
-        const errorMessage = response.status === 500 
-          ? 'API 서버 오류가 발생했습니다.' 
-          : '사용자 목록을 불러오는데 실패했습니다.';
-        throw new Error(errorMessage);
-      }
-
-      const result = await response.json();
-      setUsers(result.data);
-      setPagination(result.pagination);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-      toast({
-        title: '오류',
-        description: '사용자 목록을 불러오는데 실패했습니다.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination?.page, pagination?.limit, filters, toast, supabase]);
-
-  // 컴포넌트 마운트 시 초기 로딩
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  // pagination 변경 시 리로딩
-  useEffect(() => {
-    if (pagination && typeof pagination.page !== 'undefined') {
-      fetchUsers();
-    }
-  }, [pagination?.page, pagination?.limit, fetchUsers]);
-
-  // filters 변경 시 페이지를 1로 리셋하고 리로딩
-  useEffect(() => {
-    if (pagination && typeof pagination.page !== 'undefined') {
-      setPagination(prev => ({ ...prev, page: 1 }));
-    }
-  }, [filters]);
-
-  // Handlers
-  const handleSearch = () => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-    fetchUsers();
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setPagination(prev => ({ ...prev, page: newPage }));
-  };
-
-  const handleViewUser = (user: User) => {
-    setSelectedUser(user);
-    setShowDetailModal(true);
-  };
-
-  const handleEditUser = (user: User) => {
-    // TODO: Implement edit functionality
-    toast({
-      title: '준비 중',
-      description: '사용자 수정 기능은 준비 중입니다.',
-    });
-  };
-
-  const handleDeleteUser = async (user: User) => {
-    if (!confirm(`정말로 ${user.name}님을 삭제하시겠습니까?`)) return;
-
-    try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || '사용자 삭제에 실패했습니다.');
-      }
-
-      toast({
-        title: '성공',
-        description: '사용자가 삭제되었습니다.',
-      });
-      fetchUsers();
     } catch (error: any) {
+      console.error('User action error:', error);
       toast({
         title: '오류',
-        description: error.message,
+        description: error.message || '작업 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     }
   };
 
-  const handleApproveUser = async (user: User) => {
-    try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'approved' }),
-      });
-
-      if (!response.ok) throw new Error('승인 처리에 실패했습니다.');
-
-      toast({
-        title: '성공',
-        description: `${user.name}님이 승인되었습니다.`,
-      });
-      fetchUsers();
-    } catch (error) {
-      toast({
-        title: '오류',
-        description: '승인 처리에 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleRejectUser = async (user: User) => {
-    try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'rejected' }),
-      });
-
-      if (!response.ok) throw new Error('거절 처리에 실패했습니다.');
-
-      toast({
-        title: '성공',
-        description: `${user.name}님이 거절되었습니다.`,
-      });
-      fetchUsers();
-    } catch (error) {
-      toast({
-        title: '오류',
-        description: '거절 처리에 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
-
+  // Handle bulk actions
   const handleBulkAction = async () => {
     if (!bulkAction || selectedUsers.length === 0) return;
 
     try {
-      const response = await fetch('/api/users/bulk-action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_ids: selectedUsers,
-          action: bulkAction,
-          data: bulkActionData,
-        }),
+      const result = await bulkUserAction({
+        userIds: selectedUsers as any[],
+        action: bulkAction,
+        reason: bulkActionData.reason,
       });
 
-      if (!response.ok) throw new Error('일괄 작업에 실패했습니다.');
-
-      const result = await response.json();
-      
-      toast({
-        title: '성공',
-        description: `${result.affected}명의 사용자에 대한 작업이 완료되었습니다.`,
-      });
-
-      if (result.results.failed.length > 0) {
-        console.error('Failed operations:', result.results.failed);
+      if (result.success) {
+        toast({
+          title: '성공',
+          description: `${result.processed}개 사용자에 대한 작업이 완료되었습니다.`,
+        });
+      } else {
+        toast({
+          title: '부분 완료',
+          description: `${result.processed}개 성공, ${result.failed}개 실패`,
+          variant: 'destructive',
+        });
       }
 
       setSelectedUsers([]);
       setShowBulkActionDialog(false);
       setBulkAction(null);
       setBulkActionData({});
-      fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Bulk action error:', error);
       toast({
         title: '오류',
-        description: '일괄 작업에 실패했습니다.',
+        description: error.message || '일괄 작업 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     }
   };
 
-  const prepareBulkAction = (action: BulkActionRequest['action']) => {
+  // Handle data export
+  const handleExport = async () => {
+    try {
+      // Note: Export functionality would need to be implemented as a separate Convex action
+      // For now, we'll show a placeholder message
+      toast({
+        title: '알림',
+        description: '데이터 내보내기 기능은 준비 중입니다.',
+      });
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast({
+        title: '오류',
+        description: '데이터 내보내기 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // User selection handlers
+  const handleUserSelect = (userId: string, isSelected: boolean) => {
+    setSelectedUsers(prev => (isSelected ? [...prev, userId] : prev.filter(id => id !== userId)));
+  };
+
+  const handleSelectAll = (isSelected: boolean) => {
+    setSelectedUsers(isSelected ? users.map(user => user.id) : []);
+  };
+
+  // Modal handlers
+  const handleUserClick = (user: User) => {
+    setSelectedUser(user);
+    setShowDetailModal(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+  };
+
+  const handleBulkActionClick = (
+    action: 'approve' | 'reject' | 'delete' | 'activate' | 'deactivate'
+  ) => {
     if (selectedUsers.length === 0) {
       toast({
         title: '알림',
-        description: '선택된 사용자가 없습니다.',
+        description: '작업할 사용자를 선택해주세요.',
       });
       return;
     }
-
     setBulkAction(action);
     setShowBulkActionDialog(true);
-  };
-
-  const handleExport = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (filters.status) params.append('status', filters.status);
-      if (filters.role) params.append('role', filters.role);
-      if (filters.search) params.append('search', filters.search);
-      if (filters.hasRelationship !== undefined) {
-        params.append('hasRelationship', filters.hasRelationship.toString());
-      }
-      if (filters.dateRange?.from) params.append('createdFrom', filters.dateRange.from.toISOString());
-      if (filters.dateRange?.to) params.append('createdTo', filters.dateRange.to.toISOString());
-
-      const res = await fetch(`/api/users/export?${params.toString()}`);
-      if (!res.ok) throw new Error('엑셀 내보내기에 실패했습니다.');
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `users_${new Date().toISOString().slice(0,10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      toast({
-        title: '오류',
-        description: err.message || '엑셀 내보내기에 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleAddUserSuccess = () => {
-    fetchUsers(); // 사용자 목록 새로고침
-    toast({
-      title: '성공',
-      description: '새 사용자가 성공적으로 추가되었습니다.',
-    });
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">사용자 관리</h1>
-          <p className="text-muted-foreground">
-            시스템 사용자를 관리하고 권한을 설정합니다.
-          </p>
+          <p className="text-muted-foreground">시스템 사용자를 관리하고 권한을 설정합니다.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchUsers}>
+          <Button
+            variant="outline"
+            onClick={() => setPaginationOpts(prev => ({ ...prev, cursor: null }))}
+          >
             <RefreshCw className="mr-2 h-4 w-4" />
             새로고침
           </Button>
@@ -400,8 +293,8 @@ export default function UsersPage() {
       {/* Filters */}
       <UserFiltersComponent
         filters={filters}
-        onFiltersChange={setFilters}
-        onSearch={handleSearch}
+        onFiltersChange={handleFiltersChange}
+        onSearch={() => setPaginationOpts(prev => ({ ...prev, cursor: null }))}
         loading={loading}
       />
 
@@ -410,30 +303,24 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {selectedUsers.length}명 선택됨
-              </p>
+              <p className="text-sm text-muted-foreground">{selectedUsers.length}명 선택됨</p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => prepareBulkAction('approve')}
+                  onClick={() => handleBulkActionClick('approve')}
                 >
                   <CheckCircle className="mr-2 h-4 w-4" />
                   일괄 승인
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => prepareBulkAction('reject')}
-                >
+                <Button variant="outline" size="sm" onClick={() => handleBulkActionClick('reject')}>
                   <XCircle className="mr-2 h-4 w-4" />
                   일괄 거절
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => prepareBulkAction('change_role')}
+                  onClick={() => handleBulkActionClick('change_role')}
                 >
                   <Users className="mr-2 h-4 w-4" />
                   역할 변경
@@ -441,7 +328,7 @@ export default function UsersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => prepareBulkAction('delete')}
+                  onClick={() => handleBulkActionClick('delete')}
                   className="text-red-600"
                 >
                   <Trash className="mr-2 h-4 w-4" />
@@ -460,53 +347,66 @@ export default function UsersPage() {
             users={users}
             loading={loading}
             selectedUsers={selectedUsers}
-            onSelectionChange={setSelectedUsers}
-            onViewUser={handleViewUser}
-            onEditUser={handleEditUser}
-            onDeleteUser={handleDeleteUser}
-            onApproveUser={handleApproveUser}
-            onRejectUser={handleRejectUser}
+            onSelectionChange={(userIds: string[]) => setSelectedUsers(userIds)}
+            onSelectAll={handleSelectAll}
+            onViewUser={handleUserClick}
+            onEditUser={async user => handleUserAction('update', user, { role: 'kol' })}
+            onDeleteUser={async user => handleUserAction('delete', user)}
+            onApproveUser={async user => handleUserAction('approve', user)}
+            onRejectUser={async user => handleUserAction('reject', user, { reason: '거절 사유' })}
           />
         </CardContent>
       </Card>
 
       {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
+      {usersResult && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            총 {pagination.total || 0}명 중 {((pagination.page || 1) - 1) * (pagination.limit || 20) + 1}-
-            {Math.min((pagination.page || 1) * (pagination.limit || 20), pagination.total || 0)}명 표시
-          </p>
+          <p className="text-sm text-muted-foreground">현재 페이지: {users.length}명 표시</p>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handlePageChange((pagination.page || 1) - 1)}
-              disabled={!pagination.hasPrev}
+              onClick={handlePreviousPage}
+              disabled={!paginationOpts.cursor}
             >
               이전
             </Button>
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, pagination.totalPages || 1) }, (_, i) => {
-                const page = i + 1;
-                return (
-                  <Button
-                    key={page}
-                    variant={page === (pagination.page || 1) ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handlePageChange(page)}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
+              {Array.from(
+                {
+                  length: Math.min(
+                    5,
+                    (usersResult.total || 0) / (paginationOpts.numItems || 20) || 1
+                  ),
+                },
+                (_, i) => {
+                  const page = i + 1;
+                  return (
+                    <Button
+                      key={page}
+                      variant={
+                        page ===
+                        (paginationOpts.cursor ? usersResult.page.length : 0) /
+                          (paginationOpts.numItems || 20) +
+                          1
+                          ? 'default'
+                          : 'outline'
+                      }
+                      size="sm"
+                      onClick={() => {
+                        setPaginationOpts(prev => ({
+                          ...prev,
+                          cursor: null,
+                        }));
+                      }}
+                    >
+                      {page}
+                    </Button>
+                  );
+                }
+              )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange((pagination.page || 1) + 1)}
-              disabled={!pagination.hasNext}
-            >
+            <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!hasNextPage}>
               다음
             </Button>
           </div>
@@ -517,17 +417,17 @@ export default function UsersPage() {
       <UserDetailModal
         user={selectedUser}
         open={showDetailModal}
-        onClose={() => {
-          setShowDetailModal(false);
-          setSelectedUser(null);
-        }}
+        onClose={handleCloseDetailModal}
       />
 
       {/* User Add Modal */}
       <UserAddModal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSuccess={handleAddUserSuccess}
+        onClose={handleCloseAddModal}
+        onSuccess={() => {
+          setShowAddModal(false);
+          setPaginationOpts(prev => ({ ...prev, cursor: null }));
+        }}
       />
 
       {/* Bulk Action Dialog */}
@@ -538,13 +438,14 @@ export default function UsersPage() {
             <AlertDialogDescription>
               {bulkAction === 'approve' && `${selectedUsers.length}명의 사용자를 승인하시겠습니까?`}
               {bulkAction === 'reject' && `${selectedUsers.length}명의 사용자를 거절하시겠습니까?`}
-              {bulkAction === 'delete' && `${selectedUsers.length}명의 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+              {bulkAction === 'delete' &&
+                `${selectedUsers.length}명의 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
               {bulkAction === 'change_role' && (
-                <div className="space-y-4 mt-4">
+                <div className="mt-4 space-y-4">
                   <p>{selectedUsers.length}명의 사용자 역할을 변경합니다.</p>
                   <Select
                     value={bulkActionData.role}
-                    onValueChange={(value) => setBulkActionData({ ...bulkActionData, role: value })}
+                    onValueChange={value => setBulkActionData({ ...bulkActionData, role: value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="역할 선택" />
