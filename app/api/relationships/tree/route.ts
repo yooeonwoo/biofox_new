@@ -131,8 +131,29 @@ export async function GET(request: NextRequest) {
       // 특정 루트부터 시작
       treeData = buildTree(rootId, 0);
     } else {
-      // 최상위 노드들부터 시작 (parent_id가 null인 것들)
-      treeData = buildTree(null, 0);
+      // 최상위 노드들 찾기 (shop_relationships에 shop_owner로 등록되지 않은 KOL/OL들)
+      const allShopOwnerIds = new Set(relationships?.map(rel => rel.shop_owner_id));
+      const topLevelProfiles =
+        profiles?.filter(
+          profile =>
+            (profile.role === 'kol' || profile.role === 'ol') &&
+            profile.status === 'approved' &&
+            !allShopOwnerIds.has(profile.id)
+        ) || [];
+
+      console.log('최상위 프로필들:', topLevelProfiles);
+
+      treeData = topLevelProfiles.map(profile => ({
+        id: profile.id,
+        name: profile.name,
+        role: profile.role,
+        shop_name: profile.shop_name,
+        subordinates: buildTree(profile.id, 1),
+        stats: salesByShop[profile.id] || {
+          sales_this_month: 0,
+          last_order_date: null,
+        },
+      }));
     }
 
     console.log('구성된 트리 데이터:', JSON.stringify(treeData, null, 2));
