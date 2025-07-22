@@ -263,7 +263,7 @@
             "description": "Create Convex mutation functions to handle create, update, and delete operations for all relevant endpoints.",
             "dependencies": ["5.1"],
             "details": "For each write endpoint, implement a mutation function that performs the necessary data modifications, ensuring transactional integrity and adherence to business rules.\n<info added on 2025-07-22T07:39:46.933Z>\n### User Management & Order Management Mutation Functions\n\n**User Management Mutations (userMutations.ts)**\n\n1. **updateUser** - Updates user information including individual fields (name, email, role, status), performs email duplication checks, automatically sets approval information when status changes, and creates audit logs.\n\n2. **bulkUserAction** - Processes batch operations on multiple users simultaneously (approve, reject, activate, deactivate, delete) with error handling and result reporting.\n\n3. **approveUser** - Handles individual user approval with commission rate setting options, automatic notification generation, and prevention of duplicate approvals.\n\n4. **rejectUser** - Records rejection reasons, stores rejection information in metadata, and generates high-priority notifications.\n\n5. **createRelationship** - Establishes parent-child store relationships, deactivates existing relationships before creating new ones, prevents circular references, and automatically updates child store counts.\n\n**Order Management Mutations (orderMutations.ts)**\n\n1. **createOrder** - Automatically generates order numbers, calculates commissions, creates order items in batch, and verifies permissions (admin or own store).\n\n2. **updateOrder** - Supports partial updates, offers commission recalculation options, and triggers automatic notifications on status changes.\n\n3. **deleteOrder** - Admin-only soft delete functionality that changes status to 'cancelled', prevents deletion of orders with completed commission payments, and cancels related order item commissions.\n\n4. **bulkOrderAction** - Batch processes orders for completion, cancellation, and commission approval/payment, integrates with commission_calculations table, and automatically creates/updates monthly commission statements.\n\n5. **updateOrderItem** - Modifies quantity, unit price, and commission rates, automatically recalculates order totals and overall order commissions.\n\n**Common Features:**\n- Convex Auth integration\n- Role-based access control\n- Automatic audit log generation\n- Real-time notification system integration\n- Transaction integrity\n- Error handling and validation\n- Business logic implementation\n</info added on 2025-07-22T07:39:46.933Z>",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Test mutations with various input scenarios, including edge cases and invalid data, to confirm correct behavior and data consistency."
           },
           {
@@ -271,8 +271,8 @@
             "title": "Add Error Handling, Validation, and Pagination",
             "description": "Integrate robust error handling, input validation, and pagination logic into all query and mutation functions as appropriate.",
             "dependencies": ["5.2", "5.3"],
-            "details": "Implement input validation using Convex's type system, add try/catch blocks or equivalent error handling, and ensure paginated responses for list endpoints where necessary.",
-            "status": "pending",
+            "details": "Implement input validation using Convex's type system, add try/catch blocks or equivalent error handling, and ensure paginated responses for list endpoints where necessary.\n<info added on 2025-07-22T07:49:12.243Z>\n## Comprehensive API Improvements Implementation\n\n### Common Utility Functions (convex/utils.ts)\n- Standardized error classes and error codes\n- Permission verification helpers (requireAdmin, getCurrentUser, requireRole)\n- Input validation functions for emails, phone numbers, date ranges, and numeric ranges\n- Audit logging and notification generation helpers\n- Secure error formatting functions\n\n### User API Improvements\n- Added try-catch blocks to all query functions\n- Implemented systematic error handling using ApiError class\n- Enhanced input validation for search terms and pagination options\n- Provided more specific and meaningful error messages\n\n### User Mutation Improvements\n- Standardized permission checking with requireAdmin/getCurrentUser\n- Improved email format validation and duplicate checking\n- Added string length validation for names and store names\n- Enhanced commission rate validation\n- Standardized audit logging and notification generation\n\n### Order Mutation Improvements\n- Added amount and commission rate validation\n- Refactored order number generation logic into utility functions\n- Enhanced permission checking and error handling\n- Implemented more specific business logic validation\n\n### Technical Enhancements\n- Introduced HTTP status codes and error code system\n- Created structured error responses for client-side error type differentiation\n- Implemented security considerations (removed stack traces, prevented sensitive information exposure)\n- Reduced code duplication through reusable common functions\n- Strengthened type safety throughout the codebase\n</info added on 2025-07-22T07:49:12.243Z>",
+            "status": "done",
             "testStrategy": "Deliberately trigger errors and invalid inputs to verify error responses. Test pagination with large datasets to ensure correct slicing and navigation."
           },
           {
@@ -281,7 +281,7 @@
             "description": "Write clear documentation for each Convex query and mutation function, including usage examples, input/output schemas, and error cases.",
             "dependencies": ["5.4"],
             "details": "Prepare developer-facing documentation and inline code comments for all implemented API functions. Conduct a peer review to ensure clarity and completeness.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Have another developer follow the documentation to implement a sample integration, and gather feedback for improvements."
           }
         ]
@@ -574,7 +574,7 @@
     ],
     "metadata": {
       "created": "2025-07-22T05:15:56.692Z",
-      "updated": "2025-07-22T07:36:00.685Z",
+      "updated": "2025-07-22T07:49:24.093Z",
       "description": "Tasks for master context"
     }
   }

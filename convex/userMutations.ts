@@ -5,6 +5,19 @@
 
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
+import {
+  requireAdmin,
+  getCurrentUser,
+  validateEmail,
+  validateCommissionRate,
+  validateStringLength,
+  checkDuplicate,
+  createAuditLog,
+  createNotification,
+  ApiError,
+  ERROR_CODES,
+  formatError,
+} from './utils';
 
 /**
  * 사용자 정보 수정
@@ -30,77 +43,89 @@ export const updateUser = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    // 인증 확인
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('인증되지 않은 사용자입니다.');
-    }
+    try {
+      // 관리자 권한 확인
+      const currentUser = await requireAdmin(ctx);
 
-    // 현재 사용자 조회 및 권한 확인
-    const currentUser = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', identity.subject as any))
-      .first();
-
-    if (!currentUser || currentUser.role !== 'admin') {
-      throw new Error('관리자 권한이 필요합니다.');
-    }
-
-    // 수정할 사용자 조회
-    const targetUser = await ctx.db.get(args.userId);
-    if (!targetUser) {
-      throw new Error('사용자를 찾을 수 없습니다.');
-    }
-
-    // 이메일 중복 검사 (이메일이 변경되는 경우)
-    if (args.updates.email && args.updates.email !== targetUser.email) {
-      const existingUser = await ctx.db
-        .query('profiles')
-        .withIndex('by_email', q => q.eq('email', args.updates.email!))
-        .first();
-
-      if (existingUser && existingUser._id !== args.userId) {
-        throw new Error('이미 사용 중인 이메일입니다.');
+      // 수정할 사용자 조회
+      const targetUser = await ctx.db.get(args.userId);
+      if (!targetUser) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, '사용자를 찾을 수 없습니다.', 404);
       }
+
+      // 입력 검증
+      if (args.updates.email) {
+        if (!validateEmail(args.updates.email)) {
+          throw new ApiError(ERROR_CODES.INVALID_EMAIL, '올바르지 않은 이메일 형식입니다.', 400);
+        }
+
+        // 이메일 중복 검사
+        if (args.updates.email !== targetUser.email) {
+          const isDuplicate = await checkDuplicate(
+            ctx,
+            'profiles',
+            'email',
+            args.updates.email,
+            args.userId
+          );
+
+          if (isDuplicate) {
+            throw new ApiError(ERROR_CODES.ALREADY_EXISTS, '이미 사용 중인 이메일입니다.', 409);
+          }
+        }
+      }
+
+      if (args.updates.name) {
+        validateStringLength(args.updates.name, 2, 50, '이름');
+      }
+
+      if (args.updates.shop_name) {
+        validateStringLength(args.updates.shop_name, 2, 100, '전문점명');
+      }
+
+      if (args.updates.commission_rate !== undefined) {
+        validateCommissionRate(args.updates.commission_rate);
+      }
+
+      // 상태가 승인으로 변경되는 경우 승인 정보 추가
+      const updateData: any = {
+        ...args.updates,
+        updated_at: Date.now(),
+      };
+
+      if (args.updates.status === 'approved' && targetUser.status !== 'approved') {
+        updateData.approved_at = Date.now();
+        updateData.approved_by = currentUser._id;
+      }
+
+      // 사용자 정보 업데이트
+      await ctx.db.patch(args.userId, updateData);
+
+      // 감사 로그 생성
+      await createAuditLog(ctx, {
+        tableName: 'profiles',
+        recordId: args.userId,
+        action: 'UPDATE',
+        userId: currentUser._id,
+        userRole: currentUser.role,
+        oldValues: {
+          name: targetUser.name,
+          email: targetUser.email,
+          role: targetUser.role,
+          status: targetUser.status,
+        },
+        newValues: args.updates,
+        changedFields: Object.keys(args.updates),
+      });
+
+      return {
+        success: true,
+        userId: args.userId,
+        message: '사용자 정보가 업데이트되었습니다.',
+      };
+    } catch (error) {
+      throw formatError(error);
     }
-
-    // 상태가 승인으로 변경되는 경우 승인 정보 추가
-    const updateData: any = {
-      ...args.updates,
-      updated_at: Date.now(),
-    };
-
-    if (args.updates.status === 'approved' && targetUser.status !== 'approved') {
-      updateData.approved_at = Date.now();
-      updateData.approved_by = currentUser._id;
-    }
-
-    // 사용자 정보 업데이트
-    await ctx.db.patch(args.userId, updateData);
-
-    // 감사 로그 생성
-    await ctx.db.insert('audit_logs', {
-      table_name: 'profiles',
-      record_id: args.userId,
-      action: 'UPDATE',
-      user_id: currentUser._id,
-      user_role: currentUser.role,
-      old_values: {
-        name: targetUser.name,
-        email: targetUser.email,
-        role: targetUser.role,
-        status: targetUser.status,
-      },
-      new_values: args.updates,
-      changed_fields: Object.keys(args.updates),
-      created_at: Date.now(),
-    });
-
-    return {
-      success: true,
-      userId: args.userId,
-      message: '사용자 정보가 업데이트되었습니다.',
-    };
   },
 });
 
@@ -232,80 +257,73 @@ export const approveUser = mutation({
     commission_rate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // 인증 확인
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('인증되지 않은 사용자입니다.');
+    try {
+      // 관리자 권한 확인
+      const currentUser = await requireAdmin(ctx);
+
+      // 수수료율 검증
+      if (args.commission_rate !== undefined) {
+        validateCommissionRate(args.commission_rate);
+      }
+
+      // 승인할 사용자 조회
+      const user = await ctx.db.get(args.userId);
+      if (!user) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, '사용자를 찾을 수 없습니다.', 404);
+      }
+
+      if (user.status === 'approved') {
+        throw new ApiError(ERROR_CODES.ALREADY_APPROVED, '이미 승인된 사용자입니다.', 409);
+      }
+
+      // 사용자 승인 처리
+      const updateData: any = {
+        status: 'approved' as const,
+        approved_at: Date.now(),
+        approved_by: currentUser._id,
+        updated_at: Date.now(),
+      };
+
+      // 수수료율이 제공된 경우 설정
+      if (args.commission_rate !== undefined) {
+        updateData.commission_rate = args.commission_rate;
+      }
+
+      await ctx.db.patch(args.userId, updateData);
+
+      // 알림 생성
+      await createNotification(ctx, {
+        userId: args.userId,
+        type: 'status_changed',
+        title: '계정 승인 완료',
+        message: '귀하의 계정이 승인되었습니다. 이제 모든 서비스를 이용하실 수 있습니다.',
+        priority: 'normal',
+      });
+
+      // 감사 로그 생성
+      await createAuditLog(ctx, {
+        tableName: 'profiles',
+        recordId: args.userId,
+        action: 'UPDATE',
+        userId: currentUser._id,
+        userRole: currentUser.role,
+        oldValues: { status: user.status },
+        newValues: { status: 'approved' },
+        changedFields: ['status', 'approved_at', 'approved_by'],
+        metadata: {
+          action_type: 'user_approval',
+          commission_rate: args.commission_rate,
+        },
+      });
+
+      return {
+        success: true,
+        userId: args.userId,
+        message: '사용자가 승인되었습니다.',
+      };
+    } catch (error) {
+      throw formatError(error);
     }
-
-    // 현재 사용자 조회 및 권한 확인
-    const currentUser = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', identity.subject as any))
-      .first();
-
-    if (!currentUser || currentUser.role !== 'admin') {
-      throw new Error('관리자 권한이 필요합니다.');
-    }
-
-    // 승인할 사용자 조회
-    const user = await ctx.db.get(args.userId);
-    if (!user) {
-      throw new Error('사용자를 찾을 수 없습니다.');
-    }
-
-    if (user.status === 'approved') {
-      throw new Error('이미 승인된 사용자입니다.');
-    }
-
-    // 사용자 승인 처리
-    const updateData: any = {
-      status: 'approved' as const,
-      approved_at: Date.now(),
-      approved_by: currentUser._id,
-      updated_at: Date.now(),
-    };
-
-    // 수수료율이 제공된 경우 설정
-    if (args.commission_rate !== undefined) {
-      updateData.commission_rate = args.commission_rate;
-    }
-
-    await ctx.db.patch(args.userId, updateData);
-
-    // 알림 생성
-    await ctx.db.insert('notifications', {
-      user_id: args.userId,
-      type: 'status_changed',
-      title: '계정 승인 완료',
-      message: '귀하의 계정이 승인되었습니다. 이제 모든 서비스를 이용하실 수 있습니다.',
-      is_read: false,
-      priority: 'normal',
-      created_at: Date.now(),
-    });
-
-    // 감사 로그 생성
-    await ctx.db.insert('audit_logs', {
-      table_name: 'profiles',
-      record_id: args.userId,
-      action: 'UPDATE',
-      user_id: currentUser._id,
-      user_role: currentUser.role,
-      old_values: { status: user.status },
-      new_values: { status: 'approved' },
-      changed_fields: ['status', 'approved_at', 'approved_by'],
-      metadata: {
-        action_type: 'user_approval',
-        commission_rate: args.commission_rate,
-      },
-      created_at: Date.now(),
-    });
-
-    return {
-      success: true,
-      userId: args.userId,
-      message: '사용자가 승인되었습니다.',
-    };
   },
 });
 

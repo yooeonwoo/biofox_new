@@ -17,6 +17,7 @@ import type * as profiles from '../profiles.js';
 import type * as relationships from '../relationships.js';
 import type * as userMutations from '../userMutations.js';
 import type * as users from '../users.js';
+import type * as utils from '../utils.js';
 import type * as validation from '../validation.js';
 
 /**
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   relationships: typeof relationships;
   userMutations: typeof userMutations;
   users: typeof users;
+  utils: typeof utils;
   validation: typeof validation;
 }>;
 export declare const api: FilterApi<typeof fullApi, FunctionReference<any, 'public'>>;

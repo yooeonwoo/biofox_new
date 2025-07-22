@@ -5,6 +5,18 @@
 
 import { mutation } from './_generated/server';
 import { v } from 'convex/values';
+import {
+  requireAdmin,
+  getCurrentUser,
+  validateAmount,
+  validateCommissionRate,
+  generateOrderNumber,
+  createAuditLog,
+  createNotification,
+  ApiError,
+  ERROR_CODES,
+  formatError,
+} from './utils';
 
 /**
  * 주문 생성
@@ -40,129 +52,126 @@ export const createOrder = mutation({
     metadata: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    // 인증 확인
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('인증되지 않은 사용자입니다.');
-    }
+    try {
+      // 현재 사용자 조회
+      const currentUser = await getCurrentUser(ctx);
 
-    // 현재 사용자 조회
-    const currentUser = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', identity.subject as any))
-      .first();
+      // 권한 확인 (관리자이거나 본인 매장의 주문인 경우)
+      if (currentUser.role !== 'admin' && currentUser._id !== args.shopId) {
+        throw new ApiError(
+          ERROR_CODES.FORBIDDEN,
+          '해당 매장의 주문을 생성할 권한이 없습니다.',
+          403
+        );
+      }
 
-    if (!currentUser) {
-      throw new Error('사용자 정보를 찾을 수 없습니다.');
-    }
+      // 입력 검증
+      validateAmount(args.totalAmount, '주문 총액');
+      if (args.commissionRate !== undefined) {
+        validateCommissionRate(args.commissionRate);
+      }
 
-    // 권한 확인 (관리자이거나 본인 매장의 주문인 경우)
-    if (currentUser.role !== 'admin' && currentUser._id !== args.shopId) {
-      throw new Error('해당 매장의 주문을 생성할 권한이 없습니다.');
-    }
+      // 매장 조회
+      const shop = await ctx.db.get(args.shopId);
+      if (!shop) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, '매장을 찾을 수 없습니다.', 404);
+      }
 
-    // 매장 조회
-    const shop = await ctx.db.get(args.shopId);
-    if (!shop) {
-      throw new Error('매장을 찾을 수 없습니다.');
-    }
+      if (shop.status !== 'approved') {
+        throw new ApiError(ERROR_CODES.FORBIDDEN, '승인된 매장만 주문을 생성할 수 있습니다.', 403);
+      }
 
-    if (shop.status !== 'approved') {
-      throw new Error('승인된 매장만 주문을 생성할 수 있습니다.');
-    }
+      // 주문 번호 생성 (제공되지 않은 경우)
+      let orderNumber = args.orderNumber;
+      if (!orderNumber) {
+        orderNumber = generateOrderNumber();
+      }
 
-    // 주문 번호 생성 (제공되지 않은 경우)
-    let orderNumber = args.orderNumber;
-    if (!orderNumber) {
-      const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const random = Math.floor(Math.random() * 1000)
-        .toString()
-        .padStart(3, '0');
-      orderNumber = `ORD-${timestamp}-${random}`;
-    }
+      // 수수료 계산
+      const commissionRate = args.commissionRate || shop.commission_rate || 0.1;
+      const commissionAmount = args.totalAmount * commissionRate;
 
-    // 수수료 계산
-    const commissionRate = args.commissionRate || shop.commission_rate || 0.1;
-    const commissionAmount = args.totalAmount * commissionRate;
-
-    // 주문 생성
-    const orderId = await ctx.db.insert('orders', {
-      shop_id: args.shopId,
-      order_date: args.orderDate,
-      order_number: orderNumber,
-      total_amount: args.totalAmount,
-      commission_rate: commissionRate,
-      commission_amount: commissionAmount,
-      commission_status: 'calculated',
-      order_status: args.orderStatus || 'pending',
-      is_self_shop_order: args.isSelfShopOrder || false,
-      notes: args.notes,
-      metadata: args.metadata,
-      created_at: Date.now(),
-      updated_at: Date.now(),
-      created_by: currentUser._id,
-    });
-
-    // 주문 항목 생성
-    for (const item of args.items) {
-      const subtotal = item.quantity * item.unitPrice;
-      const itemCommissionRate = item.itemCommissionRate || commissionRate;
-      const itemCommissionAmount = subtotal * itemCommissionRate;
-
-      await ctx.db.insert('order_items', {
-        order_id: orderId,
-        product_id: item.productId,
-        product_name: item.productName,
-        product_code: item.productCode,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        subtotal: subtotal,
-        item_commission_rate: itemCommissionRate,
-        item_commission_amount: itemCommissionAmount,
-        created_at: Date.now(),
-      });
-    }
-
-    // 알림 생성 (매장 소유자에게)
-    if (currentUser.role === 'admin' && currentUser._id !== args.shopId) {
-      await ctx.db.insert('notifications', {
-        user_id: args.shopId,
-        type: 'order_created',
-        title: '새 주문이 생성되었습니다',
-        message: `주문번호 ${orderNumber}이 생성되었습니다. 총 금액: ${args.totalAmount.toLocaleString()}원`,
-        related_type: 'order',
-        related_id: orderId,
-        is_read: false,
-        priority: 'normal',
-        created_at: Date.now(),
-      });
-    }
-
-    // 감사 로그 생성
-    await ctx.db.insert('audit_logs', {
-      table_name: 'orders',
-      record_id: orderId,
-      action: 'INSERT',
-      user_id: currentUser._id,
-      user_role: currentUser.role,
-      new_values: {
+      // 주문 생성
+      const orderId = await ctx.db.insert('orders', {
         shop_id: args.shopId,
+        order_date: args.orderDate,
         order_number: orderNumber,
         total_amount: args.totalAmount,
-      },
-      metadata: {
-        action_type: 'order_creation',
-        item_count: args.items.length,
-      },
-      created_at: Date.now(),
-    });
+        commission_rate: commissionRate,
+        commission_amount: commissionAmount,
+        commission_status: 'calculated',
+        order_status: args.orderStatus || 'pending',
+        is_self_shop_order: args.isSelfShopOrder || false,
+        notes: args.notes,
+        metadata: args.metadata,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+        created_by: currentUser._id,
+      });
 
-    return {
-      success: true,
-      orderId,
-      orderNumber,
-      message: '주문이 성공적으로 생성되었습니다.',
-    };
+      // 주문 항목 생성
+      for (const item of args.items) {
+        const subtotal = item.quantity * item.unitPrice;
+        const itemCommissionRate = item.itemCommissionRate || commissionRate;
+        const itemCommissionAmount = subtotal * itemCommissionRate;
+
+        await ctx.db.insert('order_items', {
+          order_id: orderId,
+          product_id: item.productId,
+          product_name: item.productName,
+          product_code: item.productCode,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          subtotal: subtotal,
+          item_commission_rate: itemCommissionRate,
+          item_commission_amount: itemCommissionAmount,
+          created_at: Date.now(),
+        });
+      }
+
+      // 알림 생성 (매장 소유자에게)
+      if (currentUser.role === 'admin' && currentUser._id !== args.shopId) {
+        await ctx.db.insert('notifications', {
+          user_id: args.shopId,
+          type: 'order_created',
+          title: '새 주문이 생성되었습니다',
+          message: `주문번호 ${orderNumber}이 생성되었습니다. 총 금액: ${args.totalAmount.toLocaleString()}원`,
+          related_type: 'order',
+          related_id: orderId,
+          is_read: false,
+          priority: 'normal',
+          created_at: Date.now(),
+        });
+      }
+
+      // 감사 로그 생성
+      await ctx.db.insert('audit_logs', {
+        table_name: 'orders',
+        record_id: orderId,
+        action: 'INSERT',
+        user_id: currentUser._id,
+        user_role: currentUser.role,
+        new_values: {
+          shop_id: args.shopId,
+          order_number: orderNumber,
+          total_amount: args.totalAmount,
+        },
+        metadata: {
+          action_type: 'order_creation',
+          item_count: args.items.length,
+        },
+        created_at: Date.now(),
+      });
+
+      return {
+        success: true,
+        orderId,
+        orderNumber,
+        message: '주문이 성공적으로 생성되었습니다.',
+      };
+    } catch (error) {
+      throw formatError(error);
+    }
   },
 });
 
