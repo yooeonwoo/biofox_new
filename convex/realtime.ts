@@ -315,7 +315,7 @@ export const getRecentCommissionUpdates = query({
         // 특정 KOL의 커미션만 조회
         const commissions = await ctx.db
           .query('commission_calculations')
-          .withIndex('by_kol', q => q.eq('kol_id', args.kolId))
+          .withIndex('by_kol', q => q.eq('kol_id', args.kolId!))
           .collect();
 
         return commissions.sort((a, b) => b.calculated_at - a.calculated_at).slice(0, limit);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -18,6 +18,14 @@ import {
 // Convex imports로 교체
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+// 새로운 시각적 인디케이터 컴포넌트들
+import {
+  RealtimePulse,
+  NewDataHighlight,
+  ConnectionStatus,
+  NotificationBadge,
+  StatusTransition,
+} from '@/components/ui/realtime-indicator';
 import SalesChart from '../../components/sales-chart';
 import StoreRankingTable from '../../components/store-ranking-table';
 import { Button } from '@/components/ui/button';
@@ -49,7 +57,7 @@ const formatToManUnit = (value: number): string => {
   }
 };
 
-// 실시간 연결 상태 표시기
+// 실시간 연결 상태 표시기 (개선된 ConnectionStatus 사용)
 function RealtimeStatus({ lastUpdated }: { lastUpdated?: number }) {
   const [isOnline, setIsOnline] = useState(true);
 
@@ -67,18 +75,9 @@ function RealtimeStatus({ lastUpdated }: { lastUpdated?: number }) {
   }, []);
 
   return (
-    <div className="mb-2 flex items-center space-x-2 text-xs text-gray-500">
-      {isOnline ? (
-        <Wifi className="h-3 w-3 text-green-500" />
-      ) : (
-        <WifiOff className="h-3 w-3 text-red-500" />
-      )}
-      <span>
-        {isOnline ? '실시간 연결됨' : '연결 끊김'}
-        {lastUpdated && (
-          <span className="ml-2">• {new Date(lastUpdated).toLocaleTimeString()}</span>
-        )}
-      </span>
+    <div className="mb-2 flex items-center space-x-4 text-xs text-gray-500">
+      <ConnectionStatus isConnected={isOnline} showText={true} />
+      {lastUpdated && <span>마지막 업데이트: {new Date(lastUpdated).toLocaleTimeString()}</span>}
     </div>
   );
 }
@@ -91,6 +90,36 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
   const dashboardStats = useQuery(api.realtime.getKolDashboardStats);
   const recentOrders = useQuery(api.realtime.getRecentOrderUpdates, { limit: 5 });
   const unreadNotifications = useQuery(api.realtime.getUnreadNotificationCount);
+
+  // 실시간 업데이트 상태 감지
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [lastData, setLastData] = useState<any>(null);
+  const prevStatsRef = useRef<any>(null);
+
+  // 대시보드 데이터 업데이트 감지
+  useEffect(() => {
+    if (dashboardStats && prevStatsRef.current) {
+      if (JSON.stringify(dashboardStats) !== JSON.stringify(prevStatsRef.current)) {
+        setIsUpdating(true);
+        setTimeout(() => setIsUpdating(false), 2000); // 2초간 펄스 효과
+      }
+    }
+    prevStatsRef.current = dashboardStats;
+  }, [dashboardStats]);
+
+  // 새로운 주문 감지
+  useEffect(() => {
+    if (recentOrders && lastData?.orders) {
+      const newOrders = recentOrders.filter(
+        order => !lastData.orders.find((prev: any) => prev._id === order._id)
+      );
+      if (newOrders.length > 0) {
+        setIsUpdating(true);
+        setTimeout(() => setIsUpdating(false), 2000);
+      }
+    }
+    setLastData(prev => ({ ...prev, orders: recentOrders }));
+  }, [recentOrders]);
 
   // TODO: Supabase 인증 로직 구현
   useEffect(() => {
@@ -163,97 +192,101 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
 
       {/* 상단 메트릭 카드 영역 */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* 카드 1: 매출 & 수당 */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex w-full flex-col overflow-hidden md:flex-row md:items-baseline md:gap-2">
-                <span className="whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
-                  당월 매출:
-                </span>
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
-                  {dashboardStats?.sales?.currentMonth !== undefined
-                    ? formatToManUnit(dashboardStats.sales.currentMonth)
-                    : '0원'}
-                </span>
+        {/* 카드 1: 매출 & 수당 (실시간 펄스 효과 추가) */}
+        <RealtimePulse isUpdating={isUpdating} pulseColor="green">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex w-full flex-col overflow-hidden md:flex-row md:items-baseline md:gap-2">
+                  <span className="whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                    당월 매출:
+                  </span>
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                    {dashboardStats?.sales?.currentMonth !== undefined
+                      ? formatToManUnit(dashboardStats.sales.currentMonth)
+                      : '0원'}
+                  </span>
+                </div>
+                <div className="flex-shrink-0 rounded-full bg-yellow-100 p-1 text-yellow-700 sm:p-1.5">
+                  <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                </div>
               </div>
-              <div className="flex-shrink-0 rounded-full bg-yellow-100 p-1 text-yellow-700 sm:p-1.5">
-                <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-              </div>
-            </div>
 
-            <div className="mt-1 flex items-center text-[10px] sm:text-xs">
-              <span
-                className={`flex items-center ${
-                  (dashboardStats?.sales?.growth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {(dashboardStats?.sales?.growth || 0) >= 0 ? (
-                  <TrendingUp className="mr-1 h-3 w-3" />
-                ) : (
-                  <TrendingDown className="mr-1 h-3 w-3" />
-                )}
-                {Math.abs(dashboardStats?.sales?.growth || 0).toFixed(1)}% vs 지난 달
-              </span>
-            </div>
-
-            <div className="my-3 h-[1px] bg-gray-200 sm:my-4" />
-
-            <div className="flex items-center justify-between">
-              <div className="flex w-full flex-col overflow-hidden md:flex-row md:items-baseline md:gap-2">
-                <span className="whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
-                  당월 수당:
-                </span>
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
-                  {dashboardStats?.commission?.currentMonth !== undefined
-                    ? formatToManUnit(dashboardStats.commission.currentMonth)
-                    : '0원'}
+              <div className="mt-1 flex items-center text-[10px] sm:text-xs">
+                <span
+                  className={`flex items-center ${
+                    (dashboardStats?.sales?.growth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  {(dashboardStats?.sales?.growth || 0) >= 0 ? (
+                    <TrendingUp className="mr-1 h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="mr-1 h-3 w-3" />
+                  )}
+                  {Math.abs(dashboardStats?.sales?.growth || 0).toFixed(1)}% vs 지난 달
                 </span>
               </div>
-              <div className="flex-shrink-0 rounded-full bg-green-100 p-1 text-green-700 sm:p-1.5">
-                <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
-              </div>
-            </div>
-            <div className="mt-1 text-[10px] text-gray-500 sm:text-xs">
-              상태: {dashboardStats?.commission?.status === 'paid' ? '지급완료' : '계산완료'}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* 카드 2: 전문점 현황 */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-bold sm:text-lg md:text-xl">전문점 현황:</span>
-                <span className="text-sm font-bold sm:text-lg md:text-xl">
-                  {dashboardStats?.shops?.total || 0}곳
-                </span>
-              </div>
-              <div className="rounded-full bg-blue-100 p-1 text-blue-700 sm:p-1.5">
-                <Store className="h-3 w-3 sm:h-4 sm:w-4" />
-              </div>
-            </div>
-            <div className="mt-1 text-[10px] text-blue-600 sm:text-xs">🚀 실시간 업데이트됨</div>
+              <div className="my-3 h-[1px] bg-gray-200 sm:my-4" />
 
-            <div className="my-3 h-[1px] bg-gray-200 sm:my-4" />
+              <div className="flex items-center justify-between">
+                <div className="flex w-full flex-col overflow-hidden md:flex-row md:items-baseline md:gap-2">
+                  <span className="whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                    당월 수당:
+                  </span>
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                    {dashboardStats?.commission?.currentMonth !== undefined
+                      ? formatToManUnit(dashboardStats.commission.currentMonth)
+                      : '0원'}
+                  </span>
+                </div>
+                <div className="flex-shrink-0 rounded-full bg-green-100 p-1 text-green-700 sm:p-1.5">
+                  <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+                </div>
+              </div>
+              <div className="mt-1 text-[10px] text-gray-500 sm:text-xs">
+                상태: {dashboardStats?.commission?.status === 'paid' ? '지급완료' : '계산완료'}
+              </div>
+            </CardContent>
+          </Card>
+        </RealtimePulse>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-bold sm:text-lg md:text-xl">당월 주문 전문점:</span>
-                <span className="text-sm font-bold sm:text-lg md:text-xl">
-                  {dashboardStats?.shops?.ordering || 0}곳
-                </span>
+        {/* 카드 2: 전문점 현황 (실시간 펄스 효과 추가) */}
+        <RealtimePulse isUpdating={isUpdating} pulseColor="blue">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-bold sm:text-lg md:text-xl">전문점 현황:</span>
+                  <span className="text-sm font-bold sm:text-lg md:text-xl">
+                    {dashboardStats?.shops?.total || 0}곳
+                  </span>
+                </div>
+                <div className="rounded-full bg-blue-100 p-1 text-blue-700 sm:p-1.5">
+                  <Store className="h-3 w-3 sm:h-4 sm:w-4" />
+                </div>
               </div>
-              <div className="rounded-full bg-green-100 p-1 text-green-700 sm:p-1.5">
-                <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="mt-1 text-[10px] text-blue-600 sm:text-xs">🚀 실시간 업데이트됨</div>
+
+              <div className="my-3 h-[1px] bg-gray-200 sm:my-4" />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-bold sm:text-lg md:text-xl">당월 주문 전문점:</span>
+                  <span className="text-sm font-bold sm:text-lg md:text-xl">
+                    {dashboardStats?.shops?.ordering || 0}곳
+                  </span>
+                </div>
+                <div className="rounded-full bg-green-100 p-1 text-green-700 sm:p-1.5">
+                  <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
+                </div>
               </div>
-            </div>
-            <div className="mt-1 text-[10px] text-red-500 sm:text-xs">
-              {dashboardStats?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
-            </div>
-          </CardContent>
-        </Card>
+              <div className="mt-1 text-[10px] text-red-500 sm:text-xs">
+                {dashboardStats?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
+              </div>
+            </CardContent>
+          </Card>
+        </RealtimePulse>
       </div>
 
       {/* 🚀 실시간 최근 주문 현황 */}
@@ -308,9 +341,12 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  <span className="font-medium text-orange-900">
-                    읽지 않은 알림 {unreadNotifications.count}개
-                  </span>
+                  <span className="font-medium text-orange-900">읽지 않은 알림</span>
+                  <NotificationBadge
+                    count={unreadNotifications.count}
+                    animate={true}
+                    className="ml-1"
+                  />
                 </div>
                 <Link href="/kol-new/notifications">
                   <Button variant="outline" size="sm" className="border-orange-300 text-orange-700">

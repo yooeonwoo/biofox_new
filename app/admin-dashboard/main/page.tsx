@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import {
   BarChart3,
@@ -16,6 +16,14 @@ import {
 // Convex imports로 교체
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+// 새로운 시각적 인디케이터 컴포넌트들
+import {
+  RealtimePulse,
+  NewDataHighlight,
+  ConnectionStatus,
+  ActivityIcon,
+  StatusTransition,
+} from '@/components/ui/realtime-indicator';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -89,73 +97,64 @@ function DashboardCard({
   );
 }
 
-// 통계 카드 컴포넌트
+// 통계 카드 컴포넌트 (실시간 업데이트 펄스 효과 추가)
 function StatCard({
   title,
   value,
   subtitle,
   trend,
   icon,
+  isUpdating = false,
 }: {
   title: string;
   value: string | number;
   subtitle?: string;
   trend?: { value: number; direction: 'up' | 'down' | 'neutral' };
   icon?: React.ReactNode;
+  isUpdating?: boolean;
 }) {
   return (
-    <div className="rounded-lg bg-white p-6 shadow transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="mb-1 text-sm font-medium text-gray-500">{title}</h3>
-          <p className="mb-1 text-2xl font-bold text-gray-900">{value}</p>
-          {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+    <RealtimePulse isUpdating={isUpdating} pulseColor="blue">
+      <div className="rounded-lg bg-white p-6 shadow transition-shadow hover:shadow-md">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">{title}</h3>
+            <p className="mb-1 text-2xl font-bold text-gray-900">{value}</p>
+            {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+          </div>
+          {icon && (
+            <div className="rounded-full bg-blue-50 p-2">
+              <div className="text-blue-600">{icon}</div>
+            </div>
+          )}
         </div>
-        {icon && (
-          <div className="rounded-full bg-blue-50 p-2">
-            <div className="text-blue-600">{icon}</div>
+        {trend && (
+          <div className="mt-4 flex items-center">
+            <div
+              className={`flex items-center text-sm ${
+                trend.direction === 'up'
+                  ? 'text-green-600'
+                  : trend.direction === 'down'
+                    ? 'text-red-600'
+                    : 'text-gray-600'
+              }`}
+            >
+              <TrendingUp
+                size={16}
+                className={`mr-1 ${trend.direction === 'down' ? 'rotate-180' : ''}`}
+              />
+              {Math.abs(trend.value)}%
+            </div>
+            <span className="ml-2 text-sm text-gray-500">vs 지난 달</span>
           </div>
         )}
       </div>
-      {trend && (
-        <div className="mt-4 flex items-center">
-          <div
-            className={`flex items-center text-sm ${
-              trend.direction === 'up'
-                ? 'text-green-600'
-                : trend.direction === 'down'
-                  ? 'text-red-600'
-                  : 'text-gray-600'
-            }`}
-          >
-            <TrendingUp
-              size={16}
-              className={`mr-1 ${trend.direction === 'down' ? 'rotate-180' : ''}`}
-            />
-            {Math.abs(trend.value)}%
-          </div>
-          <span className="ml-2 text-sm text-gray-500">vs 지난 달</span>
-        </div>
-      )}
-    </div>
+    </RealtimePulse>
   );
 }
 
-// 최근 활동 아이템 컴포넌트 (Convex 데이터 형식에 맞게 수정)
-function ActivityItem({ activity }: { activity: any }) {
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'order_created':
-        return <Store size={16} className="text-green-600" />;
-      case 'user_registered':
-        return <Users size={16} className="text-blue-600" />;
-      case 'commission_updated':
-        return <TrendingUp size={16} className="text-purple-600" />;
-      default:
-        return <Activity size={16} className="text-gray-600" />;
-    }
-  };
-
+// 최근 활동 아이템 컴포넌트 (시각적 인디케이터 추가)
+function ActivityItem({ activity, isNew = false }: { activity: any; isNew?: boolean }) {
   const formatTimeAgo = (timestamp: number) => {
     const now = Date.now();
     const diff = now - timestamp;
@@ -170,22 +169,26 @@ function ActivityItem({ activity }: { activity: any }) {
   };
 
   return (
-    <div className="flex items-start space-x-3 rounded-lg p-3 transition-colors hover:bg-gray-50">
-      <div className="mt-1 flex-shrink-0">{getActivityIcon(activity.type)}</div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between">
-          <p className="truncate text-sm font-medium text-gray-900">{activity.title}</p>
-          <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
-            {formatTimeAgo(activity.timestamp)}
-          </span>
+    <NewDataHighlight isNew={isNew}>
+      <div className="flex items-start space-x-3 rounded-lg p-3 transition-colors hover:bg-gray-50">
+        <div className="mt-1 flex-shrink-0">
+          <ActivityIcon type={activity.type} isNew={isNew} />
         </div>
-        <p className="mt-1 line-clamp-2 text-sm text-gray-600">{activity.description}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between">
+            <p className="truncate text-sm font-medium text-gray-900">{activity.title}</p>
+            <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
+              {formatTimeAgo(activity.timestamp)}
+            </span>
+          </div>
+          <p className="mt-1 line-clamp-2 text-sm text-gray-600">{activity.description}</p>
+        </div>
       </div>
-    </div>
+    </NewDataHighlight>
   );
 }
 
-// 실시간 상태 표시기 컴포넌트
+// 실시간 상태 표시기 컴포넌트 (개선된 ConnectionStatus 사용)
 function RealtimeIndicator({ lastUpdated }: { lastUpdated?: number }) {
   const [isOnline, setIsOnline] = useState(true);
 
@@ -203,16 +206,9 @@ function RealtimeIndicator({ lastUpdated }: { lastUpdated?: number }) {
   }, []);
 
   return (
-    <div className="flex items-center space-x-2 text-xs text-gray-500">
-      <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-      <span>
-        {isOnline ? '실시간 연결됨' : '연결 끊김'}
-        {lastUpdated && (
-          <span className="ml-2">
-            • 마지막 업데이트: {new Date(lastUpdated).toLocaleTimeString()}
-          </span>
-        )}
-      </span>
+    <div className="flex items-center space-x-4 text-xs text-gray-500">
+      <ConnectionStatus isConnected={isOnline} showText={true} />
+      {lastUpdated && <span>마지막 업데이트: {new Date(lastUpdated).toLocaleTimeString()}</span>}
     </div>
   );
 }
@@ -246,6 +242,36 @@ export default function AdminDashboardMainPage() {
   // 🚀 Convex 실시간 쿼리로 교체
   const dashboardStats = useQuery(api.realtime.getDashboardStats);
   const recentActivities = useQuery(api.realtime.getRecentActivities, { limit: 10 });
+
+  // 실시간 업데이트 상태 감지
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [lastActivities, setLastActivities] = useState<any[]>([]);
+  const prevStatsRef = useRef<any>(null);
+
+  // 대시보드 통계 업데이트 감지
+  useEffect(() => {
+    if (dashboardStats && prevStatsRef.current) {
+      if (JSON.stringify(dashboardStats) !== JSON.stringify(prevStatsRef.current)) {
+        setIsUpdating(true);
+        setTimeout(() => setIsUpdating(false), 2000); // 2초간 펄스 효과
+      }
+    }
+    prevStatsRef.current = dashboardStats;
+  }, [dashboardStats]);
+
+  // 새로운 활동 감지
+  useEffect(() => {
+    if (recentActivities && lastActivities.length > 0) {
+      const newActivities = recentActivities.filter(
+        activity => !lastActivities.find(prev => prev.id === activity.id)
+      );
+      if (newActivities.length > 0) {
+        setIsUpdating(true);
+        setTimeout(() => setIsUpdating(false), 2000);
+      }
+    }
+    setLastActivities(recentActivities || []);
+  }, [recentActivities]);
 
   // KOL 목록 (알림 발송용 - 기존 API 사용)
   const [kolUsers, setKolUsers] = useState<any[]>([]);
@@ -408,12 +434,14 @@ export default function AdminDashboardMainPage() {
                 direction: (dashboardStats?.orderGrowthRate || 0) >= 0 ? 'up' : 'down',
               }}
               subtitle="활성 사용자"
+              isUpdating={isUpdating}
             />
             <StatCard
               title="활성 매장 수"
               value={dashboardStats?.activeShops || 0}
               icon={<Store size={20} />}
               subtitle="활성 관계 매장"
+              isUpdating={isUpdating}
             />
             <StatCard
               title="이번 달 주문 수"
@@ -424,6 +452,7 @@ export default function AdminDashboardMainPage() {
                 direction: (dashboardStats?.orderGrowthRate || 0) >= 0 ? 'up' : 'down',
               }}
               subtitle="지난 30일 기준"
+              isUpdating={isUpdating}
             />
             <StatCard
               title="이번 달 매출액"
@@ -434,6 +463,7 @@ export default function AdminDashboardMainPage() {
               }
               icon={<TrendingUp size={20} />}
               subtitle="월간 총 매출"
+              isUpdating={isUpdating}
             />
           </>
         )}
@@ -502,9 +532,17 @@ export default function AdminDashboardMainPage() {
                 ) : recentActivities && recentActivities.length === 0 ? (
                   <p className="py-8 text-center text-gray-500">최근 활동이 없습니다.</p>
                 ) : (
-                  recentActivities?.map((activity: any, index: number) => (
-                    <ActivityItem key={`${activity.id}-${index}`} activity={activity} />
-                  ))
+                  recentActivities?.map((activity: any, index: number) => {
+                    // 최근 5분 이내의 활동을 "새로운" 것으로 표시
+                    const isNew = Date.now() - activity.timestamp < 5 * 60 * 1000;
+                    return (
+                      <ActivityItem
+                        key={`${activity.id}-${index}`}
+                        activity={activity}
+                        isNew={isNew}
+                      />
+                    );
+                  })
                 )}
               </div>
             </ScrollArea>
