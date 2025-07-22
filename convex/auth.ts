@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
+import { Id } from './_generated/dataModel';
 
 // 현재 인증된 사용자와 프로필 정보 조회
 export const getCurrentUserWithProfile = query({
@@ -58,8 +59,8 @@ export const ensureUserProfile = mutation({
       throw new Error('Not authenticated');
     }
 
-    // identity.subject로 직접 사용자 ID 사용
-    const userId = identity.subject;
+    // identity.subject로 직접 사용자 ID 사용 (타입 단언)
+    const userId = identity.subject as Id<'users'>;
 
     // 이미 프로필이 있는지 확인
     const existingProfile = await ctx.db
@@ -105,8 +106,8 @@ export const updateUserProfile = mutation({
       throw new Error('Not authenticated');
     }
 
-    // identity.subject로 직접 사용자 ID 사용
-    const userId = identity.subject;
+    // identity.subject로 직접 사용자 ID 사용 (타입 단언)
+    const userId = identity.subject as Id<'users'>;
 
     // 사용자의 프로필 찾기
     const profile = await ctx.db
@@ -118,16 +119,20 @@ export const updateUserProfile = mutation({
       throw new Error('Profile not found');
     }
 
-    // 프로필 업데이트
-    await ctx.db.patch(profile._id, {
-      ...(args.display_name !== undefined && { display_name: args.display_name }),
-      ...(args.bio !== undefined && { bio: args.bio }),
-      ...(args.profile_image_url !== undefined && { profile_image_url: args.profile_image_url }),
-      ...(args.shop_name !== undefined && { shop_name: args.shop_name }),
-      ...(args.region !== undefined && { region: args.region }),
-      ...(args.naver_place_link !== undefined && { naver_place_link: args.naver_place_link }),
-      last_active: Date.now(),
-    });
+    // 프로필 업데이트 - 빈 객체여도 last_active는 항상 업데이트
+    const updateData: Record<string, any> = {
+      last_active: Date.now(), // 모든 업데이트에서 활성 시간 갱신
+    };
+
+    // 선택적 필드 업데이트
+    if (args.display_name !== undefined) updateData.display_name = args.display_name;
+    if (args.bio !== undefined) updateData.bio = args.bio;
+    if (args.profile_image_url !== undefined) updateData.profile_image_url = args.profile_image_url;
+    if (args.shop_name !== undefined) updateData.shop_name = args.shop_name;
+    if (args.region !== undefined) updateData.region = args.region;
+    if (args.naver_place_link !== undefined) updateData.naver_place_link = args.naver_place_link;
+
+    await ctx.db.patch(profile._id, updateData);
 
     return profile._id;
   },
@@ -141,7 +146,7 @@ export const getProfileCompleteness = query({
       return null;
     }
 
-    const userId = identity.subject;
+    const userId = identity.subject as Id<'users'>;
 
     const profile = await ctx.db
       .query('profiles')
@@ -185,7 +190,7 @@ export const approveUserProfile = mutation({
     }
 
     // 현재 사용자의 프로필 확인 (관리자 권한 체크)
-    const userId = identity.subject;
+    const userId = identity.subject as Id<'users'>;
 
     const adminProfile = await ctx.db
       .query('profiles')
@@ -204,5 +209,80 @@ export const approveUserProfile = mutation({
     });
 
     return args.profileId;
+  },
+});
+
+// 사용자 온라인 상태 업데이트
+export const updateOnlineStatus = mutation({
+  args: {
+    isOnline: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Not authenticated');
+    }
+
+    const userId = identity.subject as Id<'users'>;
+
+    const profile = await ctx.db
+      .query('profiles')
+      .withIndex('by_userId', q => q.eq('userId', userId))
+      .first();
+
+    if (!profile) {
+      throw new Error('Profile not found');
+    }
+
+    // 온라인 상태 및 활성 시간 업데이트
+    await ctx.db.patch(profile._id, {
+      last_active: Date.now(),
+      metadata: {
+        ...profile.metadata,
+        isOnline: args.isOnline,
+      },
+    });
+
+    return profile._id;
+  },
+});
+
+// 비활성 사용자 조회 (관리자용)
+export const getInactiveUsers = query({
+  args: {
+    inactiveDays: v.optional(v.number()), // 기본값: 30일
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error('Not authenticated');
+    }
+
+    // 관리자 권한 확인
+    const userId = identity.subject as Id<'users'>;
+    const adminProfile = await ctx.db
+      .query('profiles')
+      .withIndex('by_userId', q => q.eq('userId', userId))
+      .first();
+
+    if (!adminProfile || adminProfile.role !== 'admin') {
+      throw new Error('Admin access required');
+    }
+
+    const inactiveDays = args.inactiveDays || 30;
+    const cutoffTime = Date.now() - inactiveDays * 24 * 60 * 60 * 1000;
+
+    // 비활성 사용자 조회
+    const inactiveUsers = await ctx.db
+      .query('profiles')
+      .filter(q =>
+        q.and(
+          q.neq(q.field('role'), 'admin'), // 관리자 제외
+          q.lt(q.field('last_active'), cutoffTime) // 비활성 기간
+        )
+      )
+      .collect();
+
+    return inactiveUsers;
   },
 });
