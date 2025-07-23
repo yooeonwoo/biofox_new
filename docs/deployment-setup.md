@@ -197,32 +197,125 @@ node scripts/deploy-convex.js preview --skip-verification
 | `--force`             | 강제 배포 (백업 없이)          | `--force`             |
 | `--help`              | 도움말 표시                    | `--help`              |
 
-## 🔍 배포 검증
+## 🔍 배포 검증 및 롤백 시스템
 
-각 배포 후 자동으로 다음 검증이 수행됩니다:
+### 향상된 배포 검증
 
-### 1. 기본 연결 테스트
+각 배포 후 포괄적인 검증이 자동으로 수행됩니다:
 
-- Convex 서버 연결 확인
-- 기본 API 응답 테스트
+#### 🔧 수동 검증 실행
 
-### 2. 핵심 기능 검증
+```bash
+# 기본 검증 실행
+npm run verify-deployment
 
-- 대시보드 통계 쿼리
-- 사용자 프로필 시스템
-- 실시간 기능 동작
+# 향상된 포괄적 검증 실행
+npm run verify-deployment:enhanced
 
-### 3. 데이터베이스 무결성
+# 환경별 검증
+DEPLOYMENT_URL=https://your-deployment.convex.cloud npm run verify-deployment:enhanced
+```
 
-- 스키마 구조 확인
-- 테이블 접근 테스트
-- 관계 무결성 검증
+#### 📋 테스트 스위트 구성
 
-### 4. 성능 테스트
+**1. 핵심 시스템 [중요]**
 
-- 응답 시간 측정
-- 메모리 사용량 확인
-- 동시 연결 테스트
+- ✅ 기본 연결 테스트
+- ✅ 인증 시스템 검증
+- ✅ 데이터베이스 연결 확인
+
+**2. 비즈니스 로직 [중요]**
+
+- ✅ 대시보드 통계 쿼리
+- ✅ 사용자 프로필 시스템
+- ✅ 주문 시스템 동작
+- ✅ 알림 시스템 기능
+
+**3. 실시간 기능 [선택]**
+
+- ✅ 실시간 업데이트 검증
+- ✅ 구독 시스템 테스트
+
+**4. 성능 검증 [선택]**
+
+- ✅ 응답 시간 측정 (5초 이내)
+- ✅ 동시 연결 테스트 (5개 연결)
+- ✅ 메모리 사용량 검증
+
+**5. 보안 검증 [프로덕션만]**
+
+- ✅ API 보안 검증
+- ✅ 권한 시스템 확인
+- ✅ 데이터 암호화 검증
+
+#### ⚙️ 환경별 검증 설정
+
+```bash
+# 스테이징 환경 검증
+NODE_ENV=staging ROLLBACK_ON_FAILURE=false npm run verify-deployment:enhanced
+
+# 프로덕션 환경 검증 (자동 롤백 활성화)
+NODE_ENV=production ROLLBACK_ON_FAILURE=true npm run verify-deployment:enhanced
+```
+
+#### 📊 검증 보고서
+
+검증 완료 후 다음 파일들이 생성됩니다:
+
+- `deployment-verification-report.json`: 상세 검증 결과
+- 실행 시간, 성공/실패 메트릭, 환경별 상세 정보 포함
+
+### 🔄 자동 롤백 시스템
+
+#### 롤백 트리거 조건
+
+배포 검증이 실패하는 경우, 다음 조건에서 자동 롤백이 실행됩니다:
+
+- ✅ 프로덕션 환경 (`NODE_ENV=production`)
+- ✅ 중요 기능 테스트 실패
+- ✅ `ROLLBACK_ON_FAILURE=true` 설정
+
+#### 수동 롤백 실행
+
+```bash
+# 자동 롤백 (이전 배포로)
+npm run rollback
+
+# 특정 배포 ID로 롤백
+BACKUP_DEPLOYMENT_ID=dep_12345 npm run rollback
+
+# 롤백 도움말
+npm run rollback:help
+```
+
+#### 롤백 프로세스
+
+1. **현재 배포 상태 확인**
+2. **롤백 대상 식별** (이전 안정 버전)
+3. **프로덕션 백업 생성** (롤백 전)
+4. **롤백 실행** (최대 3회 재시도)
+5. **롤백 검증** (기본 기능 테스트)
+6. **롤백 보고서 생성**
+
+#### 롤백 환경 변수
+
+| 변수                    | 설명                | 기본값    |
+| ----------------------- | ------------------- | --------- |
+| `BACKUP_DEPLOYMENT_ID`  | 롤백할 특정 배포 ID | 자동 선택 |
+| `ROLLBACK_TIMEOUT`      | 롤백 타임아웃 (ms)  | 300000    |
+| `MAX_ROLLBACK_ATTEMPTS` | 최대 재시도 횟수    | 3         |
+
+#### 실패 시 대응
+
+롤백이 실패하는 경우:
+
+1. **롤백 실패 보고서** 생성 (`rollback-failure-report.json`)
+2. **긴급 알림** 전송 (설정된 경우)
+3. **수동 복구 가이드** 제공:
+   - Convex 대시보드에서 수동 롤백
+   - 이전 안정 버전 배포 ID 확인
+   - 데이터 일관성 검증
+   - 서비스 상태 모니터링
 
 ## ❌ 문제 해결
 
@@ -269,16 +362,62 @@ npm install convex
 #### 4. 배포 검증 실패
 
 ```
-Error: 배포 검증 실패: 대시보드 통계 쿼리 타임아웃
+❌ 배포 검증이 실패했습니다!
+🔥 중요 기능 실패: 2개
 ```
 
 **해결방법:**
 
-- Convex 함수가 올바르게 배포되었는지 확인
-- 네트워크 연결 상태 확인
-- `--skip-verification` 옵션으로 임시 배포 가능
+**자동 대응:**
 
-#### 5. 권한 오류
+- 프로덕션 환경에서 자동 롤백 실행
+- 상세 검증 보고서 생성 (`deployment-verification-report.json`)
+- 실패 알림 전송
+
+**수동 대응:**
+
+```bash
+# 검증 보고서 확인
+cat deployment-verification-report.json
+
+# 수동 롤백 (필요시)
+npm run rollback
+
+# 특정 배포로 롤백
+BACKUP_DEPLOYMENT_ID=dep_12345 npm run rollback
+```
+
+#### 5. 롤백 실패
+
+```
+❌ 롤백 실행 중 오류 발생: 최대 롤백 시도 횟수 (3)를 초과했습니다.
+```
+
+**해결방법:**
+
+**즉시 대응:**
+
+1. 롤백 실패 보고서 확인 (`rollback-failure-report.json`)
+2. Convex 대시보드에서 수동 롤백 수행
+3. 서비스 상태 모니터링
+
+**수동 롤백 단계:**
+
+```bash
+# 1. 현재 배포 상태 확인
+npx convex deployments list
+
+# 2. 안정 버전 배포 ID 확인
+# (예: dep_01h2345...)
+
+# 3. 수동 롤백 실행
+npx convex deploy --to dep_01h2345...
+
+# 4. 롤백 검증
+npm run verify-deployment:enhanced
+```
+
+#### 6. 권한 오류
 
 ```
 Error: Insufficient permissions for deployment

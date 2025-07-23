@@ -1,0 +1,124 @@
+{
+  "timestamp": "2025-07-23T06:11:24.944Z",
+  "environment": "development",
+  "deploymentUrl": "https://test.convex.cloud",
+  "totalTests": 12,
+  "passedTests": 0,
+  "failedTests": 12,
+  "criticalFailures": 2,
+  "executionTime": 3795,
+  "testResults": [
+    {
+      "suiteName": "핵심 시스템",
+      "critical": true,
+      "success": false,
+      "results": [
+        {
+          "name": "기본 연결",
+          "result": {
+            "error": "연결 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"profiles.getCurrentUser is not a valid path to a Convex function. Module path (profiles.getCurrentUser) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        },
+        {
+          "name": "인증 시스템",
+          "result": {
+            "error": "{\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"auth.currentUser is not a valid path to a Convex function. Module path (auth.currentUser) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        },
+        {
+          "name": "데이터베이스 연결",
+          "result": {
+            "error": "데이터베이스 연결 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"profiles.list is not a valid path to a Convex function. Module path (profiles.list) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        }
+      ]
+    },
+    {
+      "suiteName": "비즈니스 로직",
+      "critical": true,
+      "success": false,
+      "results": [
+        {
+          "name": "대시보드 통계",
+          "result": {
+            "error": "대시보드 통계 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"realtime.getDashboardStats is not a valid path to a Convex function. Module path (realtime.getDashboardStats) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        },
+        {
+          "name": "사용자 프로필",
+          "result": {
+            "error": "사용자 프로필 테스트 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"profiles.list is not a valid path to a Convex function. Module path (profiles.list) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        },
+        {
+          "name": "주문 시스템",
+          "result": {
+            "error": "주문 시스템 테스트 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"orders.list is not a valid path to a Convex function. Module path (orders.list) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        },
+        {
+          "name": "알림 시스템",
+          "result": {
+            "error": "알림 시스템 테스트 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"notifications.list is not a valid path to a Convex function. Module path (notifications.list) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        }
+      ]
+    },
+    {
+      "suiteName": "실시간 기능",
+      "critical": false,
+      "success": false,
+      "results": [
+        {
+          "name": "실시간 업데이트",
+          "result": {
+            "error": "실시간 업데이트 테스트 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"realtime.getRecentActivities is not a valid path to a Convex function. Module path (realtime.getRecentActivities) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        },
+        {
+          "name": "구독 시스템",
+          "result": {
+            "error": "구독 시스템 테스트 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"realtime.getDashboardStats is not a valid path to a Convex function. Module path (realtime.getDashboardStats) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        }
+      ]
+    },
+    {
+      "suiteName": "성능 검증",
+      "critical": false,
+      "success": false,
+      "results": [
+        {
+          "name": "응답 시간",
+          "result": {
+            "error": "응답 시간 테스트 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"realtime.getDashboardStats is not a valid path to a Convex function. Module path (realtime.getDashboardStats) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        },
+        {
+          "name": "동시 연결",
+          "result": {
+            "error": "동시 연결 테스트 실패: 동시 연결 테스트 실패: 0/5 성공"
+          },
+          "success": false
+        },
+        {
+          "name": "메모리 사용량",
+          "result": {
+            "error": "메모리 사용량 테스트 실패: {\"code\":\"BadConvexFunctionIdentifier\",\"message\":\"profiles.list is not a valid path to a Convex function. Module path (profiles.list) has an extension that isn't 'js'.\"}"
+          },
+          "success": false
+        }
+      ]
+    }
+  ]
+}

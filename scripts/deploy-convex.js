@@ -189,17 +189,34 @@ class ConvexDeployer {
     console.log('✅ 배포 검증 중...');
 
     try {
-      // 배포 검증 스크립트 실행
-      const verificationScript = path.join(__dirname, 'verify-deployment.js');
+      // 향상된 배포 검증 스크립트 실행
+      const enhancedVerificationScript = path.join(
+        __dirname,
+        'enhanced-deployment-verification.js'
+      );
+      const basicVerificationScript = path.join(__dirname, 'verify-deployment.js');
 
-      if (fs.existsSync(verificationScript)) {
-        await this.runCommand('node', [verificationScript], {
+      if (fs.existsSync(enhancedVerificationScript)) {
+        console.log('  🚀 향상된 배포 검증 실행 중...');
+        await this.runCommand('node', [enhancedVerificationScript], {
+          env: {
+            DEPLOYMENT_URL: this.deploymentUrl || process.env.CONVEX_URL,
+            VERIFICATION_TIMEOUT: '120000',
+            NODE_ENV: this.environment,
+            CONVEX_DEPLOYMENT_ENV: this.environment,
+            ROLLBACK_ON_FAILURE: this.environment === 'production' ? 'true' : 'false',
+          },
+        });
+        console.log('  ✅ 향상된 배포 검증 성공');
+      } else if (fs.existsSync(basicVerificationScript)) {
+        console.log('  📋 기본 배포 검증 실행 중...');
+        await this.runCommand('node', [basicVerificationScript], {
           env: {
             DEPLOYMENT_URL: this.deploymentUrl || process.env.CONVEX_URL,
             VERIFICATION_TIMEOUT: '120000',
           },
         });
-        console.log('  ✅ 배포 검증 성공');
+        console.log('  ✅ 기본 배포 검증 성공');
       } else {
         console.log('  ⚠️ 검증 스크립트가 없어 기본 검증을 수행합니다.');
         await this.basicVerification();

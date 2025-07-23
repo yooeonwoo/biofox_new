@@ -168,11 +168,14 @@ jobs:
            CONVEX_STAGING_DEPLOYMENT_KEY: ${{ secrets.CONVEX_STAGING_DEPLOY_KEY }}
            CONVEX_STAGING_URL: ${{ secrets.CONVEX_STAGING_URL }}
           
-      - name: ✅ Verify staging deployment
-        run: node scripts/verify-deployment.js
-        env:
-          DEPLOYMENT_URL: ${{ steps.staging-deploy.outputs.deployment-url }}
-          VERIFICATION_TIMEOUT: 60000
+             - name: ✅ Verify staging deployment
+         run: node scripts/enhanced-deployment-verification.js
+         env:
+           DEPLOYMENT_URL: ${{ steps.staging-deploy.outputs.deployment-url }}
+           VERIFICATION_TIMEOUT: 90000
+           NODE_ENV: staging
+           CONVEX_DEPLOYMENT_ENV: staging
+           ROLLBACK_ON_FAILURE: false
           
   # 프로덕션 배포 (main 브랜치)
   deploy-production:
@@ -214,6 +217,26 @@ jobs:
            CONVEX_DEPLOYMENT_KEY: ${{ secrets.CONVEX_PRODUCTION_DEPLOY_KEY }}
            CONVEX_URL: ${{ secrets.CONVEX_URL }}
            NODE_ENV: production
+           
+       - name: ✅ Verify production deployment
+         run: node scripts/enhanced-deployment-verification.js
+         env:
+           DEPLOYMENT_URL: ${{ secrets.CONVEX_URL }}
+           VERIFICATION_TIMEOUT: 180000
+           NODE_ENV: production
+           CONVEX_DEPLOYMENT_ENV: production
+           ROLLBACK_ON_FAILURE: true
+           CONVEX_DEPLOYMENT_KEY: ${{ secrets.CONVEX_PRODUCTION_DEPLOY_KEY }}
+           
+       - name: 🔄 Emergency rollback on failure
+         if: failure()
+         run: node scripts/rollback-deployment.js
+         env:
+           NODE_ENV: production
+           CONVEX_DEPLOYMENT_ENV: production
+           CONVEX_DEPLOYMENT_KEY: ${{ secrets.CONVEX_PRODUCTION_DEPLOY_KEY }}
+           ROLLBACK_TIMEOUT: 300000
+           MAX_ROLLBACK_ATTEMPTS: 3
           
   # 배포 알림
   notify-deployment:
