@@ -997,6 +997,18 @@
   resolved "https://registry.npmjs.org/@drizzle-team/brocli/-/brocli-0.8.2.tgz"
   integrity sha512-zTrFENsqGvOkBOuHDC1pXCkDXNd2UhP4lI3gYGhQ1R1SPeAAfqzPsV1dcpMy4uNU6kB5VpU5NGhvwxVNETR02A==
 
+"@edge-runtime/primitives@6.0.0":
+  version "6.0.0"
+  resolved "https://registry.npmjs.org/@edge-runtime/primitives/-/primitives-6.0.0.tgz"
+  integrity sha512-FqoxaBT+prPBHBwE1WXS1ocnu/VLTQyZ6NMUBAdbP7N2hsFTTxMC/jMu2D/8GAlMQfxeuppcPuCUk/HO3fpIvA==
+
+"@edge-runtime/vm@*", "@edge-runtime/vm@^5.0.0":
+  version "5.0.0"
+  resolved "https://registry.npmjs.org/@edge-runtime/vm/-/vm-5.0.0.tgz"
+  integrity sha512-NKBGBSIKUG584qrS1tyxVpX/AKJKQw5HgjYEnPLC0QsTw79JrGn+qUr8CXFb955Iy7GUdiiUv1rJ6JBGvaKb6w==
+  dependencies:
+    "@edge-runtime/primitives" "6.0.0"
+
 "@esbuild-kit/core-utils@^3.3.2":
   version "3.3.2"
   resolved "https://registry.npmjs.org/@esbuild-kit/core-utils/-/core-utils-3.3.2.tgz"
@@ -4033,7 +4045,12 @@ convert-source-map@^2.0.0:
   resolved "https://registry.npmjs.org/convert-source-map/-/convert-source-map-2.0.0.tgz"
   integrity sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==
 
-convex@^1.17.0, convex@^1.25.4:
+convex-test@^0.0.38:
+  version "0.0.38"
+  resolved "https://registry.npmjs.org/convex-test/-/convex-test-0.0.38.tgz"
+  integrity sha512-1o/3GvUR9gMLjiqq7SxchI/0OYQaWwbQC4INmB1SNt1WLBjUgEM8+brgpqrZwJ+Vb1DdGZokCVeihwT5IPk49w==
+
+convex@^1.16.4, convex@^1.17.0, convex@^1.25.4:
   version "1.25.4"
   resolved "https://registry.npmjs.org/convex/-/convex-1.25.4.tgz"
   integrity sha512-LiGZZTmbe5iHWwDOYfSA00w+uDM8kgLC0ohFJW0VgQlKcs8famHCE6yuplk4wwXyj9Lhb1+yMRfrAD2ZEquqHg==

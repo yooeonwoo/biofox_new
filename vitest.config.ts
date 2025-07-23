@@ -7,6 +7,18 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     exclude: ['**/node_modules/**', '**/e2e/**', '**/*.e2e.test.*'],
+    // Convex 테스트 환경 설정
+    environmentMatchGlobs: [
+      // convex/ 디렉토리의 모든 테스트는 edge-runtime 환경에서 실행
+      ['convex/**', 'edge-runtime'],
+      // 나머지 모든 테스트는 jsdom 환경 사용
+      ['**', 'jsdom'],
+    ],
+    server: {
+      deps: {
+        inline: ['convex-test'],
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'json-summary'],
@@ -58,6 +70,7 @@ export default defineConfig({
     poolOptions: {
       threads: {
         singleThread: false,
+        minThreads: 1,
         maxThreads: 4,
       },
     },

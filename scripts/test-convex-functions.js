@@ -1,356 +1,271 @@
 #!/usr/bin/env node
 
 /**
- * Convex 함수 테스트 스크립트
- * CI/CD에서 Convex 함수들의 무결성을 검증합니다.
+ * Convex 함수 단위 테스트 실행 스크립트
+ *
+ * 이 스크립트는 Convex 함수들의 단위 테스트를 실행하고
+ * 테스트 결과를 종합적으로 분석합니다.
  */
 
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
 
-const CONVEX_DIR = path.join(__dirname, '..', 'convex');
-const TEST_TIMEOUT = 60000; // 60초
+// 환경 변수 설정
+const CONVEX_TEST_ENV = process.env.CONVEX_TEST_ENV || 'test';
+const VERBOSE = process.env.VERBOSE === 'true' || process.argv.includes('--verbose');
+const COVERAGE = process.env.COVERAGE === 'true' || process.argv.includes('--coverage');
+const WATCH_MODE = process.argv.includes('--watch');
 
-console.log('🔮 Convex 함수 테스트를 시작합니다...');
+console.log('🧪 Convex 함수 단위 테스트를 시작합니다...');
+console.log(`📍 테스트 환경: ${CONVEX_TEST_ENV}`);
 
-class ConvexTester {
-  constructor() {
-    this.errors = [];
-    this.warnings = [];
-    this.passed = 0;
-    this.failed = 0;
-  }
-
-  async runTests() {
-    console.log('📁 Convex 디렉토리 확인 중...');
-
-    // 1. Convex 디렉토리 존재 확인
-    if (!fs.existsSync(CONVEX_DIR)) {
-      this.addError('Convex 디렉토리가 존재하지 않습니다.');
-      return false;
-    }
-
-    // 2. 필수 파일들 확인
-    await this.checkRequiredFiles();
-
-    // 3. TypeScript 컴파일 테스트
-    await this.testTypeScriptCompilation();
-
-    // 4. 함수 파일 구문 검사
-    await this.testFunctionSyntax();
-
-    // 5. 스키마 검증
-    await this.testSchema();
-
-    // 6. 의존성 검사
-    await this.testDependencies();
-
-    // 결과 출력
-    this.printResults();
-
-    return this.failed === 0;
-  }
-
-  async checkRequiredFiles() {
-    console.log('📋 필수 파일 확인 중...');
-
-    const requiredFiles = [
-      'tsconfig.json',
-      '_generated/api.d.ts',
-      '_generated/api.js',
-      '_generated/dataModel.d.ts',
-    ];
-
-    const optionalFiles = [
-      'auth.ts',
-      'utils.ts',
-      'realtime.ts',
-      'profiles.ts',
-      'orders.ts',
-      'notifications.ts',
-    ];
-
-    // 필수 파일 검사
-    for (const file of requiredFiles) {
-      const filePath = path.join(CONVEX_DIR, file);
-      if (fs.existsSync(filePath)) {
-        this.addPass(`✅ ${file} 존재 확인`);
-      } else {
-        this.addError(`❌ 필수 파일 누락: ${file}`);
-      }
-    }
-
-    // 선택적 파일 검사
-    for (const file of optionalFiles) {
-      const filePath = path.join(CONVEX_DIR, file);
-      if (fs.existsSync(filePath)) {
-        this.addPass(`✅ ${file} 존재 확인`);
-      } else {
-        this.addWarning(`⚠️ 선택적 파일 누락: ${file}`);
-      }
-    }
-  }
-
-  async testTypeScriptCompilation() {
-    console.log('🔧 TypeScript 컴파일 테스트 중...');
-
-    return new Promise(resolve => {
-      const tsc = spawn('npx', ['tsc', '--noEmit', '--project', 'convex/tsconfig.json'], {
-        stdio: 'pipe',
-        cwd: path.join(__dirname, '..'),
-      });
-
-      let output = '';
-      let errorOutput = '';
-
-      tsc.stdout.on('data', data => {
-        output += data.toString();
-      });
-
-      tsc.stderr.on('data', data => {
-        errorOutput += data.toString();
-      });
-
-      tsc.on('close', code => {
-        if (code === 0) {
-          this.addPass('✅ TypeScript 컴파일 성공');
-        } else {
-          this.addError(`❌ TypeScript 컴파일 실패 (exit code: ${code})`);
-          if (errorOutput) {
-            this.addError(`컴파일 오류: ${errorOutput.slice(0, 500)}...`);
-          }
-        }
-        resolve();
-      });
-
-      // 타임아웃 설정
-      setTimeout(() => {
-        tsc.kill();
-        this.addError('❌ TypeScript 컴파일 타임아웃');
-        resolve();
-      }, TEST_TIMEOUT);
+/**
+ * 명령어 실행 헬퍼 함수
+ */
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: VERBOSE ? 'inherit' : 'pipe',
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        CONVEX_TEST_ENV,
+        ...options.env,
+      },
+      ...options,
     });
-  }
 
-  async testFunctionSyntax() {
-    console.log('🔍 함수 파일 구문 검사 중...');
+    let stdout = '';
+    let stderr = '';
 
-    const functionFiles = this.getFunctionFiles();
+    if (!VERBOSE) {
+      child.stdout?.on('data', data => {
+        stdout += data.toString();
+      });
 
-    for (const file of functionFiles) {
-      try {
-        const content = fs.readFileSync(file, 'utf8');
+      child.stderr?.on('data', data => {
+        stderr += data.toString();
+      });
+    }
 
-        // 기본 구문 검사
-        if (this.checkBasicSyntax(content, file)) {
-          this.addPass(`✅ ${path.basename(file)} 구문 검사 통과`);
-        }
-
-        // Convex 특화 검사
-        this.checkConvexPatterns(content, file);
-      } catch (error) {
-        this.addError(`❌ ${path.basename(file)} 읽기 실패: ${error.message}`);
+    child.on('close', code => {
+      if (code === 0) {
+        resolve({ stdout, stderr, code });
+      } else {
+        reject(new Error(`Command failed with code ${code}\n${stderr}`));
       }
-    }
-  }
-
-  getFunctionFiles() {
-    const files = [];
-
-    function scanDirectory(dir) {
-      const items = fs.readdirSync(dir);
-
-      for (const item of items) {
-        const fullPath = path.join(dir, item);
-        const stat = fs.statSync(fullPath);
-
-        if (stat.isDirectory() && !item.startsWith('_')) {
-          scanDirectory(fullPath);
-        } else if (stat.isFile() && item.endsWith('.ts') && !item.endsWith('.d.ts')) {
-          files.push(fullPath);
-        }
-      }
-    }
-
-    scanDirectory(CONVEX_DIR);
-    return files;
-  }
-
-  checkBasicSyntax(content, filePath) {
-    const fileName = path.basename(filePath);
-
-    // 기본적인 Convex 패턴 검사
-    const patterns = {
-      hasImports: /import\s+.+from\s+['"].+['"];?/,
-      hasExports: /export\s+(const|function|default)/,
-      hasConvexImport: /from\s+['"]\.?\/?_generated\/server['"];?/,
-    };
-
-    let passed = true;
-
-    // Convex 함수 파일이라면 _generated/server import가 있어야 함
-    if (!patterns.hasConvexImport.test(content)) {
-      this.addWarning(`⚠️ ${fileName}: Convex server import가 없습니다.`);
-    }
-
-    // export가 있어야 함
-    if (!patterns.hasExports.test(content)) {
-      this.addError(`❌ ${fileName}: export가 없습니다.`);
-      passed = false;
-    }
-
-    return passed;
-  }
-
-  checkConvexPatterns(content, filePath) {
-    const fileName = path.basename(filePath);
-
-    // Convex 쿼리/뮤테이션 패턴 검사
-    const convexPatterns = {
-      query: /export\s+const\s+\w+\s*=\s*query\s*\(/,
-      mutation: /export\s+const\s+\w+\s*=\s*mutation\s*\(/,
-      action: /export\s+const\s+\w+\s*=\s*action\s*\(/,
-    };
-
-    let hasConvexFunction = false;
-
-    for (const [type, pattern] of Object.entries(convexPatterns)) {
-      if (pattern.test(content)) {
-        hasConvexFunction = true;
-        break;
-      }
-    }
-
-    if (!hasConvexFunction && !fileName.includes('utils') && !fileName.includes('types')) {
-      this.addWarning(`⚠️ ${fileName}: Convex 함수(query/mutation/action)가 없습니다.`);
-    }
-
-    // 비동기 함수 검사
-    if (content.includes('query(') || content.includes('mutation(')) {
-      if (!content.includes('async')) {
-        this.addWarning(`⚠️ ${fileName}: Convex 함수에 async가 없을 수 있습니다.`);
-      }
-    }
-  }
-
-  async testSchema() {
-    console.log('📊 스키마 검증 중...');
-
-    const schemaFile = path.join(CONVEX_DIR, 'schema.ts');
-
-    if (fs.existsSync(schemaFile)) {
-      try {
-        const content = fs.readFileSync(schemaFile, 'utf8');
-
-        if (content.includes('defineSchema') && content.includes('export default')) {
-          this.addPass('✅ 스키마 파일 구조 정상');
-        } else {
-          this.addError('❌ 스키마 파일 구조 이상');
-        }
-      } catch (error) {
-        this.addError(`❌ 스키마 파일 읽기 실패: ${error.message}`);
-      }
-    } else {
-      this.addWarning('⚠️ schema.ts 파일이 없습니다.');
-    }
-  }
-
-  async testDependencies() {
-    console.log('📦 의존성 검사 중...');
-
-    try {
-      const packageJsonPath = path.join(__dirname, '..', 'package.json');
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-
-      const requiredDeps = ['convex'];
-      const optionalDeps = ['@convex-dev/auth'];
-
-      // 필수 의존성 검사
-      for (const dep of requiredDeps) {
-        if (packageJson.dependencies?.[dep] || packageJson.devDependencies?.[dep]) {
-          this.addPass(`✅ 필수 의존성 ${dep} 설치됨`);
-        } else {
-          this.addError(`❌ 필수 의존성 ${dep} 누락`);
-        }
-      }
-
-      // 선택적 의존성 검사
-      for (const dep of optionalDeps) {
-        if (packageJson.dependencies?.[dep] || packageJson.devDependencies?.[dep]) {
-          this.addPass(`✅ 선택적 의존성 ${dep} 설치됨`);
-        } else {
-          this.addWarning(`⚠️ 선택적 의존성 ${dep} 없음`);
-        }
-      }
-    } catch (error) {
-      this.addError(`❌ package.json 읽기 실패: ${error.message}`);
-    }
-  }
-
-  addPass(message) {
-    console.log(`  ${message}`);
-    this.passed++;
-  }
-
-  addError(message) {
-    console.log(`  ${message}`);
-    this.errors.push(message);
-    this.failed++;
-  }
-
-  addWarning(message) {
-    console.log(`  ${message}`);
-    this.warnings.push(message);
-  }
-
-  printResults() {
-    console.log('\n📋 Convex 함수 테스트 결과:');
-    console.log('═'.repeat(50));
-
-    console.log(`✅ 통과: ${this.passed}`);
-    console.log(`❌ 실패: ${this.failed}`);
-    console.log(`⚠️ 경고: ${this.warnings.length}`);
-
-    if (this.errors.length > 0) {
-      console.log('\n❌ 오류 목록:');
-      this.errors.forEach(error => console.log(`  ${error}`));
-    }
-
-    if (this.warnings.length > 0) {
-      console.log('\n⚠️ 경고 목록:');
-      this.warnings.forEach(warning => console.log(`  ${warning}`));
-    }
-
-    console.log('═'.repeat(50));
-
-    if (this.failed === 0) {
-      console.log('🎉 모든 Convex 함수 테스트가 통과했습니다!');
-    } else {
-      console.log('❌ 일부 Convex 함수 테스트가 실패했습니다.');
-    }
-  }
+    });
+  });
 }
 
-// 메인 실행
-async function main() {
-  const tester = new ConvexTester();
+/**
+ * Convex 테스트 파일 검색
+ */
+function findConvexTestFiles() {
+  const convexDir = path.join(process.cwd(), 'convex');
 
+  if (!fs.existsSync(convexDir)) {
+    throw new Error('Convex 디렉토리를 찾을 수 없습니다.');
+  }
+
+  const testFiles = fs
+    .readdirSync(convexDir)
+    .filter(file => file.endsWith('.test.ts') || file.endsWith('.test.js'))
+    .map(file => path.join(convexDir, file));
+
+  return testFiles;
+}
+
+/**
+ * 테스트 의존성 확인
+ */
+function checkTestDependencies() {
+  console.log('🔍 테스트 의존성을 확인합니다...');
+
+  const packageJsonPath = path.join(process.cwd(), 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+  const requiredDeps = ['convex-test', 'vitest', '@edge-runtime/vm'];
+  const missingDeps = requiredDeps.filter(
+    dep => !packageJson.devDependencies?.[dep] && !packageJson.dependencies?.[dep]
+  );
+
+  if (missingDeps.length > 0) {
+    console.error(`❌ 필수 의존성이 누락되었습니다: ${missingDeps.join(', ')}`);
+    console.log('다음 명령어로 설치하세요:');
+    console.log(`npm install --save-dev ${missingDeps.join(' ')}`);
+    process.exit(1);
+  }
+
+  console.log('  ✅ 모든 테스트 의존성이 설치되어 있습니다.');
+}
+
+/**
+ * Vitest 설정 확인
+ */
+function checkVitestConfig() {
+  console.log('⚙️  Vitest 설정을 확인합니다...');
+
+  const configPath = path.join(process.cwd(), 'vitest.config.ts');
+
+  if (!fs.existsSync(configPath)) {
+    console.warn('⚠️  vitest.config.ts 파일이 없습니다.');
+    return false;
+  }
+
+  const configContent = fs.readFileSync(configPath, 'utf8');
+
+  // edge-runtime 환경 설정 확인
+  const hasEdgeRuntime = configContent.includes('edge-runtime');
+  const hasConvexTestInline = configContent.includes('convex-test');
+
+  if (!hasEdgeRuntime) {
+    console.warn('⚠️  Vitest 설정에 edge-runtime 환경이 구성되지 않았습니다.');
+  }
+
+  if (!hasConvexTestInline) {
+    console.warn('⚠️  Vitest 설정에 convex-test 인라인 의존성이 구성되지 않았습니다.');
+  }
+
+  if (hasEdgeRuntime && hasConvexTestInline) {
+    console.log('  ✅ Vitest 설정이 올바르게 구성되어 있습니다.');
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * 메인 테스트 실행 함수
+ */
+async function runConvexTests() {
   try {
-    const success = await Promise.race([
-      tester.runTests(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('전체 테스트 타임아웃')), TEST_TIMEOUT)
-      ),
-    ]);
+    // 의존성 및 설정 확인
+    checkTestDependencies();
+    checkVitestConfig();
 
-    process.exit(success ? 0 : 1);
+    // 테스트 파일 검색
+    const testFiles = findConvexTestFiles();
+
+    if (testFiles.length === 0) {
+      console.log('📝 Convex 테스트 파일이 없습니다.');
+      console.log('다음 파일들을 생성하여 테스트를 시작하세요:');
+      console.log('  - convex/profiles.test.ts');
+      console.log('  - convex/auth.test.ts');
+      console.log('  - convex/orders.test.ts');
+      return;
+    }
+
+    console.log(`📋 발견된 테스트 파일: ${testFiles.length}개`);
+    testFiles.forEach(file => {
+      console.log(`  - ${path.relative(process.cwd(), file)}`);
+    });
+
+    // Vitest 명령어 구성
+    const vitestArgs = ['run'];
+
+    if (WATCH_MODE) {
+      vitestArgs[0] = 'watch';
+    }
+
+    if (COVERAGE) {
+      vitestArgs.push('--coverage');
+      vitestArgs.push('--coverage.reporter=text');
+      vitestArgs.push('--coverage.reporter=json-summary');
+    }
+
+    // Convex 테스트만 실행하도록 패턴 지정
+    vitestArgs.push('convex/**/*.test.{ts,js}');
+
+    if (VERBOSE) {
+      vitestArgs.push('--reporter=verbose');
+    }
+
+    console.log('\n🚀 테스트를 실행합니다...');
+    console.log(`명령어: npx vitest ${vitestArgs.join(' ')}\n`);
+
+    // 테스트 실행
+    const result = await runCommand('npx', ['vitest', ...vitestArgs]);
+
+    console.log('\n✅ Convex 함수 테스트가 완료되었습니다!');
+
+    // 커버리지 결과 표시
+    if (COVERAGE) {
+      const coverageSummaryPath = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
+      if (fs.existsSync(coverageSummaryPath)) {
+        console.log('\n📊 커버리지 요약:');
+        const coverageSummary = JSON.parse(fs.readFileSync(coverageSummaryPath, 'utf8'));
+        const total = coverageSummary.total;
+
+        console.log(`  Lines: ${total.lines.pct}%`);
+        console.log(`  Functions: ${total.functions.pct}%`);
+        console.log(`  Branches: ${total.branches.pct}%`);
+        console.log(`  Statements: ${total.statements.pct}%`);
+      }
+    }
+
+    return result;
   } catch (error) {
-    console.error('\n💥 테스트 실행 중 오류 발생:', error.message);
+    console.error('\n❌ Convex 함수 테스트 실행 중 오류가 발생했습니다:');
+    console.error(error.message);
+
+    if (VERBOSE) {
+      console.error(error.stack);
+    }
+
     process.exit(1);
   }
 }
 
-if (require.main === module) {
-  main();
+/**
+ * 도움말 표시
+ */
+function showHelp() {
+  console.log(`
+🧪 Convex 함수 테스트 실행기
+
+사용법: node scripts/test-convex-functions.js [옵션]
+
+옵션:
+  --help        이 도움말을 표시합니다
+  --verbose     상세한 출력을 표시합니다
+  --coverage    코드 커버리지를 측정합니다
+  --watch       파일 변경을 감지하고 자동으로 테스트를 재실행합니다
+
+환경 변수:
+  CONVEX_TEST_ENV    테스트 환경 (기본값: test)
+  VERBOSE           상세 출력 활성화 (true/false)
+  COVERAGE          커버리지 측정 활성화 (true/false)
+
+예시:
+  node scripts/test-convex-functions.js
+  node scripts/test-convex-functions.js --coverage
+  node scripts/test-convex-functions.js --watch --verbose
+  COVERAGE=true node scripts/test-convex-functions.js
+`);
 }
+
+// 스크립트 실행
+if (require.main === module) {
+  if (process.argv.includes('--help')) {
+    showHelp();
+    process.exit(0);
+  }
+
+  runConvexTests()
+    .then(() => {
+      process.exit(0);
+    })
+    .catch(error => {
+      console.error('예상치 못한 오류:', error.message);
+      process.exit(1);
+    });
+}
+
+module.exports = {
+  runConvexTests,
+  findConvexTestFiles,
+  checkTestDependencies,
+  checkVitestConfig,
+};
