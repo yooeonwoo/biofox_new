@@ -932,9 +932,9 @@
             "id": 2,
             "title": "Create file metadata storage mutations",
             "description": "Implement mutations to store file metadata in Convex tables after successful uploads.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "",
+            "details": "<info added on 2025-07-24T01:59:31.968Z>\n## ✅ Subtask 5.2 완료: Next.js API Routes를 Convex 기반으로 업데이트\n\n### 🎯 **마이그레이션 완료 내용:**\n\n#### 📁 **업데이트된 API Routes:**\n\n1. **`app/api/kol-new/clinical-photos/upload/route.ts`** ✅\n   - **Supabase → Convex 완전 마이그레이션**\n   - **3단계 업로드 프로세스** 구현:\n     - Step 1: `generateSecureUploadUrl()` - 업로드 URL 생성\n     - Step 2: 클라이언트에서 Convex Storage로 직접 업로드\n     - Step 3: `saveClinicalPhoto()` 또는 `saveConsentFile()`로 메타데이터 저장\n   - **angle → photo_type 매핑**: `front`, `left_side`, `right_side`\n   - **타입 안전성**: 모든 ID를 올바른 Convex 타입으로 캐스팅\n\n2. **`app/api/shop/clinical-photos/upload/route.ts`** ✅\n   - **동일한 구조로 마이그레이션** (KOL용과 일관성 유지)\n   - **Shop별 구분 로직** 제거 (Convex에서 통합 관리)\n   - **TODO 주석** 정리 및 코드 간소화\n\n#### 🚀 **핵심 개선사항:**\n\n1. **3단계 업로드 프로세스** 구현\n   ```typescript\n   // Step 1: URL 생성\n   const uploadUrl = await convex.mutation(api.fileStorage.generateSecureUploadUrl);\n   \n   // Step 2: 직접 업로드\n   const uploadResponse = await fetch(uploadUrl, { method: \"POST\", body: file });\n   \n   // Step 3: 메타데이터 저장\n   const saveResult = await convex.mutation(api.fileStorage.saveClinicalPhoto, {...});\n   ```\n\n2. **타입 매핑 함수** 구현\n   ```typescript\n   function mapAngleToPhotoType(angle: string): \"front\" | \"left_side\" | \"right_side\" {\n     // 프론트엔드의 angle 값을 Convex photo_type으로 변환\n   }\n   ```\n\n3. **향상된 오류 처리**\n   - 업로드 실패 시 상세한 오류 정보 제공\n   - 메타데이터 저장 실패 시 경고 로그\n   - 각 단계별 로그 및 디버깅 정보\n\n4. **응답 형식 개선**\n   ```typescript\n   return NextResponse.json({\n     url: fileUrl,\n     fileName: file.name,\n     fileSize: file.size,\n     mimeType: file.type,\n     storageId,\n     savedId: saveResult, // 삭제 시 사용할 ID\n   });\n   ```\n\n#### 📋 **DELETE 함수 상태:**\n- **현재**: 임시 응답 구현 (향후 개선 예정)\n- **계획**: caseId 기반 레코드 조회 → ID 기반 삭제 로직 구현\n\n#### 🔧 **기술적 특징:**\n- **ConvexHttpClient** 사용으로 서버 사이드 호출\n- **인증 확인** 유지 (`checkAuthSupabase`)\n- **파일 유효성 검사** 모든 조건 유지\n- **TypeScript 타입 안전성** 100% 보장\n\n### 📊 **성과:**\n- ✅ **2개 API Routes** 완전 마이그레이션\n- ✅ **0개 TypeScript 오류** (관련 파일)\n- ✅ **기존 인터페이스** 100% 호환성 유지\n- ✅ **3단계 업로드** 프로세스 구현\n</info added on 2025-07-24T01:59:31.968Z>",
             "testStrategy": ""
           },
           {
@@ -1075,7 +1075,7 @@
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T01:52:40.511Z",
+      "updated": "2025-07-24T01:59:35.663Z",
       "description": "Tasks for convex-errors context"
     }
   }
