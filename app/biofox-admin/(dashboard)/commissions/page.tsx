@@ -48,18 +48,16 @@ export default function CommissionManagementPage() {
   const [selectedCommission, setSelectedCommission] = useState<any>(null);
 
   // 표준화된 Convex queries
-  const commissionsQuery = usePaginatedConvexQuery(api.commissions.listCommissions, {
+  const commissionsQuery = usePaginatedConvexQuery(api.commissions.getCommissionCalculations, {
     paginationOpts,
     month: filters.month,
-    kolId: filters.kol_id as any,
+    kol_id: filters.kol_id as any,
     status: filters.status as any,
-    sortBy: 'created_at',
-    sortOrder: 'desc',
   });
 
   const summaryQuery = useQuery(api.commissions.getCommissionSummary, {
     month: filters.month,
-    kolId: filters.kol_id as any,
+    kol_id: filters.kol_id as any,
   });
 
   // 복합 쿼리 상태 관리
@@ -83,7 +81,7 @@ export default function CommissionManagementPage() {
     // Show loading state in summary during calculation
     const existingSummary = localStore.getQuery(api.commissions.getCommissionSummary, {
       month: filters.month,
-      kolId: filters.kol_id as any,
+      kol_id: filters.kol_id as any,
     });
 
     if (existingSummary !== undefined) {
@@ -95,7 +93,7 @@ export default function CommissionManagementPage() {
         api.commissions.getCommissionSummary,
         {
           month: filters.month,
-          kolId: filters.kol_id as any,
+          kol_id: filters.kol_id as any,
         },
         optimisticSummary
       );
@@ -103,13 +101,13 @@ export default function CommissionManagementPage() {
   });
 
   const updateCommissionStatus = useMutation(
-    api.commissions.updateCommissionStatus
+    api.commissions.updateCommissionCalculation
   ).withOptimisticUpdate((localStore, args) => {
     const { orderIds, status } = args;
     const existingCommissions = localStore.getQuery(api.commissions.listCommissions, {
       paginationOpts,
       month: filters.month,
-      kolId: filters.kol_id as any,
+      kol_id: filters.kol_id as any,
       status: filters.status as any,
       sortBy: 'created_at',
       sortOrder: 'desc',
@@ -129,7 +127,7 @@ export default function CommissionManagementPage() {
         {
           paginationOpts,
           month: filters.month,
-          kolId: filters.kol_id as any,
+          kol_id: filters.kol_id as any,
           status: filters.status as any,
           sortBy: 'created_at',
           sortOrder: 'desc',

@@ -10,7 +10,6 @@ import { requireAdmin } from './auth';
 
 /**
  * 디바이스 판매 목록 조회 (필터링, 페이지네이션 지원)
- * GET /api/devices 대체
  */
 export const getDeviceSales = query({
   args: {
@@ -21,464 +20,259 @@ export const getDeviceSales = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // 관리자 권한 필요
     await requireAdmin(ctx);
 
     const limit = args.limit || 20;
-    let salesQuery = ctx.db.query('device_sales');
+    let sales;
 
-    // 매장 필터
     if (args.shop_id) {
-      salesQuery = salesQuery.withIndex('by_shop', q => q.eq('shop_id', args.shop_id));
+      sales = await ctx.db
+        .query('device_sales')
+        .withIndex('by_shop', q => q.eq('shop_id', args.shop_id!))
+        .order('desc')
+        .take(limit);
+    } else {
+      sales = await ctx.db.query('device_sales').order('desc').take(limit);
     }
 
-    // KOL 필터의 경우 관련 매장들을 먼저 찾아야 함
-    let kolShopIds: Id<'profiles'>[] = [];
-    if (args.kol_id) {
-      const relationships = await ctx.db
-        .query('shop_relationships')
-        .withIndex('by_parent', q => q.eq('parent_id', args.kol_id))
-        .filter(q => q.eq(q.field('is_active'), true))
-        .collect();
-
-      kolShopIds = relationships.map(r => r.shop_owner_id);
-    }
-
-    let sales = await salesQuery.order('desc').take(limit);
-
-    // KOL 필터 적용
-    if (args.kol_id && kolShopIds.length > 0) {
-      sales = sales.filter(sale => kolShopIds.includes(sale.shop_id));
-    }
-
-    // 날짜 필터 적용
+    // 날짜 필터링 (클라이언트 사이드)
+    let filteredSales = sales;
     if (args.date_from) {
-      sales = sales.filter(sale => sale.sale_date >= args.date_from!);
+      const fromTimestamp = new Date(args.date_from).getTime();
+      filteredSales = filteredSales.filter(sale => sale.sale_date >= fromTimestamp);
     }
     if (args.date_to) {
-      sales = sales.filter(sale => sale.sale_date <= args.date_to!);
+      const toTimestamp = new Date(args.date_to).getTime();
+      filteredSales = filteredSales.filter(sale => sale.sale_date <= toTimestamp);
     }
 
-    // 각 판매에 대해 매장 및 KOL 정보 추가
-    const salesWithDetails = await Promise.all(
-      sales.map(async sale => {
-        // 매장 정보 조회
-        const shop = await ctx.db.get(sale.shop_id);
-
-        // KOL 정보 조회 (소속 관계를 통해)
-        const relationship = await ctx.db
-          .query('shop_relationships')
-          .withIndex('by_shop_owner', q => q.eq('shop_owner_id', sale.shop_id))
-          .filter(q => q.eq(q.field('is_active'), true))
-          .first();
-
-        let kol = null;
-        if (relationship && relationship.parent_id) {
-          kol = await ctx.db.get(relationship.parent_id);
-        }
-
-        // 생성자 정보
-        let createdBy = null;
-        if (sale.created_by) {
-          createdBy = await ctx.db.get(sale.created_by);
-        }
-
-        return {
-          ...sale,
-          shop: shop
-            ? {
-                _id: shop._id,
-                name: shop.name,
-                shop_name: shop.shop_name,
-                email: shop.email,
-                region: shop.region,
-              }
-            : null,
-          kol: kol
-            ? {
-                _id: kol._id,
-                name: kol.name,
-                role: kol.role,
-              }
-            : null,
-          created_by_user: createdBy
-            ? {
-                name: createdBy.name,
-              }
-            : null,
-        };
-      })
-    );
-
-    return salesWithDetails;
+    return filteredSales;
   },
 });
 
 /**
- * 디바이스 판매 기록 생성 (수수료 계산 포함)
- * POST /api/devices 대체
+ * 디바이스 판매 추가
  */
-export const createDeviceSale = mutation({
+export const addDeviceSale = mutation({
   args: {
     shop_id: v.id('profiles'),
-    sale_date: v.string(),
-    quantity: v.number(),
     device_name: v.optional(v.string()),
-    serial_numbers: v.optional(v.array(v.string())),
+    quantity: v.number(),
+    tier_at_sale: v.union(v.literal('tier_1_4'), v.literal('tier_5_plus')),
+    standard_commission: v.number(),
+    actual_commission: v.number(),
     notes: v.optional(v.string()),
+    serial_numbers: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    // 관리자 권한 필요
-    const { profile } = await requireAdmin(ctx);
+    const userId = await requireAdmin(ctx);
 
-    // 해당 매장의 KOL 관계 찾기
-    const relationship = await ctx.db
-      .query('shop_relationships')
-      .withIndex('by_shop_owner', q => q.eq('shop_owner_id', args.shop_id))
-      .filter(q => q.eq(q.field('is_active'), true))
-      .first();
-
-    if (!relationship || !relationship.parent_id) {
-      throw new Error('Shop has no active KOL/OL relationship');
-    }
-
-    const kolId = relationship.parent_id;
-
-    // KOL의 현재 누적 대수 조회
-    const accumulator = await ctx.db
-      .query('device_accumulator')
-      .withIndex('by_kol', q => q.eq('kol_id', kolId))
-      .first();
-
-    let currentNetDevices = 0;
-    if (accumulator) {
-      const totalSold = accumulator.total_devices_sold || 0;
-      const totalReturned = accumulator.total_devices_returned || 0;
-      currentNetDevices = totalSold - totalReturned;
-    }
-
-    // 새 판매 후 누적 대수
-    const newNetDevices = currentNetDevices + args.quantity;
-
-    // 티어 결정 (판매/반품에 따라 다른 로직)
-    let currentTier: 'tier_1_4' | 'tier_5_plus';
-    if (args.quantity > 0) {
-      // 판매인 경우 현재 티어 기준
-      currentTier = currentNetDevices >= 5 ? 'tier_5_plus' : 'tier_1_4';
-    } else {
-      // 반품인 경우 반품 후 티어 기준
-      currentTier = newNetDevices >= 5 ? 'tier_5_plus' : 'tier_1_4';
-    }
-
-    // 수수료 계산
-    const commissionPerUnit = currentTier === 'tier_5_plus' ? 2500000 : 1500000;
-    const standardCommission = Math.abs(args.quantity) * commissionPerUnit;
-    const actualCommission = args.quantity * commissionPerUnit; // 반품시 음수
-
-    const now = Date.now();
-
-    // 디바이스 판매 기록 생성
-    const deviceSaleId = await ctx.db.insert('device_sales', {
+    const saleId = await ctx.db.insert('device_sales', {
       shop_id: args.shop_id,
-      sale_date: args.sale_date,
+      sale_date: Date.now(),
+      device_name: args.device_name,
       quantity: args.quantity,
-      device_name: args.device_name || '마이크로젯',
-      tier_at_sale: currentTier,
-      standard_commission: standardCommission,
-      actual_commission: actualCommission,
-      serial_numbers: args.serial_numbers,
+      tier_at_sale: args.tier_at_sale,
+      standard_commission: args.standard_commission,
+      actual_commission: args.actual_commission,
+      commission_status: 'calculated',
       notes: args.notes,
-      created_by: profile._id,
-      created_at: now,
-      updated_at: now,
+      serial_numbers: args.serial_numbers,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+      created_by: userId,
     });
 
-    // KOL 누적 대수 업데이트
-    if (accumulator) {
-      // 기존 레코드 업데이트
-      const newTotalSold =
-        (accumulator.total_devices_sold || 0) + (args.quantity > 0 ? args.quantity : 0);
-      const newTotalReturned =
-        (accumulator.total_devices_returned || 0) +
-        (args.quantity < 0 ? Math.abs(args.quantity) : 0);
-      const newTier = newTotalSold - newTotalReturned >= 5 ? 'tier_5_plus' : 'tier_1_4';
-      const tierChanged = accumulator.current_tier !== newTier;
+    // KOL 누적 데이터 업데이트
+    await updateKolDeviceAccumulator(ctx, args.shop_id, args.quantity);
 
-      await ctx.db.patch(accumulator._id, {
-        total_devices_sold: newTotalSold,
-        total_devices_returned: newTotalReturned,
-        current_tier: newTier,
-        tier_changed_at: tierChanged ? now : accumulator.tier_changed_at,
-        last_updated: now,
-      });
-    } else {
-      // 첫 판매인 경우 새 레코드 생성
-      const totalSold = args.quantity > 0 ? args.quantity : 0;
-      const totalReturned = args.quantity < 0 ? Math.abs(args.quantity) : 0;
-      const tier = totalSold - totalReturned >= 5 ? 'tier_5_plus' : 'tier_1_4';
-
-      await ctx.db.insert('device_accumulator', {
-        kol_id: kolId,
-        total_devices_sold: totalSold,
-        total_devices_returned: totalReturned,
-        current_tier: tier,
-        tier_1_4_count: currentTier === 'tier_1_4' ? Math.abs(args.quantity) : 0,
-        tier_5_plus_count: currentTier === 'tier_5_plus' ? Math.abs(args.quantity) : 0,
-        tier_changed_at: now,
-        last_updated: now,
-        created_at: now,
-      });
-    }
-
-    // 생성된 판매 기록 반환
-    const newSale = await ctx.db.get(deviceSaleId);
-    return newSale;
+    return saleId;
   },
 });
 
 /**
- * 디바이스 판매 기록 상세 조회
- * GET /api/devices/[deviceId] 대체
+ * KOL 디바이스 누적 데이터 업데이트
  */
-export const getDeviceSale = query({
-  args: {
-    device_id: v.id('device_sales'),
-  },
-  handler: async (ctx, args) => {
-    // 관리자 권한 필요
-    await requireAdmin(ctx);
+async function updateKolDeviceAccumulator(ctx: any, shopId: Id<'profiles'>, quantity: number) {
+  // 매장의 상위 KOL 찾기
+  const relationship = await ctx.db
+    .query('shop_relationships')
+    .withIndex('by_shop_owner', (q: any) => q.eq('shop_owner_id', shopId))
+    .filter((q: any) => q.eq(q.field('is_active'), true))
+    .first();
 
-    const sale = await ctx.db.get(args.device_id);
-    if (!sale) {
-      throw new Error('Device sale not found');
-    }
+  if (!relationship?.parent_id) return;
 
-    // 매장 정보 조회
-    const shop = await ctx.db.get(sale.shop_id);
+  const kolId = relationship.parent_id;
 
-    // KOL 정보 조회
-    const relationship = await ctx.db
-      .query('shop_relationships')
-      .withIndex('by_shop_owner', q => q.eq('shop_owner_id', sale.shop_id))
-      .filter(q => q.eq(q.field('is_active'), true))
-      .first();
+  // 기존 누적 데이터 조회
+  const accumulator = await ctx.db
+    .query('kol_device_accumulator')
+    .withIndex('by_kol', (q: any) => q.eq('kol_id', kolId))
+    .first();
 
-    let kol = null;
-    if (relationship && relationship.parent_id) {
-      kol = await ctx.db.get(relationship.parent_id);
-    }
+  if (accumulator) {
+    // 기존 데이터 업데이트
+    const newTotalSold = accumulator.total_devices_sold + quantity;
+    const newNetSold = newTotalSold - accumulator.total_devices_returned;
+    const newTier = newNetSold >= 5 ? 'tier_5_plus' : 'tier_1_4';
 
-    // 생성자 정보
-    let createdBy = null;
-    if (sale.created_by) {
-      createdBy = await ctx.db.get(sale.created_by);
-    }
+    await ctx.db.patch(accumulator._id, {
+      total_devices_sold: newTotalSold,
+      net_devices_sold: newNetSold,
+      current_tier: newTier,
+      last_updated: Date.now(),
+    });
+  } else {
+    // 새 누적 데이터 생성
+    const tier = quantity >= 5 ? 'tier_5_plus' : 'tier_1_4';
 
-    return {
-      ...sale,
-      shop: shop
-        ? {
-            _id: shop._id,
-            name: shop.name,
-            shop_name: shop.shop_name,
-            email: shop.email,
-            region: shop.region,
-          }
-        : null,
-      kol: kol
-        ? {
-            _id: kol._id,
-            name: kol.name,
-            role: kol.role,
-          }
-        : null,
-      created_by_user: createdBy
-        ? {
-            name: createdBy.name,
-          }
-        : null,
-    };
-  },
-});
+    await ctx.db.insert('kol_device_accumulator', {
+      kol_id: kolId,
+      total_devices_sold: quantity,
+      total_devices_returned: 0,
+      net_devices_sold: quantity,
+      current_tier: tier,
+      tier_1_4_count: tier === 'tier_1_4' ? quantity : 0,
+      tier_5_plus_count: tier === 'tier_5_plus' ? quantity : 0,
+      tier_changed_at: Date.now(),
+      last_updated: Date.now(),
+      created_at: Date.now(),
+    });
+  }
+}
 
 /**
- * 디바이스 판매 통계 조회
- * GET /api/devices/statistics 대체
+ * 상위 판매자 조회
  */
-export const getDeviceStatistics = query({
+export const getTopPerformers = query({
   args: {
-    start_date: v.optional(v.string()),
-    end_date: v.optional(v.string()),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // 관리자 권한 필요
     await requireAdmin(ctx);
 
-    let sales = await ctx.db.query('device_sales').collect();
+    const limit = args.limit || 10;
+    const accumulators = await ctx.db.query('kol_device_accumulator').order('desc').take(limit);
 
-    // 날짜 필터 적용
-    if (args.start_date) {
-      sales = sales.filter(sale => sale.sale_date >= args.start_date!);
-    }
-    if (args.end_date) {
-      sales = sales.filter(sale => sale.sale_date <= args.end_date!);
-    }
-
-    // 전체 요약 계산
-    const totalSold = sales.reduce((sum, s) => sum + (s.quantity > 0 ? s.quantity : 0), 0);
-    const totalReturned = sales.reduce(
-      (sum, s) => sum + (s.quantity < 0 ? Math.abs(s.quantity) : 0),
-      0
-    );
-    const totalCommission = sales.reduce((sum, s) => sum + (s.actual_commission || 0), 0);
-
-    // 샵별 그룹화
-    const shopGroups = new Map<
-      Id<'profiles'>,
-      { sold: number; returned: number; commission: number }
-    >();
-
-    for (const sale of sales) {
-      if (!shopGroups.has(sale.shop_id)) {
-        shopGroups.set(sale.shop_id, { sold: 0, returned: 0, commission: 0 });
-      }
-      const group = shopGroups.get(sale.shop_id)!;
-
-      if (sale.quantity > 0) {
-        group.sold += sale.quantity;
-      } else {
-        group.returned += Math.abs(sale.quantity);
-      }
-      group.commission += sale.actual_commission || 0;
-    }
-
-    // KOL 최고 성과자 조회
-    const topPerformers = await ctx.db.query('device_accumulator').order('desc').take(10);
-
-    const topPerformersWithDetails = await Promise.all(
-      topPerformers.map(async accumulator => {
+    const performersWithDetails = await Promise.all(
+      accumulators.map(async accumulator => {
         const kol = await ctx.db.get(accumulator.kol_id);
-        const netDevices =
-          (accumulator.total_devices_sold || 0) - (accumulator.total_devices_returned || 0);
+        const netDevices = accumulator.net_devices_sold;
 
         return {
-          id: kol?._id,
-          name: kol?.name,
-          role: kol?.role,
-          devices_sold: netDevices,
+          id: accumulator._id,
+          name: kol?.name || 'Unknown',
+          role: kol?.role || 'unknown',
+          netDevices,
           current_tier: accumulator.current_tier,
-          commission_earned: 0, // 추후 계산 필요
         };
       })
     );
 
-    return {
-      summary: {
-        total_sold: totalSold,
-        total_returned: totalReturned,
-        net_devices: totalSold - totalReturned,
-        total_commission: totalCommission,
-        average_per_shop: shopGroups.size > 0 ? (totalSold - totalReturned) / shopGroups.size : 0,
-      },
-      top_performers: topPerformersWithDetails,
-    };
+    return performersWithDetails;
   },
 });
 
 /**
- * 티어 변경 시뮬레이션
- * POST /api/devices/simulate-tier-change 대체
+ * KOL별 디바이스 통계 조회
  */
-export const simulateTierChange = query({
+export const getKolDeviceStats = query({
   args: {
     kol_id: v.id('profiles'),
-    additional_devices: v.number(),
   },
   handler: async (ctx, args) => {
-    // 관리자 권한 필요
     await requireAdmin(ctx);
 
-    // 현재 KOL 누적 정보 조회
     const accumulator = await ctx.db
-      .query('device_accumulator')
-      .withIndex('by_kol', q => q.eq('kol_id', args.kol_id))
+      .query('kol_device_accumulator')
+      .withIndex('by_kol', (q: any) => q.eq('kol_id', args.kol_id))
       .first();
 
-    const currentTotalSold = accumulator?.total_devices_sold || 0;
-    const currentTotalReturned = accumulator?.total_devices_returned || 0;
-    const currentNetDevices = currentTotalSold - currentTotalReturned;
-    const currentTier = accumulator?.current_tier || 'tier_1_4';
-    const currentCommissionPerDevice = currentTier === 'tier_5_plus' ? 2500000 : 1500000;
-
-    // 시뮬레이션
-    const newNetDevices = currentNetDevices + args.additional_devices;
-    const newTier = newNetDevices >= 5 ? 'tier_5_plus' : 'tier_1_4';
-    const newCommissionPerDevice = newTier === 'tier_5_plus' ? 2500000 : 1500000;
-    const tierChanged = currentTier !== newTier;
-
-    // 수수료 차이 계산
-    const commissionDifference =
-      (newCommissionPerDevice - currentCommissionPerDevice) * Math.abs(args.additional_devices);
+    if (!accumulator) {
+      return {
+        totalSold: 0,
+        totalReturned: 0,
+        netSold: 0,
+        currentTier: 'tier_1_4' as const,
+      };
+    }
 
     return {
-      current_state: {
-        total_devices: currentNetDevices,
-        current_tier: currentTier,
-        commission_per_device: currentCommissionPerDevice,
-      },
-      new_state: {
-        total_devices: newNetDevices,
-        new_tier: newTier,
-        commission_per_device: newCommissionPerDevice,
-        tier_changed: tierChanged,
-      },
-      commission_difference: commissionDifference,
+      totalSold: accumulator.total_devices_sold,
+      totalReturned: accumulator.total_devices_returned,
+      netSold: accumulator.net_devices_sold,
+      currentTier: accumulator.current_tier,
     };
   },
 });
 
 /**
- * KOL별 디바이스 누적 현황 조회
+ * 모든 KOL 디바이스 통계 조회
  */
-export const getKolDeviceAccumulator = query({
-  args: {
-    kol_id: v.optional(v.id('profiles')),
-  },
-  handler: async (ctx, args) => {
-    // 관리자 권한 필요
+export const getAllKolDeviceStats = query({
+  args: {},
+  handler: async ctx => {
     await requireAdmin(ctx);
 
-    let accumulators;
-    if (args.kol_id) {
-      const accumulator = await ctx.db
-        .query('device_accumulator')
-        .withIndex('by_kol', q => q.eq('kol_id', args.kol_id))
-        .first();
-      accumulators = accumulator ? [accumulator] : [];
-    } else {
-      accumulators = await ctx.db.query('device_accumulator').collect();
-    }
+    const accumulators = await ctx.db.query('kol_device_accumulator').collect();
 
-    // KOL 정보와 함께 반환
-    const accumulatorsWithKol = await Promise.all(
+    const statsWithDetails = await Promise.all(
       accumulators.map(async acc => {
         const kol = await ctx.db.get(acc.kol_id);
-        const netDevices = (acc.total_devices_sold || 0) - (acc.total_devices_returned || 0);
+        const netDevices = acc.net_devices_sold;
 
-        return {
-          ...acc,
-          net_devices_sold: netDevices,
-          kol: kol
-            ? {
-                _id: kol._id,
-                name: kol.name,
-                role: kol.role,
-              }
-            : null,
-        };
+        if (kol) {
+          return {
+            id: acc.kol_id,
+            name: kol.name,
+            role: kol.role,
+            netDevices,
+            totalSold: acc.total_devices_sold,
+            totalReturned: acc.total_devices_returned,
+            currentTier: acc.current_tier,
+          };
+        }
+        return null;
       })
     );
 
-    return accumulatorsWithKol;
+    return statsWithDetails.filter(Boolean);
+  },
+});
+
+/**
+ * 디바이스 반품 처리
+ */
+export const returnDevice = mutation({
+  args: {
+    kol_id: v.id('profiles'),
+    quantity: v.number(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const accumulator = await ctx.db
+      .query('kol_device_accumulator')
+      .withIndex('by_kol', (q: any) => q.eq('kol_id', args.kol_id))
+      .first();
+
+    if (!accumulator) {
+      throw new Error('KOL accumulator not found');
+    }
+
+    const newTotalReturned = accumulator.total_devices_returned + args.quantity;
+    const newNetSold = accumulator.total_devices_sold - newTotalReturned;
+    const newTier = newNetSold >= 5 ? 'tier_5_plus' : 'tier_1_4';
+
+    await ctx.db.patch(accumulator._id, {
+      total_devices_returned: newTotalReturned,
+      net_devices_sold: Math.max(0, newNetSold),
+      current_tier: newTier,
+      last_updated: Date.now(),
+    });
+
+    return { success: true };
   },
 });

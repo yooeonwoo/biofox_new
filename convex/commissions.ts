@@ -149,6 +149,9 @@ export const getCommissionSummary = query({
       // 현재 월 또는 지정된 월
       const targetMonth = args.month || new Date().toISOString().substring(0, 7);
       const [year, month] = targetMonth.split('-').map(Number);
+      if (!year || !month) {
+        throw new Error('Invalid month format');
+      }
       const startDate = new Date(year, month - 1, 1).getTime();
       const endDate = new Date(year, month, 0, 23, 59, 59, 999).getTime();
 
@@ -684,6 +687,9 @@ export const getCommissionsForExport = query({
 
       // 월 범위 계산
       const [year, month] = args.month.split('-').map(Number);
+      if (!year || !month) {
+        throw new Error('Invalid month format');
+      }
       const startDate = new Date(year, month - 1, 1).getTime();
       const endDate = new Date(year, month, 0, 23, 59, 59, 999).getTime();
 

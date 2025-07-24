@@ -16,14 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Plus, 
-  Trash, 
-  Calculator,
-  Building,
-  User,
-  AlertCircle
-} from 'lucide-react';
+import { Plus, Trash, Calculator, Building, User as UserIcon, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Order, User } from '@/types/biofox-admin';
 
@@ -54,19 +47,14 @@ interface OrderItem {
   subtotal?: number;
 }
 
-export function OrderFormModal({
-  order,
-  open,
-  onClose,
-  onSubmit
-}: OrderFormModalProps) {
+export function OrderFormModal({ order, open, onClose, onSubmit }: OrderFormModalProps) {
   const [formData, setFormData] = useState<OrderFormData>({
     shop_id: '',
     order_date: format(new Date(), 'yyyy-MM-dd'),
     order_number: '',
     items: [{ product_name: '', quantity: 1, unit_price: 0 }],
     is_self_shop_order: false,
-    notes: ''
+    notes: '',
   });
 
   const [shops, setShops] = useState<User[]>([]);
@@ -77,7 +65,7 @@ export function OrderFormModal({
   const [commissionPreview, setCommissionPreview] = useState({
     rate: 0,
     amount: 0,
-    parent: null as User | null
+    parent: null as User | null,
   });
 
   // 주문 수정 모드일 때 데이터 로드
@@ -87,15 +75,16 @@ export function OrderFormModal({
         shop_id: order.shop_id,
         order_date: order.order_date,
         order_number: order.order_number || '',
-        items: order.items?.map(item => ({
-          product_name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price
-        })) || [],
+        items:
+          order.items?.map(item => ({
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+          })) || [],
         is_self_shop_order: order.is_self_shop_order,
-        notes: order.notes || ''
+        notes: order.notes || '',
       });
-      
+
       if (order.shop) {
         setSelectedShop(order.shop);
         setSearchTerm(order.shop.shop_name);
@@ -128,7 +117,7 @@ export function OrderFormModal({
   // 총 금액 계산
   useEffect(() => {
     const total = formData.items.reduce((sum, item) => {
-      return sum + (item.quantity * item.unit_price);
+      return sum + item.quantity * item.unit_price;
     }, 0);
     setTotalAmount(total);
   }, [formData.items]);
@@ -145,13 +134,15 @@ export function OrderFormModal({
 
     // 소속 관계 조회
     try {
-      const response = await fetch(`/api/relationships?shop_id=${selectedShop.id}&active_only=true`);
+      const response = await fetch(
+        `/api/relationships?shop_id=${selectedShop.id}&active_only=true`
+      );
       if (response.ok) {
         const { data } = await response.json();
         if (data.length > 0 && data[0].parent) {
           const parent = data[0].parent;
           let rate = 0;
-          
+
           if (parent.role === 'kol') {
             rate = parent.commission_rate || 30;
           } else if (parent.role === 'ol') {
@@ -161,7 +152,7 @@ export function OrderFormModal({
           setCommissionPreview({
             rate,
             amount: totalAmount * (rate / 100),
-            parent
+            parent,
           });
         } else {
           setCommissionPreview({ rate: 0, amount: 0, parent: null });
@@ -181,7 +172,7 @@ export function OrderFormModal({
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { product_name: '', quantity: 1, unit_price: 0 }]
+      items: [...formData.items, { product_name: '', quantity: 1, unit_price: 0 }],
     });
   };
 
@@ -198,8 +189,8 @@ export function OrderFormModal({
       return;
     }
 
-    const validItems = formData.items.filter(item => 
-      item.product_name && item.quantity > 0 && item.unit_price > 0
+    const validItems = formData.items.filter(
+      item => item.product_name && item.quantity > 0 && item.unit_price > 0
     );
 
     if (validItems.length === 0) {
@@ -211,14 +202,15 @@ export function OrderFormModal({
       ...formData,
       shop_id: selectedShop.id,
       items: validItems,
-      is_self_shop_order: selectedShop.role === 'kol' || selectedShop.role === 'ol'
+      is_self_shop_order: selectedShop.role === 'kol' || selectedShop.role === 'ol',
     });
   };
 
-  const filteredShops = shops.filter(shop =>
-    shop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shop.shop_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shop.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredShops = shops.filter(
+    shop =>
+      shop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shop.shop_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shop.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatCurrency = (amount: number) => {
@@ -230,7 +222,7 @@ export function OrderFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{order ? '주문 수정' : '새 주문 등록'}</DialogTitle>
           <DialogDescription>
@@ -247,17 +239,17 @@ export function OrderFormModal({
                 id="shop"
                 placeholder="전문점 검색..."
                 value={searchTerm}
-                onChange={(e) => {
+                onChange={e => {
                   setSearchTerm(e.target.value);
                   if (!e.target.value) setSelectedShop(null);
                 }}
               />
               {searchTerm && filteredShops.length > 0 && !selectedShop && (
-                <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border bg-white shadow-lg">
                   {filteredShops.map(shop => (
                     <button
                       key={shop.id}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center justify-between"
+                      className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-100"
                       onClick={() => {
                         setSelectedShop(shop);
                         setSearchTerm(shop.shop_name);
@@ -286,7 +278,7 @@ export function OrderFormModal({
                 id="order_date"
                 type="date"
                 value={formData.order_date}
-                onChange={(e) => setFormData({ ...formData, order_date: e.target.value })}
+                onChange={e => setFormData({ ...formData, order_date: e.target.value })}
                 max={format(new Date(), 'yyyy-MM-dd')}
               />
             </div>
@@ -296,7 +288,7 @@ export function OrderFormModal({
                 id="order_number"
                 placeholder="선택사항"
                 value={formData.order_number}
-                onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
+                onChange={e => setFormData({ ...formData, order_number: e.target.value })}
               />
             </div>
           </div>
@@ -306,19 +298,19 @@ export function OrderFormModal({
             <div className="flex items-center justify-between">
               <Label>상품 목록 *</Label>
               <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="mr-1 h-4 w-4" />
                 상품 추가
               </Button>
             </div>
-            
+
             <div className="space-y-2">
               {formData.items.map((item, index) => (
-                <div key={index} className="flex gap-2 items-end">
+                <div key={index} className="flex items-end gap-2">
                   <div className="flex-1">
                     <Input
                       placeholder="상품명"
                       value={item.product_name}
-                      onChange={(e) => handleItemChange(index, 'product_name', e.target.value)}
+                      onChange={e => handleItemChange(index, 'product_name', e.target.value)}
                     />
                   </div>
                   <div className="w-24">
@@ -326,7 +318,9 @@ export function OrderFormModal({
                       type="number"
                       placeholder="수량"
                       value={item.quantity}
-                      onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                      onChange={e =>
+                        handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)
+                      }
                       min="1"
                     />
                   </div>
@@ -335,7 +329,9 @@ export function OrderFormModal({
                       type="number"
                       placeholder="단가"
                       value={item.unit_price}
-                      onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                      onChange={e =>
+                        handleItemChange(index, 'unit_price', parseFloat(e.target.value) || 0)
+                      }
                       min="0"
                     />
                   </div>
@@ -357,14 +353,14 @@ export function OrderFormModal({
           </div>
 
           {/* 금액 요약 */}
-          <div className="border rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-800">
+          <div className="space-y-2 rounded-lg border bg-gray-50 p-4 dark:bg-gray-800">
             <div className="flex justify-between text-lg font-semibold">
               <span>총 주문금액</span>
               <span>{formatCurrency(totalAmount)}</span>
             </div>
-            
+
             {selectedShop && commissionPreview.parent && (
-              <div className="space-y-1 pt-2 border-t">
+              <div className="space-y-1 border-t pt-2">
                 <div className="flex justify-between text-sm">
                   <span>소속</span>
                   <div className="flex items-center gap-2">
@@ -384,13 +380,11 @@ export function OrderFormModal({
                 </div>
               </div>
             )}
-            
+
             {selectedShop && (selectedShop.role === 'kol' || selectedShop.role === 'ol') && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  본인샵 주문으로 처리됩니다.
-                </AlertDescription>
+                <AlertDescription>본인샵 주문으로 처리됩니다.</AlertDescription>
               </Alert>
             )}
           </div>
@@ -402,7 +396,7 @@ export function OrderFormModal({
               id="notes"
               placeholder="추가 메모..."
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              onChange={e => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
             />
           </div>
