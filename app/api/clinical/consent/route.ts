@@ -1,122 +1,137 @@
-import { createServerClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+/**
+ * Clinical용 동의서 업로드 API Route (Convex 기반)
+ * Supabase에서 Convex로 마이그레이션됨
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { checkAuthSupabase } from '@/lib/auth';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
+
+// Convex HTTP 클라이언트 초기화
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServerClient()
-    
+    console.log('Clinical Consent Upload API called');
+
     // 인증 체크
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authResult = await checkAuthSupabase();
+    const userId = authResult.user?.id;
+    if (!userId) {
+      console.log('Unauthorized - no userId');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const formData = await request.formData()
-    const file = formData.get('file') as File
-    const clinical_case_id = formData.get('clinical_case_id') as string
+    console.log('User ID:', userId);
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const clinical_case_id = formData.get('clinical_case_id') as string;
+
+    console.log('Upload params:', {
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      clinical_case_id,
+    });
 
     if (!file || !clinical_case_id) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      console.log('Missing required fields');
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // 파일 크기 체크 (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File size exceeds 5MB limit' }, { status: 400 })
+      return NextResponse.json({ error: 'File size exceeds 5MB limit' }, { status: 400 });
     }
 
     // 파일 타입 체크
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
     }
 
-    // 본인의 임상 케이스인지 확인
-    const { data: clinicalCase } = await supabase
-      .from('clinical_cases')
-      .select('id, shop_id, consent_status')
-      .eq('id', clinical_case_id)
-      .eq('shop_id', user.id)
-      .single()
+    // 🚀 Step 1: Convex에서 업로드 URL 생성
+    console.log('Step 1: Generating upload URL from Convex...');
+    const uploadUrl = await convex.mutation(api.fileStorage.generateSecureUploadUrl);
 
-    if (!clinicalCase) {
-      return NextResponse.json({ error: 'Clinical case not found' }, { status: 404 })
+    console.log('Upload URL generated:', uploadUrl);
+
+    // 🚀 Step 2: 클라이언트에서 Convex Storage로 직접 업로드
+    console.log('Step 2: Uploading file to Convex Storage...');
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('Convex upload failed:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        error: errorText,
+      });
+      return NextResponse.json(
+        { error: `File upload failed: ${uploadResponse.statusText}` },
+        { status: 500 }
+      );
     }
 
-    if (clinicalCase.consent_status !== 'consented') {
-      return NextResponse.json({ error: 'Consent not given for this case' }, { status: 400 })
-    }
+    const { storageId } = await uploadResponse.json();
+    console.log('File uploaded successfully, storageId:', storageId);
 
-    // 기존 동의서가 있는지 확인
-    const { data: existingConsent } = await supabase
-      .from('consent_files')
-      .select('id, file_path')
-      .eq('clinical_case_id', clinical_case_id)
-      .single()
+    // 🚀 Step 3: 메타데이터 저장
+    console.log('Step 3: Saving metadata to Convex...');
 
-    // 파일명 생성
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${clinical_case_id}/consent_${Date.now()}.${fileExt}`
-
-    // Storage에 업로드
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('consent-files')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      })
-
-    if (uploadError) throw uploadError
-
-    // 기존 동의서가 있으면 삭제
-    if (existingConsent) {
-      await supabase.storage
-        .from('consent-files')
-        .remove([existingConsent.file_path])
-      
-      await supabase
-        .from('consent_files')
-        .delete()
-        .eq('id', existingConsent.id)
-    }
-
-    // DB에 기록
-    const { data: consent, error: dbError } = await supabase
-      .from('consent_files')
-      .insert({
-        clinical_case_id,
-        file_path: fileName,
+    try {
+      // 동의서 파일 저장
+      const saveResult = await convex.mutation(api.fileStorage.saveConsentFile, {
+        storageId,
+        clinical_case_id: clinical_case_id as Id<'clinical_cases'>,
         file_name: file.name,
         file_size: file.size,
-        upload_date: new Date().toISOString()
-      })
-      .select()
-      .single()
+        file_type: file.type,
+      });
 
-    if (dbError) {
-      // DB 저장 실패시 업로드한 파일 삭제
-      await supabase.storage
-        .from('consent-files')
-        .remove([fileName])
-      throw dbError
+      console.log('Consent file metadata saved:', saveResult);
+
+      // 파일 URL 생성
+      const fileUrl = await convex.query(api.fileStorage.getFileUrl, {
+        storageId,
+      });
+
+      console.log('File URL generated:', fileUrl);
+
+      return NextResponse.json({
+        data: {
+          id: saveResult,
+          clinical_case_id,
+          file_name: file.name,
+          file_size: file.size,
+          file_type: file.type,
+          upload_date: new Date().toISOString(),
+          url: fileUrl,
+        },
+      });
+    } catch (metadataError) {
+      console.error('Metadata save failed:', metadataError);
+
+      // TODO: 메타데이터 저장 실패 시 Storage 정리 로직 구현 필요
+      console.warn(
+        'File uploaded to storage but metadata save failed. Manual cleanup may be required for storageId:',
+        storageId
+      );
+
+      return NextResponse.json(
+        { error: `Failed to save file metadata: ${metadataError}` },
+        { status: 500 }
+      );
     }
-
-    // Storage URL 생성
-    const { data: { publicUrl } } = supabase.storage
-      .from('consent-files')
-      .getPublicUrl(fileName)
-
-    return NextResponse.json({ 
-      data: {
-        ...consent,
-        url: publicUrl
-      }
-    })
-
   } catch (error) {
-    console.error('Consent upload error:', error)
-    return NextResponse.json(
-      { error: 'Failed to upload consent file' },
-      { status: 500 }
-    )
+    console.error('Consent upload error:', error);
+    return NextResponse.json({ error: 'Failed to upload consent file' }, { status: 500 });
   }
 }

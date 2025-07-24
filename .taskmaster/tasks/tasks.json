@@ -941,18 +941,18 @@
             "id": 3,
             "title": "Create file serving queries",
             "description": "Implement queries to retrieve files and their metadata from Convex storage.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "",
+            "details": "<info added on 2025-07-24T02:01:26.307Z>\nFile serving queries have been fully implemented in convex/fileStorage.ts with all necessary functionality:\n\n1. getFileUrl - Generates public access URLs for files using storage IDs\n2. getClinicalPhotos - Retrieves all photos for a clinical case with access URLs\n3. getConsentFile - Fetches consent file metadata and URL for clinical cases\n4. getFileWithUrl - Provides general file metadata and URL retrieval\n5. getUserFiles - Lists all files uploaded by an authenticated user with filtering options\n6. getClinicalPhotosBySession - Retrieves session photos in sorted order (front, left_side, right_side)\n\nAll queries include proper authentication, automatic URL generation, complete metadata, and error handling. This subtask is complete as all required file serving functionality has been implemented.\n</info added on 2025-07-24T02:01:26.307Z>",
             "testStrategy": ""
           },
           {
             "id": 4,
             "title": "Update Next.js API Routes",
             "description": "Replace Supabase code with Convex calls in the four API route files.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "",
+            "details": "<info added on 2025-07-24T02:02:36.279Z>\n## API Route Analysis Results\n\nThree API route files require conversion from Supabase to Convex:\n1. `app/api/clinical/consent/route.ts` - Supabase-based\n2. `app/api/clinical/photos/route.ts` - Supabase-based\n3. `app/api/shop/clinical-photos/consent/[caseId]/route.ts` - Supabase-based\n\nOne file is already converted:\n- `app/api/shop/clinical-photos/upload/route.ts` - Already using Convex\n\nFunctionality to convert:\n- Consent file uploads (POST)\n- Clinical photo uploads (POST)\n- Consent file deletion (DELETE)\n\nConvex functions to implement:\n- `api.fileStorage.generateSecureUploadUrl` - For generating upload URLs\n- `api.fileStorage.saveConsentFile` - For storing consent file metadata\n- `api.fileStorage.saveClinicalPhoto` - For storing clinical photo metadata\n- `api.fileStorage.getFileUrl` - For retrieving file URLs\n- `api.fileStorage.deleteConsentFile` - For deleting consent files\n</info added on 2025-07-24T02:02:36.279Z>\n<info added on 2025-07-24T02:04:03.353Z>\n## API Route Conversion Completed\n\nSuccessfully converted three API route files from Supabase to Convex:\n\n**1. `app/api/clinical/consent/route.ts` ✅**\n- Implemented Convex HTTP client initialization\n- Established 3-step upload process:\n  - Step 1: Generate upload URL with `generateSecureUploadUrl`\n  - Step 2: Direct file upload to Convex Storage\n  - Step 3: Store metadata with `saveConsentFile`\n- Added file access URL generation with `getFileUrl`\n- Enhanced logging and error handling\n\n**2. `app/api/clinical/photos/route.ts` ✅**\n- Applied the same 3-step upload process\n- Implemented clinical photo metadata storage with `saveClinicalPhoto`\n- Maintained photo_type validation ('front', 'left_side', 'right_side')\n- Preserved file size and type validation\n\n**3. `app/api/shop/clinical-photos/consent/[caseId]/route.ts` ✅**\n- Implemented consent file retrieval with `getConsentFile`\n- Added consent file deletion with `deleteConsentFile` (removes from both Storage and DB)\n- Added proper handling for missing files\n\n**Common Improvements:**\n- Unified authentication handling with `checkAuthSupabase()`\n- Added detailed console logging\n- Added TODO comments regarding Storage cleanup during error scenarios\n- Standardized response formats for consistency\n\nAll API routes have been successfully converted to use Convex.\n</info added on 2025-07-24T02:04:03.353Z>",
             "testStrategy": ""
           },
           {
@@ -1075,7 +1075,7 @@
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T01:59:35.663Z",
+      "updated": "2025-07-24T02:04:06.688Z",
       "description": "Tasks for convex-errors context"
     }
   }

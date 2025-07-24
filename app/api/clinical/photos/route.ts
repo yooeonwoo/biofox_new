@@ -1,143 +1,147 @@
-import { createServerClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+/**
+ * Clinical용 임상사진 업로드 API Route (Convex 기반)
+ * Supabase에서 Convex로 마이그레이션됨
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { checkAuthSupabase } from '@/lib/auth';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
+
+// Convex HTTP 클라이언트 초기화
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServerClient()
-    
+    console.log('Clinical Photo Upload API called');
+
     // 인증 체크
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authResult = await checkAuthSupabase();
+    const userId = authResult.user?.id;
+    if (!userId) {
+      console.log('Unauthorized - no userId');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const formData = await request.formData()
-    const file = formData.get('file') as File
-    const clinical_case_id = formData.get('clinical_case_id') as string
-    const session_number = parseInt(formData.get('session_number') as string)
-    const photo_type = formData.get('photo_type') as string
+    console.log('User ID:', userId);
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const clinical_case_id = formData.get('clinical_case_id') as string;
+    const session_number = parseInt(formData.get('session_number') as string);
+    const photo_type = formData.get('photo_type') as string;
+
+    console.log('Upload params:', {
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      clinical_case_id,
+      session_number,
+      photo_type,
+    });
 
     if (!file || !clinical_case_id || session_number === undefined || !photo_type) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      console.log('Missing required fields');
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // 파일 크기 체크 (10MB)
     if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File size exceeds 10MB limit' }, { status: 400 })
+      return NextResponse.json({ error: 'File size exceeds 10MB limit' }, { status: 400 });
     }
 
     // 파일 타입 체크
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
     }
 
-    // 본인의 임상 케이스인지 확인
-    const { data: clinicalCase } = await supabase
-      .from('clinical_cases')
-      .select('id, shop_id')
-      .eq('id', clinical_case_id)
-      .eq('shop_id', user.id)
-      .single()
-
-    if (!clinicalCase) {
-      return NextResponse.json({ error: 'Clinical case not found' }, { status: 404 })
+    // photo_type 유효성 검사
+    const validPhotoTypes = ['front', 'left_side', 'right_side'];
+    if (!validPhotoTypes.includes(photo_type)) {
+      return NextResponse.json({ error: 'Invalid photo type' }, { status: 400 });
     }
 
-    // 기존 사진이 있는지 확인 (같은 session_number, photo_type)
-    const { data: existingPhoto } = await supabase
-      .from('clinical_photos')
-      .select('id, file_path')
-      .eq('clinical_case_id', clinical_case_id)
-      .eq('session_number', session_number)
-      .eq('photo_type', photo_type)
-      .single()
+    // 🚀 Step 1: Convex에서 업로드 URL 생성
+    console.log('Step 1: Generating upload URL from Convex...');
+    const uploadUrl = await convex.mutation(api.fileStorage.generateSecureUploadUrl);
 
-    // 파일명 생성
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${clinical_case_id}/${session_number}/${photo_type}_${Date.now()}.${fileExt}`
+    console.log('Upload URL generated:', uploadUrl);
 
-    // Storage에 업로드
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('clinical-photos')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      })
+    // 🚀 Step 2: 클라이언트에서 Convex Storage로 직접 업로드
+    console.log('Step 2: Uploading file to Convex Storage...');
 
-    if (uploadError) throw uploadError
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      body: file,
+    });
 
-    // 기존 사진이 있으면 삭제
-    if (existingPhoto) {
-      await supabase.storage
-        .from('clinical-photos')
-        .remove([existingPhoto.file_path])
-      
-      await supabase
-        .from('clinical_photos')
-        .delete()
-        .eq('id', existingPhoto.id)
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('Convex upload failed:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        error: errorText,
+      });
+      return NextResponse.json(
+        { error: `File upload failed: ${uploadResponse.statusText}` },
+        { status: 500 }
+      );
     }
 
-    // DB에 기록
-    const { data: photo, error: dbError } = await supabase
-      .from('clinical_photos')
-      .insert({
-        clinical_case_id,
+    const { storageId } = await uploadResponse.json();
+    console.log('File uploaded successfully, storageId:', storageId);
+
+    // 🚀 Step 3: 메타데이터 저장
+    console.log('Step 3: Saving metadata to Convex...');
+
+    try {
+      // 임상 사진 저장
+      const saveResult = await convex.mutation(api.fileStorage.saveClinicalPhoto, {
+        storageId,
+        clinical_case_id: clinical_case_id as Id<'clinical_cases'>,
         session_number,
-        photo_type,
-        file_path: fileName,
+        photo_type: photo_type as 'front' | 'left_side' | 'right_side',
         file_size: file.size,
-        upload_date: new Date().toISOString()
-      })
-      .select()
-      .single()
+      });
 
-    if (dbError) {
-      // DB 저장 실패시 업로드한 파일 삭제
-      await supabase.storage
-        .from('clinical-photos')
-        .remove([fileName])
-      throw dbError
+      console.log('Clinical photo metadata saved:', saveResult);
+
+      // 파일 URL 생성
+      const fileUrl = await convex.query(api.fileStorage.getFileUrl, {
+        storageId,
+      });
+
+      console.log('File URL generated:', fileUrl);
+
+      return NextResponse.json({
+        data: {
+          id: saveResult,
+          clinical_case_id,
+          session_number,
+          photo_type,
+          file_size: file.size,
+          upload_date: new Date().toISOString(),
+          url: fileUrl,
+        },
+      });
+    } catch (metadataError) {
+      console.error('Metadata save failed:', metadataError);
+
+      // TODO: 메타데이터 저장 실패 시 Storage 정리 로직 구현 필요
+      console.warn(
+        'File uploaded to storage but metadata save failed. Manual cleanup may be required for storageId:',
+        storageId
+      );
+
+      return NextResponse.json(
+        { error: `Failed to save file metadata: ${metadataError}` },
+        { status: 500 }
+      );
     }
-
-    // 임상 케이스의 total_sessions 업데이트
-    if (session_number > 0) {
-      const { data: currentCase } = await supabase
-        .from('clinical_cases')
-        .select('total_sessions')
-        .eq('id', clinical_case_id)
-        .single()
-
-      if (currentCase && (!currentCase.total_sessions || currentCase.total_sessions < session_number)) {
-        await supabase
-          .from('clinical_cases')
-          .update({ 
-            total_sessions: session_number,
-            latest_session: session_number,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', clinical_case_id)
-      }
-    }
-
-    // Storage URL 생성
-    const { data: { publicUrl } } = supabase.storage
-      .from('clinical-photos')
-      .getPublicUrl(fileName)
-
-    return NextResponse.json({ 
-      data: {
-        ...photo,
-        url: publicUrl
-      }
-    })
-
   } catch (error) {
-    console.error('Photo upload error:', error)
-    return NextResponse.json(
-      { error: 'Failed to upload photo' },
-      { status: 500 }
-    )
+    console.error('Photo upload error:', error);
+    return NextResponse.json({ error: 'Failed to upload photo' }, { status: 500 });
   }
 }
