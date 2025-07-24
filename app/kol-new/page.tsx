@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
 // TODO: Supabase 인증으로 교체 예정
 import Link from 'next/link';
-import { 
+import {
   CoinsIcon,
   TrendingUp,
   TrendingDown,
@@ -12,22 +12,22 @@ import {
   Wallet,
   ArrowRight,
   ClipboardList,
-  AlertTriangle
-} from "lucide-react";
-import SalesChart from "../../components/sales-chart";
-import StoreRankingTable from "../../components/store-ranking-table";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDashboardData } from "@/hooks/useDashboardData";
+  AlertTriangle,
+} from 'lucide-react';
+import SalesChart from '../../components/sales-chart';
+import StoreRankingTable from '../../components/store-ranking-table';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 // 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
-  if (value === 0) return "0원";
-  
+  if (value === 0) return '0원';
+
   // 만 단위 계산
   const man = Math.floor(value / 10000);
   const rest = value % 10000;
-  
+
   if (man > 0) {
     // 만 단위가 있는 경우
     if (rest > 0) {
@@ -100,21 +100,16 @@ interface ActivityData {
 export default function KolNewPage() {
   // TODO: Supabase 인증으로 교체 예정
   const [isKol, setIsKol] = useState<boolean | null>(true); // 임시로 KOL로 설정
-  
-  const { 
-    data: dashboardCompleteData, 
-    isLoading: loading, 
-    error, 
-    refetch 
-  } = useDashboardData();
+
+  const { data: dashboardCompleteData, isLoading: loading, error, refetch } = useDashboardData();
 
   useEffect(() => {
     // TODO: Supabase 인증 로직 구현
     setIsKol(true); // 임시로 KOL로 설정
   }, []);
 
-  const dashboardData = dashboardCompleteData?.dashboard;
-  const shopsData = dashboardCompleteData?.shops?.shops || [];
+  const dashboardData = dashboardCompleteData;
+  const shopsData = dashboardCompleteData?.shops?.list || [];
 
   const handleRetry = () => {
     refetch();
@@ -140,13 +135,14 @@ export default function KolNewPage() {
   }
 
   if (error) {
-    const errorMessage = error instanceof Error ? error.message : '데이터를 불러오는데 실패했습니다.';
+    const errorMessage =
+      error instanceof Error ? error.message : '데이터를 불러오는데 실패했습니다.';
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <div className="flex justify-center items-center text-destructive mb-2">
-              <AlertTriangle className="h-8 w-8 mr-2" />
+            <div className="mb-2 flex items-center justify-center text-destructive">
+              <AlertTriangle className="mr-2 h-8 w-8" />
               <CardTitle className="text-center text-destructive">에러 발생</CardTitle>
             </div>
           </CardHeader>
@@ -166,54 +162,66 @@ export default function KolNewPage() {
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{dashboardData?.kol?.shopName || "..."} - {dashboardData?.kol?.name || "..."} KOL</h1>
+        <h1 className="text-lg font-bold sm:text-xl md:text-2xl">
+          {dashboardData?.kol?.shopName || '...'} - {dashboardData?.kol?.name || '...'} KOL
+        </h1>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
-                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 매출:</span>
-                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
-                  {dashboardData?.sales?.currentMonth !== undefined 
-                    ? formatToManUnit(dashboardData.sales.currentMonth)
-                    : "0원"}
+              <div className="flex w-full flex-col overflow-hidden md:flex-row md:items-baseline md:gap-2">
+                <span className="whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                  당월 매출:
+                </span>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                  {dashboardData?.stats?.currentMonth?.sales !== undefined
+                    ? formatToManUnit(dashboardData.stats.currentMonth.sales)
+                    : '0원'}
                 </span>
               </div>
-              <div className="rounded-full bg-yellow-100 p-1 sm:p-1.5 text-yellow-700 flex-shrink-0">
-                 <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="flex-shrink-0 rounded-full bg-yellow-100 p-1 text-yellow-700 sm:p-1.5">
+                <CoinsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
               </div>
             </div>
-            <div className="mt-1 invisible h-[21px] sm:h-[24px]">
+            <div className="invisible mt-1 h-[21px] sm:h-[24px]">
               <div className="flex items-center text-[10px] sm:text-xs">
                 <span>&nbsp;</span>
               </div>
             </div>
-            <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
+            <div className="my-3 h-[1px] bg-gray-200 sm:my-4" />
             <div className="flex items-center justify-between">
-              <div className="flex flex-col md:flex-row md:items-baseline md:gap-2 w-full overflow-hidden">
-                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap">당월 수당:</span>
-                <span className="text-sm sm:text-lg md:text-xl font-bold whitespace-nowrap overflow-hidden text-ellipsis">
-                  {dashboardData?.allowance?.currentMonth !== undefined 
-                    ? formatToManUnit(dashboardData.allowance.currentMonth)
-                    : "0원"}
+              <div className="flex w-full flex-col overflow-hidden md:flex-row md:items-baseline md:gap-2">
+                <span className="whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                  당월 수당:
+                </span>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold sm:text-lg md:text-xl">
+                  {dashboardData?.stats?.currentMonth?.commission !== undefined
+                    ? formatToManUnit(dashboardData.stats.currentMonth.commission)
+                    : '0원'}
                 </span>
               </div>
-              <div className="rounded-full bg-purple-100 p-1 sm:p-1.5 text-purple-700 flex-shrink-0">
-                 <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="flex-shrink-0 rounded-full bg-purple-100 p-1 text-purple-700 sm:p-1.5">
+                <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
               </div>
             </div>
-            {dashboardData?.allowance?.growth !== undefined && (
-              <div className={`mt-1 flex items-center text-[10px] sm:text-xs ${dashboardData.allowance.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {dashboardData.allowance.growth >= 0 ? (
+            {dashboardData?.stats?.growth?.commission !== undefined && (
+              <div
+                className={`mt-1 flex items-center text-[10px] sm:text-xs ${dashboardData.stats.growth.commission >= 0 ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {dashboardData.stats.growth.commission >= 0 ? (
                   <TrendingUp className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 ) : (
                   <TrendingDown className="mr-1 h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 )}
-                <span>전월 대비 {Math.abs(dashboardData.allowance.growth) >= 10000 
-                  ? formatToManUnit(Math.abs(dashboardData.allowance.growth)) 
-                  : Math.abs(dashboardData.allowance.growth).toLocaleString() + '원'} {dashboardData.allowance.growth >= 0 ? '증가' : '감소'}</span>
+                <span>
+                  전월 대비{' '}
+                  {Math.abs(dashboardData.stats.growth.commission) >= 10000
+                    ? formatToManUnit(Math.abs(dashboardData.stats.growth.commission))
+                    : Math.abs(dashboardData.stats.growth.commission).toLocaleString() + '원'}{' '}
+                  {dashboardData.stats.growth.commission >= 0 ? '증가' : '감소'}
+                </span>
               </div>
             )}
           </CardContent>
@@ -221,32 +229,30 @@ export default function KolNewPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-               <div className="flex items-baseline gap-2">
-                <span className="text-sm sm:text-lg md:text-xl font-bold">전문점 현황:</span>
-                <span className="text-sm sm:text-lg md:text-xl font-bold">
-                   {dashboardData?.shops?.total || 0}곳
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-bold sm:text-lg md:text-xl">전문점 현황:</span>
+                <span className="text-sm font-bold sm:text-lg md:text-xl">
+                  {dashboardData?.shops?.total || 0}곳
                 </span>
               </div>
-              <div className="rounded-full bg-blue-100 p-1 sm:p-1.5 text-blue-700">
-                 <Store className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="rounded-full bg-blue-100 p-1 text-blue-700 sm:p-1.5">
+                <Store className="h-3 w-3 sm:h-4 sm:w-4" />
               </div>
             </div>
-            <div className="mt-1 text-[10px] sm:text-xs text-orange-500">
-              전문점 관리 현황
-            </div>
-            <div className="my-3 sm:my-4 h-[1px] bg-gray-200" />
-             <div className="flex items-center justify-between">
-               <div className="flex items-baseline gap-2">
-                <span className="text-sm sm:text-lg md:text-xl font-bold">당월 주문 전문점:</span>
-                <span className="text-sm sm:text-lg md:text-xl font-bold">
+            <div className="mt-1 text-[10px] text-orange-500 sm:text-xs">전문점 관리 현황</div>
+            <div className="my-3 h-[1px] bg-gray-200 sm:my-4" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-bold sm:text-lg md:text-xl">당월 주문 전문점:</span>
+                <span className="text-sm font-bold sm:text-lg md:text-xl">
                   {dashboardData?.shops?.ordering || 0}곳
                 </span>
               </div>
-              <div className="rounded-full bg-green-100 p-1 sm:p-1.5 text-green-700">
-                 <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
+              <div className="rounded-full bg-green-100 p-1 text-green-700 sm:p-1.5">
+                <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
               </div>
             </div>
-            <div className="mt-1 text-[10px] sm:text-xs text-red-500">
+            <div className="mt-1 text-[10px] text-red-500 sm:text-xs">
               {dashboardData?.shops?.notOrdering || 0}곳이 아직 주문하지 않았습니다.
             </div>
           </CardContent>
@@ -254,14 +260,14 @@ export default function KolNewPage() {
       </div>
 
       <div className="mb-6">
-        <Card className="flex flex-col h-full"> 
-          <CardContent className="flex flex-1 flex-col p-0 overflow-auto">
+        <Card className="flex h-full flex-col">
+          <CardContent className="flex flex-1 flex-col overflow-auto p-0">
             <StoreRankingTable shops={shopsData} />
           </CardContent>
           <CardFooter className="mt-auto border-t px-6 py-3">
             <div className="ml-auto">
               <Button asChild variant="ghost" size="sm">
-                <Link href="/kol-new/stores"> 
+                <Link href="/kol-new/stores">
                   모든 전문점 보기
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
