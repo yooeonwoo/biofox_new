@@ -2,144 +2,148 @@
 
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
-// 🚀 Convex를 활용한 실시간 대시보드 데이터 관리
+// 🚀 완전히 새로운 Convex 기반 Dashboard 데이터 관리
 
 interface DashboardData {
-  dashboard: {
-    kol: {
-      id: number;
-      name: string;
-      shopName: string;
+  kol: {
+    id: string;
+    name: string;
+    shopName: string;
+    email: string;
+    role: string;
+  };
+  stats: {
+    currentMonth: {
+      sales: number;
+      commission: number;
+      orderCount: number;
     };
-    sales: {
-      currentMonth: number;
-      previousMonth: number;
-      growth: number;
+    previousMonth: {
+      sales: number;
+      commission: number;
+      orderCount: number;
     };
-    allowance: {
-      currentMonth: number;
-      previousMonth: number;
-      growth: number;
-    };
-    shops: {
-      total: number;
-      ordering: number;
-      notOrdering: number;
+    growth: {
+      sales: number;
+      commission: number;
     };
   };
   shops: {
-    shops: Array<{
-      id: number;
+    total: number;
+    ordering: number;
+    notOrdering: number;
+    list: Array<{
+      id: string;
       ownerName: string;
-      shop_name: string;
+      shopName: string;
       region: string;
       status: string;
       createdAt: string;
-      is_self_shop: boolean;
       sales: {
         total: number;
-        product: number;
-        device: number;
         hasOrdered: boolean;
       };
     }>;
-    meta: {
-      totalShopsCount: number;
-      activeShopsCount: number;
-    };
   };
   activities: Array<{
-    id: number;
-    shopId: number | null;
-    shopName: string | null;
-    activityDate: string;
+    id: string;
+    type: 'order' | 'journal' | 'relationship';
+    title: string;
     content: string;
-    createdAt: string;
+    shopName?: string;
+    date: string;
     timeAgo: string;
   }>;
 }
 
-export const useDashboardData = (kolId?: string) => {
-  // 현재 월과 이전 월 계산
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-  const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-  const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+/**
+ * 완전히 새로운 Dashboard 데이터 훅 - Convex 실시간 동기화
+ * @param kolId KOL 프로필 ID (Convex ID)
+ */
+export const useDashboardData = (kolId?: string | Id<'profiles'>) => {
+  // KOL 기본 정보
+  const kolProfile = useQuery(
+    api.profiles.getProfileById,
+    kolId ? { profileId: kolId as Id<'profiles'> } : 'skip'
+  );
 
-  // Convex 쿼리들
-  const currentMonthlySales = useQuery(api.orders.getMonthlySales, {
-    shop_id: kolId as any,
-    year: currentYear,
-    month: currentMonth,
-  });
+  // Dashboard 통계 (매출, 수수료, 성장률)
+  const dashboardStats = useQuery(
+    api.orders.getDashboardStats,
+    kolId ? { kolId: kolId as Id<'profiles'> } : 'skip'
+  );
 
-  const previousMonthlySales = useQuery(api.orders.getMonthlySales, {
-    shop_id: kolId as any,
-    year: previousYear,
-    month: previousMonth,
-  });
+  // 하위 매장 목록
+  const subordinateShops = useQuery(
+    api.relationships.getSubordinateShops,
+    kolId ? { parentId: kolId as Id<'profiles'> } : 'skip'
+  );
 
-  const subordinateShops = useQuery(api.relationships.getSubordinateShops, {
-    parentId: kolId as any,
-  });
+  // 최근 영업일지 (활동 피드용) - 단순 쿼리로 변경
+  const allJournals = useQuery(
+    api.salesJournal.getSalesJournals,
+    kolId
+      ? {
+          user_id: kolId as Id<'profiles'>,
+          paginationOpts: { numItems: 5, cursor: null },
+        }
+      : 'skip'
+  );
 
-  const allRelatedOrders = useQuery(api.relationships.getAllRelatedOrders, {
-    profileId: kolId as any,
-    includeSubordinates: true,
-  });
+  // 최근 주문 (활동 피드용)
+  const recentOrders = useQuery(
+    api.relationships.getAllRelatedOrders,
+    kolId
+      ? {
+          profileId: kolId as Id<'profiles'>,
+          includeSubordinates: true,
+        }
+      : 'skip'
+  );
 
-  // 로딩 상태 체크
+  // 로딩 상태
   const isLoading =
-    currentMonthlySales === undefined ||
-    previousMonthlySales === undefined ||
+    kolProfile === undefined ||
+    dashboardStats === undefined ||
     subordinateShops === undefined ||
-    allRelatedOrders === undefined;
+    allJournals === undefined ||
+    recentOrders === undefined;
 
-  // 에러 상태 체크 (Convex는 자동으로 에러를 throw함)
+  // 에러 상태 (Convex는 자동으로 에러를 throw하므로 일반적으로 false)
   const isError = false;
 
-  // 데이터 변환
+  // 데이터 변환 및 조합
   const data: DashboardData | undefined = isLoading
     ? undefined
     : {
-        dashboard: {
-          kol: {
-            id: parseInt(kolId || '0'),
-            name: 'KOL 이름', // TODO: 실제 KOL 정보에서 가져오기
-            shopName: 'KOL 매장명',
-          },
-          sales: {
-            currentMonth: currentMonthlySales?.totalSales || 0,
-            previousMonth: previousMonthlySales?.totalSales || 0,
-            growth: calculateGrowth(
-              currentMonthlySales?.totalSales || 0,
-              previousMonthlySales?.totalSales || 0
-            ),
-          },
-          allowance: {
-            currentMonth: currentMonthlySales?.totalCommission || 0,
-            previousMonth: previousMonthlySales?.totalCommission || 0,
-            growth: calculateGrowth(
-              currentMonthlySales?.totalCommission || 0,
-              previousMonthlySales?.totalCommission || 0
-            ),
-          },
-          shops: {
-            total: subordinateShops?.length || 0,
-            ordering: calculateOrderingShops(subordinateShops || [], allRelatedOrders || []),
-            notOrdering: calculateNotOrderingShops(subordinateShops || [], allRelatedOrders || []),
-          },
+        // KOL 기본 정보
+        kol: {
+          id: kolProfile?._id || '',
+          name: kolProfile?.name || 'Unknown',
+          shopName: kolProfile?.shop_name || 'Unknown Shop',
+          email: kolProfile?.email || '',
+          role: kolProfile?.role || 'kol',
         },
+
+        // 통계 정보
+        stats: dashboardStats || {
+          currentMonth: { sales: 0, commission: 0, orderCount: 0 },
+          previousMonth: { sales: 0, commission: 0, orderCount: 0 },
+          growth: { sales: 0, commission: 0 },
+        },
+
+        // 매장 정보
         shops: {
-          shops: transformShopsData(subordinateShops || [], allRelatedOrders || []),
-          meta: {
-            totalShopsCount: subordinateShops?.length || 0,
-            activeShopsCount: calculateActiveShops(subordinateShops || []),
-          },
+          total: subordinateShops?.length || 0,
+          ordering: calculateOrderingShops(subordinateShops || [], recentOrders || []),
+          notOrdering: calculateNotOrderingShops(subordinateShops || [], recentOrders || []),
+          list: transformShopsData(subordinateShops || [], recentOrders || []),
         },
-        activities: transformActivitiesData(allRelatedOrders || []),
+
+        // 활동 피드
+        activities: combineActivities(allJournals?.page || [], recentOrders || []),
       };
 
   return {
@@ -147,16 +151,16 @@ export const useDashboardData = (kolId?: string) => {
     isLoading,
     isError,
     error: null,
-    refetch: () => {}, // Convex automatically refetches, so this is a no-op
+    // Convex는 자동으로 실시간 업데이트하므로 refetch는 no-op
+    refetch: () => Promise.resolve(),
   };
 };
 
-// 헬퍼 함수들
-function calculateGrowth(current: number, previous: number): number {
-  if (previous === 0) return current > 0 ? 100 : 0;
-  return Math.round(((current - previous) / previous) * 100);
-}
+// === 헬퍼 함수들 ===
 
+/**
+ * 이번 달 주문한 매장 수 계산
+ */
 function calculateOrderingShops(shops: any[], orders: any[]): number {
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -172,56 +176,83 @@ function calculateOrderingShops(shops: any[], orders: any[]): number {
   return shops.filter(shop => shopsWithOrders.has(shop._id)).length;
 }
 
+/**
+ * 이번 달 주문하지 않은 매장 수 계산
+ */
 function calculateNotOrderingShops(shops: any[], orders: any[]): number {
   const total = shops.length;
   const ordering = calculateOrderingShops(shops, orders);
   return total - ordering;
 }
 
-function calculateActiveShops(shops: any[]): number {
-  return shops.filter(shop => shop.status === 'approved').length;
-}
-
+/**
+ * 매장 데이터 변환
+ */
 function transformShopsData(shops: any[], orders: any[]): any[] {
   return shops.map(shop => {
     const shopOrders = orders.filter(order => order.shop_id === shop._id);
-    const totalSales = shopOrders.reduce((sum, order) => sum + order.total_amount, 0);
+    const totalSales = shopOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
 
     return {
-      id: parseInt(shop._id.replace(/[^0-9]/g, '') || '0'),
-      ownerName: shop.name,
-      shop_name: shop.shop_name,
+      id: shop._id,
+      ownerName: shop.name || 'Unknown',
+      shopName: shop.shop_name || 'Unknown Shop',
       region: shop.region || '',
-      status: shop.status,
-      createdAt: new Date(shop._creationTime).toISOString(),
-      is_self_shop: false, // TODO: 실제 로직으로 판단
+      status: shop.status || 'pending',
+      createdAt: new Date(shop._creationTime || Date.now()).toISOString(),
       sales: {
         total: totalSales,
-        product: totalSales, // TODO: 상품별 분리 필요시
-        device: 0, // TODO: 디바이스 매출 분리 필요시
         hasOrdered: shopOrders.length > 0,
       },
     };
   });
 }
 
-function transformActivitiesData(orders: any[]): any[] {
-  return orders
-    .slice(0, 10) // 최신 10개만
-    .map((order, index) => ({
-      id: index + 1,
-      shopId: parseInt(order.shop_id.replace(/[^0-9]/g, '') || '0'),
-      shopName: order.shop_name || '매장명 없음',
-      activityDate: new Date(order.order_date).toISOString(),
-      content: `주문 생성: ${order.order_number || 'N/A'}`,
-      createdAt: new Date(order.created_at).toISOString(),
-      timeAgo: getTimeAgo(order.created_at),
-    }));
+/**
+ * 영업일지와 주문 데이터를 결합하여 활동 피드 생성
+ */
+function combineActivities(journals: any[], orders: any[]): any[] {
+  const activities: any[] = [];
+
+  // 영업일지 활동 추가
+  journals.slice(0, 3).forEach((journal, index) => {
+    activities.push({
+      id: `journal-${journal._id}`,
+      type: 'journal' as const,
+      title: '영업일지 작성',
+      content: journal.content || '영업일지를 작성했습니다.',
+      shopName: journal.shop_name,
+      date: new Date(journal.date || journal.created_at).toISOString(),
+      timeAgo: getTimeAgo(journal.date || journal.created_at),
+    });
+  });
+
+  // 최근 주문 활동 추가
+  orders.slice(0, 5).forEach((order, index) => {
+    activities.push({
+      id: `order-${order._id}`,
+      type: 'order' as const,
+      title: '새 주문 접수',
+      content: `주문번호: ${order.order_number || '미정'} (${formatCurrency(order.total_amount || 0)})`,
+      shopName: order.shop_name,
+      date: new Date(order.order_date || order.created_at).toISOString(),
+      timeAgo: getTimeAgo(order.order_date || order.created_at),
+    });
+  });
+
+  // 날짜순 정렬 (최신 순)
+  return activities
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 8); // 최대 8개 활동만 표시
 }
 
+/**
+ * 상대적 시간 표시 (예: "2시간 전")
+ */
 function getTimeAgo(timestamp: number): string {
   const now = Date.now();
   const diff = now - timestamp;
+
   const minutes = Math.floor(diff / (1000 * 60));
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -229,5 +260,21 @@ function getTimeAgo(timestamp: number): string {
   if (minutes < 1) return '방금 전';
   if (minutes < 60) return `${minutes}분 전`;
   if (hours < 24) return `${hours}시간 전`;
-  return `${days}일 전`;
+  if (days < 30) return `${days}일 전`;
+  return new Date(timestamp).toLocaleDateString();
 }
+
+/**
+ * 통화 포맷팅
+ */
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('ko-KR', {
+    style: 'currency',
+    currency: 'KRW',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+// 타입 정의 export
+export type { DashboardData };
