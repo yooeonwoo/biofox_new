@@ -1,36 +1,52 @@
-import { fetchCases, createCase } from '@/lib/clinical-photos-api';
-import type { ClinicalCase } from '@/lib/clinical-photos';
+/**
+ * Clinical Photos Service - Convex 전환 리다이렉트
+ * 기존 API 호출을 새로운 Convex 기반 훅으로 교체
+ *
+ * ⚠️ 이 파일은 레거시 호환성을 위해 유지되지만
+ * 새로운 개발에서는 /lib/clinical-photos-convex.ts 사용을 권장합니다
+ */
+
 import { PERSONAL_CASE_NAME, PERSONAL_PREFIX } from '@/app/kol-new/clinical-photos/types';
 
+// 새로운 Convex 기반 훅들에서 임포트
+export {
+  useClinicalCases,
+  useClinicalCase,
+  useCreateClinicalCase,
+  useUpdateClinicalCaseStatus,
+  useDeleteClinicalCase,
+  useClinicalPhotos,
+  useUploadClinicalPhoto,
+  useDeleteClinicalPhoto,
+  useEnsurePersonalCase,
+  useCustomerCases,
+  type ClinicalCase,
+  type PhotoSlot,
+  type UploadResponse,
+} from '@/lib/clinical-photos-convex';
+
 /**
- * 모든 케이스를 가져온 뒤, customerName 이 '본인' 인 케이스를 반환한다.
+ * @deprecated 레거시 함수 - useEnsurePersonalCase() 훅 사용을 권장
  */
-export const fetchPersonalCase = async (): Promise<ClinicalCase | undefined | null> => {
-  const allCases = await fetchCases();
-  return allCases.find(c => c.customerName?.trim() === PERSONAL_CASE_NAME);
+export const fetchPersonalCase = async () => {
+  console.warn('fetchPersonalCase는 deprecated입니다. useEnsurePersonalCase() 훅을 사용하세요.');
+  throw new Error('이 함수는 더 이상 지원되지 않습니다. useEnsurePersonalCase() 훅을 사용하세요.');
 };
 
 /**
- * '본인' 케이스가 존재하지 않으면 생성 후 반환한다.
+ * @deprecated 레거시 함수 - useEnsurePersonalCase() 훅 사용을 권장
  */
-export const ensurePersonalCaseExists = async (): Promise<ClinicalCase | undefined | null> => {
-  const existing = await fetchPersonalCase();
-  if (existing) return existing;
-
-  // 생성 로직 - 최소 필수 필드만 전달
-  return await createCase({
-    customerName: PERSONAL_CASE_NAME,
-    caseName: '본인 임상 케이스',
-    concernArea: '본인 케어',
-    treatmentPlan: `${PERSONAL_PREFIX}개인 관리 계획`,
-    consentReceived: false,
-  });
+export const ensurePersonalCaseExists = async () => {
+  console.warn(
+    'ensurePersonalCaseExists는 deprecated입니다. useEnsurePersonalCase() 훅을 사용하세요.'
+  );
+  throw new Error('이 함수는 더 이상 지원되지 않습니다. useEnsurePersonalCase() 훅을 사용하세요.');
 };
 
 /**
- * '본인' 케이스를 제외한 고객 케이스 목록을 반환한다.
+ * @deprecated 레거시 함수 - useCustomerCases() 훅 사용을 권장
  */
-export const fetchCustomerCases = async (): Promise<ClinicalCase[]> => {
-  const allCases = await fetchCases();
-  return allCases.filter(c => c.customerName?.trim() !== PERSONAL_CASE_NAME);
-}; 
+export const fetchCustomerCases = async () => {
+  console.warn('fetchCustomerCases는 deprecated입니다. useCustomerCases() 훅을 사용하세요.');
+  throw new Error('이 함수는 더 이상 지원되지 않습니다. useCustomerCases() 훅을 사용하세요.');
+};

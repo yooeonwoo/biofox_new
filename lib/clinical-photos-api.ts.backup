@@ -1,14 +1,3 @@
-/**
- * ⚠️ DEPRECATED: 이 파일은 더 이상 사용되지 않습니다
- *
- * 새로운 Convex 기반 API 사용을 권장합니다:
- * - /lib/clinical-photos-convex.ts 사용
- * - React Query 기반 실시간 동기화 훅 제공
- * - 더 나은 타입 안전성과 성능
- *
- * 기존 코드 호환성을 위해 유지되지만, 새로운 개발에서는 사용하지 마세요.
- */
-
 import { supabaseClient } from './supabase-client';
 import { ClinicalCase, PhotoSlot, UploadResponse } from './clinical-photos';
 import { toast } from 'sonner';
@@ -62,9 +51,7 @@ async function getCurrentKolId(): Promise<string> {
 
     // 브라우저 환경이 아니면 KOL ID를 조회할 수 있는 방법이 없으므로 오류를 던진다.
     if (typeof window === 'undefined') {
-      throw new Error(
-        'KOL 정보를 가져올 수 없는 환경입니다. TEST_KOL_ID 환경 변수를 설정했는지 확인하세요.'
-      );
+      throw new Error('KOL 정보를 가져올 수 없는 환경입니다. TEST_KOL_ID 환경 변수를 설정했는지 확인하세요.');
     }
 
     // 사용자 정보 가져오기
@@ -86,7 +73,7 @@ async function getCurrentKolId(): Promise<string> {
         console.error('KOL 조회 오류:', kolErr);
         throw new Error('KOL 정보를 찾을 수 없습니다');
       }
-
+      
       if (kolRow?.id) {
         // 숫자형이지만 문자열로 반환하여 타입 변경 최소화
         return String(kolRow.id);
@@ -148,13 +135,6 @@ async function getUserEmail(): Promise<string> {
   }
 }
 
-// 🚨 DEPRECATED 경고 헬퍼
-const warnDeprecated = (functionName: string) => {
-  console.warn(
-    `⚠️ DEPRECATED: ${functionName}()은 더 이상 사용되지 않습니다. lib/clinical-photos-convex.ts의 훅을 사용하세요.`
-  );
-};
-
 // 케이스 목록 조회
 export async function fetchCases(status?: string): Promise<ClinicalCase[]> {
   try {
@@ -166,20 +146,14 @@ export async function fetchCases(status?: string): Promise<ClinicalCase[]> {
     // Supabase 쿼리 실행
     const { data, error } = await supabaseClient
       .from('clinical_cases')
-      .select(
-        `
+      .select(`
         *,
         clinical_consent_files(file_url)
-      `
-      )
+      `)
       .eq('kol_id', kolId)
       .order('created_at', { ascending: false });
 
-    console.log('임상사진: Supabase 응답', {
-      결과있음: !!data,
-      데이터갯수: data?.length,
-      에러: error,
-    });
+    console.log('임상사진: Supabase 응답', { 결과있음: !!data, 데이터갯수: data?.length, 에러: error });
 
     if (error) {
       console.error('임상사진: Supabase 에러', error.message);
@@ -254,12 +228,10 @@ export async function fetchCase(caseId: number): Promise<ClinicalCase | null> {
   try {
     const { data, error } = await supabaseClient
       .from('clinical_cases')
-      .select(
-        `
+      .select(`
         *,
         clinical_photos(count)
-      `
-      )
+      `)
       .eq('id', caseId)
       .single();
 
@@ -368,16 +340,13 @@ export async function createCase(caseData: {
 }
 
 // 케이스 업데이트
-export async function updateCase(
-  caseId: number,
-  caseData: Partial<ClinicalCase>
-): Promise<ClinicalCase | null> {
+export async function updateCase(caseId: number, caseData: Partial<ClinicalCase>): Promise<ClinicalCase | null> {
   try {
     console.log('updateCase 호출됨:', { caseId, caseData }); // 디버깅용
 
     // Supabase 필드명에 맞게 변환 (인덱스 시그니처 추가)
     const supabaseData: {
-      [key: string]: string | boolean | undefined;
+      [key: string]: string | boolean | undefined
     } = {
       customer_name: caseData.customerName,
       case_name: caseData.caseName,
@@ -450,7 +419,10 @@ export async function updateCase(
 // 케이스 삭제
 export async function deleteCase(caseId: number): Promise<boolean> {
   try {
-    const { error } = await supabaseClient.from('clinical_cases').delete().eq('id', caseId);
+    const { error } = await supabaseClient
+      .from('clinical_cases')
+      .delete()
+      .eq('id', caseId);
 
     if (error) throw error;
     return true;
@@ -497,19 +469,15 @@ function sanitizeFileName(fileName: string): string {
 
   // 안전한 파일명으로 변환 (알파벳, 숫자, 하이픈, 언더스코어만 허용)
   const safeName = nameWithoutExt
-    .replace(/[^\w\-_]/g, '_') // 특수문자를 언더스코어로 변경
-    .replace(/_{2,}/g, '_') // 연속된 언더스코어를 하나로 변경
-    .substring(0, 100); // 최대 100자로 제한
+    .replace(/[^\w\-_]/g, '_')  // 특수문자를 언더스코어로 변경
+    .replace(/_{2,}/g, '_')     // 연속된 언더스코어를 하나로 변경
+    .substring(0, 100);        // 최대 100자로 제한
 
   return `${safeName}${extension}`;
 }
 
 // 이미지 파일 업로드 (서버 API 사용)
-export async function uploadImage(
-  file: File,
-  caseId: number,
-  type: 'photo' | 'consent' = 'photo'
-): Promise<UploadResponse> {
+export async function uploadImage(file: File, caseId: number, type: 'photo' | 'consent' = 'photo'): Promise<UploadResponse> {
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -543,17 +511,14 @@ export async function uploadImage(
 }
 
 // 사진 메타데이터 저장
-export async function savePhoto(
-  caseId: number,
-  photoData: {
-    roundNumber: number;
-    angle: string;
-    fileUrl: string;
-    thumbnailUrl?: string;
-    fileSize: number;
-    mimeType: string;
-  }
-): Promise<any> {
+export async function savePhoto(caseId: number, photoData: {
+  roundNumber: number;
+  angle: string;
+  fileUrl: string;
+  thumbnailUrl?: string;
+  fileSize: number;
+  mimeType: string;
+}): Promise<any> {
   try {
     const { data, error } = await supabaseClient
       .from('clinical_photos')
@@ -578,11 +543,7 @@ export async function savePhoto(
 }
 
 // 사진 삭제
-export async function deletePhoto(
-  caseId: number,
-  roundNumber: number,
-  angle: string
-): Promise<void> {
+export async function deletePhoto(caseId: number, roundNumber: number, angle: string): Promise<void> {
   try {
     // 먼저 메타데이터 조회
     const { data: photoData, error: fetchError } = await supabaseClient
@@ -600,7 +561,8 @@ export async function deletePhoto(
     const filePathMatch = photoData.file_url.match(/clinical-photos\/([^?]+)/);
     if (filePathMatch && filePathMatch[1]) {
       const filePath = filePathMatch[1];
-      const { error: storageError } = await supabaseClient.storage
+      const { error: storageError } = await supabaseClient
+        .storage
         .from('clinical-photos')
         .remove([filePath]);
 
@@ -622,20 +584,9 @@ export async function deletePhoto(
 }
 
 // 사진 업로드 (API 서버를 통해 업로드 + 메타데이터 저장)
-export async function uploadPhoto(
-  caseId: number,
-  roundNumber: number,
-  angle: string,
-  file: File
-): Promise<string> {
+export async function uploadPhoto(caseId: number, roundNumber: number, angle: string, file: File): Promise<string> {
   try {
-    console.log('uploadPhoto called with:', {
-      caseId,
-      roundNumber,
-      angle,
-      fileName: file.name,
-      fileSize: file.size,
-    });
+    console.log('uploadPhoto called with:', { caseId, roundNumber, angle, fileName: file.name, fileSize: file.size });
 
     const formData = new FormData();
     formData.append('file', file);
@@ -701,19 +652,15 @@ export async function uploadConsentImage(caseId: number, file: File): Promise<st
 }
 
 // 회차별 고객 정보 저장/업데이트
-export async function saveRoundCustomerInfo(
-  caseId: number,
-  roundNumber: number,
-  roundInfo: {
-    age?: number;
-    gender?: 'male' | 'female' | 'other';
-    treatmentType?: string;
-    treatmentDate?: string;
-    products?: string[];
-    skinTypes?: string[];
-    memo?: string;
-  }
-): Promise<any> {
+export async function saveRoundCustomerInfo(caseId: number, roundNumber: number, roundInfo: {
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  treatmentType?: string;
+  treatmentDate?: string;
+  products?: string[];
+  skinTypes?: string[];
+  memo?: string;
+}): Promise<any> {
   try {
     // 기존 데이터 확인
     const { data: existingData, error: fetchError } = await supabaseClient
@@ -806,13 +753,15 @@ export async function fetchRoundCustomerInfo(caseId: number): Promise<any[]> {
         */
         return input
           .split(/[;,]/)
-          .map(s => s.trim())
-          .filter(s => s.length > 0);
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
       }
       return [];
     }
 
-    return (data || []).map(row => ({
+    return (
+      data || []
+    ).map((row) => ({
       ...row,
       products: safeParseArray(row.products),
       skin_types: safeParseArray(row.skin_types),
