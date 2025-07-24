@@ -1,17 +1,6 @@
-/**
- * ⚠️ DEPRECATED: 이 파일은 점진적으로 Convex로 전환 중입니다
- *
- * 새로운 개발에서는 다음을 고려하세요:
- * - Convex 기반 실시간 동기화
- * - 더 나은 타입 안전성
- * - 캐시 최적화
- *
- * 현재는 기존 호환성을 위해 유지됩니다.
- */
+"use client";
 
-'use client';
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface AdminNewShopRow {
   id: number;
@@ -34,7 +23,7 @@ interface ListParams {
 function buildQueryString(params: Record<string, any>) {
   const usp = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') {
+    if (v !== undefined && v !== null && v !== "") {
       usp.append(k, String(v));
     }
   });
@@ -43,17 +32,17 @@ function buildQueryString(params: Record<string, any>) {
 
 async function fetchShops(params: ListParams): Promise<AdminNewShopRow[]> {
   const qs = buildQueryString(params);
-  const res = await fetch(`/api/admin-new/shops/list${qs ? `?${qs}` : ''}`);
+  const res = await fetch(`/api/admin-new/shops/list${qs ? `?${qs}` : ""}`);
   if (!res.ok) {
     const { message } = await res.json();
-    throw new Error(message || 'Failed to fetch shops');
+    throw new Error(message || "Failed to fetch shops");
   }
   const json = await res.json();
   return json.data as AdminNewShopRow[];
 }
 
 export function useAdminNewShops(params: ListParams = {}) {
-  return useQuery({ queryKey: ['adminNewShops', params], queryFn: () => fetchShops(params) });
+  return useQuery({ queryKey: ["adminNewShops", params], queryFn: () => fetchShops(params) });
 }
 
 interface CreateShopInput {
@@ -71,19 +60,19 @@ export function useCreateAdminNewShop() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateShopInput) => {
-      const res = await fetch('/api/admin-new/shops', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/admin-new/shops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const { message } = await res.json();
-        throw new Error(message || 'failed');
+        throw new Error(message || "failed");
       }
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['adminNewShops'] });
+      qc.invalidateQueries({ queryKey: ["adminNewShops"] });
     },
   });
-}
+} 
