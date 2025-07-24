@@ -1,6 +1,6 @@
 /**
- * 커미션 관리 (Commission Management) Query & Mutation Functions
- * 기존 /api/commissions/* 엔드포인트를 대체하는 Convex 함수들
+ * 수수료 관리 (Commission Management) Query & Mutation Functions
+ * Supabase /api/commissions/* 엔드포인트와 완전 호환되는 Convex 구현
  */
 
 import { query, mutation } from './_generated/server';
@@ -11,7 +11,6 @@ import {
   requireAdmin,
   getCurrentUser,
   validateAmount,
-  validateCommissionRate,
   createAuditLog,
   createNotification,
   ApiError,
@@ -20,32 +19,26 @@ import {
 } from './utils';
 
 /**
- * 커미션 목록 조회 (페이지네이션, 필터링, 정렬 지원)
+ * 수수료 계산 목록 조회 (페이지네이션, 필터링, 정렬 지원)
+ * GET /api/commissions 대체
  */
-export const listCommissions = query({
+export const getCommissionCalculations = query({
   args: {
     // 페이지네이션
     paginationOpts: paginationOptsValidator,
 
     // 필터링 옵션
     month: v.optional(v.string()), // YYYY-MM 형식
-    kolId: v.optional(v.id('profiles')),
+    kol_id: v.optional(v.id('profiles')),
     status: v.optional(
       v.union(
         v.literal('calculated'),
-        v.literal('adjusted'),
+        v.literal('reviewed'),
+        v.literal('approved'),
         v.literal('paid'),
         v.literal('cancelled')
       )
     ),
-    minAmount: v.optional(v.number()),
-    maxAmount: v.optional(v.number()),
-
-    // 정렬 옵션
-    sortBy: v.optional(
-      v.union(v.literal('created_at'), v.literal('commission_amount'), v.literal('order_date'))
-    ),
-    sortOrder: v.optional(v.union(v.literal('asc'), v.literal('desc'))),
   },
   handler: async (ctx, args) => {
     try {
@@ -63,104 +56,76 @@ export const listCommissions = query({
         endDate = new Date(year, month, 0, 23, 59, 59, 999).getTime();
       }
 
-      // 주문 조회 (커미션 정보 포함)
-      let allOrders;
-      if (args.kolId) {
-        allOrders = await ctx.db
-          .query('orders')
-          .withIndex('by_shop', q => q.eq('shop_id', args.kolId as Id<'profiles'>))
+      // 기본 쿼리 구성
+      let allCalculations;
+
+      // KOL ID 필터
+      if (args.kol_id) {
+        allCalculations = await ctx.db
+          .query('commission_calculations')
+          .withIndex('by_kol', q => q.eq('kol_id', args.kol_id!))
           .collect();
       } else {
-        allOrders = await ctx.db.query('orders').collect();
+        allCalculations = await ctx.db.query('commission_calculations').collect();
       }
 
       // 필터링
-      let filteredOrders = allOrders.filter(order => {
-        // 날짜 필터
+      let filteredCalculations = allCalculations.filter(calc => {
+        // 월 필터
         if (startDate && endDate) {
-          if (order.order_date < startDate || order.order_date > endDate) {
+          if (calc.calculation_month < startDate || calc.calculation_month > endDate) {
             return false;
           }
         }
 
         // 상태 필터
-        if (args.status && order.commission_status !== args.status) {
-          return false;
-        }
-
-        // 금액 필터
-        if (args.minAmount && (order.commission_amount || 0) < args.minAmount) {
-          return false;
-        }
-        if (args.maxAmount && (order.commission_amount || 0) > args.maxAmount) {
+        if (args.status && calc.status !== args.status) {
           return false;
         }
 
         return true;
       });
 
-      // 정렬
-      const sortBy = args.sortBy || 'created_at';
-      const sortOrder = args.sortOrder || 'desc';
+      // KOL 정보와 함께 결과 구성
+      const commissionsWithKol = await Promise.all(
+        filteredCalculations.map(async calc => {
+          const kol = await ctx.db.get(calc.kol_id);
 
-      filteredOrders.sort((a, b) => {
-        let aValue, bValue;
-
-        switch (sortBy) {
-          case 'commission_amount':
-            aValue = a.commission_amount || 0;
-            bValue = b.commission_amount || 0;
-            break;
-          case 'order_date':
-            aValue = a.order_date;
-            bValue = b.order_date;
-            break;
-          default: // created_at
-            aValue = a.created_at;
-            bValue = b.created_at;
-        }
-
-        if (sortOrder === 'asc') {
-          return aValue - bValue;
-        } else {
-          return bValue - aValue;
-        }
-      });
-
-      // 커미션 데이터 변환
-      const commissions = await Promise.all(
-        filteredOrders.map(async order => {
-          const shop = await ctx.db.get(order.shop_id);
           return {
-            id: order._id,
-            orderId: order._id,
-            orderNumber: order.order_number || `ORD-${order._id}`,
-            shopId: order.shop_id,
-            shopName: shop?.shop_name || shop?.name || 'Unknown Shop',
-            kolName: shop?.name || 'Unknown KOL',
-            orderDate: order.order_date,
-            orderAmount: order.total_amount,
-            commissionRate: order.commission_rate || 0,
-            commissionAmount: order.commission_amount || 0,
-            commissionStatus: order.commission_status,
-            orderStatus: order.order_status,
-            notes: order.notes,
-            createdAt: order.created_at,
-            updatedAt: order.updated_at,
+            ...calc,
+            kol: kol
+              ? {
+                  id: kol._id,
+                  name: kol.name,
+                  shop_name: kol.shop_name,
+                  email: kol.email,
+                  bank_info: null, // 스키마에 없는 필드이므로 null
+                  role: kol.role,
+                }
+              : null,
+            calculation_month: new Date(calc.calculation_month).toISOString().substring(0, 7), // YYYY-MM 형식으로 변환
           };
         })
       );
 
+      // 정렬 (총 수수료 내림차순, 계산일 내림차순)
+      commissionsWithKol.sort((a, b) => {
+        if (a.total_commission !== b.total_commission) {
+          return b.total_commission - a.total_commission;
+        }
+        return b.calculated_at - a.calculated_at;
+      });
+
       // 페이지네이션 적용
-      const { page, isDone, continueCursor } = await ctx.db
-        .query('orders')
-        .order('desc')
-        .paginate(args.paginationOpts);
+      const startIndex = 0; // args.paginationOpts를 고려한 시작 인덱스
+      const endIndex = args.paginationOpts.numItems;
+      const page = commissionsWithKol.slice(startIndex, endIndex);
+      const isDone = commissionsWithKol.length <= args.paginationOpts.numItems;
 
       return {
-        page: commissions.slice(0, args.paginationOpts.numItems),
-        isDone: commissions.length <= args.paginationOpts.numItems,
-        continueCursor: commissions.length > args.paginationOpts.numItems ? 'next' : null,
+        page,
+        isDone,
+        continueCursor: isDone ? null : 'next',
       };
     } catch (error) {
       throw formatError(error);
@@ -169,70 +134,48 @@ export const listCommissions = query({
 });
 
 /**
- * 커미션 요약 정보 조회
+ * 수수료 요약 통계 조회
+ * GET /api/commissions에서 summary 부분 대체
  */
 export const getCommissionSummary = query({
   args: {
     month: v.optional(v.string()), // YYYY-MM 형식
-    kolId: v.optional(v.id('profiles')),
   },
   handler: async (ctx, args) => {
     try {
       // 관리자 권한 확인
       await requireAdmin(ctx);
 
-      // 월 필터 처리
-      let startDate: number | undefined, endDate: number | undefined;
-      if (args.month) {
-        const [year, month] = args.month.split('-').map(Number);
-        startDate = new Date(year, month - 1, 1).getTime();
-        endDate = new Date(year, month, 0, 23, 59, 59, 999).getTime();
-      }
+      // 현재 월 또는 지정된 월
+      const targetMonth = args.month || new Date().toISOString().substring(0, 7);
+      const [year, month] = targetMonth.split('-').map(Number);
+      const startDate = new Date(year, month - 1, 1).getTime();
+      const endDate = new Date(year, month, 0, 23, 59, 59, 999).getTime();
 
-      // 주문 조회
-      let allOrders;
-      if (args.kolId) {
-        allOrders = await ctx.db
-          .query('orders')
-          .withIndex('by_shop', q => q.eq('shop_id', args.kolId as Id<'profiles'>))
-          .collect();
-      } else {
-        allOrders = await ctx.db.query('orders').collect();
-      }
-
-      // 필터링
-      const orders = allOrders.filter(order => {
-        if (startDate && endDate) {
-          return order.order_date >= startDate && order.order_date <= endDate;
-        }
-        return true;
-      });
+      // 해당 월의 수수료 계산 조회
+      const calculations = await ctx.db
+        .query('commission_calculations')
+        .withIndex('by_month', q =>
+          q.gte('calculation_month', startDate).lte('calculation_month', endDate)
+        )
+        .collect();
 
       // 요약 계산
-      const summary = {
-        totalOrders: orders.length,
-        totalSales: orders.reduce((sum, order) => sum + order.total_amount, 0),
-        totalCommissions: orders.reduce((sum, order) => sum + (order.commission_amount || 0), 0),
+      const total_amount = calculations.reduce((sum, c) => sum + c.total_commission, 0);
+      const calculated_amount = calculations
+        .filter(c => c.status === 'calculated')
+        .reduce((sum, c) => sum + c.total_commission, 0);
+      const paid_amount = calculations
+        .filter(c => c.status === 'paid')
+        .reduce((sum, c) => sum + c.total_commission, 0);
+      const pending_amount = calculated_amount;
 
-        // 상태별 통계
-        calculated: orders.filter(o => o.commission_status === 'calculated').length,
-        adjusted: orders.filter(o => o.commission_status === 'adjusted').length,
-        paid: orders.filter(o => o.commission_status === 'paid').length,
-        cancelled: orders.filter(o => o.commission_status === 'cancelled').length,
-
-        // 금액별 통계
-        calculatedAmount: orders
-          .filter(o => o.commission_status === 'calculated')
-          .reduce((sum, order) => sum + (order.commission_amount || 0), 0),
-        adjustedAmount: orders
-          .filter(o => o.commission_status === 'adjusted')
-          .reduce((sum, order) => sum + (order.commission_amount || 0), 0),
-        paidAmount: orders
-          .filter(o => o.commission_status === 'paid')
-          .reduce((sum, order) => sum + (order.commission_amount || 0), 0),
+      return {
+        total_amount,
+        calculated_amount,
+        paid_amount,
+        pending_amount,
       };
-
-      return summary;
     } catch (error) {
       throw formatError(error);
     }
@@ -240,12 +183,12 @@ export const getCommissionSummary = query({
 });
 
 /**
- * 월별 커미션 계산 (새로운 커미션 생성)
+ * 월별 수수료 계산 실행
+ * POST /api/commissions 대체
  */
 export const calculateMonthlyCommissions = mutation({
   args: {
     month: v.string(), // YYYY-MM 형식
-    forceRecalculate: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     try {
@@ -260,71 +203,183 @@ export const calculateMonthlyCommissions = mutation({
 
       const startDate = new Date(year, month - 1, 1).getTime();
       const endDate = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+      const calculationMonth = startDate; // 월초로 저장
 
-      // 해당 월의 완료된 주문들 조회
-      const allOrders = await ctx.db.query('orders').collect();
-      const monthlyOrders = allOrders.filter(
-        order =>
-          order.order_date >= startDate &&
-          order.order_date <= endDate &&
-          order.order_status === 'completed' &&
-          (args.forceRecalculate || order.commission_status === 'calculated')
-      );
+      console.log(`🔄 수수료 계산 시작: ${args.month}`);
 
-      let processed = 0;
-      let errors = [];
+      // 모든 KOL/OL 조회
+      const allKols = await ctx.db
+        .query('profiles')
+        .filter(q =>
+          q.and(
+            q.or(q.eq(q.field('role'), 'kol'), q.eq(q.field('role'), 'ol')),
+            q.eq(q.field('status'), 'approved')
+          )
+        )
+        .collect();
 
-      for (const order of monthlyOrders) {
+      console.log(`👥 대상 KOL/OL 수: ${allKols.length}명`);
+
+      const calculations = [];
+      let calculatedCount = 0;
+
+      for (const kol of allKols) {
         try {
-          // 매장 정보 조회
-          const shop = await ctx.db.get(order.shop_id);
-          if (!shop) {
-            errors.push(`Shop not found for order ${order._id}`);
-            continue;
+          // 1. 소속 샵들의 주문 수수료 계산
+          const activeRelationships = await ctx.db
+            .query('shop_relationships')
+            .withIndex('by_parent', q => q.eq('parent_id', kol._id))
+            .filter(q => q.eq(q.field('is_active'), true))
+            .collect();
+
+          const subordinateShopIds = activeRelationships.map(r => r.shop_owner_id);
+
+          let subordinateSales = 0;
+          let subordinateCommission = 0;
+
+          if (subordinateShopIds.length > 0) {
+            const subordinateOrders = await ctx.db
+              .query('orders')
+              .filter(q =>
+                q.and(
+                  q.gte(q.field('order_date'), startDate),
+                  q.lte(q.field('order_date'), endDate),
+                  q.eq(q.field('is_self_shop_order'), false)
+                )
+              )
+              .collect();
+
+            const filteredOrders = subordinateOrders.filter(order =>
+              subordinateShopIds.includes(order.shop_id)
+            );
+
+            subordinateSales = filteredOrders.reduce((sum, o) => sum + o.total_amount, 0);
+            subordinateCommission = filteredOrders.reduce(
+              (sum, o) => sum + (o.commission_amount || 0),
+              0
+            );
           }
 
-          // 커미션 재계산
-          const commissionRate = order.commission_rate || shop.commission_rate || 0.1;
-          const commissionAmount = order.total_amount * commissionRate;
+          // 2. 본인샵 주문 수수료 계산
+          const selfOrders = await ctx.db
+            .query('orders')
+            .withIndex('by_shop', q => q.eq('shop_id', kol._id))
+            .filter(q =>
+              q.and(
+                q.gte(q.field('order_date'), startDate),
+                q.lte(q.field('order_date'), endDate),
+                q.eq(q.field('is_self_shop_order'), true)
+              )
+            )
+            .collect();
 
-          // 주문 업데이트
-          await ctx.db.patch(order._id, {
-            commission_rate: commissionRate,
-            commission_amount: commissionAmount,
-            commission_status: 'calculated',
-            updated_at: Date.now(),
-          });
+          const selfShopSales = selfOrders.reduce((sum, o) => sum + o.total_amount, 0);
+          const commissionRate = kol.commission_rate || (kol.role === 'kol' ? 30 : 20);
+          const selfShopCommission = selfShopSales * (commissionRate / 100);
 
-          processed++;
+          // 3. 기기 판매 수수료 계산
+          const deviceSales = await ctx.db
+            .query('device_sales')
+            .filter(q =>
+              q.and(q.gte(q.field('sale_date'), startDate), q.lte(q.field('sale_date'), endDate))
+            )
+            .collect();
+
+          const kolDeviceSales = deviceSales.filter(sale =>
+            subordinateShopIds.includes(sale.shop_id)
+          );
+
+          const deviceCommission = kolDeviceSales.reduce(
+            (sum, d) => sum + (d.actual_commission || 0),
+            0
+          );
+
+          // 4. 총 수수료 계산
+          const totalCommission = subordinateCommission + selfShopCommission + deviceCommission;
+
+          if (totalCommission > 0) {
+            // 기존 계산 확인
+            const existing = await ctx.db
+              .query('commission_calculations')
+              .withIndex('by_kol_month', q =>
+                q.eq('kol_id', kol._id).eq('calculation_month', calculationMonth)
+              )
+              .first();
+
+            const calculationData = {
+              kol_id: kol._id,
+              calculation_month: calculationMonth,
+              subordinate_shop_count: subordinateShopIds.length,
+              active_shop_count: subordinateShopIds.length,
+              subordinate_sales: subordinateSales,
+              subordinate_commission: subordinateCommission,
+              self_shop_sales: selfShopSales,
+              self_shop_commission: selfShopCommission,
+              device_count: kolDeviceSales.length,
+              device_commission: deviceCommission,
+              total_commission: totalCommission,
+              status: 'calculated' as const,
+              calculation_details: {
+                subordinate_shops: subordinateShopIds,
+                commission_rate: commissionRate,
+                calculation_date: Date.now(),
+              },
+              calculated_at: Date.now(),
+              created_by: currentUser._id,
+              updated_by: currentUser._id,
+              updated_at: Date.now(),
+            };
+
+            if (existing) {
+              // 업데이트
+              await ctx.db.patch(existing._id, {
+                ...calculationData,
+                created_at: existing.created_at, // 기존 생성일 유지
+              });
+            } else {
+              // 신규 생성
+              const newCalc = await ctx.db.insert('commission_calculations', {
+                ...calculationData,
+                created_at: Date.now(),
+              });
+              calculations.push(newCalc);
+            }
+
+            calculatedCount++;
+          }
+
+          console.log(
+            `✅ ${kol.name} (${kol.role.toUpperCase()}): ₩${totalCommission.toLocaleString()}`
+          );
         } catch (error) {
-          errors.push(`Error processing order ${order._id}: ${(error as Error).message}`);
+          console.error(`❌ ${kol.name} 계산 오류:`, error);
         }
       }
 
       // 감사 로그 생성
       await createAuditLog(ctx, {
-        tableName: 'orders',
-        recordId: 'bulk_commission_calculation',
-        action: 'UPDATE',
+        tableName: 'commission_calculations',
+        recordId: 'bulk_calculation',
+        action: 'INSERT',
         userId: currentUser._id,
         userRole: currentUser.role,
         oldValues: {},
-        newValues: { commission_calculation: args.month },
-        changedFields: ['commission_amount', 'commission_status'],
+        newValues: { calculation_month: args.month },
+        changedFields: ['commission_calculations'],
         metadata: {
           action_type: 'monthly_commission_calculation',
           month: args.month,
-          processed_count: processed,
-          error_count: errors.length,
+          calculated_count: calculatedCount,
+          total_kols: allKols.length,
         },
       });
 
+      console.log(`🎉 수수료 계산 완료: ${calculatedCount}건`);
+
       return {
-        success: errors.length === 0,
-        processed,
-        failed: errors.length,
-        errors: errors.slice(0, 10), // 최대 10개 에러만 반환
-        month: args.month,
+        success: true,
+        message: `${args.month} 수수료 계산 완료`,
+        calculated_count: calculatedCount,
       };
     } catch (error) {
       throw formatError(error);
@@ -333,181 +388,339 @@ export const calculateMonthlyCommissions = mutation({
 });
 
 /**
- * 커미션 상태 업데이트
+ * 수수료 계산 상세 조회
+ * GET /api/commissions/[commissionId] 대체
  */
-export const updateCommissionStatus = mutation({
+export const getCommissionCalculationDetail = query({
   args: {
-    orderIds: v.array(v.id('orders')),
-    status: v.union(
-      v.literal('calculated'),
-      v.literal('adjusted'),
-      v.literal('paid'),
-      v.literal('cancelled')
-    ),
-    adjustmentAmount: v.optional(v.number()),
-    reason: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    try {
-      // 관리자 권한 확인
-      const currentUser = await requireAdmin(ctx);
-
-      // 조정 금액 검증
-      if (args.adjustmentAmount !== undefined) {
-        validateAmount(args.adjustmentAmount, 'Adjustment amount');
-      }
-
-      let processed = 0;
-      let errors = [];
-
-      for (const orderId of args.orderIds) {
-        try {
-          const order = await ctx.db.get(orderId);
-          if (!order) {
-            errors.push(`Order ${orderId} not found`);
-            continue;
-          }
-
-          const updateData: any = {
-            commission_status: args.status,
-            updated_at: Date.now(),
-          };
-
-          // 조정된 상태인 경우 조정 금액 적용
-          if (args.status === 'adjusted' && args.adjustmentAmount !== undefined) {
-            updateData.commission_amount = args.adjustmentAmount;
-          }
-
-          // 주문 업데이트
-          await ctx.db.patch(orderId, updateData);
-
-          // 감사 로그 생성
-          await createAuditLog(ctx, {
-            tableName: 'orders',
-            recordId: orderId,
-            action: 'UPDATE',
-            userId: currentUser._id,
-            userRole: currentUser.role,
-            oldValues: {
-              commission_status: order.commission_status,
-              commission_amount: order.commission_amount,
-            },
-            newValues: updateData,
-            changedFields: Object.keys(updateData),
-            metadata: {
-              action_type: 'commission_status_update',
-              reason: args.reason,
-            },
-          });
-
-          // 지급 완료 시 알림 생성
-          if (args.status === 'paid') {
-            await createNotification(ctx, {
-              userId: order.shop_id,
-              type: 'commission_paid',
-              title: '커미션 지급 완료',
-              message: `${order.order_number || order._id} 주문의 커미션이 지급되었습니다.`,
-              relatedType: 'order',
-              relatedId: orderId,
-              priority: 'normal',
-            });
-          }
-
-          processed++;
-        } catch (error) {
-          errors.push(`Error updating order ${orderId}: ${(error as Error).message}`);
-        }
-      }
-
-      return {
-        success: errors.length === 0,
-        processed,
-        failed: errors.length,
-        errors: errors.slice(0, 10),
-      };
-    } catch (error) {
-      throw formatError(error);
-    }
-  },
-});
-
-/**
- * 커미션 상세 정보 조회
- */
-export const getCommissionDetail = query({
-  args: {
-    orderId: v.id('orders'),
+    commissionId: v.id('commission_calculations'),
   },
   handler: async (ctx, args) => {
     try {
       // 관리자 권한 확인
       await requireAdmin(ctx);
 
-      const order = await ctx.db.get(args.orderId);
-      if (!order) {
-        throw new ApiError(ERROR_CODES.NOT_FOUND, '주문을 찾을 수 없습니다.');
+      const commission = await ctx.db.get(args.commissionId);
+      if (!commission) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, '수수료 계산을 찾을 수 없습니다.');
       }
 
-      // 주문 항목들 조회
-      const orderItems = await ctx.db
-        .query('order_items')
-        .withIndex('by_order', q => q.eq('order_id', args.orderId))
+      // KOL 정보 조회
+      const kol = await ctx.db.get(commission.kol_id);
+      if (!kol) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, 'KOL 정보를 찾을 수 없습니다.');
+      }
+
+      // 월 범위 계산
+      const calculationDate = new Date(commission.calculation_month);
+      const startDate = new Date(
+        calculationDate.getFullYear(),
+        calculationDate.getMonth(),
+        1
+      ).getTime();
+      const endDate = new Date(
+        calculationDate.getFullYear(),
+        calculationDate.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999
+      ).getTime();
+
+      // 소속 샵들 정보
+      const subordinateShops = await ctx.db
+        .query('shop_relationships')
+        .withIndex('by_parent', q => q.eq('parent_id', kol._id))
+        .filter(q => q.eq(q.field('is_active'), true))
         .collect();
 
-      // 매장 정보 조회
-      const shop = await ctx.db.get(order.shop_id);
+      const subordinateDetails = await Promise.all(
+        subordinateShops.map(async rel => {
+          const shop = await ctx.db.get(rel.shop_owner_id);
+          if (!shop) return null;
 
-      // 관련 감사 로그 조회
-      const auditLogs = await ctx.db
-        .query('audit_logs')
-        .filter(q => q.eq(q.field('record_id'), args.orderId))
-        .order('desc')
-        .take(10);
+          const shopOrders = await ctx.db
+            .query('orders')
+            .withIndex('by_shop', q => q.eq('shop_id', shop._id))
+            .filter(q =>
+              q.and(
+                q.gte(q.field('order_date'), startDate),
+                q.lte(q.field('order_date'), endDate),
+                q.eq(q.field('is_self_shop_order'), false)
+              )
+            )
+            .collect();
+
+          const sales = shopOrders.reduce((sum, o) => sum + o.total_amount, 0);
+          const commissionAmount = shopOrders.reduce(
+            (sum, o) => sum + (o.commission_amount || 0),
+            0
+          );
+
+          return {
+            shop_id: shop._id,
+            shop_name: shop.shop_name || shop.name,
+            sales,
+            commission_rate: kol.role === 'kol' ? 30 : 20,
+            commission_amount: commissionAmount,
+          };
+        })
+      );
+
+      // 본인샵 매출 정보
+      const selfShopOrders = await ctx.db
+        .query('orders')
+        .withIndex('by_shop', q => q.eq('shop_id', kol._id))
+        .filter(q =>
+          q.and(
+            q.gte(q.field('order_date'), startDate),
+            q.lte(q.field('order_date'), endDate),
+            q.eq(q.field('is_self_shop_order'), true)
+          )
+        )
+        .collect();
+
+      const selfShopSales = selfShopOrders.reduce((sum, o) => sum + o.total_amount, 0);
+
+      // 기기 판매 상세
+      const deviceSales = await ctx.db
+        .query('device_sales')
+        .filter(q =>
+          q.and(q.gte(q.field('sale_date'), startDate), q.lte(q.field('sale_date'), endDate))
+        )
+        .collect();
+
+      const kolDeviceSales = await Promise.all(
+        deviceSales
+          .filter(sale => subordinateShops.some(rel => rel.shop_owner_id === sale.shop_id))
+          .map(async sale => {
+            const shop = await ctx.db.get(sale.shop_id);
+            return {
+              sale_id: sale._id,
+              shop_name: shop?.shop_name || 'Unknown Shop',
+              quantity: Math.abs(sale.quantity || 1),
+              tier: sale.tier_at_sale,
+              commission_per_unit: (sale.standard_commission || 0) / Math.abs(sale.quantity || 1),
+              total_commission: sale.actual_commission || 0,
+            };
+          })
+      );
+
+      // 조정 내역 (adjustments)
+      const adjustments = commission.calculation_details?.adjustments || [];
 
       return {
-        order: {
-          id: order._id,
-          orderNumber: order.order_number,
-          orderDate: order.order_date,
-          orderStatus: order.order_status,
-          totalAmount: order.total_amount,
-          commissionRate: order.commission_rate,
-          commissionAmount: order.commission_amount,
-          commissionStatus: order.commission_status,
-          notes: order.notes,
-          createdAt: order.created_at,
-          updatedAt: order.updated_at,
+        id: commission._id,
+        kol: {
+          id: kol._id,
+          name: kol.name,
+          role: kol.role,
+          shop_name: kol.shop_name,
+          email: kol.email,
+          bank_info: null, // 스키마에 없는 필드이므로 null
         },
-        shop: shop
+        calculation_month: new Date(commission.calculation_month).toISOString().substring(0, 7),
+        details: {
+          subordinate_shops: subordinateDetails.filter(d => d && d.commission_amount > 0),
+          self_shop: {
+            sales: selfShopSales,
+            commission_amount: commission.self_shop_commission || 0,
+          },
+          devices: kolDeviceSales,
+        },
+        adjustments,
+        total_commission: commission.total_commission,
+        status: commission.status,
+        payment: commission.payment_reference
           ? {
-              id: shop._id,
-              name: shop.name,
-              shopName: shop.shop_name,
-              email: shop.email,
-              region: shop.region,
+              payment_date: commission.payment_date,
+              payment_reference: commission.payment_reference,
             }
           : null,
-        items: orderItems.map(item => ({
-          id: item._id,
-          productName: item.product_name,
-          productCode: item.product_code,
-          quantity: item.quantity,
-          unitPrice: item.unit_price,
-          subtotal: item.subtotal,
-          itemCommissionRate: item.item_commission_rate,
-          itemCommissionAmount: item.item_commission_amount,
-        })),
-        auditLogs: auditLogs.map(log => ({
-          id: log._id,
-          action: log.action,
-          changedFields: log.changed_fields,
-          oldValues: log.old_values,
-          newValues: log.new_values,
-          userRole: log.user_role,
-          createdAt: log.created_at,
-          metadata: log.metadata,
-        })),
       };
+    } catch (error) {
+      throw formatError(error);
+    }
+  },
+});
+
+/**
+ * 수수료 계산 업데이트 (조정, 상태 변경)
+ * PUT /api/commissions/[commissionId] 대체
+ */
+export const updateCommissionCalculation = mutation({
+  args: {
+    commissionId: v.id('commission_calculations'),
+    adjustment_amount: v.optional(v.number()),
+    adjustment_reason: v.optional(v.string()),
+    status: v.optional(
+      v.union(
+        v.literal('calculated'),
+        v.literal('reviewed'),
+        v.literal('approved'),
+        v.literal('paid'),
+        v.literal('cancelled')
+      )
+    ),
+    payment_info: v.optional(
+      v.object({
+        payment_date: v.optional(v.number()),
+        payment_reference: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // 관리자 권한 확인
+      const currentUser = await requireAdmin(ctx);
+
+      const current = await ctx.db.get(args.commissionId);
+      if (!current) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, '수수료 계산을 찾을 수 없습니다.');
+      }
+
+      const updates: any = {
+        updated_by: currentUser._id,
+        updated_at: Date.now(),
+      };
+
+      // 조정 금액이 있는 경우
+      if (args.adjustment_amount !== undefined && args.adjustment_reason) {
+        const currentDetails = current.calculation_details || {};
+        const newAdjustments = [
+          ...(currentDetails.adjustments || []),
+          {
+            amount: args.adjustment_amount,
+            reason: args.adjustment_reason,
+            adjusted_by: {
+              id: currentUser._id,
+              name: currentUser.name,
+            },
+            adjusted_at: Date.now(),
+          },
+        ];
+
+        updates.calculation_details = {
+          ...currentDetails,
+          adjustments: newAdjustments,
+        };
+        updates.manual_adjustment = (current.manual_adjustment || 0) + args.adjustment_amount;
+        updates.total_commission =
+          (current.subordinate_commission || 0) +
+          (current.self_shop_commission || 0) +
+          (current.device_commission || 0) +
+          updates.manual_adjustment;
+        updates.status = 'adjusted';
+      }
+
+      // 상태 변경
+      if (args.status) {
+        updates.status = args.status;
+      }
+
+      // 지급 정보
+      if (args.payment_info) {
+        updates.payment_date = args.payment_info.payment_date || Date.now();
+        updates.payment_reference = args.payment_info.payment_reference;
+        updates.paid_at = Date.now();
+        updates.status = 'paid';
+      }
+
+      await ctx.db.patch(args.commissionId, updates);
+
+      // 감사 로그 생성
+      await createAuditLog(ctx, {
+        tableName: 'commission_calculations',
+        recordId: args.commissionId,
+        action: 'UPDATE',
+        userId: currentUser._id,
+        userRole: currentUser.role,
+        oldValues: {
+          status: current.status,
+          total_commission: current.total_commission,
+          manual_adjustment: current.manual_adjustment,
+        },
+        newValues: updates,
+        changedFields: Object.keys(updates),
+        metadata: {
+          action_type: 'commission_update',
+          adjustment_reason: args.adjustment_reason,
+        },
+      });
+
+      // 지급 완료 시 알림 생성
+      if (args.status === 'paid' || args.payment_info) {
+        await createNotification(ctx, {
+          userId: current.kol_id,
+          type: 'commission_paid',
+          title: '수수료 지급 완료',
+          message: `${new Date(current.calculation_month).toISOString().substring(0, 7)} 수수료가 지급되었습니다.`,
+          relatedType: 'commission_calculation',
+          relatedId: args.commissionId,
+          priority: 'normal',
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      throw formatError(error);
+    }
+  },
+});
+
+/**
+ * 수수료 데이터 내보내기용 조회
+ * GET /api/commissions/export 대체
+ */
+export const getCommissionsForExport = query({
+  args: {
+    month: v.string(), // YYYY-MM 형식
+  },
+  handler: async (ctx, args) => {
+    try {
+      // 관리자 권한 확인
+      await requireAdmin(ctx);
+
+      // 월 범위 계산
+      const [year, month] = args.month.split('-').map(Number);
+      const startDate = new Date(year, month - 1, 1).getTime();
+      const endDate = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+
+      // 해당 월의 수수료 계산 조회
+      const calculations = await ctx.db
+        .query('commission_calculations')
+        .withIndex('by_month', q =>
+          q.gte('calculation_month', startDate).lte('calculation_month', endDate)
+        )
+        .collect();
+
+      // KOL 정보와 함께 데이터 구성
+      const commissionsWithKol = await Promise.all(
+        calculations.map(async calc => {
+          const kol = await ctx.db.get(calc.kol_id);
+
+          return {
+            ...calc,
+            kol: kol
+              ? {
+                  id: kol._id,
+                  name: kol.name,
+                  role: kol.role,
+                  shop_name: kol.shop_name,
+                  email: kol.email,
+                  bank_info: null, // 스키마에 없는 필드이므로 null
+                }
+              : null,
+            adjustments: calc.calculation_details?.adjustments || [],
+          };
+        })
+      );
+
+      // 총 수수료 내림차순 정렬
+      commissionsWithKol.sort((a, b) => b.total_commission - a.total_commission);
+
+      return { data: commissionsWithKol };
     } catch (error) {
       throw formatError(error);
     }

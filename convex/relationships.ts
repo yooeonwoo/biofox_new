@@ -1,6 +1,7 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { Id } from './_generated/dataModel';
+import { requireAdmin } from './auth';
 
 /**
  * 데이터 모델 간 관계 정의 및 관리 시스템
@@ -478,20 +479,331 @@ export const getOrganizationTree = query({
   },
 });
 
-// 📈 관계 통계 조회
+/**
+ * 소속 관계 관리 (Shop Relationships Management)
+ * 매장-KOL 간 소속 관계를 관리하는 Convex 함수들
+ */
+
+/**
+ * 소속 관계 목록 조회
+ * GET /api/relationships 대체
+ */
+export const getRelationships = query({
+  args: {
+    shop_id: v.optional(v.id('profiles')),
+    parent_id: v.optional(v.id('profiles')),
+    active_only: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    // 관리자 권한 필요 (일단 주석 처리 - 원본 API도 주석 처리됨)
+    // await requireAdmin(ctx);
+
+    let relationshipsQuery = ctx.db.query('shop_relationships');
+
+    // 필터 적용
+    if (args.shop_id) {
+      relationshipsQuery = relationshipsQuery.withIndex('by_shop_owner', q =>
+        q.eq('shop_owner_id', args.shop_id)
+      );
+    } else if (args.parent_id) {
+      relationshipsQuery = relationshipsQuery.withIndex('by_parent', q =>
+        q.eq('parent_id', args.parent_id)
+      );
+    }
+
+    if (args.active_only) {
+      relationshipsQuery = relationshipsQuery.filter(q => q.eq(q.field('is_active'), true));
+    }
+
+    const relationships = await relationshipsQuery.order('desc').collect();
+
+    // 각 관계에 대해 관련 프로필 정보 조회
+    const relationshipsWithProfiles = await Promise.all(
+      relationships.map(async relationship => {
+        // 매장 소유자 정보 조회
+        const shopOwner = await ctx.db.get(relationship.shop_owner_id);
+
+        // 상위 관리자 정보 조회
+        let parent = null;
+        if (relationship.parent_id) {
+          parent = await ctx.db.get(relationship.parent_id);
+        }
+
+        return {
+          ...relationship,
+          shop_owner: shopOwner
+            ? {
+                _id: shopOwner._id,
+                name: shopOwner.name,
+                email: shopOwner.email,
+                shop_name: shopOwner.shop_name,
+                role: shopOwner.role,
+                status: shopOwner.status,
+              }
+            : null,
+          parent: parent
+            ? {
+                _id: parent._id,
+                name: parent.name,
+                email: parent.email,
+                shop_name: parent.shop_name,
+                role: parent.role,
+              }
+            : null,
+        };
+      })
+    );
+
+    return relationshipsWithProfiles;
+  },
+});
+
+/**
+ * 새로운 소속 관계 생성
+ * POST /api/relationships 대체
+ */
+export const createRelationship = mutation({
+  args: {
+    shop_owner_id: v.id('profiles'),
+    parent_id: v.optional(v.id('profiles')),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // 관리자 권한 필요
+    const { profile } = await requireAdmin(ctx);
+
+    // 유효성 검사
+    if (args.shop_owner_id === args.parent_id) {
+      throw new Error('자기 자신을 소속시킬 수 없습니다.');
+    }
+
+    // 기존 활성 관계가 있는지 확인
+    const existingRelation = await ctx.db
+      .query('shop_relationships')
+      .withIndex('by_shop_owner', q => q.eq('shop_owner_id', args.shop_owner_id))
+      .filter(q => q.eq(q.field('is_active'), true))
+      .first();
+
+    if (existingRelation) {
+      throw new Error('이미 활성화된 관계가 존재합니다.');
+    }
+
+    const now = Date.now();
+
+    // 새 관계 생성
+    const relationshipId = await ctx.db.insert('shop_relationships', {
+      shop_owner_id: args.shop_owner_id,
+      parent_id: args.parent_id,
+      started_at: now,
+      is_active: true,
+      relationship_type: 'direct',
+      notes: args.reason,
+      created_by: profile._id,
+      created_at: now,
+      updated_at: now,
+    });
+
+    // 생성된 관계 조회 (프로필 정보 포함)
+    const newRelationship = await ctx.db.get(relationshipId);
+    const shopOwner = await ctx.db.get(args.shop_owner_id);
+    let parent = null;
+    if (args.parent_id) {
+      parent = await ctx.db.get(args.parent_id);
+    }
+
+    return {
+      ...newRelationship,
+      shop_owner: shopOwner
+        ? {
+            _id: shopOwner._id,
+            name: shopOwner.name,
+            email: shopOwner.email,
+            shop_name: shopOwner.shop_name,
+            role: shopOwner.role,
+          }
+        : null,
+      parent: parent
+        ? {
+            _id: parent._id,
+            name: parent.name,
+            email: parent.email,
+            shop_name: parent.shop_name,
+            role: parent.role,
+          }
+        : null,
+    };
+  },
+});
+
+/**
+ * 소속 관계 수정
+ * PUT /api/relationships 대체
+ */
+export const updateRelationship = mutation({
+  args: {
+    relationship_id: v.id('shop_relationships'),
+    shop_owner_id: v.id('profiles'),
+    parent_id: v.optional(v.id('profiles')),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // 관리자 권한 필요
+    await requireAdmin(ctx);
+
+    // 유효성 검사
+    if (args.shop_owner_id === args.parent_id) {
+      throw new Error('자기 자신을 소속시킬 수 없습니다.');
+    }
+
+    const now = Date.now();
+
+    // 관계 수정
+    await ctx.db.patch(args.relationship_id, {
+      parent_id: args.parent_id,
+      notes: args.reason,
+      updated_at: now,
+    });
+
+    // 수정된 관계 조회 (프로필 정보 포함)
+    const updatedRelationship = await ctx.db.get(args.relationship_id);
+    if (!updatedRelationship) {
+      throw new Error('관계를 찾을 수 없습니다.');
+    }
+
+    const shopOwner = await ctx.db.get(args.shop_owner_id);
+    let parent = null;
+    if (args.parent_id) {
+      parent = await ctx.db.get(args.parent_id);
+    }
+
+    return {
+      ...updatedRelationship,
+      shop_owner: shopOwner
+        ? {
+            _id: shopOwner._id,
+            name: shopOwner.name,
+            email: shopOwner.email,
+            shop_name: shopOwner.shop_name,
+            role: shopOwner.role,
+          }
+        : null,
+      parent: parent
+        ? {
+            _id: parent._id,
+            name: parent.name,
+            email: parent.email,
+            shop_name: parent.shop_name,
+            role: parent.role,
+          }
+        : null,
+    };
+  },
+});
+
+/**
+ * 소속 관계 삭제
+ * DELETE /api/relationships 대체
+ */
+export const deleteRelationship = mutation({
+  args: {
+    relationship_id: v.optional(v.id('shop_relationships')),
+    shop_owner_id: v.optional(v.id('profiles')),
+  },
+  handler: async (ctx, args) => {
+    // 관리자 권한 필요
+    await requireAdmin(ctx);
+
+    // 적어도 하나의 ID는 필요
+    if (!args.relationship_id && !args.shop_owner_id) {
+      throw new Error('관계 ID 또는 매장 소유자 ID가 필요합니다.');
+    }
+
+    if (args.relationship_id) {
+      // 특정 관계 삭제
+      await ctx.db.delete(args.relationship_id);
+    } else if (args.shop_owner_id) {
+      // 특정 매장 소유자의 모든 관계 삭제
+      const relationships = await ctx.db
+        .query('shop_relationships')
+        .withIndex('by_shop_owner', q => q.eq('shop_owner_id', args.shop_owner_id))
+        .collect();
+
+      for (const relationship of relationships) {
+        await ctx.db.delete(relationship._id);
+      }
+    }
+
+    return { success: true, message: '관계가 삭제되었습니다.' };
+  },
+});
+
+/**
+ * 특정 매장의 활성 관계 조회 (수수료 계산용)
+ */
+export const getActiveRelationshipByShop = query({
+  args: {
+    shop_id: v.id('profiles'),
+    date: v.optional(v.number()), // 특정 시점의 관계 조회
+  },
+  handler: async (ctx, args) => {
+    const targetDate = args.date || Date.now();
+
+    const relationship = await ctx.db
+      .query('shop_relationships')
+      .withIndex('by_shop_owner', q => q.eq('shop_owner_id', args.shop_id))
+      .filter(q =>
+        q.and(
+          q.eq(q.field('is_active'), true),
+          q.lte(q.field('started_at'), targetDate),
+          q.or(q.eq(q.field('ended_at'), null), q.gte(q.field('ended_at'), targetDate))
+        )
+      )
+      .first();
+
+    if (!relationship) {
+      return null;
+    }
+
+    // 상위 관리자 정보 조회
+    let parent = null;
+    if (relationship.parent_id) {
+      parent = await ctx.db.get(relationship.parent_id);
+    }
+
+    return {
+      ...relationship,
+      parent: parent
+        ? {
+            _id: parent._id,
+            name: parent.name,
+            role: parent.role,
+            commission_rate: parent.commission_rate,
+          }
+        : null,
+    };
+  },
+});
+
+/**
+ * 관계 통계 조회
+ */
 export const getRelationshipStats = query({
   args: {},
   handler: async ctx => {
-    const stats: Record<string, number> = {};
+    // 관리자 권한 필요
+    await requireAdmin(ctx);
 
-    for (const relation of SYSTEM_RELATIONSHIPS) {
-      try {
-        const count = await ctx.db.query(relation.source as any).collect();
-        stats[relation.name] = count.length;
-      } catch (error) {
-        stats[relation.name] = -1; // 오류 표시
-      }
-    }
+    const allRelationships = await ctx.db.query('shop_relationships').collect();
+
+    const stats = {
+      total_relationships: allRelationships.length,
+      active_relationships: allRelationships.filter(r => r.is_active).length,
+      inactive_relationships: allRelationships.filter(r => !r.is_active).length,
+      relationships_by_type: {
+        direct: allRelationships.filter(r => r.relationship_type === 'direct').length,
+        indirect: allRelationships.filter(r => r.relationship_type === 'indirect').length,
+      },
+    };
 
     return stats;
   },

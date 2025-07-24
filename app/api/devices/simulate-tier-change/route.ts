@@ -1,70 +1,56 @@
-import { createServerClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '@/convex/_generated/api';
+import { checkAuthConvex } from '@/lib/auth';
 
-export async function POST(request: Request) {
+// Convex HTTP 클라이언트 초기화
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+// 티어 변경 시뮬레이션 (Convex 기반)
+export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
-    
-    // 인증 체크
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    console.log('Tier Simulation API called - using Convex');
+
+    // 인증 체크 (Convex 기반)
+    const authResult = await checkAuthConvex(['admin']);
+    if (!authResult.user || !authResult.profile) {
+      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 });
     }
 
-    // 관리자 권한 체크
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (authResult.profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const body = await request.json()
-    const { kol_id, additional_devices } = body
+    const body = await request.json();
+    const { kol_id, additional_devices } = body;
 
-    // 현재 KOL 누적 정보 조회
-    const { data: accumulator } = await supabase
-      .from('kol_device_accumulator')
-      .select('*')
-      .eq('kol_id', kol_id)
-      .single()
+    console.log('Simulating tier change:', { kol_id, additional_devices });
 
-    const currentNetDevices = accumulator?.net_devices_sold || 0
-    const currentTier = accumulator?.current_tier || 'tier_1_4'
-    const currentCommissionPerDevice = currentTier === 'tier_5_plus' ? 2500000 : 1500000
+    // 유효성 검사
+    if (!kol_id || additional_devices === undefined) {
+      return NextResponse.json(
+        { error: 'KOL ID와 추가 디바이스 수량이 필요합니다.' },
+        { status: 400 }
+      );
+    }
 
-    // 시뮬레이션
-    const newNetDevices = currentNetDevices + additional_devices
-    const newTier = newNetDevices >= 5 ? 'tier_5_plus' : 'tier_1_4'
-    const newCommissionPerDevice = newTier === 'tier_5_plus' ? 2500000 : 1500000
-    const tierChanged = currentTier !== newTier
+    try {
+      // Convex 시뮬레이션 쿼리 실행
+      const simulation = await convex.query(api.devices.simulateTierChange, {
+        kol_id,
+        additional_devices,
+      });
 
-    // 수수료 차이 계산
-    const commissionDifference = (newCommissionPerDevice - currentCommissionPerDevice) * Math.abs(additional_devices)
-
-    return NextResponse.json({
-      current_state: {
-        total_devices: currentNetDevices,
-        current_tier: currentTier,
-        commission_per_device: currentCommissionPerDevice
-      },
-      new_state: {
-        total_devices: newNetDevices,
-        new_tier: newTier,
-        commission_per_device: newCommissionPerDevice,
-        tier_changed: tierChanged
-      },
-      commission_difference: commissionDifference
-    })
-
+      return NextResponse.json(simulation);
+    } catch (convexError) {
+      console.error('Convex simulation query error:', convexError);
+      return NextResponse.json(
+        { error: 'Failed to simulate tier change in Convex' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Tier simulation error:', error)
-    return NextResponse.json(
-      { error: 'Failed to simulate tier change' },
-      { status: 500 }
-    )
+    console.error('Tier simulation error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -31,7 +31,7 @@
     "@csstools/css-tokenizer" "^3.0.3"
     lru-cache "^10.4.3"
 
-"@auth/core@^0.37.0":
+"@auth/core@^0.37.0", "@auth/core@^0.37.4":
   version "0.37.4"
   resolved "https://registry.npmjs.org/@auth/core/-/core-0.37.4.tgz"
   integrity sha512-HOXJwXWXQRhbBDHlMU0K/6FT1v+wjtzdKhsNg0ZN7/gne6XPsIrjZ4daMcFnbq0Z/vsAbYBinQhhua0d77v7qw==

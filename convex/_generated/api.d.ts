@@ -10,8 +10,12 @@
 
 import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server';
 import type * as auth from '../auth.js';
+import type * as auth_old from '../auth_old.js';
+import type * as clinical from '../clinical.js';
 import type * as commissions from '../commissions.js';
+import type * as devices from '../devices.js';
 import type * as fileStorage from '../fileStorage.js';
+import type * as http from '../http.js';
 import type * as migration from '../migration.js';
 import type * as notifications from '../notifications.js';
 import type * as orderMutations from '../orderMutations.js';
@@ -35,8 +39,12 @@ import type * as validation from '../validation.js';
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  auth_old: typeof auth_old;
+  clinical: typeof clinical;
   commissions: typeof commissions;
+  devices: typeof devices;
   fileStorage: typeof fileStorage;
+  http: typeof http;
   migration: typeof migration;
   notifications: typeof notifications;
   orderMutations: typeof orderMutations;
