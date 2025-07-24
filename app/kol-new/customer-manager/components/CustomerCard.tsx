@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Customer, CustomerProgress, StageData, Achievements } from "@/lib/types/customer";
-import StageBlocks from "./StageBlocks";
-import { useUpdateCustomer } from "@/lib/hooks/customers";
-import { debounce } from "@/lib/utils";
-import CustomerHeader, { BasicInfoValue } from "./CustomerHeader";
-import { useUpdateCustomerInfo } from "@/lib/hooks/customer-info";
-import { ConnectionLineProvider } from "../contexts/ConnectionLineProvider";
-import ConnectionLines from "./ConnectionLines";
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Customer, CustomerProgress, StageData, Achievements } from '@/lib/types/customer';
+import StageBlocks from './StageBlocks';
+import { useUpdateCustomerProgress, useUpdateCustomer } from '@/hooks/useCustomers';
+import { debounce } from '@/lib/utils';
+import CustomerHeader, { BasicInfoValue } from './CustomerHeader';
+import { ConnectionLineProvider } from '../contexts/ConnectionLineProvider';
+import ConnectionLines from './ConnectionLines';
+import { Id } from '@/convex/_generated/dataModel';
 
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
@@ -27,23 +27,27 @@ const defaultAchievements: Achievements = {
 };
 
 export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: Props) {
-  const initialProgress: CustomerProgress =
-    customer.customer_progress?.[0] || {
-      id: "temp-" + customer.id,
-      customerId: customer.id.toString(),
-      stageData: defaultStageData,
-      achievements: defaultAchievements,
-      updatedAt: null,
-    };
+  const initialProgress: CustomerProgress = customer.customer_progress?.[0] || {
+    id: 'temp-' + customer.id,
+    customerId: customer.id.toString(),
+    stageData: defaultStageData,
+    achievements: defaultAchievements,
+    updatedAt: null,
+  };
 
   const [localProgress, setLocalProgress] = useState<CustomerProgress>(initialProgress);
-  const updateMutation = useUpdateCustomer();
+  const { updateProgress } = useUpdateCustomerProgress();
+  const { updateCustomer } = useUpdateCustomer();
 
   const debouncedSave = useCallback(
     debounce((p: CustomerProgress) => {
-      updateMutation.mutate({ customerId: customer.id.toString(), progress: p });
+      updateProgress({
+        customerId: customer.id as Id<'customers'>,
+        stageData: p.stageData,
+        achievements: p.achievements,
+      });
     }, 1000),
-    [customer.id]
+    [customer.id, updateProgress]
   );
 
   useEffect(() => {
@@ -51,7 +55,7 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
   }, [localProgress, debouncedSave]);
 
   function handleStageChange(stageKey: keyof StageData, value: any) {
-    setLocalProgress((prev) => ({
+    setLocalProgress(prev => ({
       ...prev,
       stageData: {
         ...prev.stageData,
@@ -70,12 +74,21 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
     manager: customer.manager,
   });
 
-  const updateInfoMutation = useUpdateCustomerInfo();
   const debouncedSaveInfo = useCallback(
     debounce((info: BasicInfoValue) => {
-      updateInfoMutation.mutate({ customerId: customer.id.toString(), info });
+      updateCustomer({
+        customerId: customer.id as Id<'customers'>,
+        updates: {
+          shopName: info.shopName,
+          phone: info.phone,
+          region: info.region,
+          placeAddress: info.placeAddress,
+          assignee: info.assignee,
+          manager: info.manager,
+        },
+      });
     }, 1000),
-    []
+    [updateCustomer]
   );
 
   useEffect(() => {
@@ -83,13 +96,16 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
   }, [basicInfo, debouncedSaveInfo]);
 
   function handleAchievementChange(newAch: Achievements) {
-    setLocalProgress((prev) => ({ ...prev, achievements: newAch }));
+    setLocalProgress(prev => ({ ...prev, achievements: newAch }));
   }
 
   const cardRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={cardRef} className="relative bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+    <div
+      ref={cardRef}
+      className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md"
+    >
       <ConnectionLineProvider cardRef={cardRef}>
         {/* 연결선 */}
         <ConnectionLines stageData={localProgress.stageData} />
@@ -117,4 +133,4 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
       </ConnectionLineProvider>
     </div>
   );
-} 
+}

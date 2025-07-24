@@ -555,4 +555,63 @@ export default defineSchema({
     .index('by_mime_type', ['mime_type']) // 파일 타입별
     .index('by_file_size', ['file_size']) // 파일 크기순
     .index('by_created_at', ['created_at']), // 업로드일순
+
+  // 👥 고객 관리 - KOL별 고객 정보 (14개 컬럼)
+  customers: defineTable({
+    kol_id: v.id('profiles'), // KOL 프로필 참조
+    name: v.string(),
+    shop_name: v.optional(v.string()),
+    phone: v.string(),
+    region: v.string(),
+    place_address: v.optional(v.string()),
+    assignee: v.string(), // 담당자
+    manager: v.string(), // 매니저
+    status: v.string(), // 고객 상태
+    notes: v.optional(v.string()),
+    completed_stages: v.optional(v.number()),
+    total_stages: v.optional(v.number()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index('by_kol', ['kol_id'])
+    .index('by_status', ['status'])
+    .index('by_region', ['region'])
+    .index('by_assignee', ['assignee'])
+    .index('by_manager', ['manager'])
+    .index('by_phone', ['phone'])
+    // 🚀 성능 최적화 인덱스
+    .index('by_kol_status', ['kol_id', 'status']) // KOL별 상태
+    .index('by_kol_region', ['kol_id', 'region']) // KOL별 지역
+    .index('by_kol_created', ['kol_id', 'created_at']) // KOL별 최신순
+    .index('by_created_at', ['created_at']) // 생성일순
+    .index('by_updated_at', ['updated_at']), // 수정일순
+
+  // 📈 고객 진행상황 - 단계별 진행 데이터 (6개 컬럼)
+  customer_progress: defineTable({
+    customer_id: v.id('customers'),
+    stage_data: v.any(), // JSON 형태의 단계별 데이터
+    achievements: v.any(), // JSON 형태의 성취 데이터
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index('by_customer', ['customer_id'])
+    .index('by_created_at', ['created_at'])
+    .index('by_updated_at', ['updated_at']),
+
+  // 📝 고객 노트 - 고객별 메모 및 노트 (6개 컬럼)
+  customer_notes: defineTable({
+    customer_id: v.id('customers'),
+    content: v.string(),
+    note_type: v.optional(v.string()), // 노트 유형
+    created_by: v.id('profiles'),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index('by_customer', ['customer_id'])
+    .index('by_created_by', ['created_by'])
+    .index('by_note_type', ['note_type'])
+    .index('by_created_at', ['created_at'])
+    // 🚀 성능 최적화 인덱스
+    .index('by_customer_created', ['customer_id', 'created_at']) // 고객별 최신순
+    .index('by_customer_type', ['customer_id', 'note_type']), // 고객별 타입
 });
