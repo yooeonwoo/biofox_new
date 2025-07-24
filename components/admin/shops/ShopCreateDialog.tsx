@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCreateShop } from '@/lib/hooks/shops'; // TODO: Convex 전환 후 shops-convex로 변경
+import { useCreateShop } from '@/lib/hooks/shops-convex';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -42,10 +42,9 @@ export default function ShopCreateDialog() {
 
   const { mutate, isPending, isSuccess } = useCreateShop();
 
-  // 성공 시 다이얼로그 닫기
+  // 성공 시 다이얼로그 닫기 (토스트 알림은 훅에서 처리)
   useEffect(() => {
     if (isSuccess) {
-      toast.success('전문점이 생성되었습니다.');
       form.reset();
     }
   }, [isSuccess]);

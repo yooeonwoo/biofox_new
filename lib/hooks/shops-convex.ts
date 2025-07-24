@@ -5,10 +5,54 @@
 
 'use client';
 
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation as useConvexMutation } from 'convex/react';
+import { useMutation } from '@tanstack/react-query';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
+import { ConvexHttpClient } from 'convex/browser';
 import { toast } from 'sonner';
+import { numberToConvexId } from '@/lib/convex-utils';
+
+// ConvexHttpClient 인스턴스 생성
+const convexClient = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+// Shop 관련 ID 변환 어댑터 함수들
+export class ShopIdAdapter {
+  /**
+   * 폼 입력 데이터를 Convex 호환 형태로 변환
+   */
+  static formToConvex(input: CreateShopFormInput): CreateShopInput {
+    const kolId = numberToConvexId(input.kolId);
+    if (!kolId) {
+      throw new Error('유효하지 않은 KOL ID입니다.');
+    }
+
+    return {
+      ...input,
+      kolId,
+    };
+  }
+
+  /**
+   * 다중 KOL ID 변환 (배치 처리용)
+   */
+  static convertKolIds(kolIds: number[]): string[] {
+    return kolIds.map(id => numberToConvexId(id)).filter((id): id is string => id !== null);
+  }
+
+  /**
+   * Shop ID 유효성 검증
+   */
+  static validateShopId(shopId: string | number | null): string | null {
+    if (typeof shopId === 'number') {
+      return numberToConvexId(shopId);
+    }
+    if (typeof shopId === 'string' && shopId.trim() !== '') {
+      return shopId;
+    }
+    return null;
+  }
+}
 
 // 필터링 파라미터 타입
 interface GetShopsParams {
@@ -34,9 +78,18 @@ export interface Shop {
   updatedAt: string;
 }
 
-// 신규 매장 생성 입력 타입
+// 신규 매장 생성 입력 타입 (컴포넌트에서 받는 형태)
+interface CreateShopFormInput {
+  kolId: number; // 컴포넌트에서 number로 전송
+  ownerName: string;
+  shopName: string;
+  region?: string;
+  contractDate?: string;
+}
+
+// Convex로 전송할 데이터 타입
 interface CreateShopInput {
-  kolId: string;
+  kolId: string; // Convex는 string ID 사용
   ownerName: string;
   shopName: string;
   region?: string;
@@ -104,42 +157,47 @@ export function useShops(params: GetShopsParams = {}) {
 }
 
 /**
- * 매장 생성 훅 (실시간 동기화)
+ * 매장 생성 훅 (React Query + ConvexHttpClient 패턴)
+ * React Query 호환 인터페이스 제공: { mutate, isPending, isSuccess }
  */
 export function useCreateShop() {
-  const createProfile = useMutation(api.profiles.createProfile);
+  return useMutation({
+    mutationFn: async (input: CreateShopFormInput) => {
+      // 1. ID 타입 변환 (number → string) - Shop 전용 어댑터 사용
+      const convertedInput = ShopIdAdapter.formToConvex(input);
 
-  return {
-    mutate: async (input: CreateShopInput) => {
+      // 2. ConvexHttpClient를 사용하여 Convex 함수 호출
       try {
-        // 임시 사용자 ID 생성 또는 기존 시스템과 연동 필요
-        // 현재는 KOL의 userId를 재사용하는 방식으로 처리
+        // 임시 사용자 ID 생성
         const tempUserId = `temp_${Date.now()}` as Id<'users'>;
 
-        const result = await createProfile({
+        const result = await convexClient.mutation(api.profiles.createProfile, {
           userId: tempUserId,
-          email: `${input.ownerName.toLowerCase().replace(/\s+/g, '')}@temp.com`,
-          name: input.ownerName,
-          role: 'shop_owner',
-          shop_name: input.shopName,
-          region: input.region,
+          email: `${convertedInput.ownerName.toLowerCase().replace(/\s+/g, '')}@temp.com`,
+          name: convertedInput.ownerName,
+          role: 'shop_owner' as const,
+          shop_name: convertedInput.shopName,
+          region: convertedInput.region,
         });
 
-        toast.success('매장이 성공적으로 생성되었습니다.');
         return {
           id: result,
-          shopName: input.shopName,
-          ownerName: input.ownerName,
-          region: input.region,
+          shopName: convertedInput.shopName,
+          ownerName: convertedInput.ownerName,
+          region: convertedInput.region,
         };
       } catch (error: any) {
         console.error('Shop creation error:', error);
-        toast.error(`매장 생성에 실패했습니다: ${error.message}`);
-        throw error;
+        throw new Error(`매장 생성에 실패했습니다: ${error.message}`);
       }
     },
-    isLoading: false, // useMutation은 로딩 상태를 자체 관리
-  };
+    onSuccess: () => {
+      toast.success('매장이 성공적으로 생성되었습니다.');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
 }
 
 /**
