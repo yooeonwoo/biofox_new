@@ -1076,7 +1076,7 @@
         "id": 9,
         "title": "Audit and Plan Convex Migration for Remaining Supabase Dependencies",
         "description": "Conduct a comprehensive audit of the entire project to identify all remaining Supabase dependencies and create a detailed migration roadmap for converting them to Convex.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [1, 5, 6, 7, 8],
         "priority": "high",
         "details": "## Current Migration Status\n\n### Completed Areas (✅)\n- File upload system (~90% complete)\n  - `app/api/clinical/consent/route.ts` - Convex 3-stage upload\n  - `app/api/clinical/photos/route.ts` - Convex 3-stage upload\n  - `app/api/shop/clinical-photos/consent/[caseId]/route.ts` - Convex deletion\n  - `app/api/kol-new/clinical-photos/upload/route.ts` - Convex-based\n  - `app/api/shop/clinical-photos/upload/route.ts` - Convex-based\n\n### Remaining Supabase Dependencies (❌)\n\n1. **API Routes** (~70% remaining):\n   - User management: `app/api/users/route.ts`, `app/api/users/[userId]/route.ts`\n   - Profiles: `app/api/profiles/route.ts`\n   - Device management: `app/api/devices/route.ts`, `app/api/devices/[deviceId]/route.ts`\n   - Order management: `app/api/orders/route.ts`\n   - Commission management: `app/api/commissions/route.ts`\n   - Clinical cases: `app/api/clinical/cases/route.ts`, `app/api/clinical/cases/[caseId]/route.ts`\n   - KOL shop management: `app/api/kol-new/shops/route.ts`\n   - Dashboard data: `app/api/kol-new/dashboard-complete/route.ts`\n   - Admin metrics: `app/api/admin-new/manual-metrics/route.ts`\n   - Other clinical-photos/cases related APIs\n\n2. **Authentication System** (~0% complete):\n   - Development environment using localStorage-based temporary auth\n   - Production still referencing Supabase Auth (TODO comments)\n   - `checkAuthSupabase()` functions still dependent on Supabase\n\n3. **React Hooks** (~80% remaining):\n   - `hooks/useCustomerPageState.ts` - Customer page state management\n   - `hooks/usePersonalPageState.ts` - Personal page state management\n   - `lib/hooks/customers.ts` - Customer CRUD operations\n   - `lib/hooks/customer-crud.ts` - Customer creation/modification\n   - `lib/hooks/customer-info.ts` - Customer information management\n   - `app/kol-new/clinical-photos/hooks/useCaseManagement.ts` - Case management\n   - `app/shop/clinical-photos/hooks/useCaseManagement.ts` - Case management\n\n4. **Data Service Layer** (~90% remaining):\n   - `lib/clinical-photos-api.ts` - Clinical photo API (fetchCases, createCase, updateCase, etc.)\n   - `lib/supabase.ts` - Supabase client configuration\n   - `lib/supabase-client.ts` - Client/server Supabase wrapper\n   - `lib/supabase-admin.ts` - Admin Supabase client\n   - `lib/db.ts` - DB access module (Supabase RPC based)\n   - `lib/xano-adapters/dashboard-adapter.ts` - Mixed Xano/Supabase usage\n\n5. **Component-Level Supabase Usage**:\n   - `app/admin-dashboard/kol-data-entry/components/shop-data-entry.tsx`\n   - `app/admin-dashboard/kol-data-entry/components/kol-data-entry.tsx`\n   - `app/kol-new/customer-manager/components/CustomerList.tsx`\n\n6. **Environment Configuration and Dependencies**:\n   - `.env` file still requires Supabase-related environment variables\n   - `package.json` still contains Supabase dependencies\n   - Type definitions referencing Supabase schema (`lib/types.ts`)\n\n## Migration Priorities\n\n### High Priority (Essential)\n1. **Authentication System** - Foundation for the entire app\n2. **Core API Routes** - User/profile/order management\n3. **Data Service Layer** - Core business logic\n\n### Medium Priority\n4. **React Hooks** - Component-level data management\n5. **Admin Dashboard** - Back-office functionality\n\n### Low Priority\n6. **Migration Scripts** - Development tools\n7. **Environment Configuration Cleanup** - Dependency removal\n\n## Overall Project Completion\n- **File Upload System**: ~90% complete ✅\n- **API Routes**: ~30% complete ⚠️\n- **Authentication System**: ~0% complete ❌\n- **Data Service Layer**: ~10% complete ❌\n- **React Hooks**: ~20% complete ⚠️\n- **Total Project**: **~35% complete**",
@@ -1113,7 +1113,7 @@
             "id": 4,
             "title": "",
             "description": "Document data service layer migration strategy",
-            "status": "to-do",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -1122,7 +1122,7 @@
             "id": 5,
             "title": "",
             "description": "Plan React hooks migration approach",
-            "status": "to-do",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -1131,7 +1131,7 @@
             "id": 6,
             "title": "",
             "description": "Create component-level Supabase usage migration plan",
-            "status": "to-do",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -1140,7 +1140,7 @@
             "id": 7,
             "title": "",
             "description": "Develop environment configuration cleanup strategy",
-            "status": "to-do",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -1149,7 +1149,7 @@
             "id": 8,
             "title": "",
             "description": "Create comprehensive migration timeline with milestones",
-            "status": "to-do",
+            "status": "done",
             "dependencies": [],
             "details": "",
             "testStrategy": ""
@@ -1159,7 +1159,7 @@
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T02:29:56.287Z",
+      "updated": "2025-07-24T02:30:16.164Z",
       "description": "Tasks for convex-errors context"
     }
   }
