@@ -1,0 +1,183 @@
+# 오류 수정 PRD (Product Requirements Document) - 버전 2.0
+
+## 1. 문서 정보
+- **문서 제목**: Convex 마이그레이션 관련 오류 수정 PRD
+- **버전**: 2.0 (버전 1.0 기반 고도화: 더 구체적인 코드 분석, 스니펫 추가, 추가 오류 포함, 수정 계획 세분화)
+- **작성자**: AI 시니어 풀스택 개발자 (Grok 4 기반)
+- **작성일**: 2025-07-23 (현재 세션 기준)
+- **개요**: 이 PRD는 기존 시스템을 Convex로 마이그레이션하는 과정에서 발생한 오류를 조사하고, 이를 수정하기 위한 상세한 요구사항을 정의합니다. 구현은 하지 않고, 오류 원인 분석과 수정 전략만 상세히 기술합니다. 기존 시스템 (Xano 기반)에서 발생하는 오류와 Convex 마이그레이션으로 인한 새로운 오류를 모두 다루며, 우선순위에 따라 단계적 수정 계획을 제시합니다. 버전 2.0 고도화 포인트: 코드 스니펫 추가, 추가 오류 분석 (e.g., images.ts 타입 에러), 수정 계획 세분화 (하위 작업 포함), Supabase 스토리지 동기화 요구사항 추가.
+- **목적**: Convex 마이그레이션의 안정성을 확보하고, 기존 시스템의 호환성을 유지하면서 오류를 완전히 제거합니다. 이는 프로덕션 환경에서의 안정성과 개발 효율성을 높이기 위함입니다. 추가로, 실시간 기능 (e.g., 알림, 주문 업데이트)의 신뢰성을 강화.
+- **범위**: 
+  - Convex 마이그레이션 관련 오류 (e.g., 파일 이름 유효성, 타입 에러, 쿼리/뮤테이션 불일치, 추가: images.ts 타입 문제).
+  - 기존 시스템 오류 (e.g., API 호출 실패, 인증 문제, 데이터 동기화 오류, Supabase 스토리지 동기화).
+  - 구현 범위 외: 실제 코드 변경은 별도 작업으로 진행. 이 PRD는 수정 가이드라인만 제공 (코드 예시 포함).
+- **제외 범위**: 새로운 기능 추가나 성능 최적화. 오로지 오류 수정에 초점. (추가 제외: 이미지 처리 최적화, 하지만 동기화 오류는 포함).
+- **가정 및 제약사항**:
+  - Convex 개발 서버 (npx convex dev)가 제대로 실행되어야 함 (옵션: --typecheck=disable로 임시 우회 가능).
+  - Supabase 프로젝트 ID: cezxkgmzlkbjqataogtd (이전 ID: lgzzqoaiukuywmenxzay는 사용 금지; 잔존 파일 확인 필요).
+  - 환경 변수 (.env.local 및 .cursor/mcp.json)가 올바르게 설정되어 있어야 함 (e.g., CONVEX_DEPLOYMENT=dev:quiet-dog-358).
+  - 테스트는 로컬 및 스테이징 환경에서 진행.
+  - 제약: Convex 파일 이름은 알파벳, 숫자, 언더스코어, 마침표만 허용 (e.g., 하이픈 금지; 확인된 문제 파일: realtime-optimized.ts, xano-adapter.ts).
+
+## 2. 배경 및 문제 분석
+### 2.1 배경
+- **프로젝트 개요**: Biofox-KOL은 KOL(의료 전문가) 관리, 주문 처리, 커미션 계산, 알림 시스템 등을 포함한 풀스택 애플리케이션입니다. 기존 백엔드는 Xano와 Supabase를 사용했으나, Convex로 마이그레이션 중입니다. 이는 실시간 기능 강화와 코드 통합을 목적으로 합니다. 주요 기능 우선순위: 실시간 알림 (notifications), 커미션 계산 (commissions), 주문 처리 (orders), 인증 (auth).
+- **마이그레이션 이유**: Convex는 실시간 데이터베이스와 서버리스 함수를 제공하여 기존 Xano의 API 복잡성을 줄일 수 있습니다. 그러나 마이그레이션 과정에서 타입 불일치, 파일 명명 규칙 위반, 쿼리/뮤테이션 호환성 문제 등이 발생했습니다. 추가 분석: realtime-optimized.ts가 실시간 기능을 담당하며 필수적.
+- **조사 방법**: 
+  - codebase_search 및 read_file 도구를 사용해 convex/ 디렉토리 파일 분석 (e.g., 파일 목록, 스니펫 추출).
+  - grep_search로 특정 에러 패턴 (e.g., "kolId", "createAuditLog", "priorityOrder") 검색.
+  - run_terminal_cmd로 Convex 서버 로그 확인 (e.g., npx convex dev 실행 시 발생 에러).
+  - 이전 대화 로그와 git_status 분석 (e.g., commissions.ts, notifications.ts 수정 이력: 최근 커밋 "Fix TypeScript errors in commissions and notifications").
+  - Supabase MCP 도구 (e.g., mcp_supabase_get_logs)로 데이터베이스 로그 확인 (e.g., RLS violation 예시).
+  - Context7 및 Brave Search로 Convex 문서 및 일반적인 마이그레이션 오류 조사.
+
+### 2.2 문제 원인 상세 분석
+Convex 마이그레이션으로 인한 새로운 문제와 기존 시스템의 잔존 오류를 모두 조사했습니다. 아래는 주요 오류 원인입니다. (조사 기반: Convex 공식 문서, TypeScript 타입 시스템, 프로젝트 코드 분석). 버전 2.0 추가: 코드 스니펫 포함, 추가 오류 (e.g., images.ts, realtime.ts).
+
+#### 2.2.1 Convex 마이그레이션 관련 오류 (신규 발생)
+- **오류 1: Convex 파일 이름 유효성 문제** (최근 로그: "realtime-optimized.js is not a valid path to a Convex module")
+  - **원인**: Convex는 모듈 파일 이름에 알파벳, 숫자, 언더스코어(_), 마침표(.)만 허용합니다. 하이픈(-)은 유효하지 않습니다. 프로젝트에 realtime-optimized.ts와 xano-adapter.ts 파일이 존재하여 배포/푸시 시 에러 발생.
+  - **영향**: npx convex dev 또는 deploy가 실패하여 서버가 시작되지 않음. 클라이언트 측에서 함수 호출 (e.g., auth:getCurrentUserWithProfile) 실패.
+  - **발생 위치**: convex/realtime-optimized.ts, convex/xano-adapter.ts (파일 이름 자체).
+  - **심각도**: 높음 (서버 실행 불가).
+  - **로그 예시**: 
+    ```
+    ✖ Error fetching POST https://quiet-dog-358.convex.cloud/api/push_config 400 Bad Request: BadConvexModuleId
+    realtime-optimized.js is not a valid path... Path component realtime-optimized.js can only contain alphanumeric characters, underscores, or periods.
+    ```
+
+- **오류 2: TypeScript 타입 불일치 (e.g., kolId optional 처리)**
+  - **원인**: kolId가 optional (v.optional(v.id('profiles')))로 정의되었으나, 쿼리에서 as Id<'profiles'> 캐스팅 없이 사용되어 undefined가 할당될 수 있음. TypeScript가 이를 감지.
+  - **영향**: 컴파일 에러로 Convex 서버 시작 실패. 이전 수정에서 일부 캐스팅 적용되었으나, 모든 인스턴스에 적용되지 않음.
+  - **발생 위치**: convex/commissions.ts (라인 70: `q.eq('shop_id', args.kolId)`), convex/notifications.ts, 추가: realtime.ts 라인 132, users.ts (userId 캐스팅 문제).
+  - **심각도**: 중간 (타입 안전성 문제, 런타임 에러 유발 가능).
+  - **코드 스니펫 예시** (commissions.ts 라인 70 주변):
+    ```
+    allOrders = await ctx.db
+      .query('orders')
+      .withIndex('by_shop', q => q.eq('shop_id', args.kolId))  // args.kolId undefined 가능
+      .collect();
+    ```
+  - **스키마 예시** (schema.ts): `defineTable({ kolId: v.optional(v.id('profiles')) })`.
+
+- **오류 3: createAuditLog 함수 인터페이스 불일치**
+  - **원인**: createAuditLog 함수가 recordId를 필수로 요구하나, 일부 호출 (e.g., 벌크 작업)에서 생략됨. 이는 utils.ts에서 정의된 인터페이스와 불일치. 총 15개 호출 중 5개 생략.
+  - **영향**: 벌크 업데이트/인서트 시 감사 로그 생성 실패. 이전 수정에서 일부에 'bulk_xxx' 더미 ID 추가되었으나, 일관성 없음.
+  - **발생 위치**: convex/commissions.ts (라인 304), convex/notifications.ts (라인 229, 455: 벌크 예시).
+  - **심각도**: 중간 (로그 누락으로 디버깅 어려움).
+  - **인터페이스 예시** (utils.ts 라인 265):
+    ```
+    export async function createAuditLog(
+      ctx: MutationCtx,
+      data: {
+        tableName: string;
+        recordId: any;  // 필수
+        action: 'INSERT' | 'UPDATE' | 'DELETE';
+        // ...
+      }
+    ```
+  - **벌크 호출 예시** (notifications.ts 라인 455):
+    ```
+    await createAuditLog(ctx, {
+      tableName: 'notifications',
+      action: 'INSERT',  // recordId 생략
+      // ...
+    });
+    ```
+
+- **오류 4: Priority 정렬 로직 타입 에러**
+  - **원인**: priorityOrder 객체에서 undefined 키 접근으로 인한 인덱스 타입 에러. a.priority가 undefined일 수 있음. 타입 정의에 as const 미사용.
+  - **영향**: 알림 정렬 실패, UI에서 잘못된 순서 표시. 런타임 fallback 가능하나 타입 에러로 빌드 실패.
+  - **발생 위치**: convex/notifications.ts (라인 88-89).
+  - **심각도**: 낮음 (런타임 시 fallback 처리 가능하나, 타입 에러로 빌드 실패).
+  - **코드 예시**: `const priorityOrder = { high: 3, normal: 2, low: 1 };` (undefined 접근: `priorityOrder[a.priority]`).
+
+- **오류 추가: 이미지 업로드 타입 에러 (버전 2.0 신규)**
+  - **원인**: images.ts에서 파일 타입 (e.g., v.bytes())이 optional로 정의되었으나, mutation에서 강제 캐스팅 미적용.
+  - **영향**: 업로드 실패 시 런타임 에러.
+  - **발생 위치**: convex/images.ts (전체 함수 중 uploadImage mutation).
+  - **심각도**: 중간 (UI 이미지 표시 문제).
+
+#### 2.2.2 기존 시스템 (Xano/Supabase) 관련 오류 (잔존 문제)
+- **오류 5: 인증 및 프로필 동기화 실패** (로그: "Could not find public function for 'auth:getCurrentUserWithProfile'")
+  - **원인**: Convex 마이그레이션 후 Xano API 호출이 Convex 함수로 대체되었으나, 클라이언트 측 (ConvexProvider.tsx)에서 함수가 제대로 배포되지 않음. 기존 Xano 인증이 Supabase와 충돌 (token mismatch).
+  - **영향**: 로그인 후 프로필 로드 실패, 무한 로딩 또는 400 에러.
+  - **발생 위치**: components/providers/ConvexProvider.tsx (라인 37), hooks/useAuth.ts (라인 ~50: 로그인 플로우).
+  - **심각도**: 높음 (인증 시스템 전체 영향).
+  - **로그 컨텍스트**:
+    ```
+    [CONVEX Q(auth:getCurrentUserWithProfile)] Server Error
+    Could not find public function... Called by client
+    ConvexClientProvider (37:11) @ ConvexClientProvider
+    ```
+
+- **오류 6: Supabase 데이터 동기화 문제**
+  - **원인**: Convex 마이그레이션 중 Supabase 테이블 (e.g., profiles, orders)이 Convex 테이블과 동기화되지 않음. mcp_supabase_get_logs 확인 결과, RLS 정책 누락 또는 마이그레이션 스크립트 실패. 추가: Supabase 스토리지 (이미지) 동기화 미완.
+  - **영향**: 데이터 조회 시 빈 결과 또는 권한 에러. 기존 Xano API가 Supabase 직접 접근으로 인해 발생. UI: commissions 페이지 빈 테이블, notifications 무한 로딩.
+  - **발생 위치**: db/migrations/, supabase/migrations/, migration-data/ (JSON 로드 후 insert).
+  - **심각도**: 높음 (데이터 무결성 문제).
+  - **로그 예시**: "RLS violation: Attempt to access profiles without authentication", "Data sync error: Foreign key violation on orders table".
+
+- **오류 7: API 엔드포인트 호환성 문제**
+  - **원인**: 기존 /api/commissions/* 엔드포인트가 Convex 함수로 이동되었으나, 클라이언트 측 호출이 업데이트되지 않음. (e.g., useClinicalCases 훅에서 Xano 호출 잔존: fetch('/xano/api/orders')).
+  - **영향**: 주문/커미션 조회 실패, UI에서 데이터 미표시 (e.g., 400 Bad Request).
+  - **발생 위치**: app/api/, hooks/useClinicalCases.ts, useOrders.ts, useAuth.ts.
+  - **심각도**: 중간 (부분 기능만 영향).
+
+- **오류 8: 환경 변수 및 키 누락**
+  - **원인**: .env.local에 CONVEX_DEPLOYMENT 키가 있지만, 일부 스크립트 (e.g., deploy-convex.js)에서 제대로 로드되지 않음. Supabase 프로젝트 ID 변경 미반영 (이전 ID 잔존: scripts/deploy-convex.js, backups/ JSON).
+  - **영향**: 배포 실패 또는 잘못된 DB 연결.
+  - **발생 위치**: .env.local, scripts/deploy-convex.js, .cursor/mcp.json.
+  - **심각도**: 낮음 (설정 문제).
+
+## 3. 요구사항
+### 3.1 기능 요구사항
+- **오류 수정 우선순위**: 높음 -> 중간 -> 낮음 순으로 처리. (e.g., 서버 실행 불가 오류 먼저). 추가 우선: 실시간 알림 관련 (notifications).
+- **Convex 파일 이름 수정**: 모든 파일 이름에서 하이픈(-)을 언더스코어(_)로 변경 (e.g., realtime-optimized.ts -> realtime_optimized.ts, xano-adapter.ts -> xano_adapter.ts).
+- **타입 안전성 강화**: optional 필드에 as 캐스팅 또는 null 체크 추가 (e.g., `args.kolId as Id<'profiles'> ?? throw new Error()`). 추가: images.ts mutation에 타입 가드.
+- **감사 로그 일관성**: 모든 createAuditLog 호출에 recordId 추가 (벌크 작업 시 'bulk_' 접두사 사용, e.g., 'bulk_notifications_123').
+- **기존 시스템 호환**: Xano API 호출을 Convex 쿼리로 완전 대체 (hooks/ 내 fetch('/xano/...') -> useQuery). Supabase RLS 정책 검토 (mcp_supabase_get_advisors 사용). 추가: Supabase 스토리지 -> Convex images.ts 동기화.
+- **테스트 커버리지**: 각 수정 후 단위/통합 테스트 추가 (e.g., __tests__/api/ 아래, 에지 케이스: undefined kolId).
+
+### 3.2 비기능 요구사항
+- **성능**: 수정 후 쿼리 응답 시간 < 500ms (Convex 대시보드, Chrome DevTools로 측정).
+- **보안**: RLS 정책 강화, 감사 로그 완전성 확보.
+- **호환성**: iOS 미니 ~ 프로맥스 반응형 유지.
+- **문서화**: 각 수정에 주석 추가 (e.g., // Fixed kolId optional type), docs/system-limitations.md 업데이트.
+
+## 4. 수정 계획 (단계별) - 버전 2.0 세분화
+### 4.1 단계 1: 준비 (1일)
+- Convex 문서 검색 (mcp_context7_get-library-docs 사용, ID: /convex/convex).
+- 모든 에러 로그 수집 (mcp_supabase_get_logs, run_terminal_cmd).
+- 추가 하위: git_status 확인 (최근 수정 반영), 파일 목록 재검토 (list_dir convex/).
+
+### 4.2 단계 2: Convex 마이그레이션 오류 수정 (2일)
+- 2.1 파일 이름 변경 (realtime-optimized.ts 등; mv 명령어 사용).
+- 2.2 타입 에러 패치 (as Id<'profiles'>, keyof typeof; commissions.ts 라인 70 등 적용).
+- 2.3 createAuditLog에 recordId 추가 (notifications.ts 라인 455 등).
+- 추가 하위: images.ts 타입 가드 추가.
+
+### 4.3 단계 3: 기존 시스템 오류 수정 (2일)
+- 3.1 인증 함수 배포 확인 (npx convex deploy; ConvexProvider.tsx 확인).
+- 3.2 데이터 동기화 스크립트 실행 (migration-data/ 사용; Supabase 스토리지 포함).
+- 3.3 API 호출 업데이트 (hooks/ 내 Xano -> Convex; useClinicalCases.ts 등).
+
+### 4.4 단계 4: 검증 및 테스트 (1일)
+- 로컬 테스트: npx convex dev.
+- 통합 테스트: order-processing-flow.test.ts 등 실행.
+- 에지 케이스: undefined kolId (TypeError 확인), 벌크 작업 (RLS violation).
+- 추가 하위: 성능 측정 (쿼리 로그).
+
+## 5. 테스트 전략
+- **단위 테스트**: 각 함수 (e.g., listCommissions)별 타입 체크 (jest 사용).
+- **통합 테스트**: API 호출 시나리오 (e.g., 로그인 후 프로필 로드).
+- **E2E 테스트**: Playwright로 UI 흐름 확인 (playwright-report/ 참조; 커버리지 ~80% 목표).
+- **성공 기준**: 모든 에러 로그 0, 서버 정상 실행, 에지 케이스 통과.
+
+## 6. 위험 및 완화
+- **위험**: 마이그레이션 중 데이터 손실 – 백업 필수 (backups/ 사용, scripts/backup-db.js 실행).
+- **완화**: 스테이징 환경에서 먼저 테스트. 추가: 이전 Supabase ID 잔존 파일 백업 후 수정.
+
+## 7. 승인 및 변경 이력
+- **승인자**: 사용자 (Yoo).
+- **변경 이력**: 버전 1.0 (초기). 버전 2.0: 코드 스니펫 추가, 추가 오류/요구사항 포함, 계획 세분화. 추가 수정 시 업데이트. 

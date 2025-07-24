@@ -5,6 +5,7 @@
 
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { Id } from './_generated/dataModel';
 import { paginationOptsValidator } from 'convex/server';
 import {
   requireAdmin,
@@ -67,7 +68,7 @@ export const listCommissions = query({
       if (args.kolId) {
         allOrders = await ctx.db
           .query('orders')
-          .withIndex('by_shop', q => q.eq('shop_id', args.kolId))
+          .withIndex('by_shop', q => q.eq('shop_id', args.kolId as Id<'profiles'>))
           .collect();
       } else {
         allOrders = await ctx.db.query('orders').collect();
@@ -193,7 +194,7 @@ export const getCommissionSummary = query({
       if (args.kolId) {
         allOrders = await ctx.db
           .query('orders')
-          .withIndex('by_shop', q => q.eq('shop_id', args.kolId))
+          .withIndex('by_shop', q => q.eq('shop_id', args.kolId as Id<'profiles'>))
           .collect();
       } else {
         allOrders = await ctx.db.query('orders').collect();
@@ -303,6 +304,7 @@ export const calculateMonthlyCommissions = mutation({
       // 감사 로그 생성
       await createAuditLog(ctx, {
         tableName: 'orders',
+        recordId: 'bulk_commission_calculation',
         action: 'UPDATE',
         userId: currentUser._id,
         userRole: currentUser.role,

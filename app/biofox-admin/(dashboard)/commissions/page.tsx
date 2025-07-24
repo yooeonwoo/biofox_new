@@ -18,7 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { CommissionTable } from '@/components/biofox-admin/commissions/CommissionTable';
 import { CommissionFilters } from '@/components/biofox-admin/commissions/CommissionFilters';
-import { CommissionSummary } from '@/components/biofox-admin/commissions/CommissionSummary';
+import { CommissionSummaryCards } from '@/components/biofox-admin/commissions/CommissionSummaryCards';
 import { CommissionDetailModal } from '@/components/biofox-admin/commissions/CommissionDetailModal';
 import { ConvexQueryState, LoadingState, ErrorState } from '@/components/ui/loading';
 import { usePaginatedConvexQuery, useCombinedConvexQueries } from '@/hooks/useConvexQuery';
@@ -226,13 +226,7 @@ export default function CommissionManagementPage() {
           />
         }
       >
-        {summary => (
-          <CommissionSummary
-            summary={summary}
-            loading={summaryQuery === undefined}
-            month={filters.month}
-          />
-        )}
+        {summary => <CommissionSummaryCards summary={summary} />}
       </ConvexQueryState>
 
       {/* Bulk Actions */}

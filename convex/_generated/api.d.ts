@@ -17,6 +17,7 @@ import type * as orderMutations from '../orderMutations.js';
 import type * as orders from '../orders.js';
 import type * as profiles from '../profiles.js';
 import type * as realtime from '../realtime.js';
+import type * as realtime_optimized from '../realtime_optimized.js';
 import type * as relationships from '../relationships.js';
 import type * as userMutations from '../userMutations.js';
 import type * as users from '../users.js';
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   orders: typeof orders;
   profiles: typeof profiles;
   realtime: typeof realtime;
+  realtime_optimized: typeof realtime_optimized;
   relationships: typeof relationships;
   userMutations: typeof userMutations;
   users: typeof users;

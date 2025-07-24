@@ -271,3 +271,54 @@ export const getInactiveUsers = query({
     }));
   },
 });
+
+// 현재 인증된 사용자와 프로필 정보 조회
+export const getCurrentUserWithProfile = query({
+  args: {},
+  handler: async ctx => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { user: null, profile: null };
+    }
+
+    // 사용자 정보 구성
+    const user = {
+      _id: identity.subject as Id<'users'>,
+      name: identity.name,
+      email: identity.email,
+      image: identity.pictureUrl,
+    };
+
+    // 사용자 프로필 조회
+    const profile = await ctx.db
+      .query('profiles')
+      .withIndex('by_userId', q => q.eq('userId', identity.subject as Id<'users'>))
+      .unique();
+
+    if (!profile) {
+      return { user, profile: null };
+    }
+
+    return {
+      user,
+      profile: {
+        _id: profile._id,
+        userId: profile.userId,
+        email: profile.email,
+        name: profile.name,
+        role: profile.role,
+        status: profile.status,
+        shop_name: profile.shop_name,
+        region: profile.region,
+        naver_place_link: profile.naver_place_link,
+        commission_rate: profile.commission_rate,
+        total_subordinates: profile.total_subordinates,
+        active_subordinates: profile.active_subordinates,
+        approved_at: profile.approved_at,
+        approved_by: profile.approved_by,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+      },
+    };
+  },
+});

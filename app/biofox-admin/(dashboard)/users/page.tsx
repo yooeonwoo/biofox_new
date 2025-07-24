@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -27,7 +28,6 @@ import { UserTable } from '@/components/biofox-admin/users/UserTable';
 import { UserDetailModal } from '@/components/biofox-admin/users/UserDetailModal';
 import { UserAddModal } from '@/components/biofox-admin/users/UserAddModal';
 import { UserFilters } from '@/components/biofox-admin/users/UserFilters';
-import { ExportButton } from '@/components/biofox-admin/users/ExportButton';
 import { BulkActionButton } from '@/components/biofox-admin/users/BulkActionButton';
 import { ConvexQueryState, LoadingState, ErrorState } from '@/components/ui/loading';
 import { usePaginatedConvexQuery } from '@/hooks/useConvexQuery';
@@ -35,7 +35,6 @@ import { Download, UserPlus } from 'lucide-react';
 import type { User, UserFilters as UserFiltersType } from '@/types/biofox-admin';
 
 // Convex imports
-import { usePaginationState } from '@/hooks/usePaginationState';
 
 export default function UsersPage() {
   const { toast } = useToast();
@@ -114,7 +113,7 @@ export default function UsersPage() {
 
   // Extract processed data
   const users =
-    usersQuery.items?.map(user => ({
+    usersQuery.items?.map((user: any) => ({
       ...user,
       stats: {
         total_sales_this_month: 0,
@@ -315,7 +314,7 @@ export default function UsersPage() {
       </div>
 
       {/* Filters */}
-      <UserFilters filters={filters} onFiltersChange={setFilters} />
+      <UserFilters filters={filters} onFiltersChange={handleFiltersChange} onSearch={() => {}} />
 
       {/* Bulk Actions */}
       {selectedUsers.length > 0 && (

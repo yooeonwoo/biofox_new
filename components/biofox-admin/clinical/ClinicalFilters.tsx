@@ -1,64 +1,59 @@
-'use client'
+'use client';
 
-import { Card } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { DateRangePicker } from '@/components/ui/date-range-picker'
-import { X } from 'lucide-react'
-import { DateRange } from 'react-day-picker'
+} from '@/components/ui/select';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { X } from 'lucide-react';
+import { DateRange } from 'react-day-picker';
 
 interface ClinicalFilters {
-  shop_id?: string
-  consent_status?: string
-  status?: string
-  subject_type?: string
-  search?: string
-  dateRange?: DateRange
+  shop_id?: string;
+  consent_status?: string;
+  status?: string;
+  subject_type?: string;
+  search?: string;
+  dateRange?: DateRange;
 }
 
 interface ClinicalFiltersProps {
-  filters: ClinicalFilters
-  onFiltersChange: (filters: ClinicalFilters) => void
-  showConsentFilter?: boolean // 관리자용
+  filters: ClinicalFilters;
+  onFiltersChange: (filters: ClinicalFilters) => void;
+  showConsentFilter?: boolean; // 관리자용
 }
 
-export function ClinicalFilters({ 
-  filters, 
-  onFiltersChange, 
-  showConsentFilter = false 
+export function ClinicalFilters({
+  filters,
+  onFiltersChange,
+  showConsentFilter = false,
 }: ClinicalFiltersProps) {
   const handleReset = () => {
-    onFiltersChange({})
-  }
+    onFiltersChange({});
+  };
 
-  const hasActiveFilters = 
-    filters.shop_id || 
+  const hasActiveFilters =
+    filters.shop_id ||
     filters.consent_status ||
     filters.status ||
     filters.subject_type ||
     filters.search ||
-    filters.dateRange
+    filters.dateRange;
 
   return (
     <Card className="p-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-medium">필터</h3>
         {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleReset}
-            className="h-8 px-2 text-xs"
-          >
-            <X className="h-3 w-3 mr-1" />
+          <Button variant="ghost" size="sm" onClick={handleReset} className="h-8 px-2 text-xs">
+            <X className="mr-1 h-3 w-3" />
             초기화
           </Button>
         )}
@@ -70,7 +65,7 @@ export function ClinicalFilters({
           <Input
             placeholder="이름 또는 치료 항목"
             value={filters.search || ''}
-            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+            onChange={e => onFiltersChange({ ...filters, search: e.target.value })}
           />
         </div>
 
@@ -78,10 +73,12 @@ export function ClinicalFilters({
           <Label>진행 상태</Label>
           <Select
             value={filters.status || 'all'}
-            onValueChange={(value) => onFiltersChange({ 
-              ...filters, 
-              status: value === 'all' ? undefined : value 
-            })}
+            onValueChange={value =>
+              onFiltersChange({
+                ...filters,
+                status: value === 'all' ? undefined : value,
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -100,10 +97,12 @@ export function ClinicalFilters({
           <Label>대상 구분</Label>
           <Select
             value={filters.subject_type || 'all'}
-            onValueChange={(value) => onFiltersChange({ 
-              ...filters, 
-              subject_type: value === 'all' ? undefined : value 
-            })}
+            onValueChange={value =>
+              onFiltersChange({
+                ...filters,
+                subject_type: value === 'all' ? undefined : value,
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -121,10 +120,12 @@ export function ClinicalFilters({
             <Label>동의 상태</Label>
             <Select
               value={filters.consent_status || 'consented'}
-              onValueChange={(value) => onFiltersChange({ 
-                ...filters, 
-                consent_status: value 
-              })}
+              onValueChange={value =>
+                onFiltersChange({
+                  ...filters,
+                  consent_status: value,
+                })
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -140,9 +141,11 @@ export function ClinicalFilters({
 
         <div className="space-y-2">
           <Label>시작일</Label>
-          <DateRangePicker
-            value={filters.dateRange}
-            onChange={(range) => onFiltersChange({ ...filters, dateRange: range })}
+          <DatePickerWithRange
+            date={filters.dateRange}
+            onDateChange={(range: DateRange | undefined) =>
+              onFiltersChange({ ...filters, dateRange: range })
+            }
           />
         </div>
 
@@ -152,11 +155,11 @@ export function ClinicalFilters({
             <Input
               placeholder="샵명 또는 원장님 이름"
               value={filters.shop_id || ''}
-              onChange={(e) => onFiltersChange({ ...filters, shop_id: e.target.value })}
+              onChange={e => onFiltersChange({ ...filters, shop_id: e.target.value })}
             />
           </div>
         )}
       </div>
     </Card>
-  )
+  );
 }

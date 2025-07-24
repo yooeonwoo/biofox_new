@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
 
 interface LoadingSpinnerProps {
   className?: string;
@@ -144,6 +145,7 @@ interface ConvexQueryStateProps {
 /**
  * Convex useQuery 결과를 표준화된 방식으로 처리하는 컴포넌트
  * 로딩, 에러, 빈 데이터 상태를 일관성 있게 처리
+ * Hydration-safe: 서버와 클라이언트에서 동일한 초기 렌더링을 보장
  */
 export function ConvexQueryState({
   data,
@@ -156,6 +158,18 @@ export function ConvexQueryState({
   className,
   onRetry,
 }: ConvexQueryStateProps) {
+  // Hydration mismatch를 방지하기 위한 클라이언트 전용 상태
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // 서버 렌더링 중이거나 아직 마운트되지 않은 경우 로딩 상태 표시
+  if (!isMounted) {
+    return <div className={className}>{loadingComponent || <LoadingState title={title} />}</div>;
+  }
+
   // 로딩 상태 (data가 undefined인 경우)
   if (data === undefined) {
     return <div className={className}>{loadingComponent || <LoadingState title={title} />}</div>;

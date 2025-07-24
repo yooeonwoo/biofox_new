@@ -85,8 +85,8 @@ export const getUserNotifications = query({
         switch (sortBy) {
           case 'priority':
             const priorityOrder = { high: 3, normal: 2, low: 1 };
-            aValue = priorityOrder[a.priority] || 1;
-            bValue = priorityOrder[b.priority] || 1;
+            aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 1;
+            bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 1;
             break;
           default: // created_at
             aValue = a.created_at;
@@ -228,6 +228,7 @@ export const markAllNotificationsAsRead = mutation({
       // 감사 로그 생성
       await createAuditLog(ctx, {
         tableName: 'notifications',
+        recordId: 'bulk_mark_read',
         action: 'UPDATE',
         userId: currentUser._id,
         userRole: currentUser.role,
@@ -454,6 +455,7 @@ export const createBulkNotifications = mutation({
       // 감사 로그 생성
       await createAuditLog(ctx, {
         tableName: 'notifications',
+        recordId: 'bulk_notification_creation',
         action: 'INSERT',
         userId: currentUser._id,
         userRole: currentUser.role,

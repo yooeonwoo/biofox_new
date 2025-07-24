@@ -16,15 +16,18 @@ export interface UserProfile {
   userId: string;
   email: string;
   name: string;
-  display_name?: string;
   role: 'admin' | 'kol' | 'ol' | 'shop_owner';
   status: 'pending' | 'approved' | 'rejected';
   shop_name: string;
   region?: string;
-  bio?: string;
-  profile_image_url?: string;
+  naver_place_link?: string;
+  commission_rate?: number;
+  total_subordinates?: number;
+  active_subordinates?: number;
+  approved_at?: number;
+  approved_by?: string;
   created_at: number;
-  last_active?: number;
+  updated_at: number;
 }
 
 export interface AuthState {
