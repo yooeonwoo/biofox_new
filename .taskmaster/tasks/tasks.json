@@ -912,13 +912,86 @@
       {
         "id": 5,
         "title": "Fix Image Upload Type Errors",
-        "description": "Address type errors in the image upload functionality by adding proper type guards for optional file types.",
-        "details": "1. Review the convex/images.ts file, focusing on the uploadImage mutation\n2. Identify where file type (v.bytes()) is defined as optional but used without type checking\n3. Add appropriate type guards or null checks\n4. Ensure proper error handling for cases where file data is missing\n\nExample implementation:\n```typescript\n// Before\nexport const uploadImage = mutation({\n  args: {\n    file: v.optional(v.bytes()),\n    // other args\n  },\n  handler: async (ctx, args) => {\n    // Potential error if args.file is undefined\n    const fileData = args.file;\n    // ...\n  }\n});\n\n// After\nexport const uploadImage = mutation({\n  args: {\n    file: v.optional(v.bytes()),\n    // other args\n  },\n  handler: async (ctx, args) => {\n    // Add type guard\n    if (!args.file) {\n      throw new Error('File data is required for upload');\n    }\n    const fileData = args.file;\n    // ...\n  }\n});\n```",
-        "testStrategy": "1. Test image upload with valid file data\n2. Test with missing file data to verify proper error handling\n3. Verify uploaded images can be retrieved correctly\n4. Test edge cases like empty files or invalid formats",
-        "priority": "medium",
+        "description": "Migrate the existing Supabase-based file upload system to Convex to ensure all systems use Convex consistently.",
+        "status": "in-progress",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "priority": "medium",
+        "details": "## Current System (Supabase-based)\n\n### API Routes\n- `/api/kol-new/clinical-photos/upload/route.ts`\n- `/api/shop/clinical-photos/upload/route.ts` \n- `/api/clinical/photos/route.ts`\n- `/api/clinical/consent/route.ts`\n\n### Storage Buckets\n- `clinical-photos` (clinical photos)\n- `consent-files` (consent forms)\n\n### Tables\n- `clinical_photos` / `clinical_photos_shop`\n- `clinical_consent_files` / `clinical_consent_files_shop`\n\n## Target System (Convex-based)\n\n### Implementation Plan\n\n#### Phase 1: Build Convex File Upload System\n1. Create mutations for generating upload URLs\n2. Create mutations for storing file metadata\n3. Create queries for serving files\n\n#### Phase 2: Update Next.js API Routes\n1. Replace Supabase code with Convex calls\n2. Update client upload flow to use the new 3-step process\n\n#### Phase 3: Update Frontend Components\n1. Update `ConsentUploader.tsx`\n2. Update `ClinicalPhotoModal.tsx`\n3. Update other file upload components\n\n### Implementation Notes\n- The original task assumed a `convex/images.ts` file with an `uploadImage` mutation using `v.bytes()`, but this doesn't exist\n- Instead, we need to create a complete file upload system in Convex from scratch\n- Use existing Convex schema for metadata storage where possible",
+        "testStrategy": "1. Test file upload with valid file data for each file type (clinical photos, consent forms)\n2. Test with missing file data to verify proper error handling\n3. Verify uploaded files can be retrieved correctly\n4. Test edge cases like empty files or invalid formats\n5. Verify that frontend components work correctly with the new Convex-based system\n6. Test migration of existing files from Supabase to Convex\n7. Verify proper permissions and access control for uploaded files",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Convex file upload URL generation mutations",
+            "description": "Implement mutations that generate signed URLs for direct file uploads to Convex storage.",
+            "status": "done",
+            "dependencies": [],
+            "details": "<info added on 2025-07-24T01:52:36.346Z>\n## ✅ Subtask 5.1 완료: Convex 파일 업로드 URL 생성 mutations 구현\n\n### 🎯 **구현 완료 내용:**\n\n#### 📁 **생성된 파일: `convex/fileStorage.ts`**\n완전한 Convex 기반 파일 업로드 시스템을 구현했습니다.\n\n#### 🔗 **URL 생성 Mutations:**\n1. **`generateUploadUrl()`** - 기본 파일 업로드 URL 생성\n2. **`generateSecureUploadUrl()`** - 인증이 필요한 보안 업로드 URL 생성\n\n#### 💾 **파일 메타데이터 저장 Mutations:**\n1. **`saveClinicalPhoto()`** - 임상 사진 메타데이터 저장\n   - 같은 세션/타입의 기존 사진 자동 교체\n   - `clinical_photos` 테이블에 `storageId` 저장\n   \n2. **`saveConsentFile()`** - 동의서 파일 메타데이터 저장\n   - 기존 동의서 자동 교체\n   - `consent_files` 테이블에 `storageId` 저장\n   \n3. **`saveFileMetadata()`** - 일반 파일 메타데이터 저장\n   - `file_metadata` 테이블에 `storageId` 저장\n\n#### 📖 **파일 조회 Queries:**\n1. **`getFileUrl()`** - 파일 URL 생성\n2. **`getClinicalPhotos()`** - 임상 케이스 사진 조회 (URL 포함)\n3. **`getConsentFile()`** - 동의서 파일 조회 (URL 포함)\n4. **`getClinicalPhotosBySession()`** - 세션별 임상 사진 조회\n5. **`getUserFiles()`** - 사용자별 파일 조회\n\n#### 🗑️ **파일 삭제 Mutations:**\n1. **`deleteClinicalPhoto()`** - 임상 사진 삭제\n2. **`deleteConsentFile()`** - 동의서 파일 삭제\n3. **`deleteFile()`** - 일반 파일 삭제\n\n### 🔧 **구현 특징:**\n\n#### **인증 및 보안:**\n- 모든 mutation에서 사용자 인증 확인\n- 사용자 프로필 기반 권한 관리\n- 안전한 파일 삭제 (Storage + DB)\n\n#### **데이터 일관성:**\n- 기존 파일 자동 교체 (Storage에서도 삭제)\n- 트랜잭션 안전성 보장\n- 오류 발생 시 롤백 처리\n\n#### **성능 최적화:**\n- 기존 Convex 스키마 인덱스 활용\n- 효율적인 쿼리 구조\n- URL 배치 생성으로 성능 향상\n\n### 🚀 **Convex 3단계 업로드 프로세스 구현:**\n1. **Step 1**: `generateUploadUrl()` - 업로드 URL 생성\n2. **Step 2**: 클라이언트에서 직접 파일 업로드 (fetch API)\n3. **Step 3**: `saveClinicalPhoto()` / `saveConsentFile()` - storageId 저장\n\n### ✅ **검증 완료:**\n- TypeScript 컴파일 오류 0개\n- Convex 서버 정상 실행 확인\n- API 자동 생성 확인 (`_generated/api.d.ts`에 `fileStorage` 모듈 등록)\n</info added on 2025-07-24T01:52:36.346Z>",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create file metadata storage mutations",
+            "description": "Implement mutations to store file metadata in Convex tables after successful uploads.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create file serving queries",
+            "description": "Implement queries to retrieve files and their metadata from Convex storage.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Update Next.js API Routes",
+            "description": "Replace Supabase code with Convex calls in the four API route files.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Update ConsentUploader.tsx",
+            "description": "Modify the consent form uploader component to use the new Convex-based system.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Update ClinicalPhotoModal.tsx",
+            "description": "Modify the clinical photo modal component to use the new Convex-based system.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Update other file upload components",
+            "description": "Identify and update any other components that use the Supabase file upload system.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Create migration script for existing files",
+            "description": "Develop a script to migrate existing files from Supabase storage to Convex storage.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 6,
@@ -1002,7 +1075,7 @@
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T01:43:56.760Z",
+      "updated": "2025-07-24T01:52:40.511Z",
       "description": "Tasks for convex-errors context"
     }
   }
