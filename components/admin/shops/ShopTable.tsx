@@ -1,13 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import { Shop } from "@/lib/hooks/shops";
+import React from 'react';
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { Shop } from '@/lib/hooks/shops-convex';
 import {
   Table,
   TableBody,
@@ -15,9 +10,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 interface Props {
   data: Shop[];
@@ -27,43 +22,43 @@ export default function ShopTable({ data }: Props) {
   const columns = React.useMemo<ColumnDef<Shop>[]>(
     () => [
       {
-        accessorKey: "id",
-        header: "ID",
-        cell: ({ row }) => row.getValue("id"),
+        accessorKey: 'id',
+        header: 'ID',
+        cell: ({ row }) => row.getValue('id'),
       },
       {
-        accessorKey: "shop_name",
-        header: "전문점명",
+        accessorKey: 'shop_name',
+        header: '전문점명',
       },
       {
-        accessorKey: "kols.name",
-        header: "KOL",
-        cell: ({ row }) => row.original.kols?.name ?? "-",
+        accessorKey: 'kols.name',
+        header: 'KOL',
+        cell: ({ row }) => row.original.kols?.name ?? '-',
       },
       {
-        accessorKey: "region",
-        header: "지역",
+        accessorKey: 'region',
+        header: '지역',
       },
       {
-        accessorKey: "status",
-        header: "상태",
+        accessorKey: 'status',
+        header: '상태',
         cell: ({ row }) => (
-          <Badge variant={row.getValue("status") === "active" ? "default" : "secondary"}>
-            {row.getValue("status")}
+          <Badge variant={row.getValue('status') === 'active' ? 'default' : 'secondary'}>
+            {row.getValue('status')}
           </Badge>
         ),
       },
       {
-        accessorKey: "device_count",
-        header: "기기수",
+        accessorKey: 'device_count',
+        header: '기기수',
       },
       {
-        accessorKey: "latest_allocation",
-        header: "최근 배정일",
+        accessorKey: 'latestAllocation',
+        header: '최근 배정일',
         cell: ({ row }) =>
-          row.original.latest_allocation
-            ? format(new Date(row.original.latest_allocation), "yyyy-MM-dd")
-            : "-",
+          row.original.latestAllocation
+            ? format(new Date(row.original.latestAllocation), 'yyyy-MM-dd')
+            : '-',
       },
     ],
     []
@@ -79,14 +74,11 @@ export default function ShopTable({ data }: Props) {
     <div className="rounded-md border bg-white">
       <Table>
         <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
+          {table.getHeaderGroups().map(headerGroup => (
             <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
+              {headerGroup.headers.map(header => (
                 <TableHead key={header.id} className="whitespace-nowrap">
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
+                  {flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -94,9 +86,9 @@ export default function ShopTable({ data }: Props) {
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => (
+            table.getRowModel().rows.map(row => (
               <TableRow key={row.id} className="hover:bg-gray-50">
-                {row.getVisibleCells().map((cell) => (
+                {row.getVisibleCells().map(cell => (
                   <TableCell key={cell.id} className="whitespace-nowrap">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
