@@ -491,6 +491,27 @@ export default defineSchema({
     .index('by_expires_at', ['expires_at']) // 만료일순
     .index('by_related', ['related_type', 'related_id']), // 관련 항목별
 
+  // 📋 영업일지 - KOL 활동 일지 (8개 컬럼)
+  sales_journals: defineTable({
+    user_id: v.id('profiles'), // 작성자 (KOL)
+    shop_id: v.optional(v.id('profiles')), // 관련 샵 (선택적, profiles 테이블 참조)
+    date: v.string(), // 영업일지 날짜 (YYYY-MM-DD)
+    shop_name: v.string(), // 샵 이름
+    content: v.string(), // 영업일지 내용
+    special_notes: v.optional(v.string()), // 특별 노트
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index('by_user', ['user_id'])
+    .index('by_date', ['date'])
+    .index('by_shop', ['shop_id'])
+    .index('by_created_at', ['created_at'])
+    // 🚀 성능 최적화 인덱스
+    .index('by_user_date', ['user_id', 'date']) // 사용자별 날짜순 (UNIQUE 제약용)
+    .index('by_user_created', ['user_id', 'created_at']) // 사용자별 최신순
+    .index('by_shop_date', ['shop_id', 'date']) // 샵별 날짜순
+    .index('by_date_created', ['date', 'created_at']), // 날짜별 최신순
+
   // 📝 감사 로그 - 변경 사항 추적 (12개 컬럼)
   audit_logs: defineTable({
     table_name: v.string(),
