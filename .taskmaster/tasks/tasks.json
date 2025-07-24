@@ -847,12 +847,67 @@
         "id": 4,
         "title": "Fix Priority Sorting Logic Type Errors",
         "description": "Address type errors in the priorityOrder object by adding proper type definitions and handling undefined values.",
-        "details": "1. Locate the priorityOrder object in convex/notifications.ts (lines 88-89)\n2. Fix the type error by either:\n   - Adding 'as const' to the priorityOrder object\n   - Adding a type guard for undefined priority values\n   - Providing a default value when accessing the object\n\nExample implementation:\n```typescript\n// Before\nconst priorityOrder = { high: 3, normal: 2, low: 1 };\n// ... later usage with potential undefined access\nreturn priorityOrder[a.priority] - priorityOrder[b.priority];\n\n// After - Option 1: Add as const\nconst priorityOrder = { high: 3, normal: 2, low: 1 } as const;\n\n// After - Option 2: Add type guard and default\nconst priorityOrder: Record<string, number> = { high: 3, normal: 2, low: 1 };\n// ... later usage with safe access\nreturn (priorityOrder[a.priority ?? 'normal'] || 2) - (priorityOrder[b.priority ?? 'normal'] || 2);\n```",
-        "testStrategy": "1. Run TypeScript compiler to verify no type errors\n2. Test sorting with various priority combinations\n3. Test with undefined priority values to ensure fallback works\n4. Verify notifications are displayed in the correct order in the UI",
-        "priority": "medium",
+        "status": "done",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "priority": "medium",
+        "details": "1. Locate the priorityOrder object in convex/notifications.ts (lines 88-89)\n2. Fix the type error by either:\n   - Adding 'as const' to the priorityOrder object\n   - Adding a type guard for undefined priority values\n   - Providing a default value when accessing the object\n\nImplementation completed:\n- Added 'as const' to the priorityOrder object\n- Defined explicit type: `type PriorityLevel = keyof typeof priorityOrder`\n- Moved priorityOrder object outside the switch statement for performance\n- Used `?? priorityOrder.normal` instead of `|| 1` for safer default handling\n- Added clear comments explaining the code's intent\n\nBefore:\n```typescript\nswitch (sortBy) {\n  case 'priority':\n    const priorityOrder = { high: 3, normal: 2, low: 1 };\n    aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 1;\n    bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 1;\n    break;\n```\n\nAfter:\n```typescript\n// 우선순위 매핑 (타입 안전성을 위해 as const 사용)\nconst priorityOrder = { high: 3, normal: 2, low: 1 } as const;\ntype PriorityLevel = keyof typeof priorityOrder;\n\nfilteredNotifications.sort((a, b) => {\n  let aValue: number, bValue: number;\n\n  switch (sortBy) {\n    case 'priority':\n      // 타입 안전한 우선순위 값 가져오기 (기본값: normal=2)\n      aValue = priorityOrder[a.priority as PriorityLevel] ?? priorityOrder.normal;\n      bValue = priorityOrder[b.priority as PriorityLevel] ?? priorityOrder.normal;\n      break;\n```",
+        "testStrategy": "1. ✅ Run TypeScript compiler to verify no type errors - Confirmed with `npx tsc --noEmit --project convex/tsconfig.json`\n2. ✅ Test sorting with various priority combinations\n3. ✅ Test with undefined priority values to ensure fallback works\n4. ✅ Verify notifications are displayed in the correct order in the UI\n5. ✅ Verify Convex server continues to run normally\n6. ✅ Confirm type safety with `as const` for literal types\n7. ✅ Verify performance improvement by preventing object recreation",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add 'as const' to priorityOrder object",
+            "description": "Added `as const` to the priorityOrder object to ensure type safety and literal type preservation.",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define explicit PriorityLevel type",
+            "description": "Created `type PriorityLevel = keyof typeof priorityOrder` for better type checking.",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Optimize object placement",
+            "description": "Moved priorityOrder object outside the switch statement to prevent recreation during each sort operation.",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Improve default value handling",
+            "description": "Replaced `|| 1` with `?? priorityOrder.normal` for more meaningful default handling.",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Add clear code comments",
+            "description": "Added descriptive comments to explain the purpose of the code changes and type safety improvements.",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Verify TypeScript compilation",
+            "description": "Ran `npx tsc --noEmit --project convex/tsconfig.json` to confirm zero type errors.",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 5,
@@ -947,7 +1002,7 @@
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T01:41:18.252Z",
+      "updated": "2025-07-24T01:43:56.760Z",
       "description": "Tasks for convex-errors context"
     }
   }

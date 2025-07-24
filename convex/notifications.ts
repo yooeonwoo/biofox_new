@@ -79,14 +79,18 @@ export const getUserNotifications = query({
       const sortBy = args.sortBy || 'created_at';
       const sortOrder = args.sortOrder || 'desc';
 
+      // 우선순위 매핑 (타입 안전성을 위해 as const 사용)
+      const priorityOrder = { high: 3, normal: 2, low: 1 } as const;
+      type PriorityLevel = keyof typeof priorityOrder;
+
       filteredNotifications.sort((a, b) => {
-        let aValue, bValue;
+        let aValue: number, bValue: number;
 
         switch (sortBy) {
           case 'priority':
-            const priorityOrder = { high: 3, normal: 2, low: 1 };
-            aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 1;
-            bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 1;
+            // 타입 안전한 우선순위 값 가져오기 (기본값: normal=2)
+            aValue = priorityOrder[a.priority as PriorityLevel] ?? priorityOrder.normal;
+            bValue = priorityOrder[b.priority as PriorityLevel] ?? priorityOrder.normal;
             break;
           default: // created_at
             aValue = a.created_at;
