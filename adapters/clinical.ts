@@ -1,6 +1,14 @@
 import { z } from 'zod';
-import type { ClinicalCase as DomainClinicalCase, PhotoSlot as DomainPhotoSlot, CustomerInfo, RoundCustomerInfo } from '@/types/clinical';
-import type { ClinicalCase as APIClinicalCase, PhotoSlot as APIPhotoSlot } from '@/lib/clinical-photos';
+import type {
+  ClinicalCase as DomainClinicalCase,
+  PhotoSlot as DomainPhotoSlot,
+  CustomerInfo,
+  RoundCustomerInfo,
+} from '@/types/clinical';
+import type {
+  ClinicalCase as APIClinicalCase,
+  PhotoSlot as APIPhotoSlot,
+} from '@/lib/clinical-photos';
 import { safeParseStringArray } from '@/types/clinical';
 
 // API 응답 스키마 정의
@@ -110,14 +118,14 @@ export async function toDomainCase(
 ): Promise<DomainClinicalCase> {
   // API 데이터 검증
   const validatedApiCase = apiClinicalCaseSchema.parse(apiCase);
-  
+
   // 제품 정보 배열 생성
   const products: string[] = [];
   if (validatedApiCase.cureBooster) products.push('cure_booster');
   if (validatedApiCase.cureMask) products.push('cure_mask');
   if (validatedApiCase.premiumMask) products.push('premium_mask');
   if (validatedApiCase.allInOneSerum) products.push('all_in_one_serum');
-  
+
   // 피부 타입 배열 생성
   const skinTypes: string[] = [];
   if (validatedApiCase.skinRedSensitive) skinTypes.push('red_sensitive');
@@ -168,7 +176,8 @@ export async function toDomainCase(
     id: validatedApiCase.id.toString(),
     customerName: validatedApiCase.customerName,
     status: validatedApiCase.status as 'active' | 'completed' | 'archived',
-    createdAt: validatedApiCase.createdAt.split('T')[0],
+    createdAt: (validatedApiCase.createdAt?.split('T')[0] ||
+      new Date().toISOString().split('T')[0]) as string,
     consentReceived: validatedApiCase.consentReceived,
     consentImageUrl: validatedApiCase.consentImageUrl,
     photos: domainPhotos,
@@ -179,7 +188,7 @@ export async function toDomainCase(
       treatmentType: roundCustomerInfo[1]?.treatmentType,
       products: products,
       skinTypes: skinTypes,
-      memo: validatedApiCase.treatmentPlan || ''
+      memo: validatedApiCase.treatmentPlan || '',
     },
     roundCustomerInfo: roundCustomerInfo,
     // boolean 필드 그대로 전달
@@ -205,7 +214,7 @@ export async function toDomainCase(
 export function toAPICase(domainCase: DomainClinicalCase): Partial<APIClinicalCase> {
   // Domain 데이터 검증
   const validatedDomainCase = domainClinicalCaseSchema.parse(domainCase);
-  
+
   // API 형식으로 변환
   const apiCase: Partial<APIClinicalCase> = {
     id: parseInt(validatedDomainCase.id, 10),
@@ -268,4 +277,4 @@ export function toCaseCreateRequest(domainCase: Partial<DomainClinicalCase>): {
     skinWrinkle: domainCase.skinWrinkle,
     skinEtc: domainCase.skinEtc,
   };
-} 
+}

@@ -1,25 +1,53 @@
-import path from 'path';
-import { config } from 'dotenv';
+/**
+ * Vitest 글로벌 설정 파일
+ * 모든 테스트 실행 전에 로드됩니다.
+ */
 
-// .env.test가 존재하면 로드, 그렇지 않으면 기본 .env(.local) 로드
-config({ path: '.env.test', override: false });
+import { vi } from 'vitest';
 
-// Node 18+ 환경이 아닌 경우 fetch 폴리필 (Optional)
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-if (typeof fetch === 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  global.fetch = require('node-fetch');
+// MSW 설정 (테스트용 API 모킹)
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
+
+// 환경 변수 검증 및 기본값 설정
+// CI 환경에서는 더 관대한 설정 사용
+const isCI = process.env.CI === 'true';
+
+// 기본 환경 변수 설정
+if (!process.env.NODE_ENV) {
+  Object.defineProperty(process.env, 'NODE_ENV', {
+    value: 'test',
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
 }
 
-// 테스트 환경에서 ENV 누락 시 경고만 출력하고 테스트를 건너뛸 수 있게 함
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  console.warn('⚠️  NEXT_PUBLIC_SUPABASE_URL 가 설정되지 않았습니다. 일부 통합 테스트가 건너뜁니다.');
-}
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn('⚠️  SUPABASE_SERVICE_ROLE_KEY 가 설정되지 않았습니다. 일부 통합 테스트가 건너뜁니다.');
-}
+process.env.CONVEX_URL = process.env.CONVEX_URL || 'https://test-convex-url.convex.cloud';
 
-process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost';
-process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test_key';
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'test_anon_key';
+// 전역 테스트 설정
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
+// MSW 서버 설정
+export const server = setupServer();
+
+// 테스트 실행 전 설정
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'warn' });
+});
+
+// 각 테스트 후 핸들러 리셋
+afterEach(() => {
+  server.resetHandlers();
+});
+
+// 테스트 종료 후 서버 정리
+afterAll(() => {
+  server.close();
+});
+
+export { http, HttpResponse };

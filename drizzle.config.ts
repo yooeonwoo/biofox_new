@@ -1,31 +1,19 @@
 import type { Config } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
+import 'dotenv/config';
 
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is required');
+  throw new Error('DATABASE_URL is not set');
 }
 
-// DATABASE_URL 예시: postgres://postgres:postgres@db.cezxkgmzlkbjqataogtd.supabase.co:5432/postgres
-const url = new URL(process.env.DATABASE_URL);
-const [username, password] = url.username && url.password ? [url.username, url.password] : [];
-const host = url.hostname;
-const port = url.port ? parseInt(url.port, 10) : 5432;
-const database = url.pathname.substring(1); // pathname은 '/postgres'와 같은 형태로 시작함
+// 환경별 접근
+// Development/Production 모두 Neon을 사용
+console.log('Using DATABASE_URL:', process.env.DATABASE_URL?.substring(0, 50) + '...');
 
 export default {
   schema: './db/schema.ts',
   out: './drizzle/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    host,
-    port,
-    user: username,
-    password,
-    database,
-    ssl: true,
+    url: process.env.DATABASE_URL!,
   },
-  verbose: true,
-  strict: true,
-} satisfies Config; 
+} satisfies Config;

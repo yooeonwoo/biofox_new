@@ -2,54 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 애니메이션 키프레임 추가 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 애니메이션 클래스 */
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
 /* ───── legacy 레이아웃 레이어 ───── */
 @layer components {
   .legacy-card {
-    @apply w-full mb-6;
+    @apply mb-6 w-full;
   }
-  
+
   .legacy-card-glass {
-    @apply w-full max-w-2xl mx-auto mb-6 bg-gradient-to-br from-white/80 to-gray-50/50 backdrop-blur-sm border border-gray-200/50;
+    @apply mx-auto mb-6 w-full max-w-2xl border border-gray-200/50 bg-gradient-to-br from-white/80 to-gray-50/50 backdrop-blur-sm;
   }
-  
+
   .legacy-btn {
-    @apply bg-biofox-blue-violet text-white hover:bg-biofox-dark-blue-violet px-4 py-2 rounded-lg transition-all duration-200;
+    @apply rounded-lg bg-biofox-blue-violet px-4 py-2 text-white transition-all duration-200 hover:bg-biofox-dark-blue-violet;
   }
-  
+
   .legacy-thumb {
-    @apply aspect-square rounded-lg object-cover border border-gray-200;
+    @apply aspect-square rounded-lg border border-gray-200 object-cover;
   }
-  
+
   .legacy-input {
-    @apply border bg-white px-3 py-2 rounded-md legacy-input-focus;
+    @apply legacy-input-focus rounded-md border bg-white px-3 py-2;
   }
-  
+
   .legacy-input-focus {
-    @apply focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 transition-all duration-200;
+    @apply transition-all duration-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30;
   }
-  
+
   .legacy-section {
-    @apply border-2 border-soksok-light-blue/40 rounded-lg p-4 bg-soksok-light-blue/20;
+    @apply rounded-lg border-2 border-soksok-light-blue/40 bg-soksok-light-blue/20 p-4;
   }
-  
+
   .legacy-section-header {
     @apply text-sm font-medium text-blue-700;
   }
-  
+
   .legacy-round-badge {
-    @apply text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-soksok-light-blue/40;
+    @apply rounded-full border border-soksok-light-blue/40 bg-white px-2 py-1 text-xs text-gray-500;
   }
-  
+
   .legacy-photo-container {
-    @apply border-2 border-gray-200 rounded-lg p-2 bg-gray-50/50;
+    @apply rounded-lg border-2 border-gray-200 bg-gray-50/50 p-2;
   }
-  
+
   .legacy-photo-grid {
-    @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+    @apply grid grid-cols-1 gap-4 md:grid-cols-3;
   }
-  
+
   .legacy-photo-uploader {
-    @apply w-full h-full border-2 rounded-lg overflow-hidden border-soksok-light-blue/40 bg-soksok-light-blue/10;
+    @apply h-full w-full overflow-hidden rounded-lg border-2 border-soksok-light-blue/40 bg-soksok-light-blue/10;
   }
 }
 
@@ -110,16 +127,22 @@
 }
 
 /* mobile safari overscroll 방지 */
-html, body {
+html,
+body {
   max-width: 100%;
   overflow-x: hidden;
 }
 
 /* Prevent flex children from forcing min-content overflow */
-.min-w-0 { 
-  min-width: 0 !important; 
+.min-w-0 {
+  min-width: 0 !important;
 }
 
 /* Hide scrollbar for horizontal scroll */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

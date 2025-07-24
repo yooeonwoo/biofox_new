@@ -59,7 +59,15 @@ const eslintConfig = [
       "no-console": "off",
     },
   },
-  ...storybook.configs.recommended
+  {
+    files: ["**/*.stories.@(js|jsx|ts|tsx)"],
+    plugins: {
+      storybook: storybook,
+    },
+    rules: {
+      ...storybook.configs.recommended.rules,
+    },
+  }
 ];
 
 export default eslintConfig;
