@@ -5,6 +5,7 @@
 
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { Id } from './_generated/dataModel';
 import {
   getCurrentUser,
   requireAdmin,
@@ -280,10 +281,15 @@ export const getRecentOrderUpdates = query({
         // KOL의 관련 매장들 조회
         const shopRelationships = await ctx.db
           .query('shop_relationships')
-          .withIndex('by_parent_active', q => q.eq('parent_id', args.kolId).eq('is_active', true))
+          .withIndex('by_parent_active', q =>
+            q.eq('parent_id', args.kolId as Id<'profiles'>).eq('is_active', true)
+          )
           .collect();
 
-        const relatedShopIds = [args.kolId, ...shopRelationships.map(r => r.shop_owner_id)];
+        const relatedShopIds = [
+          args.kolId as Id<'profiles'>,
+          ...shopRelationships.map(r => r.shop_owner_id),
+        ];
 
         // 관련 매장의 주문만 필터링
         return sortedOrders.filter(order => relatedShopIds.includes(order.shop_id)).slice(0, limit);
@@ -315,7 +321,7 @@ export const getRecentCommissionUpdates = query({
         // 특정 KOL의 커미션만 조회
         const commissions = await ctx.db
           .query('commission_calculations')
-          .withIndex('by_kol', q => q.eq('kol_id', args.kolId!))
+          .withIndex('by_kol', q => q.eq('kol_id', args.kolId as Id<'profiles'>))
           .collect();
 
         return commissions.sort((a, b) => b.calculated_at - a.calculated_at).slice(0, limit);

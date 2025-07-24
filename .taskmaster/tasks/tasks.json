@@ -742,12 +742,49 @@
         "id": 2,
         "title": "Fix TypeScript Type Inconsistencies in KOL ID Handling",
         "description": "Address type errors related to optional kolId fields by adding proper type casting or null checks to prevent undefined assignments.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
         "details": "1. Identify all instances where kolId is used without proper type casting\n2. Add appropriate type casting using `as Id<'profiles'>` or null checks\n3. Focus on the following files and locations:\n   - convex/commissions.ts (line 70: `q.eq('shop_id', args.kolId)`)\n   - convex/notifications.ts\n   - convex/realtime.ts (line 132)\n   - convex/users.ts (userId casting issues)\n\nExample fix for commissions.ts line 70:\n```typescript\n// Before\nallOrders = await ctx.db\n  .query('orders')\n  .withIndex('by_shop', q => q.eq('shop_id', args.kolId))\n  .collect();\n\n// After\nallOrders = await ctx.db\n  .query('orders')\n  .withIndex('by_shop', q => q.eq('shop_id', args.kolId as Id<'profiles'>))\n  .collect();\n\n// Alternative with null check\nif (!args.kolId) {\n  throw new Error('kolId is required');\n}\nallOrders = await ctx.db\n  .query('orders')\n  .withIndex('by_shop', q => q.eq('shop_id', args.kolId))\n  .collect();\n```",
         "testStrategy": "1. Run TypeScript compiler with strict mode to verify no type errors\n2. Test functions with both valid kolId values and undefined/null values to ensure proper error handling\n3. Verify that queries return expected results when kolId is provided\n4. Test edge cases where kolId might be undefined to ensure graceful error handling",
-        "priority": "high",
-        "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add Id type import to realtime.ts and realtime_optimized.ts",
+            "description": "Added the necessary Id type import to both files: `import { Id } from './_generated/dataModel';`",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Apply type casting in realtime.ts",
+            "description": "Fixed type inconsistencies in realtime.ts by applying proper type casting:\n- Line 282: Changed `args.kolId` to `args.kolId as Id<'profiles'>`\n- Line 285: Changed `[args.kolId, ...]` to `[args.kolId as Id<'profiles'>, ...]`\n- Line 317: Replaced non-null assertion `args.kolId!` with `args.kolId as Id<'profiles'>`",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Apply type casting in realtime_optimized.ts",
+            "description": "Fixed type inconsistencies in realtime_optimized.ts by applying proper type casting:\n- Line 446: Changed `args.kolId` to `args.kolId as Id<'profiles'>`\n- Line 449: Changed `[args.kolId, ...]` to `[args.kolId as Id<'profiles'>, ...]`",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Verify TypeScript compilation and server functionality",
+            "description": "Verified that all type errors have been resolved:\n- TypeScript compiler runs with 0 errors: `npx tsc --noEmit --project convex/tsconfig.json`\n- Convex server starts normally with \"Convex functions ready!\" message\n- All kolId references now use consistent type casting patterns\n- Improved code quality by removing non-null assertions in favor of explicit type casting",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 3,
@@ -818,7 +855,7 @@
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T01:23:48.348Z",
+      "updated": "2025-07-24T01:29:42.335Z",
       "description": "Tasks for convex-errors context"
     }
   }

@@ -5,6 +5,7 @@
 
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { Id } from './_generated/dataModel';
 import {
   getCurrentUser,
   requireAdmin,
@@ -444,10 +445,15 @@ export const getOptimizedRecentOrderUpdates = query({
         // 🚀 최적화: KOL의 관련 매장들을 먼저 조회
         const shopRelationships = await ctx.db
           .query('shop_relationships')
-          .withIndex('by_parent_active', q => q.eq('parent_id', args.kolId).eq('is_active', true))
+          .withIndex('by_parent_active', q =>
+            q.eq('parent_id', args.kolId as Id<'profiles'>).eq('is_active', true)
+          )
           .collect();
 
-        const relatedShopIds = [args.kolId, ...shopRelationships.map(r => r.shop_owner_id)];
+        const relatedShopIds = [
+          args.kolId as Id<'profiles'>,
+          ...shopRelationships.map(r => r.shop_owner_id),
+        ];
 
         // 🚀 최적화: 최근 주문만 조회하고 메모리에서 필터링
         const recentOrders = await ctx.db
