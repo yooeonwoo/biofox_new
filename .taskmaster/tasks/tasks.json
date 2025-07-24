@@ -913,7 +913,7 @@
         "id": 5,
         "title": "Fix Image Upload Type Errors",
         "description": "Migrate the existing Supabase-based file upload system to Convex to ensure all systems use Convex consistently.",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "details": "## Current System (Supabase-based)\n\n### API Routes\n- `/api/kol-new/clinical-photos/upload/route.ts`\n- `/api/shop/clinical-photos/upload/route.ts` \n- `/api/clinical/photos/route.ts`\n- `/api/clinical/consent/route.ts`\n\n### Storage Buckets\n- `clinical-photos` (clinical photos)\n- `consent-files` (consent forms)\n\n### Tables\n- `clinical_photos` / `clinical_photos_shop`\n- `clinical_consent_files` / `clinical_consent_files_shop`\n\n## Target System (Convex-based)\n\n### Implementation Plan\n\n#### Phase 1: Build Convex File Upload System\n1. Create mutations for generating upload URLs\n2. Create mutations for storing file metadata\n3. Create queries for serving files\n\n#### Phase 2: Update Next.js API Routes\n1. Replace Supabase code with Convex calls\n2. Update client upload flow to use the new 3-step process\n\n#### Phase 3: Update Frontend Components\n1. Update `ConsentUploader.tsx`\n2. Update `ClinicalPhotoModal.tsx`\n3. Update other file upload components\n\n### Implementation Notes\n- The original task assumed a `convex/images.ts` file with an `uploadImage` mutation using `v.bytes()`, but this doesn't exist\n- Instead, we need to create a complete file upload system in Convex from scratch\n- Use existing Convex schema for metadata storage where possible",
@@ -1071,11 +1071,95 @@
         "dependencies": [1, 6],
         "status": "pending",
         "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Audit and Plan Convex Migration for Remaining Supabase Dependencies",
+        "description": "Conduct a comprehensive audit of the entire project to identify all remaining Supabase dependencies and create a detailed migration roadmap for converting them to Convex.",
+        "status": "in-progress",
+        "dependencies": [1, 5, 6, 7, 8],
+        "priority": "high",
+        "details": "## Current Migration Status\n\n### Completed Areas (✅)\n- File upload system (~90% complete)\n  - `app/api/clinical/consent/route.ts` - Convex 3-stage upload\n  - `app/api/clinical/photos/route.ts` - Convex 3-stage upload\n  - `app/api/shop/clinical-photos/consent/[caseId]/route.ts` - Convex deletion\n  - `app/api/kol-new/clinical-photos/upload/route.ts` - Convex-based\n  - `app/api/shop/clinical-photos/upload/route.ts` - Convex-based\n\n### Remaining Supabase Dependencies (❌)\n\n1. **API Routes** (~70% remaining):\n   - User management: `app/api/users/route.ts`, `app/api/users/[userId]/route.ts`\n   - Profiles: `app/api/profiles/route.ts`\n   - Device management: `app/api/devices/route.ts`, `app/api/devices/[deviceId]/route.ts`\n   - Order management: `app/api/orders/route.ts`\n   - Commission management: `app/api/commissions/route.ts`\n   - Clinical cases: `app/api/clinical/cases/route.ts`, `app/api/clinical/cases/[caseId]/route.ts`\n   - KOL shop management: `app/api/kol-new/shops/route.ts`\n   - Dashboard data: `app/api/kol-new/dashboard-complete/route.ts`\n   - Admin metrics: `app/api/admin-new/manual-metrics/route.ts`\n   - Other clinical-photos/cases related APIs\n\n2. **Authentication System** (~0% complete):\n   - Development environment using localStorage-based temporary auth\n   - Production still referencing Supabase Auth (TODO comments)\n   - `checkAuthSupabase()` functions still dependent on Supabase\n\n3. **React Hooks** (~80% remaining):\n   - `hooks/useCustomerPageState.ts` - Customer page state management\n   - `hooks/usePersonalPageState.ts` - Personal page state management\n   - `lib/hooks/customers.ts` - Customer CRUD operations\n   - `lib/hooks/customer-crud.ts` - Customer creation/modification\n   - `lib/hooks/customer-info.ts` - Customer information management\n   - `app/kol-new/clinical-photos/hooks/useCaseManagement.ts` - Case management\n   - `app/shop/clinical-photos/hooks/useCaseManagement.ts` - Case management\n\n4. **Data Service Layer** (~90% remaining):\n   - `lib/clinical-photos-api.ts` - Clinical photo API (fetchCases, createCase, updateCase, etc.)\n   - `lib/supabase.ts` - Supabase client configuration\n   - `lib/supabase-client.ts` - Client/server Supabase wrapper\n   - `lib/supabase-admin.ts` - Admin Supabase client\n   - `lib/db.ts` - DB access module (Supabase RPC based)\n   - `lib/xano-adapters/dashboard-adapter.ts` - Mixed Xano/Supabase usage\n\n5. **Component-Level Supabase Usage**:\n   - `app/admin-dashboard/kol-data-entry/components/shop-data-entry.tsx`\n   - `app/admin-dashboard/kol-data-entry/components/kol-data-entry.tsx`\n   - `app/kol-new/customer-manager/components/CustomerList.tsx`\n\n6. **Environment Configuration and Dependencies**:\n   - `.env` file still requires Supabase-related environment variables\n   - `package.json` still contains Supabase dependencies\n   - Type definitions referencing Supabase schema (`lib/types.ts`)\n\n## Migration Priorities\n\n### High Priority (Essential)\n1. **Authentication System** - Foundation for the entire app\n2. **Core API Routes** - User/profile/order management\n3. **Data Service Layer** - Core business logic\n\n### Medium Priority\n4. **React Hooks** - Component-level data management\n5. **Admin Dashboard** - Back-office functionality\n\n### Low Priority\n6. **Migration Scripts** - Development tools\n7. **Environment Configuration Cleanup** - Dependency removal\n\n## Overall Project Completion\n- **File Upload System**: ~90% complete ✅\n- **API Routes**: ~30% complete ⚠️\n- **Authentication System**: ~0% complete ❌\n- **Data Service Layer**: ~10% complete ❌\n- **React Hooks**: ~20% complete ⚠️\n- **Total Project**: **~35% complete**",
+        "testStrategy": "1. Verification of audit completeness:\n   - Use code search tools (grep, ripgrep) to search for \"supabase\", \"createClient\", and other Supabase-related terms\n   - Cross-reference findings with the audit document to ensure all instances are captured\n   - Have another team member review the audit for completeness\n\n2. Validate dependency identification:\n   - For each identified dependency, verify its purpose and usage in the application\n   - Test the current functionality to understand behavior that must be preserved\n   - Document expected behavior for each component to serve as acceptance criteria\n\n3. Review migration roadmap:\n   - Ensure all dependencies are included in the roadmap\n   - Verify that dependencies between components are correctly identified\n   - Confirm priority assignments make logical sense for the project\n\n4. Validate implementation gap analysis:\n   - Research Convex documentation to confirm feature availability\n   - Create proof-of-concept implementations for complex migration cases\n   - Document any confirmed limitations or workarounds needed\n\n5. Final validation:\n   - Present findings to the development team for feedback\n   - Update the audit and plan based on team input\n   - Ensure the final document provides clear, actionable guidance for migration tasks",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "",
+            "description": "Create detailed inventory of remaining Supabase dependencies",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "",
+            "description": "Develop authentication system migration plan (highest priority)",
+            "status": "to-do",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "",
+            "description": "Create migration plan for core API routes (users, profiles, orders)",
+            "status": "to-do",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "",
+            "description": "Document data service layer migration strategy",
+            "status": "to-do",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "",
+            "description": "Plan React hooks migration approach",
+            "status": "to-do",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "",
+            "description": "Create component-level Supabase usage migration plan",
+            "status": "to-do",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "",
+            "description": "Develop environment configuration cleanup strategy",
+            "status": "to-do",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "",
+            "description": "Create comprehensive migration timeline with milestones",
+            "status": "to-do",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T02:19:24.978Z",
+      "updated": "2025-07-24T02:25:03.818Z",
       "description": "Tasks for convex-errors context"
     }
   }
