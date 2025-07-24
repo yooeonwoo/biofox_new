@@ -1,6 +1,18 @@
-"use client";
+/**
+ * ⚠️ DEPRECATED: 이 파일은 Convex로 전환되었습니다
+ *
+ * 새로운 파일을 사용하세요:
+ * - /lib/hooks/shops-convex.ts
+ * - 실시간 동기화 지원
+ * - 더 나은 타입 안전성
+ * - 향상된 성능
+ *
+ * 기존 호환성을 위해 잠시 유지됩니다.
+ */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+'use client';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface GetShopsParams {
   search?: string;
@@ -24,7 +36,7 @@ export interface Shop {
 function buildQueryString(params: GetShopsParams) {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== "" && value !== null) {
+    if (value !== undefined && value !== '' && value !== null) {
       searchParams.append(key, String(value));
     }
   });
@@ -33,10 +45,10 @@ function buildQueryString(params: GetShopsParams) {
 
 export async function getShops(params: GetShopsParams = {}): Promise<Shop[]> {
   const qs = buildQueryString(params);
-  const res = await fetch(`/api/admin/shops${qs ? `?${qs}` : ""}`);
+  const res = await fetch(`/api/admin/shops${qs ? `?${qs}` : ''}`);
   if (!res.ok) {
     const { error } = await res.json();
-    throw new Error(error || "Failed to fetch shops");
+    throw new Error(error || 'Failed to fetch shops');
   }
   const json = await res.json();
   return json.shops as Shop[];
@@ -44,7 +56,7 @@ export async function getShops(params: GetShopsParams = {}): Promise<Shop[]> {
 
 export function useShops(params: GetShopsParams = {}) {
   return useQuery({
-    queryKey: ["shops", params],
+    queryKey: ['shops', params],
     queryFn: () => getShops(params),
   });
 }
@@ -62,9 +74,9 @@ export function useCreateShop() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateShopInput) => {
-      const res = await fetch("/api/admin/shops", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/admin/shops', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kolId: input.kolId,
           ownerName: input.ownerName,
@@ -76,12 +88,12 @@ export function useCreateShop() {
       });
       if (!res.ok) {
         const { error } = await res.json();
-        throw new Error(error || "Failed to create shop");
+        throw new Error(error || 'Failed to create shop');
       }
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shops"] });
+      queryClient.invalidateQueries({ queryKey: ['shops'] });
     },
   });
 }
