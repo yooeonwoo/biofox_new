@@ -1,9 +1,21 @@
-"use client";
+/**
+ * ⚠️ DEPRECATED: 이 파일은 Convex로 전환되었습니다
+ *
+ * 새로운 파일을 사용하세요:
+ * - /hooks/useCustomers.ts
+ * - useCreateCustomer(), useDeleteCustomer() 훅 제공
+ * - 실시간 동기화 지원
+ * - 더 나은 타입 안전성
+ *
+ * 기존 호환성을 위해 잠시 유지됩니다.
+ */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabaseBrowser } from "@/lib/supabase-client";
-import type { Customer } from "@/lib/types/customer";
-import { toast } from "sonner";
+'use client';
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabaseBrowser } from '@/lib/supabase-client';
+import type { Customer } from '@/lib/types/customer';
+import { toast } from 'sonner';
 
 export interface CreateCustomerInput {
   kolId: number;
@@ -26,7 +38,7 @@ export function useCreateCustomer() {
     mutationFn: async (input: CreateCustomerInput) => {
       const { kolId, ...rest } = input;
       const { data, error } = await supabaseBrowser()
-        .from("customers")
+        .from('customers')
         .insert({
           kol_id: kolId,
           name: rest.name,
@@ -37,19 +49,22 @@ export function useCreateCustomer() {
           assignee: rest.assignee,
           manager: rest.manager,
         })
-        .select("*, customer_progress(*)")
+        .select('*, customer_progress(*)')
         .single();
 
       if (error) throw error;
       return data as Customer & { customer_progress: any[] };
     },
     // Optimistic update – query invalidation handled on success
-    onSuccess: (created) => {
-      queryClient.setQueryData<any[]>(["customers", created.kolId], (old = []) => [created, ...old]);
-      toast.success("고객이 생성되었습니다.");
+    onSuccess: created => {
+      queryClient.setQueryData<any[]>(['customers', created.kolId], (old = []) => [
+        created,
+        ...old,
+      ]);
+      toast.success('고객이 생성되었습니다.');
     },
     onError: (error: any) => {
-      toast.error("고객 생성 실패: " + error.message);
+      toast.error('고객 생성 실패: ' + error.message);
     },
   });
 }
@@ -66,20 +81,23 @@ export function useDeleteCustomer() {
 
   return useMutation({
     mutationFn: async ({ customerId }: DeleteCustomerInput) => {
-      const { error } = await supabaseBrowser().from("customers").delete().eq("id", customerId);
+      const { error } = await supabaseBrowser().from('customers').delete().eq('id', customerId);
       if (error) throw error;
       return { customerId };
     },
     onSuccess: ({ customerId }) => {
       // 모든 customers 캐시에서 해당 항목 제거
-      queryClient.getQueriesData(["customers"]).forEach(([key, value]) => {
+      queryClient.getQueriesData(['customers']).forEach(([key, value]) => {
         if (!Array.isArray(value)) return;
-        queryClient.setQueryData<any[]>(key, value.filter((c: any) => c.id !== customerId));
+        queryClient.setQueryData<any[]>(
+          key,
+          value.filter((c: any) => c.id !== customerId)
+        );
       });
-      toast.success("고객이 삭제되었습니다.");
+      toast.success('고객이 삭제되었습니다.');
     },
     onError: (error: any) => {
-      toast.error("고객 삭제 실패: " + error.message);
+      toast.error('고객 삭제 실패: ' + error.message);
     },
   });
 }

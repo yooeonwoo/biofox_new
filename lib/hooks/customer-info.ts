@@ -1,22 +1,36 @@
-"use client";
+/**
+ * ⚠️ DEPRECATED: 이 파일은 Convex로 전환되었습니다
+ *
+ * 새로운 파일을 사용하세요:
+ * - /hooks/useCustomers.ts
+ * - useUpdateCustomer() 훅 제공
+ * - 실시간 동기화 지원
+ * - 더 나은 타입 안전성
+ *
+ * 기존 호환성을 위해 잠시 유지됩니다.
+ */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabaseBrowser } from "@/lib/supabase-client";
-import type { Customer } from "@/lib/types/customer";
-import { toast } from "sonner";
+'use client';
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabaseBrowser } from '@/lib/supabase-client';
+import type { Customer } from '@/lib/types/customer';
+import { toast } from 'sonner';
 
 /**
  * 고객 기본 정보 업데이트 입력 값
  */
 export interface UpdateCustomerInfoInput {
   customerId: string;
-  info: Partial<Pick<Customer, "shopName" | "phone" | "region" | "placeAddress" | "assignee" | "manager">>;
+  info: Partial<
+    Pick<Customer, 'shopName' | 'phone' | 'region' | 'placeAddress' | 'assignee' | 'manager'>
+  >;
 }
 
 /**
  * camelCase -> snake_case 변환 유틸(로컬)
  */
-function toSnakeCasePayload(info: UpdateCustomerInfoInput["info"]): Record<string, any> {
+function toSnakeCasePayload(info: UpdateCustomerInfoInput['info']): Record<string, any> {
   const payload: Record<string, any> = {};
   if (info.shopName !== undefined) payload.shop_name = info.shopName;
   if (info.placeAddress !== undefined) payload.place_address = info.placeAddress;
@@ -40,17 +54,17 @@ export function useUpdateCustomerInfo() {
       if (Object.keys(payload).length === 0) return; // 변경 없음
 
       const { error } = await supabaseBrowser()
-        .from("customers")
+        .from('customers')
         .update(payload)
-        .eq("id", customerId);
+        .eq('id', customerId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
     onError: (error: any) => {
-      toast.error("정보 저장 실패: " + error.message);
+      toast.error('정보 저장 실패: ' + error.message);
     },
   });
 }
