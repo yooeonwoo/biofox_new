@@ -959,9 +959,9 @@
             "id": 5,
             "title": "Update ConsentUploader.tsx",
             "description": "Modify the consent form uploader component to use the new Convex-based system.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "",
+            "details": "<info added on 2025-07-24T02:05:26.114Z>\n**ConsentUploader Component Analysis**\n\nThe ConsentUploader.tsx component currently uses an indirect approach to Convex:\n- Uses clinicalPhotosAPI.consent.upload() function\n- This calls uploadConsentImage in lib/clinical-photos-api.ts\n- The uploadConsentImage function uses the /api/kol-new/clinical-photos/upload API\n- This API is already implemented with Convex\n\nRecommended improvements:\n1. Remove the intermediate API layers and connect directly to Convex\n2. Replace React Query with Convex's built-in real-time update capabilities\n3. Implement stronger type safety throughout the component\n4. Optimize performance by eliminating unnecessary API calls and data transformations\n5. Ensure consistent error handling with the rest of the Convex-based system\n\nThis update will align with the overall project goal of migrating from Supabase to Convex for file uploads and storage.\n</info added on 2025-07-24T02:05:26.114Z>\n<info added on 2025-07-24T02:06:48.285Z>\n**ConsentUploader Component Convex Migration Completed**\n\nThe ConsentUploader.tsx component has been successfully updated to use Convex directly:\n\n**Key Changes:**\n\n1. **Direct Convex Integration**\n   - Removed intermediate API layers (clinicalPhotosAPI.consent.upload())\n   - Implemented direct Convex mutations: generateSecureUploadUrl, saveConsentFile\n\n2. **Three-Step Upload Process Implementation**\n   - Step 1: Generate upload URL from Convex\n   - Step 2: Direct file upload to Convex Storage\n   - Step 3: Store metadata in Convex DB\n\n3. **Enhanced Validation**\n   - Adjusted consent file size limit to 5MB (reduced from 10MB)\n   - Added double MIME type verification\n   - Clarified allowed file types\n\n4. **Dependency Optimization**\n   - Removed React Query in favor of Convex's real-time updates\n   - Cleaned up unnecessary imports\n\n5. **Improved Logging**\n   - Added detailed console logging for each step\n   - Enhanced error tracking\n\n**Results:**\n- More direct and efficient file upload process\n- Leveraging Convex's real-time capabilities\n- Performance improvements from eliminating API layers\n- Enhanced type safety throughout the component\n</info added on 2025-07-24T02:06:48.285Z>",
             "testStrategy": ""
           },
           {
@@ -1075,7 +1075,7 @@
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T02:04:06.688Z",
+      "updated": "2025-07-24T02:06:52.158Z",
       "description": "Tasks for convex-errors context"
     }
   }
