@@ -1,229 +1,291 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Upload, Camera, X, FileText, Download, Plus } from 'lucide-react'
-import { createClient } from '@/utils/supabase/client'
-import { useToast } from '@/components/ui/use-toast'
+import { useState, useCallback } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Upload, Camera, X, FileText, Download, Plus } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 interface ClinicalPhotoModalProps {
-  caseId: string | null
-  caseName?: string
-  consentStatus?: string
-  open: boolean
-  onClose: () => void
-  onUpdate?: () => void
+  caseId: string | null;
+  caseName?: string;
+  consentStatus?: string;
+  open: boolean;
+  onClose: () => void;
+  onUpdate?: () => void;
 }
 
 interface Photo {
-  id: string
-  session_number: number
-  photo_type: string
-  file_path: string
-  url?: string
-  created_at: string
+  _id: Id<'clinical_photos'>;
+  session_number: number;
+  photo_type: string;
+  file_path: string;
+  url: string | null;
+  created_at: number;
+  [key: string]: any; // Convex에서 추가로 반환할 수 있는 필드들
 }
 
-export function ClinicalPhotoModal({ 
-  caseId, 
+export function ClinicalPhotoModal({
+  caseId,
   caseName,
   consentStatus,
-  open, 
+  open,
   onClose,
-  onUpdate 
+  onUpdate,
 }: ClinicalPhotoModalProps) {
-  const [photos, setPhotos] = useState<Photo[]>([])
-  const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [activeSession, setActiveSession] = useState(0)
-  const [consentFile, setConsentFile] = useState<any>(null)
-  const { toast } = useToast()
-  const supabase = createClient()
+  const [uploading, setUploading] = useState(false);
+  const [activeSession, setActiveSession] = useState(0);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (caseId && open) {
-      fetchPhotos()
-      fetchConsentFile()
-    }
-  }, [caseId, open])
+  // Convex queries - 자동으로 실시간 업데이트됨
+  const photos = useQuery(
+    api.fileStorage.getClinicalPhotos,
+    caseId ? { clinical_case_id: caseId as Id<'clinical_cases'> } : 'skip'
+  );
 
-  const fetchPhotos = async () => {
-    if (!caseId) return
-    
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('clinical_photos')
-      .select('*')
-      .eq('clinical_case_id', caseId)
-      .order('session_number', { ascending: true })
-      .order('photo_type', { ascending: true })
+  const consentFile = useQuery(
+    api.fileStorage.getConsentFile,
+    caseId ? { clinical_case_id: caseId as Id<'clinical_cases'> } : 'skip'
+  );
 
-    if (error) {
-      console.error('Error fetching photos:', error)
-    } else {
-      // URL 생성
-      const photosWithUrls = await Promise.all((data || []).map(async (photo) => {
-        const { data: { publicUrl } } = supabase.storage
-          .from('clinical-photos')
-          .getPublicUrl(photo.file_path)
-        return { ...photo, url: publicUrl }
-      }))
-      setPhotos(photosWithUrls)
-    }
-    setLoading(false)
-  }
+  // Convex mutations
+  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
+  const saveClinicalPhoto = useMutation(api.fileStorage.saveClinicalPhoto);
+  const saveConsentFile = useMutation(api.fileStorage.saveConsentFile);
+  const deleteClinicalPhoto = useMutation(api.fileStorage.deleteClinicalPhoto);
+  const deleteConsentFile = useMutation(api.fileStorage.deleteConsentFile);
 
-  const fetchConsentFile = async () => {
-    if (!caseId) return
-    
-    const { data, error } = await supabase
-      .from('consent_files')
-      .select('*')
-      .eq('clinical_case_id', caseId)
-      .single()
+  const handlePhotoUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>, photoType: string) => {
+      const file = e.target.files?.[0];
+      if (!file || !caseId) return;
 
-    if (data) {
-      const { data: { publicUrl } } = supabase.storage
-        .from('consent-files')
-        .getPublicUrl(data.file_path)
-      setConsentFile({ ...data, url: publicUrl })
-    }
-  }
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, photoType: string) => {
-    const file = e.target.files?.[0]
-    if (!file || !caseId) return
-
-    setUploading(true)
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('clinical_case_id', caseId)
-    formData.append('session_number', activeSession.toString())
-    formData.append('photo_type', photoType)
-
-    try {
-      const response = await fetch('/api/clinical/photos', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (response.ok) {
-        toast({
-          title: '업로드 완료',
-          description: '사진이 업로드되었습니다.'
-        })
-        fetchPhotos()
-        onUpdate?.()
-      } else {
-        const error = await response.json()
+      // 파일 유효성 검사
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
         toast({
           title: '업로드 실패',
-          description: error.error || '사진 업로드에 실패했습니다.',
-          variant: 'destructive'
-        })
+          description: '지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP만 허용)',
+          variant: 'destructive',
+        });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: '업로드 실패',
-        description: '네트워크 오류가 발생했습니다.',
-        variant: 'destructive'
-      })
-    }
-    setUploading(false)
-  }
 
-  const handleConsentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !caseId) return
-
-    setUploading(true)
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('clinical_case_id', caseId)
-
-    try {
-      const response = await fetch('/api/clinical/consent', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (response.ok) {
-        toast({
-          title: '업로드 완료',
-          description: '동의서가 업로드되었습니다.'
-        })
-        fetchConsentFile()
-      } else {
-        const error = await response.json()
+      if (file.size > 10 * 1024 * 1024) {
         toast({
           title: '업로드 실패',
-          description: error.error || '동의서 업로드에 실패했습니다.',
-          variant: 'destructive'
-        })
+          description: '파일 크기는 10MB 이하여야 합니다.',
+          variant: 'destructive',
+        });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: '업로드 실패',
-        description: '네트워크 오류가 발생했습니다.',
-        variant: 'destructive'
-      })
-    }
-    setUploading(false)
-  }
 
-  const handleDeletePhoto = async (photo: Photo) => {
-    if (!confirm('정말 이 사진을 삭제하시겠습니까?')) return
+      setUploading(true);
 
-    const { error } = await supabase
-      .from('clinical_photos')
-      .delete()
-      .eq('id', photo.id)
+      try {
+        console.log('Step 1: Generating upload URL from Convex...');
 
-    if (!error) {
-      await supabase.storage
-        .from('clinical-photos')
-        .remove([photo.file_path])
-      
-      toast({
-        title: '삭제 완료',
-        description: '사진이 삭제되었습니다.'
-      })
-      fetchPhotos()
-      onUpdate?.()
-    }
-  }
+        // 🚀 Step 1: Convex에서 업로드 URL 생성
+        const uploadUrl = await generateUploadUrl();
 
-  // 세션별로 사진 그룹화
-  const photosBySession = photos.reduce((acc, photo) => {
-    if (!acc[photo.session_number]) {
-      acc[photo.session_number] = []
-    }
-    acc[photo.session_number].push(photo)
-    return acc
-  }, {} as Record<number, Photo[]>)
+        console.log('Step 2: Uploading file to Convex Storage...');
 
-  const maxSession = Math.max(0, ...Object.keys(photosBySession).map(Number))
+        // 🚀 Step 2: Convex Storage로 직접 업로드
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          body: file,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('Convex upload failed:', {
+            status: uploadResponse.status,
+            statusText: uploadResponse.statusText,
+            error: errorText,
+          });
+          throw new Error(`파일 업로드 실패: ${uploadResponse.statusText}`);
+        }
+
+        const { storageId } = await uploadResponse.json();
+        console.log('File uploaded successfully, storageId:', storageId);
+
+        console.log('Step 3: Saving metadata to Convex...');
+
+        // 🚀 Step 3: 메타데이터 저장
+        await saveClinicalPhoto({
+          storageId,
+          clinical_case_id: caseId as Id<'clinical_cases'>,
+          session_number: activeSession,
+          photo_type: photoType as 'front' | 'left_side' | 'right_side',
+          file_size: file.size,
+        });
+
+        console.log('Clinical photo metadata saved');
+
+        toast({
+          title: '업로드 완료',
+          description: '사진이 업로드되었습니다.',
+        });
+
+        onUpdate?.(); // 부모 컴포넌트에 업데이트 알림
+      } catch (error) {
+        console.error('Photo upload error:', error);
+        toast({
+          title: '업로드 실패',
+          description: error instanceof Error ? error.message : '사진 업로드에 실패했습니다.',
+          variant: 'destructive',
+        });
+      } finally {
+        setUploading(false);
+      }
+    },
+    [caseId, activeSession, generateUploadUrl, saveClinicalPhoto, toast, onUpdate]
+  );
+
+  const handleConsentUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !caseId) return;
+
+      // 파일 유효성 검사
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: '업로드 실패',
+          description: '지원하지 않는 파일 형식입니다. (PDF, JPEG, PNG만 허용)',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: '업로드 실패',
+          description: '파일 크기는 5MB 이하여야 합니다.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setUploading(true);
+
+      try {
+        console.log('Step 1: Generating upload URL from Convex...');
+
+        // 🚀 Step 1: Convex에서 업로드 URL 생성
+        const uploadUrl = await generateUploadUrl();
+
+        console.log('Step 2: Uploading file to Convex Storage...');
+
+        // 🚀 Step 2: Convex Storage로 직접 업로드
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          body: file,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('Convex upload failed:', {
+            status: uploadResponse.status,
+            statusText: uploadResponse.statusText,
+            error: errorText,
+          });
+          throw new Error(`파일 업로드 실패: ${uploadResponse.statusText}`);
+        }
+
+        const { storageId } = await uploadResponse.json();
+        console.log('File uploaded successfully, storageId:', storageId);
+
+        console.log('Step 3: Saving metadata to Convex...');
+
+        // 🚀 Step 3: 메타데이터 저장
+        await saveConsentFile({
+          storageId,
+          clinical_case_id: caseId as Id<'clinical_cases'>,
+          file_name: file.name,
+          file_size: file.size,
+          file_type: file.type,
+        });
+
+        console.log('Consent file metadata saved');
+
+        toast({
+          title: '업로드 완료',
+          description: '동의서가 업로드되었습니다.',
+        });
+      } catch (error) {
+        console.error('Consent upload error:', error);
+        toast({
+          title: '업로드 실패',
+          description: error instanceof Error ? error.message : '동의서 업로드에 실패했습니다.',
+          variant: 'destructive',
+        });
+      } finally {
+        setUploading(false);
+      }
+    },
+    [caseId, generateUploadUrl, saveConsentFile, toast]
+  );
+
+  const handleDeletePhoto = useCallback(
+    async (photo: Photo) => {
+      if (!photo || !confirm('정말 이 사진을 삭제하시겠습니까?')) return;
+
+      try {
+        await deleteClinicalPhoto({
+          photoId: photo._id,
+        });
+
+        toast({
+          title: '삭제 완료',
+          description: '사진이 삭제되었습니다.',
+        });
+
+        onUpdate?.();
+      } catch (error) {
+        console.error('Photo delete error:', error);
+        toast({
+          title: '삭제 실패',
+          description: '사진 삭제에 실패했습니다.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [deleteClinicalPhoto, toast, onUpdate]
+  );
+
+  // 데이터 변환 및 그룹화
+  const photosData = photos || [];
+  const photosBySession = photosData.reduce(
+    (acc, photo) => {
+      if (!acc[photo.session_number]) {
+        acc[photo.session_number] = [];
+      }
+      acc[photo.session_number].push(photo);
+      return acc;
+    },
+    {} as Record<number, Photo[]>
+  );
+
+  const maxSession = Math.max(0, ...Object.keys(photosBySession).map(Number));
 
   const photoTypes = [
     { type: 'front', label: '정면' },
     { type: 'left_side', label: '좌측면' },
-    { type: 'right_side', label: '우측면' }
-  ]
+    { type: 'right_side', label: '우측면' },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             임상 사진 관리
@@ -248,7 +310,7 @@ export function ClinicalPhotoModal({
               >
                 Before
               </Button>
-              {Array.from({ length: maxSession + 1 }, (_, i) => i + 1).map((session) => (
+              {Array.from({ length: maxSession + 1 }, (_, i) => i + 1).map(session => (
                 <Button
                   key={session}
                   variant={activeSession === session ? 'default' : 'outline'}
@@ -258,35 +320,34 @@ export function ClinicalPhotoModal({
                   {session}회차
                 </Button>
               ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveSession(maxSession + 1)}
-              >
-                <Plus className="h-4 w-4" />
-                새 회차
+              <Button variant="ghost" size="sm" onClick={() => setActiveSession(maxSession + 1)}>
+                <Plus className="h-4 w-4" />새 회차
               </Button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               {photoTypes.map(({ type, label }) => {
-                const existingPhoto = photosBySession[activeSession]?.find(p => p.photo_type === type)
-                
+                const existingPhoto = photosBySession[activeSession]?.find(
+                  p => p.photo_type === type
+                );
+
                 return (
                   <Card key={type}>
                     <CardContent className="p-4">
                       <Label className="mb-2 block">{label}</Label>
-                      
+
                       {existingPhoto ? (
-                        <div className="relative group">
+                        <div className="group relative">
                           <img
-                            src={existingPhoto.url}
+                            src={existingPhoto.url || ''}
                             alt={`${label} 사진`}
-                            className="w-full aspect-square object-cover rounded-lg"
+                            className="aspect-square w-full rounded-lg object-cover"
                           />
                           <button
                             onClick={() => handleDeletePhoto(existingPhoto)}
-                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                            disabled={uploading}
+                            title="사진 삭제"
                           >
                             <X className="h-4 w-4" />
                           </button>
@@ -297,11 +358,11 @@ export function ClinicalPhotoModal({
                             type="file"
                             accept="image/*"
                             className="hidden"
-                            onChange={(e) => handlePhotoUpload(e, type)}
+                            onChange={e => handlePhotoUpload(e, type)}
                             disabled={uploading}
                           />
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
-                            <Camera className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                          <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-gray-400">
+                            <Camera className="mx-auto mb-2 h-8 w-8 text-gray-400" />
                             <span className="text-sm text-gray-500">
                               {uploading ? '업로드 중...' : '클릭하여 업로드'}
                             </span>
@@ -310,7 +371,7 @@ export function ClinicalPhotoModal({
                       )}
                     </CardContent>
                   </Card>
-                )
+                );
               })}
             </div>
           </TabsContent>
@@ -333,9 +394,9 @@ export function ClinicalPhotoModal({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(consentFile.url, '_blank')}
+                        onClick={() => window.open(consentFile.url || '', '_blank')}
                       >
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="mr-2 h-4 w-4" />
                         다운로드
                       </Button>
                     </div>
@@ -353,9 +414,9 @@ export function ClinicalPhotoModal({
                       onChange={handleConsentUpload}
                       disabled={uploading}
                     />
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-gray-400 transition-colors">
-                      <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-600 mb-2">동의서 업로드</p>
+                    <div className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-12 text-center transition-colors hover:border-gray-400">
+                      <Upload className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                      <p className="mb-2 text-gray-600">동의서 업로드</p>
                       <p className="text-sm text-gray-500">
                         {uploading ? '업로드 중...' : 'PDF 또는 이미지 파일 (최대 5MB)'}
                       </p>
@@ -368,5 +429,5 @@ export function ClinicalPhotoModal({
         </Tabs>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
