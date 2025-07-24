@@ -986,9 +986,9 @@
             "id": 8,
             "title": "Create migration script for existing files",
             "description": "Develop a script to migrate existing files from Supabase storage to Convex storage.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "",
+            "details": "<info added on 2025-07-24T02:17:33.563Z>\n## File Migration Script Design Completed\n\nI analyzed the existing data export scripts and Convex file storage structure:\n\n**Supabase file-related tables:**\n1. `clinical_photos` - Clinical photo metadata and URLs\n2. `consent_files` - Consent form metadata and URLs  \n3. `file_metadata` - General file metadata\n\n**Convex file storage structure:**\n1. `_storage` - Actual file binary storage\n2. `clinical_photos` - Clinical photo metadata (references storage ID)\n3. `consent_files` - Consent form metadata (references storage ID)\n\n**Migration strategy:**\n1. Extract file URLs and metadata from Supabase\n2. Download files and upload to Convex Storage\n3. Store metadata in Convex DB (mapping to storage IDs)\n4. Include batch processing and error recovery functionality\n\nI will now proceed with writing the actual migration script.\n</info added on 2025-07-24T02:17:33.563Z>\n<info added on 2025-07-24T02:19:19.535Z>\n## File Migration Script Implementation Completed\n\nI successfully created the `scripts/migration/migrate-files-to-convex.ts` file.\n\n**Key Features:**\n1. **Resumable structure** - Saves migration state to JSON file to continue after interruptions\n2. **Batch processing** - Sequentially migrates clinical photos and consent files\n3. **Error recovery** - Implements up to 3 retries with exponential backoff\n4. **Progress tracking** - Displays real-time progress and detailed logging\n5. **Comprehensive logging** - Outputs timestamped logs to both file and console\n\n**Migration Process:**\n1. Queries `clinical_photos` and `consent_files` tables from Supabase\n2. Downloads each file from Supabase Storage\n3. Uploads to Convex Storage\n4. Stores metadata in Convex DB with storage ID mapping\n\n**Output Files:**\n- `migration-data/file-migration-state.json` - Migration state\n- `migration-data/file-migration.log` - Detailed logs\n\n**Execution Command:**\n```bash\nnpm run ts-node scripts/migration/migrate-files-to-convex.ts\n```\n\nThe script is complete and ready for execution.\n</info added on 2025-07-24T02:19:19.535Z>",
             "testStrategy": ""
           }
         ]
@@ -1075,7 +1075,7 @@
     ],
     "metadata": {
       "created": "2025-07-24T01:19:06.614Z",
-      "updated": "2025-07-24T02:15:08.146Z",
+      "updated": "2025-07-24T02:19:24.978Z",
       "description": "Tasks for convex-errors context"
     }
   }
