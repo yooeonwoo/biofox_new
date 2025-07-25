@@ -22,7 +22,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/lib/clinical-photos-api', () => ({
+vi.mock('@/lib/clinical-photos', () => ({
   updateCase: vi.fn(),
   uploadPhoto: vi.fn(),
   fetchPhotos: vi.fn(),
@@ -41,10 +41,9 @@ const createWrapper = () => {
       },
     },
   });
-  
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    React.createElement(QueryClientProvider, { client: queryClient }, children)
-  );
+
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
   return Wrapper;
 };
 
@@ -105,7 +104,7 @@ describe('useCustomerCaseHandlers', () => {
       setCases: mockSetCases,
     };
 
-    const { updateCase } = await import('@/lib/clinical-photos-api');
+    const { updateCase } = await import('@/lib/clinical-photos');
     const mockUpdateCase = vi.mocked(updateCase);
     mockUpdateCase.mockResolvedValue(null);
 
@@ -128,7 +127,7 @@ describe('useCustomerCaseHandlers', () => {
       enqueue: mockEnqueue,
     };
 
-    const { uploadPhoto } = await import('@/lib/clinical-photos-api');
+    const { uploadPhoto } = await import('@/lib/clinical-photos');
     const mockUploadPhoto = vi.mocked(uploadPhoto);
     mockUploadPhoto.mockResolvedValue('test-url');
 
@@ -154,7 +153,7 @@ describe('useCustomerCaseHandlers', () => {
       setCases: mockSetCases,
     };
 
-    const { updateCase } = await import('@/lib/clinical-photos-api');
+    const { updateCase } = await import('@/lib/clinical-photos');
     const mockUpdateCase = vi.mocked(updateCase);
 
     const { result } = renderHook(() => useCustomerCaseHandlers(props), {
@@ -198,10 +197,8 @@ describe('useCustomerCaseHandlers', () => {
   });
 
   it('이미 새 고객이 있을 때 추가 시도하면 토스트 에러를 표시한다', () => {
-    const mockCases = [
-      { id: 'new-customer-123', customerName: '새 고객' } as ClinicalCase,
-    ];
-    
+    const mockCases = [{ id: 'new-customer-123', customerName: '새 고객' } as ClinicalCase];
+
     const props = {
       ...defaultProps,
       cases: mockCases,
@@ -229,4 +226,4 @@ describe('useCustomerCaseHandlers', () => {
     expect(result.current.isNewCustomer('123')).toBe(false);
     expect(result.current.isNewCustomer('regular-case')).toBe(false);
   });
-}); 
+});

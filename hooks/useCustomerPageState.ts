@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { checkAuthSupabase } from '@/lib/auth';
 import { safeParseStringArray } from '@/types/clinical';
@@ -15,9 +15,13 @@ export const useCustomerPageState = () => {
   const [hasUnsavedNewCustomer, setHasUnsavedNewCustomer] = useState(false);
   const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
   const [isComposing, setIsComposing] = useState(false);
-  const [inputDebounceTimers, setInputDebounceTimers] = useState<{[key: string]: NodeJS.Timeout}>({});
+  const [inputDebounceTimers, setInputDebounceTimers] = useState<{ [key: string]: NodeJS.Timeout }>(
+    {}
+  );
   const [isUserInteracting, setIsUserInteracting] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<{[caseId:string]: 'idle' | 'saving' | 'saved' | 'error'}>({});
+  const [saveStatus, setSaveStatus] = useState<{
+    [caseId: string]: 'idle' | 'saving' | 'saved' | 'error';
+  }>({});
 
   /** Refs - 그대로 이식 */
   const userActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -46,26 +50,28 @@ export const useCustomerPageState = () => {
         setIsLoading(false);
       }
     };
-    
+
     checkAuth();
   }, [router]);
 
   // 사용자 상호작용 감지 훅
   useEffect(() => {
     const interactiveElements = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
-    
+
     const checkFocusState = () => {
       const activeElement = document.activeElement;
-      const isInputFocused = !!(activeElement &&
+      const isInputFocused = !!(
+        activeElement &&
         interactiveElements.includes(activeElement.tagName) &&
-        activeElement !== document.body);
-      
-      console.log('포커스 상태 변경:', { 
-        activeElement: activeElement?.tagName, 
+        activeElement !== document.body
+      );
+
+      console.log('포커스 상태 변경:', {
+        activeElement: activeElement?.tagName,
         isInputFocused,
-        id: activeElement?.id || 'no-id'
+        id: activeElement?.id || 'no-id',
       });
-      
+
       setIsUserInteracting(isInputFocused);
     };
 
@@ -75,17 +81,19 @@ export const useCustomerPageState = () => {
 
       console.log('사용자 활동 감지:', event.type);
       setIsUserInteracting(true);
-      
+
       if (userActivityTimeoutRef.current) {
         clearTimeout(userActivityTimeoutRef.current);
       }
-      
+
       userActivityTimeoutRef.current = setTimeout(() => {
         const activeElement = document.activeElement;
-        const isInputFocused = !!(activeElement &&
+        const isInputFocused = !!(
+          activeElement &&
           interactiveElements.includes(activeElement.tagName) &&
-          activeElement !== document.body);
-          
+          activeElement !== document.body
+        );
+
         if (!isInputFocused) {
           console.log('사용자 활동 타임아웃 - 상호작용 상태 해제');
           setIsUserInteracting(false);
@@ -111,7 +119,7 @@ export const useCustomerPageState = () => {
       document.removeEventListener('touchstart', handleUserActivity);
       document.removeEventListener('input', handleUserActivity);
       document.removeEventListener('change', handleUserActivity);
-      
+
       if (userActivityTimeoutRef.current) {
         clearTimeout(userActivityTimeoutRef.current);
       }
@@ -162,120 +170,132 @@ export const useCustomerPageState = () => {
   useEffect(() => {
     const loadCases = async () => {
       if (!user) return;
-      
+
       try {
         const { fetchCases } = await import('@/lib/clinical-photos');
         const allCasesData = await fetchCases();
-        
-        const casesData = allCasesData.filter(case_ => 
-          case_.customerName?.trim().toLowerCase() !== '본인' && 
-          !case_.customerName?.includes('본인')
+
+        const casesData = allCasesData.filter(
+          case_ =>
+            case_.customerName?.trim().toLowerCase() !== '본인' &&
+            !case_.customerName?.includes('본인')
         );
-        
+
         console.log('전체 케이스:', allCasesData.length, '고객 케이스:', casesData.length);
-        
-        const transformedCases: ClinicalCase[] = await Promise.all(casesData.map(async case_ => {
-          const productTypes = [];
-          if (case_.cureBooster) productTypes.push('cure_booster');
-          if (case_.cureMask) productTypes.push('cure_mask');
-          if (case_.premiumMask) productTypes.push('premium_mask');
-          if (case_.allInOneSerum) productTypes.push('all_in_one_serum');
-          
-          const skinTypeData = [];
-          if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
-          if (case_.skinPigment) skinTypeData.push('pigment');
-          if (case_.skinPore) skinTypeData.push('pore');
-          if (case_.skinTrouble) skinTypeData.push('acne_trouble');
-          if (case_.skinWrinkle) skinTypeData.push('wrinkle');
-          if (case_.skinEtc) skinTypeData.push('other');
-          
-          let photos: PhotoSlot[] = [];
-          try {
-            const { fetchPhotos } = await import('@/lib/clinical-photos-api');
-            const photoData = await fetchPhotos(case_.id);
-            photos = photoData.map(p => ({
-              id: p.id,
-              roundDay: p.roundDay,
-              angle: p.angle as 'front' | 'left' | 'right',
-              imageUrl: p.imageUrl,
-              uploaded: true
-            }));
-          } catch (error) {
-            console.error(`Failed to load photos for case ${case_.id}:`, error);
-          }
 
-          const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
-          try {
-            const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
-            const roundData = await fetchRoundCustomerInfo(case_.id);
-            roundData.forEach(round => {
-              roundCustomerInfo[round.round_number] = {
-                age: round.age,
-                gender: round.gender,
-                treatmentType: round.treatment_type || '',
-                products: safeParseStringArray(round.products),
-                skinTypes: safeParseStringArray(round.skin_types),
-                memo: round.memo || '',
-                date: round.treatment_date || ''
+        const transformedCases: ClinicalCase[] = await Promise.all(
+          casesData.map(async case_ => {
+            const productTypes = [];
+            if (case_.cureBooster) productTypes.push('cure_booster');
+            if (case_.cureMask) productTypes.push('cure_mask');
+            if (case_.premiumMask) productTypes.push('premium_mask');
+            if (case_.allInOneSerum) productTypes.push('all_in_one_serum');
+
+            const skinTypeData = [];
+            if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
+            if (case_.skinPigment) skinTypeData.push('pigment');
+            if (case_.skinPore) skinTypeData.push('pore');
+            if (case_.skinTrouble) skinTypeData.push('acne_trouble');
+            if (case_.skinWrinkle) skinTypeData.push('wrinkle');
+            if (case_.skinEtc) skinTypeData.push('other');
+
+            let photos: PhotoSlot[] = [];
+            try {
+              const { fetchPhotos } = await import('@/lib/clinical-photos');
+              const photoData = await fetchPhotos(case_.id);
+              photos = photoData.map(p => ({
+                id: p.id,
+                roundDay: p.roundDay,
+                angle: p.angle as 'front' | 'left' | 'right',
+                imageUrl: p.imageUrl,
+                uploaded: true,
+              }));
+            } catch (error) {
+              console.error(`Failed to load photos for case ${case_.id}:`, error);
+            }
+
+            const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+            try {
+              const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos');
+              const roundData = await fetchRoundCustomerInfo(case_.id);
+              roundData.forEach(round => {
+                roundCustomerInfo[round.round_number] = {
+                  age: round.age,
+                  gender: round.gender,
+                  treatmentType: round.treatment_type || '',
+                  products: safeParseStringArray(round.products),
+                  skinTypes: safeParseStringArray(round.skin_types),
+                  memo: round.memo || '',
+                  date: round.treatment_date || '',
+                };
+              });
+            } catch (error) {
+              console.error(`Failed to load round info for case ${case_.id}:`, error);
+            }
+
+            if (!roundCustomerInfo[1]) {
+              roundCustomerInfo[1] = {
+                age: undefined,
+                gender: undefined,
+                treatmentType: '',
+                products: productTypes,
+                skinTypes: skinTypeData,
+                memo: case_.treatmentPlan || '',
+                date: case_.createdAt.split('T')[0],
               };
-            });
-          } catch (error) {
-            console.error(`Failed to load round info for case ${case_.id}:`, error);
-          }
+            } else {
+              if (
+                (!roundCustomerInfo[1].products || roundCustomerInfo[1].products.length === 0) &&
+                productTypes.length > 0
+              ) {
+                roundCustomerInfo[1].products = productTypes;
+              }
+              if (
+                (!roundCustomerInfo[1].skinTypes || roundCustomerInfo[1].skinTypes.length === 0) &&
+                skinTypeData.length > 0
+              ) {
+                roundCustomerInfo[1].skinTypes = skinTypeData;
+              }
+            }
 
-          if (!roundCustomerInfo[1]) {
-            roundCustomerInfo[1] = {
-              age: undefined,
-              gender: undefined,
-              treatmentType: '',
-              products: productTypes,
-              skinTypes: skinTypeData,
-              memo: case_.treatmentPlan || '',
-              date: case_.createdAt.split('T')[0],
-            };
-          } else {
-            if ((!roundCustomerInfo[1].products || roundCustomerInfo[1].products.length === 0) && productTypes.length > 0) {
-              roundCustomerInfo[1].products = productTypes;
-            }
-            if ((!roundCustomerInfo[1].skinTypes || roundCustomerInfo[1].skinTypes.length === 0) && skinTypeData.length > 0) {
-              roundCustomerInfo[1].skinTypes = skinTypeData;
-            }
-          }
-          
-          return {
-            id: case_.id.toString(),
-            customerName: case_.customerName,
-            status: (case_.status === 'archived' || (case_.status as any) === 'cancelled')
-              ? 'active'
-              : (case_.status as 'active' | 'completed'),
-            createdAt: case_.createdAt ? case_.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
-            consentReceived: case_.consentReceived,
-            consentImageUrl: case_.consentImageUrl,
-            photos: photos,
-            customerInfo: {
-              name: case_.customerName,
-              age: roundCustomerInfo[1]?.age,
-              gender: roundCustomerInfo[1]?.gender,
-              products: productTypes,
-              skinTypes: skinTypeData,
-              memo: case_.treatmentPlan || ''
-            },
-            roundCustomerInfo: roundCustomerInfo,
-            cureBooster: case_.cureBooster || false,
-            cureMask: case_.cureMask || false,
-            premiumMask: case_.premiumMask || false,
-            allInOneSerum: case_.allInOneSerum || false,
-            skinRedSensitive: case_.skinRedSensitive || false,
-            skinPigment: case_.skinPigment || false,
-            skinPore: case_.skinPore || false,
-            skinTrouble: case_.skinTrouble || false,
-            skinWrinkle: case_.skinWrinkle || false,
-            skinEtc: case_.skinEtc || false
-          } as ClinicalCase;
-        }));
-        
+            return {
+              id: case_.id.toString(),
+              customerName: case_.customerName,
+              status:
+                case_.status === 'archived' || (case_.status as any) === 'cancelled'
+                  ? 'active'
+                  : (case_.status as 'active' | 'completed'),
+              createdAt: case_.createdAt
+                ? case_.createdAt.split('T')[0]
+                : new Date().toISOString().split('T')[0],
+              consentReceived: case_.consentReceived,
+              consentImageUrl: case_.consentImageUrl,
+              photos: photos,
+              customerInfo: {
+                name: case_.customerName,
+                age: roundCustomerInfo[1]?.age,
+                gender: roundCustomerInfo[1]?.gender,
+                products: productTypes,
+                skinTypes: skinTypeData,
+                memo: case_.treatmentPlan || '',
+              },
+              roundCustomerInfo: roundCustomerInfo,
+              cureBooster: case_.cureBooster || false,
+              cureMask: case_.cureMask || false,
+              premiumMask: case_.premiumMask || false,
+              allInOneSerum: case_.allInOneSerum || false,
+              skinRedSensitive: case_.skinRedSensitive || false,
+              skinPigment: case_.skinPigment || false,
+              skinPore: case_.skinPore || false,
+              skinTrouble: case_.skinTrouble || false,
+              skinWrinkle: case_.skinWrinkle || false,
+              skinEtc: case_.skinEtc || false,
+            } as ClinicalCase;
+          })
+        );
+
         setCases(transformedCases as ClinicalCase[]);
-        
+
         const initialRounds: { [caseId: string]: number } = {};
         transformedCases.forEach(case_ => {
           initialRounds[case_.id] = 1;
@@ -295,29 +315,29 @@ export const useCustomerPageState = () => {
     let scrollTimeout: NodeJS.Timeout | null = null;
     let throttleTimeout: NodeJS.Timeout | null = null;
     let isScrolling = false;
-    
+
     const handleScroll = () => {
       console.log('스크롤 이벤트 감지됨', { isUserInteracting });
-      
+
       if (isUserInteracting) {
         console.log('사용자 상호작용 중 - 스크롤 애니메이션 차단');
         return;
       }
-      
+
       if (!isScrolling && !throttleTimeout) {
         isScrolling = true;
         console.log(' 의도적 스크롤 감지 - 숫자 애니메이션 시작');
-        
+
         const currentCases = casesRef.current;
         if (currentCases && currentCases.length > 0) {
           setNumberVisibleCards(new Set(currentCases.map(c => c.id)));
         }
-        
+
         throttleTimeout = setTimeout(() => {
           throttleTimeout = null;
         }, 150);
       }
-      
+
       if (scrollTimeout) clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
         console.log(' 스크롤 멈춤 - 숫자 애니메이션 종료');
@@ -327,7 +347,7 @@ export const useCustomerPageState = () => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       if (scrollTimeout) clearTimeout(scrollTimeout);
@@ -339,11 +359,11 @@ export const useCustomerPageState = () => {
   useEffect(() => {
     if (cases.length > 0 && !isUserInteracting) {
       console.log(' 초기 애니메이션 테스트 시작', { casesLength: cases.length, isUserInteracting });
-      
+
       const initialAnimationTimer = setTimeout(() => {
         if (!isUserInteracting) {
           setNumberVisibleCards(new Set(cases.map(c => c.id)));
-          
+
           setTimeout(() => {
             setNumberVisibleCards(new Set());
           }, 2000);
@@ -351,7 +371,7 @@ export const useCustomerPageState = () => {
           console.log('초기 애니메이션 차단 - 사용자 상호작용 중');
         }
       }, 1000);
-      
+
       return () => {
         clearTimeout(initialAnimationTimer);
       };
@@ -395,13 +415,13 @@ export const useCustomerPageState = () => {
     setIsUserInteracting,
     saveStatus,
     setSaveStatus,
-    
+
     // Refs
     userActivityTimeoutRef,
     mainContentRef,
     casesRef,
-    
+
     // Helper functions
     isNewCustomer,
   };
-}; 
+};

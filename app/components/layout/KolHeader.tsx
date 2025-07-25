@@ -50,15 +50,23 @@ export default function KolHeader() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  // Convex queries and mutations
-  const notificationsResult = useQuery(api.notifications.getUserNotifications, {
-    paginationOpts: { numItems: 10, cursor: null },
-    isRead: false, // 최신 읽지 않은 알림들
-    sortBy: 'created_at',
-    sortOrder: 'desc',
-  });
+  // Convex queries와 뮤테이션은 로그인된 경우에만 실행
+  const notificationsResult = useQuery(
+    api.notifications.getUserNotifications,
+    profile
+      ? {
+          paginationOpts: { numItems: 10, cursor: null },
+          isRead: false,
+          sortBy: 'created_at',
+          sortOrder: 'desc',
+        }
+      : 'skip'
+  );
 
-  const unreadCountResult = useQuery(api.notifications.getUnreadNotificationCount, {});
+  const unreadCountResult = useQuery(
+    api.notifications.getUnreadNotificationCount,
+    profile ? {} : 'skip'
+  );
 
   const markAsRead = useMutation(api.notifications.markNotificationAsRead);
   const markAllAsRead = useMutation(api.notifications.markAllNotificationsAsRead);

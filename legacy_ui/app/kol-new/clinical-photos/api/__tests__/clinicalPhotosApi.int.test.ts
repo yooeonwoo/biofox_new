@@ -5,9 +5,9 @@ import {
   fetchCase,
   updateCase,
   deleteCase,
-} from '@/lib/clinical-photos-api';
+} from '@/lib/clinical-photos';
 
-import * as clinicalApi from '@/lib/clinical-photos-api';
+import * as clinicalApi from '@/lib/clinical-photos';
 
 // 통합 테스트는 실제 Supabase 연결이 필요합니다.
 // 환경변수 미설정 시 테스트를 건너뜁니다.

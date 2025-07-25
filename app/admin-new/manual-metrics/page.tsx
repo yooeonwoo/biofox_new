@@ -62,7 +62,9 @@ const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
 // API 호출 함수
 const fetchMetrics = async (kolId: number, yearMonth: string): Promise<MetricsData> => {
-  const response = await fetch(`/api/admin-new/manual-metrics?kolId=${kolId}&yearMonth=${yearMonth}`);
+  const response = await fetch(
+    `/api/admin-new/manual-metrics?kolId=${kolId}&yearMonth=${yearMonth}`
+  );
   if (!response.ok) {
     throw new Error('데이터 조회에 실패했습니다.');
   }
@@ -93,17 +95,30 @@ export default function ManualMetricsPage() {
   const { data: kols = [], isLoading: kolsLoading } = useAdminNewKols();
 
   // KOL -> Shop 파생 데이터
-  const kolMap = kols.reduce((acc: Record<number, { kolName: string; shops: typeof kols }>, cur) => {
-    if (!acc[cur.kol_id]) acc[cur.kol_id] = { kolName: cur.name, shops: [] };
-    acc[cur.kol_id].shops.push(cur);
-    return acc;
-  }, {});
-  const kolOptions = Object.entries(kolMap).map(([id, { kolName }]) => ({ kolId: Number(id), kolName }));
-  const shopOptions: typeof kols = selectedKolId && kolMap[selectedKolId] ? kolMap[selectedKolId]!.shops : [];
+  const kolMap = kols.reduce(
+    (acc: Record<number, { kolName: string; shops: typeof kols }>, cur) => {
+      if (!acc[cur.kol_id]) acc[cur.kol_id] = { kolName: cur.name, shops: [] };
+      acc[cur.kol_id].shops.push(cur);
+      return acc;
+    },
+    {}
+  );
+  const kolOptions = Object.entries(kolMap).map(([id, { kolName }]) => ({
+    kolId: Number(id),
+    kolName,
+  }));
+  const shopOptions: typeof kols =
+    selectedKolId && kolMap[selectedKolId] ? kolMap[selectedKolId]!.shops : [];
 
   const yearMonth = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
 
-  const { data: metricsData, isLoading, isFetching, isError, error } = useQuery<MetricsData, Error>({
+  const {
+    data: metricsData,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+  } = useQuery<MetricsData, Error>({
     queryKey: ['manualMetrics', selectedKolId, yearMonth],
     queryFn: () => fetchMetrics(selectedKolId!, yearMonth),
     enabled: queryEnabled && !!selectedKolId,
@@ -167,7 +182,7 @@ export default function ManualMetricsPage() {
         monthly_sales: Number(data.kolMetrics.monthly_sales),
         monthly_commission: Number(data.kolMetrics.monthly_commission),
       },
-      shopMetrics: data.shopMetrics.map((shop) => ({
+      shopMetrics: data.shopMetrics.map(shop => ({
         shop_id: shop.shop_id,
         year_month: yearMonth,
         total_sales: Number(shop.total_sales),
@@ -177,14 +192,17 @@ export default function ManualMetricsPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <h1 className="text-lg sm:text-xl md:text-2xl font-bold">수기 실적 입력</h1>
+    <div className="space-y-6 p-4 md:p-6">
+      <h1 className="text-lg font-bold sm:text-xl md:text-2xl">수기 실적 입력</h1>
 
       <Card>
-        <CardContent className="p-4 flex flex-wrap items-center gap-4">
+        <CardContent className="flex flex-wrap items-center gap-4 p-4">
           {/* KOL 선택 */}
           <Select
-            onValueChange={(v) => { setSelectedKolId(Number(v)); setSelectedShopId(null); }}
+            onValueChange={v => {
+              setSelectedKolId(Number(v));
+              setSelectedShopId(null);
+            }}
             disabled={kolsLoading}
             value={selectedKolId ? String(selectedKolId) : undefined}
           >
@@ -192,7 +210,7 @@ export default function ManualMetricsPage() {
               <SelectValue placeholder="KOL 선택" />
             </SelectTrigger>
             <SelectContent className="max-h-60 overflow-y-auto">
-              {kolOptions.map((k) => (
+              {kolOptions.map(k => (
                 <SelectItem key={k.kolId} value={String(k.kolId)}>
                   {k.kolName}
                 </SelectItem>
@@ -202,7 +220,7 @@ export default function ManualMetricsPage() {
 
           {/* 전문점 선택 */}
           <Select
-            onValueChange={(v) => setSelectedShopId(Number(v))}
+            onValueChange={v => setSelectedShopId(Number(v))}
             disabled={!selectedKolId || shopOptions.length === 0}
             value={selectedShopId ? String(selectedShopId) : undefined}
           >
@@ -210,7 +228,7 @@ export default function ManualMetricsPage() {
               <SelectValue placeholder="전문점 선택" />
             </SelectTrigger>
             <SelectContent className="max-h-60 overflow-y-auto">
-              {shopOptions.map((s) => (
+              {shopOptions.map(s => (
                 <SelectItem key={s.shop_id} value={String(s.shop_id)}>
                   {s.shop_name}
                 </SelectItem>
@@ -218,12 +236,12 @@ export default function ManualMetricsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+          <Select value={String(selectedYear)} onValueChange={v => setSelectedYear(Number(v))}>
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {generateYears().map((year) => (
+              {generateYears().map(year => (
                 <SelectItem key={year} value={String(year)}>
                   {year}년
                 </SelectItem>
@@ -231,12 +249,12 @@ export default function ManualMetricsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
+          <Select value={String(selectedMonth)} onValueChange={v => setSelectedMonth(Number(v))}>
             <SelectTrigger className="w-[100px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {months.map((month) => (
+              {months.map(month => (
                 <SelectItem key={month} value={String(month)}>
                   {month}월
                 </SelectItem>
@@ -266,20 +284,29 @@ export default function ManualMetricsPage() {
             <CardHeader>
               <CardTitle>KOL 실적</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label htmlFor="kol-sales" className="block text-sm font-medium text-gray-700 mb-1">월 매출</label>
+                <label htmlFor="kol-sales" className="mb-1 block text-sm font-medium text-gray-700">
+                  월 매출
+                </label>
                 <Input
                   id="kol-sales"
                   type="number"
+                  placeholder="월 매출 입력"
                   {...register('kolMetrics.monthly_sales', { valueAsNumber: true })}
                 />
               </div>
               <div>
-                <label htmlFor="kol-commission" className="block text-sm font-medium text-gray-700 mb-1">월 수당</label>
+                <label
+                  htmlFor="kol-commission"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  월 수당
+                </label>
                 <Input
                   id="kol-commission"
                   type="number"
+                  placeholder="월 수당 입력"
                   {...register('kolMetrics.monthly_commission', { valueAsNumber: true })}
                 />
               </div>
@@ -305,6 +332,7 @@ export default function ManualMetricsPage() {
                       <TableCell>
                         <Input
                           type="number"
+                          placeholder="매출 금액 입력"
                           {...register(`shopMetrics.${index}.total_sales`, { valueAsNumber: true })}
                         />
                       </TableCell>

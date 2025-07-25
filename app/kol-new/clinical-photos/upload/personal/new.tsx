@@ -3,7 +3,7 @@ import { useCaseManagement } from '@/app/kol-new/clinical-photos/hooks/useCaseMa
 import { usePhotoManagement } from '@/app/kol-new/clinical-photos/hooks/usePhotoManagement';
 import { CaseCard } from '@/app/kol-new/clinical-photos/components/CaseCard';
 import { LoadingState } from '@/components/ui/loading';
-import { updateCase } from '@/lib/clinical-photos-api';
+import { updateCase } from '@/lib/clinical-photos';
 
 export default function PersonalClinicalUploadPageRefactor() {
   const { cases, loading, refresh } = useCaseManagement('personal');
@@ -14,8 +14,8 @@ export default function PersonalClinicalUploadPageRefactor() {
   }
 
   return (
-    <div className="flex flex-col items-center py-8 space-y-6">
-      {cases.map((caseItem) => (
+    <div className="flex flex-col items-center space-y-6 py-8">
+      {cases.map(caseItem => (
         <CaseCard
           key={caseItem.id}
           type="personal"
@@ -30,4 +30,4 @@ export default function PersonalClinicalUploadPageRefactor() {
       ))}
     </div>
   );
-} 
+}

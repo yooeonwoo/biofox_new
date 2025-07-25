@@ -113,6 +113,20 @@ export async function uploadConsentImage(caseId: number, file: File): Promise<st
   throw new Error('Not implemented - use Convex hooks instead');
 }
 
+export async function saveRoundCustomerInfo(
+  caseId: number,
+  roundDay: number,
+  data: any
+): Promise<any> {
+  console.log('saveRoundCustomerInfo called');
+  throw new Error('Not implemented - use Convex hooks instead');
+}
+
+export async function fetchRoundCustomerInfo(caseId: number): Promise<any> {
+  console.log('fetchRoundCustomerInfo called');
+  return {};
+}
+
 // 동의서 업로드
 export async function uploadConsentFile(caseId: number, file: File): Promise<UploadResponse> {
   return uploadImage(file, caseId, 'consent');

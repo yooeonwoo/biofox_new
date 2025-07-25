@@ -11,20 +11,27 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Upload, 
-  FileSpreadsheet, 
-  AlertCircle, 
+import {
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
   CheckCircle,
   XCircle,
   Download,
-  FileText
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface BulkImportModalProps {
   open: boolean;
@@ -65,6 +72,23 @@ interface ImportResult {
   };
 }
 
+const useCopyToClipboard = () => {
+  const { toast } = useToast();
+  return async (text: string, successMessage: string, fallback: () => void) => {
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast({ description: successMessage });
+      } catch (err) {
+        console.error('Clipboard copy failed', err);
+        fallback();
+      }
+    } else {
+      fallback();
+    }
+  };
+};
+
 export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
@@ -77,46 +101,50 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
     quantity_column: '',
     order_number_column: '',
     skip_first_row: false,
-    date_format: 'YYYY-MM-DD'
+    date_format: 'YYYY-MM-DD',
   });
   const [step, setStep] = useState<'upload' | 'mapping' | 'processing' | 'result'>('upload');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const copyToClipboard = useCopyToClipboard();
 
-  const handleFileSelect = useCallback((e: React.DragEvent<HTMLDivElement> | React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    
-    let selectedFile: File | null = null;
-    
-    if ('dataTransfer' in e) {
-      selectedFile = e.dataTransfer.files[0];
-    } else if (e.target.files) {
-      selectedFile = e.target.files[0];
-    }
+  const handleFileSelect = useCallback(
+    (e: React.DragEvent<HTMLDivElement> | React.ChangeEvent<HTMLInputElement>) => {
+      e.preventDefault();
 
-    if (selectedFile && selectedFile.type === 'text/csv') {
-      setFile(selectedFile);
-      
-      // 파일 읽기
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target?.result as string;
-        setFileContent(content);
-        
-        // 헤더 추출
-        const lines = content.split('\n');
-        if (lines.length > 0) {
-          const headerLine = lines[0];
-          const headers = headerLine.split(',').map(h => h.trim());
-          setHeaders(headers);
-          setStep('mapping');
-        }
-      };
-      reader.readAsText(selectedFile);
-    } else {
-      alert('CSV 파일만 업로드 가능합니다.');
-    }
-  }, []);
+      let selectedFile: File | null = null;
+
+      if ('dataTransfer' in e) {
+        selectedFile = e.dataTransfer.files[0] ?? null;
+      } else if (e.target.files) {
+        selectedFile = e.target.files[0] ?? null;
+      }
+
+      if (selectedFile && selectedFile.type === 'text/csv') {
+        setFile(selectedFile);
+
+        // 파일 읽기
+        const reader = new FileReader();
+        reader.onload = event => {
+          const content = event.target?.result as string;
+          setFileContent(content);
+
+          // 헤더 추출
+          const lines = content.split('\n');
+          if (lines.length > 0) {
+            const headerLine = lines[0]!;
+            const headers = headerLine.split(',').map(h => h.trim());
+            setHeaders(headers);
+            setStep('mapping');
+          }
+        };
+        reader.readAsText(selectedFile);
+      } else {
+        alert('CSV 파일만 업로드 가능합니다.');
+      }
+    },
+    []
+  );
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -144,8 +172,8 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
         body: JSON.stringify({
           file_type: 'csv',
           data: base64Content,
-          options
-        })
+          options,
+        }),
       });
 
       const data = await response.json();
@@ -165,31 +193,37 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
   };
 
   const downloadTemplate = () => {
-    const template = 'date,shop_email,amount,product,quantity,order_number\n2024-01-01,shop@example.com,100000,제품명,1,ORD-001';
-    const blob = new Blob([template], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'order_import_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const template =
+      'date,shop_email,amount,product,quantity,order_number\n2024-01-01,shop@example.com,100000,제품명,1,ORD-001';
+    copyToClipboard(template, '템플릿이 클립보드에 복사되었습니다.', () => {
+      // fallback download
+      const blob = new Blob([template], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'order_import_template.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   };
 
   const downloadErrors = () => {
     if (!result?.summary.errors) return;
-
     const csv = ['행,오류,데이터'];
     result.summary.errors.forEach(error => {
       csv.push(`${error.row},"${error.error}","${JSON.stringify(error.data)}"`);
     });
-
-    const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'import_errors.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const content = csv.join('\n');
+    copyToClipboard(content, '오류 내역이 클립보드에 복사되었습니다.', () => {
+      // fallback download
+      const blob = new Blob([content], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'import_errors.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   };
 
   const reset = () => {
@@ -204,7 +238,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
       quantity_column: '',
       order_number_column: '',
       skip_first_row: false,
-      date_format: 'YYYY-MM-DD'
+      date_format: 'YYYY-MM-DD',
     });
     setStep('upload');
     setResult(null);
@@ -231,9 +265,9 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
           <div className="space-y-4">
             <div
               className={cn(
-                "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer",
-                "hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-800",
-                "transition-colors"
+                'cursor-pointer rounded-lg border-2 border-dashed p-8 text-center',
+                'hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-800',
+                'transition-colors'
               )}
               onDrop={handleFileSelect}
               onDragOver={handleDragOver}
@@ -245,6 +279,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                 accept=".csv"
                 onChange={handleFileSelect}
                 className="hidden"
+                aria-label="CSV 파일 선택"
               />
               <FileSpreadsheet className="mx-auto h-12 w-12 text-gray-400" />
               <p className="mt-2 text-sm text-gray-600">
@@ -252,16 +287,14 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
               </p>
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <Button variant="outline" size="sm" onClick={downloadTemplate}>
                 <Download className="mr-2 h-4 w-4" />
                 템플릿 다운로드
               </Button>
-              <Alert className="flex-1 ml-4">
+              <Alert className="ml-4 flex-1">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  UTF-8 인코딩된 CSV 파일만 지원됩니다.
-                </AlertDescription>
+                <AlertDescription>UTF-8 인코딩된 CSV 파일만 지원됩니다.</AlertDescription>
               </Alert>
             </div>
           </div>
@@ -282,14 +315,16 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                   <Label>날짜 컬럼 *</Label>
                   <Select
                     value={options.date_column}
-                    onValueChange={(value) => setOptions({ ...options, date_column: value })}
+                    onValueChange={value => setOptions({ ...options, date_column: value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="선택하세요" />
                     </SelectTrigger>
                     <SelectContent>
                       {headers.map(header => (
-                        <SelectItem key={header} value={header}>{header}</SelectItem>
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -299,7 +334,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                   <Label>날짜 형식</Label>
                   <Select
                     value={options.date_format}
-                    onValueChange={(value) => setOptions({ ...options, date_format: value })}
+                    onValueChange={value => setOptions({ ...options, date_format: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -317,14 +352,16 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                 <Label>Shop 식별자 컬럼 * (이메일 또는 샵명)</Label>
                 <Select
                   value={options.shop_identifier_column}
-                  onValueChange={(value) => setOptions({ ...options, shop_identifier_column: value })}
+                  onValueChange={value => setOptions({ ...options, shop_identifier_column: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
                     {headers.map(header => (
-                      <SelectItem key={header} value={header}>{header}</SelectItem>
+                      <SelectItem key={header} value={header}>
+                        {header}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -334,14 +371,16 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                 <Label>금액 컬럼 *</Label>
                 <Select
                   value={options.amount_column}
-                  onValueChange={(value) => setOptions({ ...options, amount_column: value })}
+                  onValueChange={value => setOptions({ ...options, amount_column: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
                     {headers.map(header => (
-                      <SelectItem key={header} value={header}>{header}</SelectItem>
+                      <SelectItem key={header} value={header}>
+                        {header}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -352,7 +391,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                   <Label>제품명 컬럼 (선택)</Label>
                   <Select
                     value={options.product_column}
-                    onValueChange={(value) => setOptions({ ...options, product_column: value })}
+                    onValueChange={value => setOptions({ ...options, product_column: value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="선택하세요" />
@@ -360,7 +399,9 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                     <SelectContent>
                       <SelectItem value="">없음</SelectItem>
                       {headers.map(header => (
-                        <SelectItem key={header} value={header}>{header}</SelectItem>
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -370,7 +411,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                   <Label>수량 컬럼 (선택)</Label>
                   <Select
                     value={options.quantity_column}
-                    onValueChange={(value) => setOptions({ ...options, quantity_column: value })}
+                    onValueChange={value => setOptions({ ...options, quantity_column: value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="선택하세요" />
@@ -378,7 +419,9 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                     <SelectContent>
                       <SelectItem value="">없음</SelectItem>
                       {headers.map(header => (
-                        <SelectItem key={header} value={header}>{header}</SelectItem>
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -391,7 +434,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
         {step === 'processing' && (
           <div className="space-y-4 py-8">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
               <p className="mt-4 text-sm text-gray-600">처리 중...</p>
             </div>
           </div>
@@ -440,12 +483,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   {result.summary.error_count}개의 주문 등록에 실패했습니다.
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="ml-2"
-                    onClick={downloadErrors}
-                  >
+                  <Button variant="link" size="sm" className="ml-2" onClick={downloadErrors}>
                     오류 내역 다운로드
                   </Button>
                 </AlertDescription>
@@ -454,7 +492,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
 
             {result.summary.preview && result.summary.preview.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium mb-2">등록된 주문 미리보기</h4>
+                <h4 className="mb-2 text-sm font-medium">등록된 주문 미리보기</h4>
                 <div className="space-y-1">
                   {result.summary.preview.map((item, idx) => (
                     <div key={idx} className="text-sm text-gray-600">
@@ -490,9 +528,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
               <Button variant="outline" onClick={reset}>
                 새 파일 등록
               </Button>
-              <Button onClick={onClose}>
-                완료
-              </Button>
+              <Button onClick={onClose}>완료</Button>
             </>
           )}
         </DialogFooter>
@@ -503,7 +539,7 @@ export function BulkImportModal({ open, onClose, onSuccess }: BulkImportModalPro
 
 // Card 컴포넌트가 없으므로 간단히 구현
 function Card({ children }: { children: React.ReactNode }) {
-  return <div className="border rounded-lg">{children}</div>;
+  return <div className="rounded-lg border">{children}</div>;
 }
 
 function CardContent({ children, className }: { children: React.ReactNode; className?: string }) {

@@ -16,6 +16,8 @@ export interface UserProfile {
   userId: string;
   email: string;
   name: string;
+  display_name?: string;
+  bio?: string;
   role: 'admin' | 'kol' | 'ol' | 'shop_owner';
   status: 'pending' | 'approved' | 'rejected';
   shop_name: string;
@@ -37,8 +39,9 @@ export interface AuthState {
   isLoading: boolean;
   syncError?: string | null;
   completeness?: {
-    completeness: number;
+    completionPercentage: number;
     missingFields: string[];
+    isComplete: boolean;
   };
 }
 

@@ -49,10 +49,11 @@ export function RelationshipTreeView({
       if (!response.ok) throw new Error('트리 데이터 조회 실패');
 
       const { data } = await response.json();
-      setTreeData(data);
+      const safeData: TreeNode[] = Array.isArray(data) ? data : [];
+      setTreeData(safeData);
 
       // 자동으로 루트 노드들 확장
-      const rootIds = data.map((node: TreeNode) => node.id);
+      const rootIds = safeData.map((node: TreeNode) => node.id);
       setExpandedNodes(new Set(rootIds));
     } catch (error) {
       console.error('트리 데이터 조회 오류:', error);
@@ -197,7 +198,7 @@ export function RelationshipTreeView({
     );
   };
 
-  const filteredTreeData = filterNodes(treeData, searchTerm);
+  const filteredTreeData = filterNodes(treeData || [], searchTerm);
 
   return (
     <Card className={cn('p-4', className)}>
@@ -227,7 +228,7 @@ export function RelationshipTreeView({
             <div className="flex justify-center py-8">
               <div className="text-sm text-gray-500">로딩 중...</div>
             </div>
-          ) : filteredTreeData.length === 0 ? (
+          ) : (filteredTreeData?.length ?? 0) === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-gray-500">
               <Store className="mb-2 h-12 w-12" />
               <div className="text-sm">등록된 관계가 없습니다.</div>

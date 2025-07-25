@@ -130,7 +130,7 @@ export default function ClinicalPhotosUploadPage() {
   // 케이스 생성 핸들러
   const handleCreateCase = async () => {
     try {
-      const { createCase } = await import('@/lib/clinical-photos-api');
+      const { createCase } = await import('@/lib/clinical-photos');
       const caseData = {
         customerName: formData.customerName,
         caseName: formData.caseName,

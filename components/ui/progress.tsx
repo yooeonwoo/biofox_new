@@ -1,5 +1,5 @@
-import { forwardRef, HTMLAttributes } from "react";
-import { cn } from "@/lib/utils";
+import { forwardRef, HTMLAttributes } from 'react';
+import { cn } from '@/lib/utils';
 
 interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
   value?: number;
@@ -20,12 +20,10 @@ export const Progress = forwardRef<HTMLDivElement, ProgressProps>(
         aria-valuenow={percentage}
         aria-valuemin={0}
         aria-valuemax={100}
-        className={cn(
-          "relative h-2 w-full overflow-hidden rounded-full bg-gray-200",
-          className
-        )}
+        className={cn('relative h-2 w-full overflow-hidden rounded-full bg-gray-200', className)}
         {...props}
       >
+        {/* eslint-disable-next-line no-inline-styles */}
         <div
           className="absolute left-0 top-0 h-full bg-black transition-all"
           style={{ width: `${percentage}%` }}
@@ -35,4 +33,4 @@ export const Progress = forwardRef<HTMLDivElement, ProgressProps>(
   }
 );
 
-Progress.displayName = "Progress"; 
+Progress.displayName = 'Progress';

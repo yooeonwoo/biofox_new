@@ -166,7 +166,7 @@ export function useCustomerCaseHandlers({
             );
           } else {
             // 실제 케이스의 경우 Supabase에 업로드
-            const { uploadPhoto, fetchPhotos } = await import('@/lib/clinical-photos-api');
+            const { uploadPhoto, fetchPhotos } = await import('@/lib/clinical-photos');
             imageUrl = await uploadPhoto(parseInt(caseId), roundDay, angle, file);
             console.log('Received imageUrl from upload:', imageUrl);
 
@@ -249,7 +249,7 @@ export function useCustomerCaseHandlers({
       try {
         // 새 고객이 아닌 경우에만 실제 삭제 API 호출
         if (!isNewCustomer(caseId)) {
-          const { deletePhoto, fetchPhotos } = await import('@/lib/clinical-photos-api');
+          const { deletePhoto, fetchPhotos } = await import('@/lib/clinical-photos');
           await deletePhoto(parseInt(caseId), roundDay, angle);
 
           // 삭제 성공 후 해당 케이스의 사진 목록을 데이터베이스에서 다시 불러오기
@@ -339,7 +339,7 @@ export function useCustomerCaseHandlers({
 
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
-          const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+          const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
           const updateData: any = {};
 
           if (customerInfo.name) {
@@ -431,7 +431,7 @@ export function useCustomerCaseHandlers({
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
           await enqueue(caseId, async () => {
-            const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+            const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
             const updateData: any = {};
             if (roundInfo.memo !== undefined) {
               updateData.treatmentPlan = roundInfo.memo;
@@ -503,7 +503,7 @@ export function useCustomerCaseHandlers({
       try {
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
-          const { updateCase } = await import('@/lib/clinical-photos-api');
+          const { updateCase } = await import('@/lib/clinical-photos');
           await updateCase(parseInt(caseId), updates);
         }
 
@@ -666,7 +666,7 @@ export function useCustomerCaseHandlers({
       try {
         markSaving(caseId);
 
-        const { createCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+        const { createCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
 
         // 1. 새 케이스 생성
         const createdCase = await createCase({
@@ -759,7 +759,7 @@ export function useCustomerCaseHandlers({
       }
 
       try {
-        const { deleteCase } = await import('@/lib/clinical-photos-api');
+        const { deleteCase } = await import('@/lib/clinical-photos');
         await deleteCase(parseInt(caseId));
 
         // 로컬 상태에서 케이스 제거

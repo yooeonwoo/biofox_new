@@ -11,24 +11,31 @@ export function useConvexQuery<T>(
   options?: {
     enabled?: boolean;
     refetchInterval?: number;
+    onError?: (err: any) => void;
   }
 ) {
-  // Convex useQuery는 args가 "skip"이면 실행하지 않음
   const queryArgs = options?.enabled === false ? 'skip' : args;
 
-  const data = useQuery(query, queryArgs);
+  let data: any;
+  let error: any = null;
+  try {
+    data = useQuery(query, queryArgs);
+  } catch (err) {
+    error = err;
+    if (options?.onError) options.onError(err);
+  }
 
   const state = useMemo(() => {
     return {
       data,
-      isLoading: data === undefined && options?.enabled !== false,
-      isError: false, // Convex는 현재 에러 상태를 직접 노출하지 않음
-      error: null,
-      isSuccess: data !== undefined,
+      isLoading: data === undefined && !error && options?.enabled !== false,
+      isError: error !== null,
+      error,
+      isSuccess: data !== undefined && error === null,
       isEmpty: Array.isArray(data) && data.length === 0,
-      isReady: data !== undefined,
+      isReady: data !== undefined || error !== null,
     };
-  }, [data, options?.enabled]);
+  }, [data, error, options?.enabled]);
 
   return state;
 }

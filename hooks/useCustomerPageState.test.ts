@@ -8,7 +8,7 @@ import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest';
 vi.mock('next/navigation');
 vi.mock('@/lib/auth');
 vi.mock('@/lib/clinical-photos');
-vi.mock('@/lib/clinical-photos-api');
+vi.mock('@/lib/clinical-photos');
 
 const mockUseRouter = vi.mocked(useRouter);
 const mockCheckAuthSupabase = vi.mocked(checkAuthSupabase);
@@ -155,7 +155,7 @@ describe('useCustomerPageState', () => {
   it('currentRounds 상태를 올바르게 업데이트할 수 있어야 함', () => {
     const { result } = renderHook(() => useCustomerPageState());
 
-    const testRounds = { 'case1': 1, 'case2': 2, 'case3': 3 };
+    const testRounds = { case1: 1, case2: 2, case3: 3 };
 
     act(() => {
       result.current.setCurrentRounds(testRounds);
@@ -174,4 +174,4 @@ describe('useCustomerPageState', () => {
     expect(result.current.mainContentRef.current).toBe(null);
     expect(result.current.casesRef.current).toEqual([]);
   });
-}); 
+});

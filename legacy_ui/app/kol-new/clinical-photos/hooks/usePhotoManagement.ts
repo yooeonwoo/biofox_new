@@ -1,4 +1,4 @@
-import { uploadPhoto, deletePhoto } from '@/lib/clinical-photos-api';
+import { uploadPhoto, deletePhoto } from '@/lib/clinical-photos';
 
 /**
  * 사진 업로드 / 삭제 로직을 공통화한 훅

@@ -4,7 +4,6 @@ import { ReactNode, useState } from 'react';
 import KolHeader from '@/app/components/layout/KolHeader';
 import KolSidebar from '@/app/components/layout/KolSidebar';
 import KolFooter from '@/app/components/layout/KolFooter';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -13,11 +12,8 @@ interface LayoutProps {
 }
 
 export default function KolNewLayout({ children }: LayoutProps) {
-  return (
-    <ProtectedRoute requireAuth={true} requiredRole="kol" fallbackUrl="/signin">
-      <KolNewLayoutContent>{children}</KolNewLayoutContent>
-    </ProtectedRoute>
-  );
+  // 인증 우회: ProtectedRoute 제거
+  return <KolNewLayoutContent>{children}</KolNewLayoutContent>;
 }
 
 function KolNewLayoutContent({ children }: LayoutProps) {

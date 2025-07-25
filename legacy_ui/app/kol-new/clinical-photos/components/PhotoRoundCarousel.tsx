@@ -261,6 +261,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
         accept="image/jpeg,image/png,image/jpg,image/webp"
         onChange={handleFileSelect}
         className="hidden"
+        aria-label="사진 업로드"
         disabled={uploading}
       />
 
@@ -272,6 +273,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
           </h3>
         </div>
         {!isCompleted && visibleSlots[3] && (
+          // eslint-disable-next-line no-inline-styles
           <div style={{width: 'calc(25% - 8px)'}} className="text-center">
             <h3 className="text-xs font-medium text-gray-400">
               {getRoundName(visibleSlots[3].roundDay)}
@@ -296,6 +298,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(({
         )}
 
         {/* 메인 컨테이너 - 4개 슬롯을 grid로 구성 */}
+        {/* eslint-disable-next-line no-inline-styles */}
         <div className="grid grid-cols-4 gap-2 flex-1" style={{aspectRatio: '4/1'}}>
           {/* 현재 회차 3개 슬롯 영역 (하나로 묶음) */}
           <div className="col-span-3 border-2 border-gray-300 rounded-lg p-1 bg-white">

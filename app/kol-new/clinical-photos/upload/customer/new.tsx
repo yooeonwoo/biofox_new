@@ -2,7 +2,7 @@ import React from 'react';
 import { useCaseManagement } from '@/app/kol-new/clinical-photos/hooks/useCaseManagement';
 import CaseCard from '@/app/kol-new/clinical-photos/components/CaseCard';
 import { LoadingState } from '@/components/ui/loading';
-import { updateCase, deleteCase, createCase } from '@/lib/clinical-photos-api';
+import { updateCase, deleteCase, createCase } from '@/lib/clinical-photos';
 
 export default function CustomerClinicalUploadPageRefactor() {
   const { cases, loading, refresh, setCases } = useCaseManagement('customer');
@@ -27,10 +27,12 @@ export default function CustomerClinicalUploadPageRefactor() {
   }
 
   return (
-    <div className="flex flex-col items-center py-8 space-y-6">
-      <button onClick={handleAddCustomer} className="px-4 py-2 rounded bg-primary text-white mb-4">+ 새 고객 추가</button>
+    <div className="flex flex-col items-center space-y-6 py-8">
+      <button onClick={handleAddCustomer} className="mb-4 rounded bg-primary px-4 py-2 text-white">
+        + 새 고객 추가
+      </button>
 
-      {cases.map((caseItem) => (
+      {cases.map(caseItem => (
         <CaseCard
           key={caseItem.id}
           type="customer"
@@ -46,4 +48,4 @@ export default function CustomerClinicalUploadPageRefactor() {
       ))}
     </div>
   );
-} 
+}

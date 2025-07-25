@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { redirect } from 'next/navigation';
-import { fetchCases, updateCase } from '@/lib/clinical-photos-api';
+import { fetchCases, updateCase } from '@/lib/clinical-photos';
 import { useUser, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { ArrowLeft, Camera, Save, Edit, Trash2, Eye } from "lucide-react";
@@ -260,7 +260,7 @@ export default function PersonalClinicalUploadPage() {
           console.log('본인 케이스가 없어서 생성합니다.');
           
           try {
-            const { createCase } = await import('@/lib/clinical-photos-api');
+            const { createCase } = await import('@/lib/clinical-photos');
             const newPersonalCase = await createCase({
               customerName: '본인',
               caseName: '본인 임상 케이스',
@@ -343,7 +343,7 @@ export default function PersonalClinicalUploadPage() {
           // 사진 데이터 로드
           let photos: PhotoSlot[] = [];
           try {
-            const { fetchPhotos } = await import('@/lib/clinical-photos-api');
+            const { fetchPhotos } = await import('@/lib/clinical-photos');
             const photoData = await fetchPhotos(personalCase.id);
             photos = photoData.map(p => ({
               id: p.id,
@@ -359,7 +359,7 @@ export default function PersonalClinicalUploadPage() {
           // 회차별 고객 정보 로드
           const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
           try {
-            const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+            const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos');
             const roundData = await fetchRoundCustomerInfo(personalCase.id);
             roundData.forEach(round => {
               roundCustomerInfo[round.round_number] = {
@@ -440,7 +440,7 @@ export default function PersonalClinicalUploadPage() {
       }
       
       // 실제 API 호출
-      const { updateCase } = await import('@/lib/clinical-photos-api');
+      const { updateCase } = await import('@/lib/clinical-photos');
       const updateData: any = { consentReceived };
       
       // 동의 취소 시 동의서 이미지도 제거
@@ -502,7 +502,7 @@ export default function PersonalClinicalUploadPage() {
 
         try {
           // 실제 케이스의 경우 Supabase에 업로드
-          const { uploadConsentImage, fetchCase } = await import('@/lib/clinical-photos-api');
+          const { uploadConsentImage, fetchCase } = await import('@/lib/clinical-photos');
           const imageUrl = await uploadConsentImage(parseInt(caseId), file);
           
           // 업로드 성공 후 해당 케이스 정보를 데이터베이스에서 다시 불러오기
@@ -574,7 +574,7 @@ export default function PersonalClinicalUploadPage() {
       
       // 삭제 성공 후 해당 케이스 정보를 데이터베이스에서 다시 불러오기
       try {
-        const { fetchCase } = await import('@/lib/clinical-photos-api');
+        const { fetchCase } = await import('@/lib/clinical-photos');
         const updatedCase = await fetchCase(parseInt(caseId));
         if (updatedCase) {
           setCases(prev => prev.map(case_ => 
@@ -625,7 +625,7 @@ export default function PersonalClinicalUploadPage() {
     if (file) {
       try {
         // 실제 케이스의 경우 Supabase에 업로드
-        const { uploadPhoto, fetchPhotos } = await import('@/lib/clinical-photos-api');
+        const { uploadPhoto, fetchPhotos } = await import('@/lib/clinical-photos');
         const imageUrl = await uploadPhoto(parseInt(caseId), roundDay, angle, file);
         console.log('Received imageUrl from upload:', imageUrl);
         
@@ -694,7 +694,7 @@ export default function PersonalClinicalUploadPage() {
   const handlePhotoDelete = async (caseId: string, roundDay: number, angle: string): Promise<void> => {
     try {
       // 실제 삭제 API 호출
-      const { deletePhoto, fetchPhotos } = await import('@/lib/clinical-photos-api');
+      const { deletePhoto, fetchPhotos } = await import('@/lib/clinical-photos');
       await deletePhoto(parseInt(caseId), roundDay, angle);
       
       // 삭제 성공 후 해당 케이스의 사진 목록을 데이터베이스에서 다시 불러오기
@@ -806,7 +806,7 @@ export default function PersonalClinicalUploadPage() {
       });
 
       // 실제 API 호출로 서버에 저장
-      const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+      const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
       const updateData: any = {};
       
       // 메모 정보를 treatmentPlan으로 업데이트 (본인 케이스 전용)
@@ -905,7 +905,7 @@ export default function PersonalClinicalUploadPage() {
       if (!confirmed) return;
 
       // 실제 케이스인 경우 API 호출로 삭제
-      const { deleteCase } = await import('@/lib/clinical-photos-api');
+      const { deleteCase } = await import('@/lib/clinical-photos');
       const success = await deleteCase(parseInt(caseId));
       
       if (success) {
@@ -975,7 +975,7 @@ export default function PersonalClinicalUploadPage() {
         // 사진 데이터 로드
         let photos: PhotoSlot[] = [];
         try {
-          const { fetchPhotos } = await import('@/lib/clinical-photos-api');
+          const { fetchPhotos } = await import('@/lib/clinical-photos');
           const photoData = await fetchPhotos(personalCase.id);
           photos = photoData.map(p => ({
             id: p.id,
@@ -991,7 +991,7 @@ export default function PersonalClinicalUploadPage() {
         // 회차별 고객 정보 로드
         const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
         try {
-          const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos-api');
+          const { fetchRoundCustomerInfo } = await import('@/lib/clinical-photos');
           const roundData = await fetchRoundCustomerInfo(personalCase.id);
           roundData.forEach(round => {
             roundCustomerInfo[round.round_number] = {

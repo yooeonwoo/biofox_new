@@ -1,4 +1,4 @@
-import { uploadPhoto, deletePhoto } from '@/lib/clinical-photos-api';
+import { uploadPhoto, deletePhoto } from '@/lib/clinical-photos';
 
 /**
  * 사진 업로드 / 삭제 로직을 공통화한 훅
@@ -9,7 +9,7 @@ export const usePhotoManagement = () => {
     caseId: number,
     roundDay: number,
     angle: 'front' | 'left' | 'right',
-    file: File,
+    file: File
   ) => {
     try {
       const url = await uploadPhoto(caseId, roundDay, angle, file);
@@ -24,7 +24,7 @@ export const usePhotoManagement = () => {
   const handlePhotoDelete = async (
     caseId: number,
     roundDay: number,
-    angle: 'front' | 'left' | 'right',
+    angle: 'front' | 'left' | 'right'
   ) => {
     try {
       await deletePhoto(caseId, roundDay, angle);
@@ -35,4 +35,4 @@ export const usePhotoManagement = () => {
   };
 
   return { handlePhotoUpload, handlePhotoDelete };
-}; 
+};

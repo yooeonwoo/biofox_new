@@ -13,18 +13,18 @@ interface KolInfo {
   region?: string;
 }
 import Link from 'next/link';
-import { ArrowLeft, Camera, Plus, Calendar, User, Scissors } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import KolHeader from "../../../components/layout/KolHeader";
-import KolSidebar from "../../../components/layout/KolSidebar";
-import KolFooter from "../../../components/layout/KolFooter";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DialogTitle } from "@/components/ui/dialog";
-import KolMobileMenu from "../../../components/layout/KolMobileMenu";
+import { ArrowLeft, Camera, Plus, Calendar, User, Scissors } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import KolHeader from '../../../components/layout/KolHeader';
+import KolSidebar from '../../../components/layout/KolSidebar';
+import KolFooter from '../../../components/layout/KolFooter';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { DialogTitle } from '@/components/ui/dialog';
+import KolMobileMenu from '../../../components/layout/KolMobileMenu';
 
 export default function ClinicalPhotosUploadPage() {
   const [user, setUser] = useState<any>(null);
@@ -36,13 +36,13 @@ export default function ClinicalPhotosUploadPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState<{ kol?: KolInfo } | null>(null);
   const [existingCases, setExistingCases] = useState<any[]>([]);
-  
+
   // 폼 상태
   const [formData, setFormData] = useState({
     customerName: '',
     caseName: '',
     consentReceived: false,
-    consentDate: ''
+    consentDate: '',
   });
 
   // 사용자 인증 확인
@@ -50,16 +50,16 @@ export default function ClinicalPhotosUploadPage() {
     async function checkAuth() {
       try {
         const response = await fetch('/api/user', {
-          credentials: 'include'
+          credentials: 'include',
         });
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
           setIsSignedIn(true);
-          const userRole = userData.role || "kol";
+          const userRole = userData.role || 'kol';
           console.log('사용자 역할:', userRole);
           // test 역할과 kol 역할 모두 임상사진 페이지 접근 허용
-          setIsKol(userRole === "kol" || userRole === "test");
+          setIsKol(userRole === 'kol' || userRole === 'test');
         } else {
           setIsSignedIn(false);
           setIsKol(false);
@@ -83,12 +83,12 @@ export default function ClinicalPhotosUploadPage() {
         try {
           console.log('임상사진 업로드 - 대시보드 데이터 로드 시작...');
           const dashboardResponse = await fetch('/api/kol-new/dashboard');
-          
+
           if (!dashboardResponse.ok) {
             console.error('대시보드 API 에러');
             return;
           }
-          
+
           const dashboardResult = await dashboardResponse.json();
           console.log('임상사진 업로드 - 대시보드 데이터 로드 완료');
           setDashboardData(dashboardResult);
@@ -96,9 +96,9 @@ export default function ClinicalPhotosUploadPage() {
           console.error('대시보드 데이터 로드 중 오류:', err);
         }
       };
-      
+
       fetchDashboardData();
-      
+
       // 기존 케이스 로드
       const fetchExistingCases = async () => {
         try {
@@ -109,7 +109,7 @@ export default function ClinicalPhotosUploadPage() {
           console.error('기존 케이스 로드 실패:', error);
         }
       };
-      
+
       fetchExistingCases();
     }
   }, [isLoaded, isSignedIn, isKol]);
@@ -119,7 +119,7 @@ export default function ClinicalPhotosUploadPage() {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
       });
       window.location.href = '/';
     } catch (error) {
@@ -132,7 +132,7 @@ export default function ClinicalPhotosUploadPage() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -141,25 +141,25 @@ export default function ClinicalPhotosUploadPage() {
     setFormData(prev => ({
       ...prev,
       consentReceived: checked,
-      consentDate: checked ? new Date().toISOString().split('T')[0] : ''
+      consentDate: checked ? new Date().toISOString().split('T')[0] : '',
     }));
   };
 
   // 케이스 생성 핸들러
   const handleCreateCase = async () => {
     try {
-      const { createCase } = await import('@/lib/clinical-photos-api');
+      const { createCase } = await import('@/lib/clinical-photos');
       const caseData = {
         customerName: formData.customerName,
         caseName: formData.caseName,
         consentReceived: formData.consentReceived,
         consentDate: formData.consentDate || undefined,
         treatmentPlan: '',
-        concernArea: ''
+        concernArea: '',
       };
-      
+
       const createdCase = await createCase(caseData);
-      
+
       if (createdCase) {
         alert('케이스가 성공적으로 생성되었습니다!');
         // 폼 초기화
@@ -167,7 +167,7 @@ export default function ClinicalPhotosUploadPage() {
           customerName: '',
           caseName: '',
           consentReceived: false,
-          consentDate: ''
+          consentDate: '',
         });
         // 상세 페이지로 이동
         router.push('/kol-new/clinical-photos/upload/customer');
@@ -183,7 +183,7 @@ export default function ClinicalPhotosUploadPage() {
     if (typeof window !== 'undefined') {
       const draftData = {
         ...formData,
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
       };
       localStorage.setItem('clinical_case_draft', JSON.stringify(draftData));
       alert('임시저장되었습니다.');
@@ -201,7 +201,7 @@ export default function ClinicalPhotosUploadPage() {
             customerName: draftData.customerName || '',
             caseName: draftData.caseName || '',
             consentReceived: draftData.consentReceived || false,
-            consentDate: draftData.consentDate || ''
+            consentDate: draftData.consentDate || '',
           });
         } catch (error) {
           console.error('임시저장 데이터 로드 실패:', error);
@@ -234,9 +234,9 @@ export default function ClinicalPhotosUploadPage() {
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
-      <KolHeader 
-        userName={user?.firstName || "KOL"}
-        shopName={dashboardData?.kol?.shopName || "로딩 중..."}
+      <KolHeader
+        userName={user?.firstName || 'KOL'}
+        shopName={dashboardData?.kol?.shopName || '로딩 중...'}
         userImage={user?.imageUrl}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
@@ -259,23 +259,24 @@ export default function ClinicalPhotosUploadPage() {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">임상사진 업로드</h1>
-                <p className="text-sm text-muted-foreground mt-1">새로운 케이스를 등록하고 사진을 업로드하세요</p>
+                <h1 className="text-lg font-bold sm:text-xl md:text-2xl">임상사진 업로드</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  새로운 케이스를 등록하고 사진을 업로드하세요
+                </p>
               </div>
             </div>
 
             {/* 새 업로드 폼 (상단 고정) */}
             <Card className="mb-6 border-2 border-dashed border-blue-200 bg-blue-50/50">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  새 케이스 등록
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Plus className="h-5 w-5" />새 케이스 등록
                 </CardTitle>
                 <CardDescription>고객 정보를 입력하고 시술 사진을 업로드하세요</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* 기본 정보 입력 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="customerName" className="flex items-center gap-2">
                       <User className="h-4 w-4" />
@@ -307,7 +308,7 @@ export default function ClinicalPhotosUploadPage() {
                 </div>
 
                 {/* 동의서 체크 */}
-                <div className="space-y-3 p-4 bg-white rounded-lg border">
+                <div className="space-y-3 rounded-lg border bg-white p-4">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="consent"
@@ -342,32 +343,32 @@ export default function ClinicalPhotosUploadPage() {
                   <div className="grid grid-cols-3 gap-4">
                     {/* Before */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-center block">Before</Label>
-                      <div className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
+                      <Label className="block text-center text-xs font-medium">Before</Label>
+                      <div className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:bg-gray-100">
                         <div className="text-center">
-                          <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <Camera className="mx-auto mb-2 h-8 w-8 text-gray-400" />
                           <span className="text-xs text-gray-500">정면</span>
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* 7일차 */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-center block">7일차</Label>
-                      <div className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
+                      <Label className="block text-center text-xs font-medium">7일차</Label>
+                      <div className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:bg-gray-100">
                         <div className="text-center">
-                          <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <Camera className="mx-auto mb-2 h-8 w-8 text-gray-400" />
                           <span className="text-xs text-gray-500">정면</span>
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* 14일차 */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-center block">14일차</Label>
-                      <div className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
+                      <Label className="block text-center text-xs font-medium">14일차</Label>
+                      <div className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:bg-gray-100">
                         <div className="text-center">
-                          <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <Camera className="mx-auto mb-2 h-8 w-8 text-gray-400" />
                           <span className="text-xs text-gray-500">정면</span>
                         </div>
                       </div>
@@ -377,15 +378,15 @@ export default function ClinicalPhotosUploadPage() {
 
                 {/* 저장 버튼 */}
                 <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="flex-1"
                     disabled={!formData.customerName || !formData.caseName}
                     onClick={handleSaveDraft}
                   >
                     임시저장
                   </Button>
-                  <Button 
+                  <Button
                     className="flex-1"
                     disabled={!formData.customerName || !formData.caseName}
                     onClick={handleCreateCase}
@@ -400,48 +401,59 @@ export default function ClinicalPhotosUploadPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">이전 케이스</CardTitle>
-                <CardDescription>기존에 등록된 케이스들을 확인하고 추가 사진을 업로드할 수 있습니다</CardDescription>
+                <CardDescription>
+                  기존에 등록된 케이스들을 확인하고 추가 사진을 업로드할 수 있습니다
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {existingCases.length > 0 ? (
                   <div className="space-y-3">
-                    {existingCases.map((case_) => (
-                      <div key={case_.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                    {existingCases.map(case_ => (
+                      <div
+                        key={case_.id}
+                        className="flex items-center justify-between rounded-lg border p-3 hover:bg-gray-50"
+                      >
                         <div className="flex-1">
                           <h4 className="font-medium">{case_.customerName}</h4>
                           <p className="text-sm text-gray-500">{case_.caseName || '시술명 없음'}</p>
-                          <p className="text-xs text-gray-400">생성일: {new Date(case_.createdAt).toLocaleDateString('ko-KR')}</p>
+                          <p className="text-xs text-gray-400">
+                            생성일: {new Date(case_.createdAt).toLocaleDateString('ko-KR')}
+                          </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            case_.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                          }`}>
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs ${
+                              case_.status === 'completed'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}
+                          >
                             {case_.status === 'completed' ? '완료' : '진행중'}
                           </span>
                           <Button size="sm" variant="outline" asChild>
-                            <Link href="/kol-new/clinical-photos/upload/customer">
-                              사진 업로드
-                            </Link>
+                            <Link href="/kol-new/clinical-photos/upload/customer">사진 업로드</Link>
                           </Button>
                         </div>
                       </div>
                     ))}
-                    
+
                     {existingCases.length >= 5 && (
-                      <div className="text-center pt-3">
+                      <div className="pt-3 text-center">
                         <Button variant="outline" size="sm" asChild>
-                          <Link href="/kol-new/clinical-photos">
-                            전체 케이스 보기
-                          </Link>
+                          <Link href="/kol-new/clinical-photos">전체 케이스 보기</Link>
                         </Button>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Camera className="h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">등록된 케이스가 없습니다</h3>
-                    <p className="text-gray-500 mb-4">위 폼을 사용해서 첫 번째 케이스를 등록해보세요</p>
+                    <Camera className="mb-4 h-12 w-12 text-gray-400" />
+                    <h3 className="mb-2 text-lg font-medium text-gray-900">
+                      등록된 케이스가 없습니다
+                    </h3>
+                    <p className="mb-4 text-gray-500">
+                      위 폼을 사용해서 첫 번째 케이스를 등록해보세요
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -458,18 +470,29 @@ export default function ClinicalPhotosUploadPage() {
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetTrigger className="block sm:hidden">
           <div className="flex items-center justify-center p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-6 w-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"
+              />
             </svg>
           </div>
         </SheetTrigger>
         <SheetContent side="left" className="w-[250px] sm:w-[300px]">
           <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
-          <KolMobileMenu 
-            userName={user?.firstName || "KOL"}
-            shopName={"임상사진 업로드"}
-            userImage={user?.imageUrl} 
-            setMobileMenuOpen={setMobileMenuOpen} 
+          <KolMobileMenu
+            userName={user?.firstName || 'KOL'}
+            shopName={'임상사진 업로드'}
+            userImage={user?.imageUrl}
+            setMobileMenuOpen={setMobileMenuOpen}
             onSignOut={handleSignOut}
           />
         </SheetContent>

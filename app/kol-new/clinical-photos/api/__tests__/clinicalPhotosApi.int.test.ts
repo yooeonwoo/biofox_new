@@ -1,11 +1,6 @@
 import '@/tests/setup';
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import {
-  createCase,
-  fetchCase,
-  updateCase,
-  deleteCase,
-} from '@/lib/clinical-photos-api';
+import { createCase, fetchCase, updateCase, deleteCase } from '@/lib/clinical-photos';
 
 // Mock fetch to avoid network calls
 global.fetch = vi.fn();
@@ -72,4 +67,4 @@ describe('clinical-photos-api mocked', () => {
     const updated = await updateCase(createdCaseId || 12345, { concernArea: '리액트테스트' });
     expect(updated?.concernArea).toBe('리액트테스트');
   }, 20_000);
-}); 
+});

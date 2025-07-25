@@ -3,7 +3,7 @@ import { useCaseManagement } from '@/app/kol-new/clinical-photos/hooks/useCaseMa
 import { usePhotoManagement } from '@/app/kol-new/clinical-photos/hooks/usePhotoManagement';
 import { CaseCard } from '@/app/kol-new/clinical-photos/components/CaseCard';
 import { LoadingState } from '@/components/ui/loading';
-import { updateCase } from '@/lib/clinical-photos-api';
+import { updateCase } from '@/lib/clinical-photos';
 
 export default function PersonalClinicalUploadPageRefactor() {
   const { cases, loading, refresh } = useCaseManagement('personal');

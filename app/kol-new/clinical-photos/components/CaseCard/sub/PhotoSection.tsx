@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import PhotoRoundCarousel from '@/app/kol-new/clinical-photos/components/PhotoRoundCarousel';
-import { fetchPhotos } from '@/lib/clinical-photos-api';
+import { fetchPhotos } from '@/lib/clinical-photos';
 import type { PhotoSlot } from '@/lib/clinical-photos';
 import { usePhotoManagement } from '@/app/kol-new/clinical-photos/hooks/usePhotoManagement';
 import { LoadingSpinner } from '@/components/ui/loading';
@@ -49,4 +49,4 @@ export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted 
       onPhotosRefresh={loadPhotos}
     />
   );
-}; 
+};

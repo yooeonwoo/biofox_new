@@ -24,7 +24,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/lib/clinical-photos-api', () => ({
+vi.mock('@/lib/clinical-photos', () => ({
   updateCase: vi.fn(() => Promise.resolve({})),
   saveRoundCustomerInfo: vi.fn(() => Promise.resolve({})),
   uploadPhoto: vi.fn(() => Promise.resolve('http://example.com/photo.jpg')),
@@ -48,7 +48,7 @@ describe('usePersonalCaseHandlers', () => {
       name: '본인',
       products: [],
       skinTypes: [],
-      memo: ''
+      memo: '',
     },
     roundCustomerInfo: {
       1: {
@@ -56,8 +56,8 @@ describe('usePersonalCaseHandlers', () => {
         products: [],
         skinTypes: [],
         memo: '',
-        date: '2024-01-01'
-      }
+        date: '2024-01-01',
+      },
     },
     cureBooster: false,
     cureMask: false,
@@ -68,7 +68,7 @@ describe('usePersonalCaseHandlers', () => {
     skinPore: false,
     skinTrouble: false,
     skinWrinkle: false,
-    skinEtc: false
+    skinEtc: false,
   };
 
   const defaultProps = {
@@ -121,7 +121,7 @@ describe('usePersonalCaseHandlers', () => {
   it('케이스 상태 변경이 올바르게 동작해야 한다', async () => {
     const mockSetCases = vi.fn();
     const props = { ...defaultProps, setCases: mockSetCases };
-    
+
     const { result } = renderHook(() => usePersonalCaseHandlers(props));
 
     await act(async () => {
@@ -134,7 +134,7 @@ describe('usePersonalCaseHandlers', () => {
   it('동의서 상태 변경이 올바르게 동작해야 한다', async () => {
     const mockSetCases = vi.fn();
     const props = { ...defaultProps, setCases: mockSetCases };
-    
+
     const { result } = renderHook(() => usePersonalCaseHandlers(props));
 
     await act(async () => {
@@ -160,7 +160,7 @@ describe('usePersonalCaseHandlers', () => {
     const mockSetCases = vi.fn();
     const mockSetCurrentRound = vi.fn();
     const mockSetHasUnsavedPersonalCase = vi.fn();
-    
+
     const props = {
       ...defaultProps,
       cases: [], // 케이스 없음
@@ -168,7 +168,7 @@ describe('usePersonalCaseHandlers', () => {
       setCurrentRound: mockSetCurrentRound,
       setHasUnsavedPersonalCase: mockSetHasUnsavedPersonalCase,
     };
-    
+
     const { result } = renderHook(() => usePersonalCaseHandlers(props));
 
     act(() => {
@@ -184,7 +184,7 @@ describe('usePersonalCaseHandlers', () => {
   it('사진 업로드가 새 개인 케이스에서 올바르게 동작해야 한다', async () => {
     const mockSetCases = vi.fn();
     const props = { ...defaultProps, setCases: mockSetCases };
-    
+
     const { result } = renderHook(() => usePersonalCaseHandlers(props));
 
     const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
@@ -201,7 +201,7 @@ describe('usePersonalCaseHandlers', () => {
   it('사진 삭제가 새 개인 케이스에서 올바르게 동작해야 한다', async () => {
     const mockSetCases = vi.fn();
     const props = { ...defaultProps, setCases: mockSetCases };
-    
+
     const { result } = renderHook(() => usePersonalCaseHandlers(props));
 
     await act(async () => {
@@ -216,14 +216,14 @@ describe('usePersonalCaseHandlers', () => {
     const mockSetCases = vi.fn();
     const mockMarkSaving = vi.fn();
     const mockMarkSaved = vi.fn();
-    
+
     const props = {
       ...defaultProps,
       setCases: mockSetCases,
       markSaving: mockMarkSaving,
       markSaved: mockMarkSaved,
     };
-    
+
     const { result } = renderHook(() => usePersonalCaseHandlers(props));
 
     await act(async () => {
@@ -239,20 +239,20 @@ describe('usePersonalCaseHandlers', () => {
     const mockSetCases = vi.fn();
     const mockMarkSaving = vi.fn();
     const mockMarkSaved = vi.fn();
-    
+
     const props = {
       ...defaultProps,
       setCases: mockSetCases,
       markSaving: mockMarkSaving,
       markSaved: mockMarkSaved,
     };
-    
+
     const { result } = renderHook(() => usePersonalCaseHandlers(props));
 
     await act(async () => {
-      await result.current.handleRoundPersonalInfoUpdate('new-personal-123', 1, { 
+      await result.current.handleRoundPersonalInfoUpdate('new-personal-123', 1, {
         treatmentType: '10GF',
-        memo: '테스트 메모'
+        memo: '테스트 메모',
       });
     });
 
@@ -260,4 +260,4 @@ describe('usePersonalCaseHandlers', () => {
     expect(mockSetCases).toHaveBeenCalled();
     expect(mockMarkSaved).toHaveBeenCalledWith('new-personal-123');
   });
-}); 
+});

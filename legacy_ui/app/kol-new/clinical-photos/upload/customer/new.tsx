@@ -2,7 +2,7 @@ import React from 'react';
 import { useCaseManagement } from '@/app/kol-new/clinical-photos/hooks/useCaseManagement';
 import CaseCard from '@/app/kol-new/clinical-photos/components/CaseCard';
 import { LoadingState } from '@/components/ui/loading';
-import { updateCase, deleteCase, createCase } from '@/lib/clinical-photos-api';
+import { updateCase, deleteCase, createCase } from '@/lib/clinical-photos';
 
 export default function CustomerClinicalUploadPageRefactor() {
   const { cases, loading, refresh, setCases } = useCaseManagement('customer');
