@@ -16,6 +16,7 @@ interface Props {
   cardNumber: number;
   isNew?: boolean;
   onDelete?: () => void;
+  isDummyMode?: boolean;
 }
 
 const defaultStageData: StageData = {} as StageData;
@@ -26,7 +27,13 @@ const defaultAchievements: Achievements = {
   expertCourse: false,
 };
 
-export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: Props) {
+export default function CustomerCard({
+  customer,
+  cardNumber,
+  isNew,
+  onDelete,
+  isDummyMode = false,
+}: Props) {
   const initialProgress: CustomerProgress = customer.customer_progress?.[0] || {
     id: 'temp-' + customer.id,
     customerId: customer.id.toString(),
@@ -41,13 +48,19 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
 
   const debouncedSave = useCallback(
     debounce((p: CustomerProgress) => {
+      // 더미 모드에서는 API 호출하지 않음
+      if (isDummyMode) {
+        console.log('더미 모드: 진행 상황 업데이트', p);
+        return;
+      }
+
       updateProgress({
         customerId: customer.id as Id<'customers'>,
         stageData: p.stageData,
         achievements: p.achievements,
       });
     }, 1000),
-    [customer.id, updateProgress]
+    [customer.id, updateProgress, isDummyMode]
   );
 
   useEffect(() => {
@@ -76,6 +89,12 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
 
   const debouncedSaveInfo = useCallback(
     debounce((info: BasicInfoValue) => {
+      // 더미 모드에서는 API 호출하지 않음
+      if (isDummyMode) {
+        console.log('더미 모드: 고객 정보 업데이트', info);
+        return;
+      }
+
       updateCustomer({
         customerId: customer.id as Id<'customers'>,
         updates: {
@@ -88,7 +107,7 @@ export default function CustomerCard({ customer, cardNumber, isNew, onDelete }: 
         },
       });
     }, 1000),
-    [updateCustomer]
+    [updateCustomer, isDummyMode, customer.id]
   );
 
   useEffect(() => {

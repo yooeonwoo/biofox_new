@@ -15,26 +15,36 @@ type LocalCustomer = Customer & {
 
 interface Props {
   initialData: LocalCustomer[];
-  kolId: string; // Convex ID는 문자열
+  kolId?: string; // Convex ID는 문자열, 더미 모드에서는 undefined 가능
 }
 
 export default function CustomerList({ initialData, kolId }: Props) {
-  const { results: customers, status, loadMore } = useCustomers(kolId as Id<'profiles'>);
+  // 더미 모드인지 확인
+  const isDummyMode = kolId === 'dummy-kol-id' || !kolId;
+
+  // 더미 모드가 아닐 때만 useCustomers 훅 사용
+  const { results: customers, status } = useCustomers(isDummyMode ? undefined : (kolId as any));
 
   const [localCustomers, setLocalCustomers] = useState<LocalCustomer[]>(initialData);
   const [isAdding, setIsAdding] = useState(false);
 
-  const isLoading = status === 'LoadingFirstPage';
+  const isLoading = !isDummyMode && status === 'LoadingFirstPage';
   const isError = false; // Convex는 다른 에러 처리 방식 사용
 
   useEffect(() => {
+    // 더미 모드에서는 initialData 사용
+    if (isDummyMode) {
+      setLocalCustomers(initialData);
+      return;
+    }
+
     // useCustomers 훅에서 데이터가 변경되면 로컬 상태도 업데이트
     // 단, 새 고객 추가 중일 때는 업데이트하지 않음
     if (customers && !isAdding) {
       // Convex 데이터를 기존 타입에 맞게 변환
       const transformedCustomers: LocalCustomer[] = customers.map(customer => ({
         id: customer._id,
-        kol_id: parseInt(kolId), // string을 number로 변환
+        kol_id: kolId ? parseInt(kolId) : 0, // kolId 없으면 0
         name: customer.name,
         shopName: customer.shop_name,
         phone: customer.phone,
@@ -64,14 +74,14 @@ export default function CustomerList({ initialData, kolId }: Props) {
       }));
       setLocalCustomers(transformedCustomers);
     }
-  }, [customers, isAdding]);
+  }, [customers, isAdding, isDummyMode, initialData, kolId]);
 
   const handleAddCustomer = () => {
     if (isAdding) return;
 
     const newCustomer: LocalCustomer = {
       id: `new-${Date.now()}`,
-      kol_id: parseInt(kolId),
+      kol_id: kolId ? parseInt(kolId) : 0,
       name: '신규 고객',
       shopName: '',
       phone: '',
@@ -129,6 +139,7 @@ export default function CustomerList({ initialData, kolId }: Props) {
               cardNumber={idx + 1}
               isNew={c.isNew}
               onDelete={() => handleDeleteNewCustomer(c.id)}
+              isDummyMode={isDummyMode}
             />
           ))}
         </div>
