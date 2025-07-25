@@ -61,7 +61,7 @@ export default function KolSidebar({ className, isOpen = false, onClose }: KolSi
       show: !isTestRole,
     },
     {
-      name: '고객 관리',
+      name: '영업 관리',
       href: '/kol-new/customer-manager',
       icon: Users,
       current: pathname.startsWith('/kol-new/customer-manager'),

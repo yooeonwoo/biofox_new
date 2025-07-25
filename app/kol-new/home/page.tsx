@@ -18,7 +18,7 @@ const ICONS = [
   { href: '/kol-new', label: '대시보드', Icon: LayoutDashboard },
   { href: '/kol-new/stores', label: '전문점 관리', Icon: Store },
   { href: '/kol-new/clinical-photos', label: '임상사진', Icon: Camera },
-  { href: '/kol-new/customer-manager', label: '고객 관리', Icon: Users },
+  { href: '/kol-new/customer-manager', label: '영업 관리', Icon: Users },
   { href: '/kol-new/notifications', label: '알림', Icon: Bell },
   { href: 'https://biofoxpro.co.kr/', label: '전문가몰', Icon: ShoppingBag, external: true },
   { href: 'https://foxyafinal.vercel.app/chat', label: '모두의 비서', Icon: Bot, external: true },
