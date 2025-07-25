@@ -99,13 +99,13 @@ export default function KolSidebar({ className, isOpen = false, onClose }: KolSi
     },
     {
       name: '모두의 비서',
-      href: 'https://foxyafinal.vercel.app/',
+      href: 'https://foxyafinal.vercel.app/chat',
       icon: Bot,
       external: true,
     },
     {
       name: '폭스 과외선생님',
-      href: 'https://foxyafinal.vercel.app/',
+      href: 'https://foxyafinal.vercel.app/tutoring/ask',
       icon: GraduationCap,
       external: true,
     },
