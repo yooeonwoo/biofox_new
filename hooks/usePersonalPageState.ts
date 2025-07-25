@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { checkAuthSupabase } from '@/lib/auth';
+// import { checkAuthSupabase } from '@/lib/auth'; // 제거
 import { safeParseStringArray } from '@/types/clinical';
 import type { ClinicalCase, PhotoSlot, RoundCustomerInfo } from '@/types/clinical';
 
@@ -37,16 +37,19 @@ export const usePersonalPageState = ({ initialRound = 1 }: UsePersonalPageStateP
 
   /** 2) useEffect들 - Personal용으로 수정 */
 
-  // 사용자 인증 확인
+  // 사용자 인증 확인 - 더미 데이터 사용
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { user } = await checkAuthSupabase(['kol', 'test']);
-        if (!user) {
-          router.push('/signin');
-          return;
-        }
-        setUser(user);
+        // 더미 유저 데이터
+        const dummyUser = {
+          id: 'dummy-user-id',
+          name: '테스트 KOL',
+          email: 'test@biofox.com',
+          role: 'kol',
+          kolId: 1,
+        };
+        setUser(dummyUser);
       } catch (error) {
         console.error('인증 확인 중 오류:', error);
         router.push('/signin');

@@ -45,25 +45,23 @@ export default function ClinicalPhotosUploadPage() {
     consentDate: '',
   });
 
-  // 사용자 인증 확인
+  // 사용자 인증 확인 - 더미 데이터 사용
   useEffect(() => {
     async function checkAuth() {
       try {
-        const response = await fetch('/api/user', {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setIsSignedIn(true);
-          const userRole = userData.role || 'kol';
-          console.log('사용자 역할:', userRole);
-          // test 역할과 kol 역할 모두 임상사진 페이지 접근 허용
-          setIsKol(userRole === 'kol' || userRole === 'test');
-        } else {
-          setIsSignedIn(false);
-          setIsKol(false);
-        }
+        // 더미 유저 데이터
+        const dummyUser = {
+          id: 'dummy-user-id',
+          firstName: '테스트',
+          lastName: 'KOL',
+          email: 'test@biofox.com',
+          role: 'kol',
+          kolId: 1,
+          imageUrl: null,
+        };
+        setUser(dummyUser);
+        setIsSignedIn(true);
+        setIsKol(true);
       } catch (error) {
         console.error('인증 확인 오류:', error);
         setIsSignedIn(false);
@@ -76,22 +74,26 @@ export default function ClinicalPhotosUploadPage() {
     checkAuth();
   }, []);
 
-  // 대시보드 데이터 로드
+  // 대시보드 데이터 로드 - 더미 데이터 사용
   useEffect(() => {
     if (isLoaded && isSignedIn && isKol !== null) {
       const fetchDashboardData = async () => {
         try {
           console.log('임상사진 업로드 - 대시보드 데이터 로드 시작...');
-          const dashboardResponse = await fetch('/api/kol-new/dashboard');
 
-          if (!dashboardResponse.ok) {
-            console.error('대시보드 API 에러');
-            return;
-          }
-
-          const dashboardResult = await dashboardResponse.json();
-          console.log('임상사진 업로드 - 대시보드 데이터 로드 완료');
-          setDashboardData(dashboardResult);
+          // 더미 대시보드 데이터
+          const dummyDashboardData = {
+            kol: {
+              id: 1,
+              name: '테스트 KOL',
+              shopName: '테스트 뷰티샵',
+              email: 'test@biofox.com',
+              phone: '010-1234-5678',
+              imageUrl: undefined,
+              region: '서울 강남구',
+            },
+          };
+          setDashboardData(dummyDashboardData);
         } catch (err) {
           console.error('대시보드 데이터 로드 중 오류:', err);
         }
@@ -99,12 +101,34 @@ export default function ClinicalPhotosUploadPage() {
 
       fetchDashboardData();
 
-      // 기존 케이스 로드
+      // 기존 케이스 로드 - 더미 데이터 사용
       const fetchExistingCases = async () => {
         try {
-          const { fetchCases } = await import('@/lib/clinical-photos');
-          const cases = await fetchCases();
-          setExistingCases(cases.slice(0, 5)); // 최초 5개만 표시
+          // 더미 케이스 데이터
+          const dummyCases = [
+            {
+              id: 1,
+              customerName: '김미영 고객님',
+              caseName: '보톡스 이마',
+              status: 'active',
+              createdAt: '2024-01-10T09:00:00.000Z',
+            },
+            {
+              id: 2,
+              customerName: '이정희 고객님',
+              caseName: '필러 팔자주름',
+              status: 'completed',
+              createdAt: '2024-01-05T14:30:00.000Z',
+            },
+            {
+              id: 3,
+              customerName: '박소연 고객님',
+              caseName: '리프팅 시술',
+              status: 'active',
+              createdAt: '2024-01-03T11:00:00.000Z',
+            },
+          ];
+          setExistingCases(dummyCases);
         } catch (error) {
           console.error('기존 케이스 로드 실패:', error);
         }
@@ -114,14 +138,12 @@ export default function ClinicalPhotosUploadPage() {
     }
   }, [isLoaded, isSignedIn, isKol]);
 
-  // 로그아웃 함수
+  // 로그아웃 함수 - 더미
   const handleSignOut = async () => {
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      window.location.href = '/';
+      console.log('로그아웃 처리 (더미)');
+      // 실제로는 아무것도 하지 않음
+      alert('로그아웃 기능은 현재 비활성화되어 있습니다.');
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
     }
@@ -145,33 +167,21 @@ export default function ClinicalPhotosUploadPage() {
     }));
   };
 
-  // 케이스 생성 핸들러
+  // 케이스 생성 핸들러 - 더미
   const handleCreateCase = async () => {
     try {
-      const { createCase } = await import('@/lib/clinical-photos');
-      const caseData = {
-        customerName: formData.customerName,
-        caseName: formData.caseName,
-        consentReceived: formData.consentReceived,
-        consentDate: formData.consentDate || undefined,
-        treatmentPlan: '',
-        concernArea: '',
-      };
+      console.log('케이스 생성 (더미):', formData);
 
-      const createdCase = await createCase(caseData);
-
-      if (createdCase) {
-        alert('케이스가 성공적으로 생성되었습니다!');
-        // 폼 초기화
-        setFormData({
-          customerName: '',
-          caseName: '',
-          consentReceived: false,
-          consentDate: '',
-        });
-        // 상세 페이지로 이동
-        router.push('/kol-new/clinical-photos/upload/customer');
-      }
+      alert('케이스가 성공적으로 생성되었습니다! (더미)');
+      // 폼 초기화
+      setFormData({
+        customerName: '',
+        caseName: '',
+        consentReceived: false,
+        consentDate: '',
+      });
+      // 상세 페이지로 이동
+      router.push('/kol-new/clinical-photos/upload/customer');
     } catch (error) {
       console.error('케이스 생성 실패:', error);
       alert('케이스 생성에 실패했습니다. 다시 시도해주세요.');
@@ -234,14 +244,7 @@ export default function ClinicalPhotosUploadPage() {
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
-      <KolHeader
-        userName={user?.firstName || 'KOL'}
-        shopName={dashboardData?.kol?.shopName || '로딩 중...'}
-        userImage={user?.imageUrl}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-        onSignOut={handleSignOut}
-      />
+      <KolHeader />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Desktop Only */}
@@ -489,10 +492,11 @@ export default function ClinicalPhotosUploadPage() {
         <SheetContent side="left" className="w-[250px] sm:w-[300px]">
           <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
           <KolMobileMenu
+            isOpen={mobileMenuOpen}
+            onClose={() => setMobileMenuOpen(false)}
             userName={user?.firstName || 'KOL'}
             shopName={'임상사진 업로드'}
             userImage={user?.imageUrl}
-            setMobileMenuOpen={setMobileMenuOpen}
             onSignOut={handleSignOut}
           />
         </SheetContent>
