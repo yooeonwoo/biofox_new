@@ -2,16 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { redirect, useRouter } from 'next/navigation';
-
-interface KolInfo {
-  id: number;
-  name: string;
-  shopName: string;
-  email: string;
-  phone: string;
-  imageUrl?: string;
-  region?: string;
-}
 import Link from 'next/link';
 import { ArrowLeft, Camera, Plus, Calendar, User, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,91 +10,41 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import KolHeader from '../../../components/layout/KolHeader';
-import KolSidebar from '../../../components/layout/KolSidebar';
 import KolFooter from '../../../components/layout/KolFooter';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DialogTitle } from '@/components/ui/dialog';
 import KolMobileMenu from '../../../components/layout/KolMobileMenu';
+import { useAuth } from '@/hooks/useAuth';
+
+interface FormDataState {
+  customerName: string;
+  caseName: string;
+  consentReceived: boolean;
+  consentDate: string;
+}
 
 export default function ClinicalPhotosUploadPage() {
-  const [user, setUser] = useState<any>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false);
+  const { user, profile, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [isKol, setIsKol] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [dashboardData, setDashboardData] = useState<{ kol?: KolInfo } | null>(null);
   const [existingCases, setExistingCases] = useState<any[]>([]);
-
-  // 폼 상태
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataState>({
     customerName: '',
     caseName: '',
     consentReceived: false,
     consentDate: '',
   });
 
-  // 사용자 인증 확인 - 더미 데이터 사용
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        // 더미 유저 데이터
-        const dummyUser = {
-          id: 'dummy-user-id',
-          firstName: '테스트',
-          lastName: 'KOL',
-          email: 'test@biofox.com',
-          role: 'kol',
-          kolId: 1,
-          imageUrl: null,
-        };
-        setUser(dummyUser);
-        setIsSignedIn(true);
-        setIsKol(true);
-      } catch (error) {
-        console.error('인증 확인 오류:', error);
-        setIsSignedIn(false);
-        setIsKol(false);
-      } finally {
-        setIsLoaded(true);
-        setLoading(false);
-      }
+    if (!isAuthLoading && !isAuthenticated) {
+      redirect('/signin');
     }
-    checkAuth();
-  }, []);
+  }, [isAuthLoading, isAuthenticated]);
 
-  // 대시보드 데이터 로드 - 더미 데이터 사용
   useEffect(() => {
-    if (isLoaded && isSignedIn && isKol !== null) {
-      const fetchDashboardData = async () => {
-        try {
-          console.log('임상사진 업로드 - 대시보드 데이터 로드 시작...');
-
-          // 더미 대시보드 데이터
-          const dummyDashboardData = {
-            kol: {
-              id: 1,
-              name: '테스트 KOL',
-              shopName: '테스트 뷰티샵',
-              email: 'test@biofox.com',
-              phone: '010-1234-5678',
-              imageUrl: undefined,
-              region: '서울 강남구',
-            },
-          };
-          setDashboardData(dummyDashboardData);
-        } catch (err) {
-          console.error('대시보드 데이터 로드 중 오류:', err);
-        }
-      };
-
-      fetchDashboardData();
-
-      // 기존 케이스 로드 - 더미 데이터 사용
+    if (isAuthenticated) {
       const fetchExistingCases = async () => {
         try {
-          // 더미 케이스 데이터
           const dummyCases = [
             {
               id: 1,
@@ -133,54 +73,41 @@ export default function ClinicalPhotosUploadPage() {
           console.error('기존 케이스 로드 실패:', error);
         }
       };
-
       fetchExistingCases();
     }
-  }, [isLoaded, isSignedIn, isKol]);
+  }, [isAuthenticated]);
 
-  // 로그아웃 함수 - 더미
-  const handleSignOut = async () => {
-    try {
-      console.log('로그아웃 처리 (더미)');
-      // 실제로는 아무것도 하지 않음
-      alert('로그아웃 기능은 현재 비활성화되어 있습니다.');
-    } catch (error) {
-      console.error('로그아웃 중 오류가 발생했습니다:', error);
-    }
-  };
-
-  // 폼 입력 핸들러
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (checked: boolean | 'indeterminate') => {
+    let newConsentReceived: boolean;
+    let newConsentDate: string;
+
+    if (checked === 'indeterminate') {
+      // indeterminate 상태는 동의하지 않은 것으로 간주하고 초기화합니다.
+      newConsentReceived = false;
+      newConsentDate = '';
+    } else {
+      // boolean 상태 처리 (undefined 방지를 위해 ?? 사용)
+      newConsentReceived = checked;
+      newConsentDate = checked ? (new Date().toISOString().split('T')[0] ?? '') : '';
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: value,
+      consentReceived: newConsentReceived,
+      consentDate: newConsentDate,
     }));
   };
 
-  // 체크박스 핸들러
-  const handleCheckboxChange = (checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      consentReceived: checked,
-      consentDate: checked ? new Date().toISOString().split('T')[0] : '',
-    }));
-  };
-
-  // 케이스 생성 핸들러 - 더미
   const handleCreateCase = async () => {
     try {
       console.log('케이스 생성 (더미):', formData);
-
       alert('케이스가 성공적으로 생성되었습니다! (더미)');
-      // 폼 초기화
-      setFormData({
-        customerName: '',
-        caseName: '',
-        consentReceived: false,
-        consentDate: '',
-      });
-      // 상세 페이지로 이동
+      setFormData({ customerName: '', caseName: '', consentReceived: false, consentDate: '' });
       router.push('/kol-new/clinical-photos/upload/customer');
     } catch (error) {
       console.error('케이스 생성 실패:', error);
@@ -188,19 +115,14 @@ export default function ClinicalPhotosUploadPage() {
     }
   };
 
-  // 임시저장 핸들러
   const handleSaveDraft = () => {
     if (typeof window !== 'undefined') {
-      const draftData = {
-        ...formData,
-        savedAt: new Date().toISOString(),
-      };
+      const draftData = { ...formData, savedAt: new Date().toISOString() };
       localStorage.setItem('clinical_case_draft', JSON.stringify(draftData));
       alert('임시저장되었습니다.');
     }
   };
 
-  // 임시저장 데이터 로드
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedDraft = localStorage.getItem('clinical_case_draft');
@@ -220,8 +142,7 @@ export default function ClinicalPhotosUploadPage() {
     }
   }, []);
 
-  // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!isLoaded || isKol === null || loading) {
+  if (isAuthLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -236,24 +157,12 @@ export default function ClinicalPhotosUploadPage() {
     );
   }
 
-  // KOL이 아닌 경우 홈으로 리다이렉트
-  if (!isKol) {
-    return redirect('/');
-  }
-
   return (
     <div className="flex h-screen flex-col">
-      {/* Header */}
       <KolHeader />
-
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Desktop Only */}
-        <KolSidebar />
-
-        {/* Main Content */}
         <main className="flex-1 overflow-auto bg-muted/10 p-4 md:p-6">
           <div className="mx-auto max-w-4xl">
-            {/* 뒤로가기 헤더 */}
             <div className="mb-6 flex items-center gap-4">
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/kol-new/clinical-photos">
@@ -268,8 +177,6 @@ export default function ClinicalPhotosUploadPage() {
                 </p>
               </div>
             </div>
-
-            {/* 새 업로드 폼 (상단 고정) */}
             <Card className="mb-6 border-2 border-dashed border-blue-200 bg-blue-50/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -278,7 +185,6 @@ export default function ClinicalPhotosUploadPage() {
                 <CardDescription>고객 정보를 입력하고 시술 사진을 업로드하세요</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* 기본 정보 입력 */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="customerName" className="flex items-center gap-2">
@@ -309,8 +215,6 @@ export default function ClinicalPhotosUploadPage() {
                     />
                   </div>
                 </div>
-
-                {/* 동의서 체크 */}
                 <div className="space-y-3 rounded-lg border bg-white p-4">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -339,12 +243,9 @@ export default function ClinicalPhotosUploadPage() {
                     </div>
                   )}
                 </div>
-
-                {/* 사진 업로드 그리드 */}
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium">시술 사진 업로드</h3>
                   <div className="grid grid-cols-3 gap-4">
-                    {/* Before */}
                     <div className="space-y-2">
                       <Label className="block text-center text-xs font-medium">Before</Label>
                       <div className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:bg-gray-100">
@@ -354,8 +255,6 @@ export default function ClinicalPhotosUploadPage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* 7일차 */}
                     <div className="space-y-2">
                       <Label className="block text-center text-xs font-medium">7일차</Label>
                       <div className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:bg-gray-100">
@@ -365,8 +264,6 @@ export default function ClinicalPhotosUploadPage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* 14일차 */}
                     <div className="space-y-2">
                       <Label className="block text-center text-xs font-medium">14일차</Label>
                       <div className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:bg-gray-100">
@@ -378,8 +275,6 @@ export default function ClinicalPhotosUploadPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* 저장 버튼 */}
                 <div className="flex gap-3">
                   <Button
                     variant="outline"
@@ -399,8 +294,6 @@ export default function ClinicalPhotosUploadPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* 이전 케이스들 */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">이전 케이스</CardTitle>
@@ -425,11 +318,7 @@ export default function ClinicalPhotosUploadPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`rounded-full px-2 py-1 text-xs ${
-                              case_.status === 'completed'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-blue-100 text-blue-700'
-                            }`}
+                            className={`rounded-full px-2 py-1 text-xs ${case_.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}
                           >
                             {case_.status === 'completed' ? '완료' : '진행중'}
                           </span>
@@ -439,7 +328,6 @@ export default function ClinicalPhotosUploadPage() {
                         </div>
                       </div>
                     ))}
-
                     {existingCases.length >= 5 && (
                       <div className="pt-3 text-center">
                         <Button variant="outline" size="sm" asChild>
@@ -461,15 +349,12 @@ export default function ClinicalPhotosUploadPage() {
                 )}
               </CardContent>
             </Card>
-
             <div className="mt-6">
               <KolFooter />
             </div>
           </div>
         </main>
       </div>
-
-      {/* Mobile Menu */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetTrigger className="block sm:hidden">
           <div className="flex items-center justify-center p-2">
@@ -494,10 +379,10 @@ export default function ClinicalPhotosUploadPage() {
           <KolMobileMenu
             isOpen={mobileMenuOpen}
             onClose={() => setMobileMenuOpen(false)}
-            userName={user?.firstName || 'KOL'}
+            userName={profile?.name || user?.email || 'KOL'}
             shopName={'임상사진 업로드'}
-            userImage={user?.imageUrl}
-            onSignOut={handleSignOut}
+            userImage={user?.user_metadata?.avatar_url}
+            onSignOut={() => router.push('/api/auth/signout')}
           />
         </SheetContent>
       </Sheet>
