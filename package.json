@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 3002",
     "dev:local": "next dev",
-    "build": "convex dev --once && next build",
+    "build": "next build",
+    "build:with-convex": "convex dev --once && next build",
     "build-force": "cross-env NEXT_SKIP_TYPESCRIPT_CHECK=true NEXT_FORCE_RESOLVE_ROUTES=true next build",
     "start": "next start",
     "lint": "next lint",
