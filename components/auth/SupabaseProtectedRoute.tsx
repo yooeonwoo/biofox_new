@@ -3,8 +3,6 @@
 import React, { useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/supabase-auth-provider';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
 
 type UserRole = 'kol' | 'sales' | 'admin' | 'ol' | 'shop_owner';
 
@@ -26,11 +24,8 @@ export function SupabaseProtectedRoute({
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  // Supabase 사용자가 있으면 Convex 프로필 조회
-  const profile = useQuery(
-    api.supabaseAuth.getProfileBySupabaseId,
-    user ? { supabaseUserId: user.id } : 'skip'
-  );
+  // TODO: Convex 프로필 조회 로직은 나중에 추가
+  const profile = null;
 
   useEffect(() => {
     if (!loading) {
@@ -51,7 +46,7 @@ export function SupabaseProtectedRoute({
   }, [loading, user, profile, allowedRoles, requireAuth, fallbackUrl, redirectTo, router]);
 
   // 로딩 중
-  if (loading || (user && profile === undefined)) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
@@ -68,17 +63,8 @@ export function SupabaseProtectedRoute({
     );
   }
 
-  // 권한이 없는 경우
-  if (user && allowedRoles && profile && !allowedRoles.includes(profile.role as UserRole)) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h2 className="mb-2 text-xl font-semibold">접근 권한이 없습니다</h2>
-          <p className="text-gray-600">이 페이지에 접근할 권한이 없습니다.</p>
-        </div>
-      </div>
-    );
-  }
+  // TODO: 권한 체크는 Convex 연동 후 구현
+  // 현재는 로그인된 사용자는 모두 접근 가능
 
   return <>{children}</>;
 }

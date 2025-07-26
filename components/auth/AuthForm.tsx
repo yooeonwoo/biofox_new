@@ -17,8 +17,6 @@ import {
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/providers/supabase-auth-provider';
 import { useMutation } from '@tanstack/react-query';
-import { api } from '@convex/_generated/api';
-import { useMutation as useConvexMutation } from 'convex/react';
 import Link from 'next/link';
 import { Loader2, Mail, Lock, User } from 'lucide-react';
 import Image from 'next/image';
@@ -54,24 +52,10 @@ interface AuthFormProps {
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
-  const { signIn, signUp, user } = useAuth();
-  const syncProfile = useConvexMutation(api.supabaseAuth.syncSupabaseProfile);
+  const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // 사용자가 로그인되면 Convex 프로필 동기화
-  useEffect(() => {
-    if (user) {
-      syncProfile({
-        supabaseUserId: user.id,
-        email: user.email!,
-        metadata: user.user_metadata,
-      }).catch(error => {
-        console.error('프로필 동기화 오류:', error);
-      });
-    }
-  }, [user, syncProfile]);
 
   const form = useForm<any>({
     resolver: zodResolver(type === 'signup' ? signUpSchema : signInSchema),
