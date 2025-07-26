@@ -29,6 +29,17 @@ export const getProfilesByRole = query({
   },
 });
 
+// 이메일로 프로필 조회 (실제 인증 시스템용)
+export const getProfileByEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('profiles')
+      .withIndex('by_email', q => q.eq('email', args.email))
+      .first();
+  },
+});
+
 // 승인 대기 중인 프로필 조회
 export const getPendingProfiles = query({
   handler: async ctx => {

@@ -26,14 +26,21 @@ export default function CustomerList({ kolId }: Props) {
   const [localCustomers, setLocalCustomers] = useState<LocalCustomer[]>([]);
   const [isAdding, setIsAdding] = useState(false);
 
-  // 현재는 임시로 하드코딩된 프로필 ID 사용 (실제로는 profiles에서 조회해야 함)
-  const actualKolId = 'mock-profile-id' as Id<'profiles'>;
-
-  // Convex queries and mutations
-  const customers = useQuery(api.customers.getCustomersByKol, {
-    kolId: actualKolId,
-    paginationOpts: { numItems: 100, cursor: null },
+  // 실제 프로필 조회 (이메일 기반)
+  const profile = useQuery(api.profiles.getProfileByEmail, {
+    email: kolId, // kolId는 현재 사용자의 이메일
   });
+
+  // 프로필이 있을 때만 고객 데이터 조회
+  const customers = useQuery(
+    api.customers.getCustomersByKol,
+    profile?._id
+      ? {
+          kolId: profile._id,
+          paginationOpts: { numItems: 100, cursor: null },
+        }
+      : 'skip'
+  );
 
   const createCustomer = useMutation(api.customers.createCustomer);
 
@@ -61,75 +68,87 @@ export default function CustomerList({ kolId }: Props) {
     }
   }, [customers]);
 
-  const handleAddCustomer = () => {
+  const handleAddCustomer = async () => {
     if (isAdding) return;
 
-    const newCustomer: LocalCustomer = {
-      id: `new-${Date.now()}`,
-      kol_id: 1, // 임시로 숫자로 설정
-      name: '신규 고객',
-      shopName: '',
-      phone: '',
-      region: '',
-      placeAddress: '',
-      assignee: '',
-      manager: '',
-      status: 'new',
-      created_at: new Date().toISOString(),
-      customer_progress: [],
-      isNew: true,
-      notes: '',
-      completed_stages: 0,
-      total_stages: 6,
-    };
-    setLocalCustomers(prev => [newCustomer, ...prev]);
     setIsAdding(true);
-  };
 
-  const handleSaveNewCustomer = async (customerData: {
-    name: string;
-    shopName?: string;
-    phone: string;
-    region: string;
-    placeAddress?: string;
-    assignee: string;
-    manager: string;
-    notes?: string;
-  }) => {
     try {
+      // 프로필이 없으면 에러 처리
+      if (!profile?._id) {
+        toast.error('프로필을 찾을 수 없습니다. 로그인을 다시 시도해주세요.');
+        setIsAdding(false);
+        return;
+      }
+
       const customerId = await createCustomer({
-        kolId: actualKolId,
-        name: customerData.name,
-        shopName: customerData.shopName,
-        phone: customerData.phone,
-        region: customerData.region,
-        placeAddress: customerData.placeAddress,
-        assignee: customerData.assignee,
-        manager: customerData.manager,
-        notes: customerData.notes,
+        kolId: profile._id, // 실제 kolId 사용
+        name: '새 고객',
+        shopName: '',
+        phone: '',
+        region: '',
+        placeAddress: '',
+        assignee: '',
+        manager: '',
+        notes: '',
       });
 
-      // 임시 고객 제거 (실제 데이터는 useQuery를 통해 자동으로 업데이트됨)
-      setLocalCustomers(prev => prev.filter(c => !c.isNew));
-      setIsAdding(false);
-
-      toast.success('고객이 성공적으로 등록되었습니다.');
+      if (customerId) {
+        toast.success('새 고객이 추가되었습니다.');
+        // 고객 목록은 Convex query에 의해 자동으로 업데이트됨
+      }
     } catch (error) {
-      console.error('고객 생성 실패:', error);
-      toast.error('고객 등록에 실패했습니다.');
+      console.error('고객 추가 중 오류:', error);
+      toast.error('고객 추가에 실패했습니다.');
+    } finally {
+      setIsAdding(false);
     }
   };
 
-  const handleDeleteNewCustomer = (customerId: string | number) => {
+  const handleDelete = async (customerId: string | number) => {
+    // 프로필이 없으면 에러 처리
+    if (!profile?._id) {
+      toast.error('프로필을 찾을 수 없습니다.');
+      return;
+    }
+
+    // 삭제 로직 (현재는 로컬에서만 제거)
     setLocalCustomers(prev => prev.filter(c => c.id !== customerId));
-    setIsAdding(false);
+    toast.success('고객이 삭제되었습니다.');
   };
 
-  // 로딩 상태
+  // 로딩 상태 처리
+  if (profile === undefined) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+          <p className="text-gray-500">프로필을 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 프로필을 찾을 수 없는 경우
+  if (profile === null) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4 text-red-500">프로필을 찾을 수 없습니다.</p>
+          <p className="text-gray-500">관리자에게 문의하여 프로필을 생성해주세요.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 고객 데이터 로딩 중
   if (customers === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+          <p className="text-gray-500">고객 데이터를 불러오는 중...</p>
+        </div>
       </div>
     );
   }
@@ -167,11 +186,9 @@ export default function CustomerList({ kolId }: Props) {
             <CustomerCard
               key={c.id}
               customer={c}
-              progress={c.customer_progress?.[0]}
               cardNumber={idx + 1}
               isNew={c.isNew}
-              onDelete={() => handleDeleteNewCustomer(c.id)}
-              onSave={c.isNew ? handleSaveNewCustomer : undefined}
+              onDelete={() => handleDelete(c.id)}
               isDummyMode={false} // 실제 Convex 연동 모드로 변경
             />
           ))}
