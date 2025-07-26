@@ -1,6 +1,6 @@
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useAuth as useSupabaseAuth } from '@/providers/supabase-auth-provider';
+import { useSupabaseAuth } from '@/providers/supabase-auth-provider';
 
 /**
  * Supabase와 Convex 프로필 데이터를 결합하기 위한 사용자 역할 타입 정의

@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   updateUser: async () => {},
 });
 
-export function useAuth() {
+export function useSupabaseAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within SupabaseAuthProvider');
