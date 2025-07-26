@@ -8,6 +8,11 @@ import CustomerHeader, { BasicInfoValue } from './CustomerHeader';
 import { ConnectionLineProvider } from '../contexts/ConnectionLineProvider';
 import ConnectionLines from './ConnectionLines';
 
+// Convex 관련 imports
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { toast } from 'sonner';
+
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
   progress?: CustomerProgress;
@@ -52,6 +57,13 @@ export default function CustomerCard({
   };
 
   const [localProgress, setLocalProgress] = useState<CustomerProgress>(initialProgress);
+
+  // 인적사항 저장 상태 관리
+  const [isSavingBasicInfo, setIsSavingBasicInfo] = useState(false);
+  const [lastSavedBasicInfo, setLastSavedBasicInfo] = useState<Date | null>(null);
+
+  // Convex mutation
+  const updateCustomer = useMutation(api.customers.updateCustomer);
 
   const debouncedSave = useCallback(
     debounce((p: CustomerProgress) => {
@@ -103,6 +115,53 @@ export default function CustomerCard({
     debouncedSaveInfo(basicInfo);
   }, [basicInfo, debouncedSaveInfo]);
 
+  // 인적사항 수동 저장 함수
+  const handleSaveBasicInfo = useCallback(async () => {
+    if (
+      isDummyMode ||
+      !customer.id ||
+      (typeof customer.id === 'string' && customer.id.startsWith('new-'))
+    ) {
+      console.log('더미 모드 또는 신규 고객: 인적사항 저장 시뮬레이션', { basicInfo });
+
+      // 더미 모드에서도 저장 상태 업데이트
+      setIsSavingBasicInfo(true);
+
+      // 1초 대기 후 완료 처리
+      setTimeout(() => {
+        setIsSavingBasicInfo(false);
+        setLastSavedBasicInfo(new Date());
+        toast.success('인적사항이 저장되었습니다.');
+      }, 1000);
+
+      return;
+    }
+
+    try {
+      setIsSavingBasicInfo(true);
+
+      await updateCustomer({
+        customerId: customer.id as any,
+        updates: {
+          shopName: basicInfo.shopName,
+          phone: basicInfo.phone || '',
+          region: basicInfo.region || '',
+          placeAddress: basicInfo.placeAddress,
+          assignee: basicInfo.assignee || '',
+          manager: basicInfo.manager || '',
+        },
+      });
+
+      setLastSavedBasicInfo(new Date());
+      toast.success('인적사항이 저장되었습니다.');
+    } catch (error) {
+      console.error('인적사항 저장 실패:', error);
+      toast.error('인적사항 저장에 실패했습니다.');
+    } finally {
+      setIsSavingBasicInfo(false);
+    }
+  }, [customer.id, basicInfo, updateCustomer, isDummyMode]);
+
   function handleAchievementChange(newAch: Achievements) {
     setLocalProgress(prev => ({ ...prev, achievements: newAch }));
   }
@@ -127,6 +186,9 @@ export default function CustomerCard({
           onBasicInfoChange={setBasicInfo}
           isNew={isNew}
           onDelete={onDelete}
+          onSaveBasicInfo={handleSaveBasicInfo}
+          isSavingBasicInfo={isSavingBasicInfo}
+          lastSavedBasicInfo={lastSavedBasicInfo}
         />
 
         {/* 스테이지 블록 */}
