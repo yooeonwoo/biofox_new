@@ -2,11 +2,18 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export interface User {
   email: string;
-  role: 'kol' | 'sales';
+  role: 'kol' | 'sales' | 'admin' | 'ol' | 'shop_owner';
   name: string;
+  profileId?: Id<'profiles'>;
+  shop_name?: string;
+  region?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface AuthContextType {
@@ -19,17 +26,19 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// 하드코딩된 사용자 정보
-const HARDCODED_USERS: Record<string, { password: string; role: 'kol' | 'sales'; name: string }> = {
+// 실제 프로필과 연동된 사용자 정보 (개발용)
+const DEVELOPMENT_USERS: Record<string, { password: string; email: string }> = {
   'reflance88@gmail.com': {
     password: 'admin123',
-    role: 'kol',
-    name: 'KOL 사용자',
+    email: 'reflance88@gmail.com',
   },
   'sales@sales.com': {
     password: 'sales123',
-    role: 'sales',
-    name: '영업 사용자',
+    email: 'sales@sales.com',
+  },
+  'admin@admin.com': {
+    password: 'admin123',
+    email: 'admin@admin.com',
   },
 };
 
@@ -40,44 +49,66 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const router = useRouter();
+
+  // 현재 로그인된 사용자의 프로필 조회
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    currentUserEmail ? { email: currentUserEmail } : 'skip'
+  );
 
   // 페이지 로드시 로컬 스토리지에서 사용자 정보 복원
   useEffect(() => {
-    // 클라이언트 사이드에서만 실행되도록 보장
     if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('simple-auth-user');
-      if (storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-        } catch (error) {
-          console.error('Failed to parse stored user:', error);
-          localStorage.removeItem('simple-auth-user');
-        }
+      const storedEmail = localStorage.getItem('simple-auth-email');
+      if (storedEmail && DEVELOPMENT_USERS[storedEmail]) {
+        setCurrentUserEmail(storedEmail);
+      } else {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  // 프로필 데이터가 로드되면 사용자 상태 업데이트
+  useEffect(() => {
+    if (currentUserEmail && profile !== undefined) {
+      if (profile) {
+        // Convex 프로필이 있는 경우
+        const userData: User = {
+          email: profile.email,
+          role: profile.role as User['role'],
+          name: profile.name,
+          profileId: profile._id,
+          shop_name: profile.shop_name,
+          region: profile.region,
+          status: profile.status,
+        };
+        setUser(userData);
+      } else {
+        // 프로필이 없는 경우 (아직 생성되지 않음)
+        const userData: User = {
+          email: currentUserEmail,
+          role: 'kol', // 기본값
+          name: currentUserEmail.split('@')[0], // 이메일에서 이름 추출
+        };
+        setUser(userData);
       }
       setIsLoading(false);
     }
-  }, []);
+  }, [currentUserEmail, profile]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
 
-    // 간단한 인증 시뮬레이션
+    // 개발용 인증 시뮬레이션
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const userInfo = HARDCODED_USERS[email];
+    const userInfo = DEVELOPMENT_USERS[email];
 
     if (userInfo && userInfo.password === password) {
-      const loggedInUser: User = {
-        email,
-        role: userInfo.role,
-        name: userInfo.name,
-      };
-
-      setUser(loggedInUser);
-      localStorage.setItem('simple-auth-user', JSON.stringify(loggedInUser));
-      setIsLoading(false);
+      localStorage.setItem('simple-auth-email', email);
+      setCurrentUserEmail(email);
       return true;
     }
 
@@ -87,7 +118,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('simple-auth-user');
+    setCurrentUserEmail(null);
+    localStorage.removeItem('simple-auth-email');
     router.push('/signin');
   };
 

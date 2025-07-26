@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 
+type UserRole = 'kol' | 'sales' | 'admin' | 'ol' | 'shop_owner';
+
 interface ProtectedRouteProps {
-  children: React.ReactNode;
-  allowedRoles?: ('kol' | 'sales')[];
+  children: ReactNode;
+  allowedRoles?: UserRole[];
   redirectTo?: string;
 }
 
@@ -27,7 +29,7 @@ export function ProtectedRoute({
       }
 
       // 권한이 없는 경우 홈페이지로 리다이렉트
-      if (user && !allowedRoles.includes(user.role)) {
+      if (user && !allowedRoles.includes(user.role as UserRole)) {
         router.push('/');
         return;
       }
@@ -44,7 +46,7 @@ export function ProtectedRoute({
   }
 
   // 권한이 없는 경우
-  if (!allowedRoles.includes(user.role)) {
+  if (!allowedRoles.includes(user.role as UserRole)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">

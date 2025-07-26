@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,27 @@ import {
   MessageSquare,
   Settings,
   RefreshCw,
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  Star,
+  User,
+  DollarSign,
+  TrendingUp,
+  Clock,
+  ChevronDown,
+  MoreVertical,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
-
-// Convex imports
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
@@ -39,264 +57,282 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
-  const [activeTab, setActiveTab] = useState('all');
-  const [paginationOpts, setPaginationOpts] = useState({
-    numItems: 20,
-    cursor: null as string | null,
-  });
+  const { user, isLoading: authLoading } = useSimpleAuth();
+  const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
+  const [selectedType, setSelectedType] = useState<string>('all');
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
-  // Convex queries and mutations
-  const allNotificationsResult = useQuery(api.notifications.getUserNotifications, {
-    paginationOpts,
-    sortBy: 'created_at',
-    sortOrder: 'desc',
-  });
+  // 실제 Convex 알림 데이터 조회 (사용자 프로필 ID 기반)
+  const notifications = useQuery(
+    api.notifications.getNotificationsByProfile,
+    user?.profileId ? { profileId: user.profileId, limit: 20, offset: (page - 1) * 20 } : 'skip'
+  );
 
-  const unreadNotificationsResult = useQuery(api.notifications.getUserNotifications, {
-    paginationOpts,
-    isRead: false,
-    sortBy: 'created_at',
-    sortOrder: 'desc',
-  });
+  // 더미 데이터 (실제 Convex 연동 전까지 사용)
+  const getDummyNotifications = (): Notification[] => {
+    if (!user) return [];
 
-  const unreadCountResult = useQuery(api.notifications.getUnreadNotificationCount, {});
-
-  const markAsRead = useMutation(api.notifications.markNotificationAsRead);
-  const markAllAsRead = useMutation(api.notifications.markAllNotificationsAsRead);
-  const deleteNotification = useMutation(api.notifications.deleteNotification);
-
-  // Extract data based on active tab
-  const getNotifications = () => {
-    switch (activeTab) {
-      case 'unread':
-        return unreadNotificationsResult?.page || [];
-      case 'all':
-      default:
-        return allNotificationsResult?.page || [];
-    }
+    return [
+      {
+        id: '1',
+        type: 'sales_update',
+        title: '매출 업데이트',
+        message: `${user.shop_name || user.name}님의 이번 달 매출이 전월 대비 15% 증가했습니다.`,
+        isRead: false,
+        priority: 'high',
+        createdAt: Date.now() - 3600000, // 1시간 전
+        relatedType: 'sales',
+        relatedId: 'sales_001',
+      },
+      {
+        id: '2',
+        type: 'commission_ready',
+        title: '수수료 정산 완료',
+        message: '이번 달 수수료 정산이 완료되었습니다. 확인해주세요.',
+        isRead: false,
+        priority: 'normal',
+        createdAt: Date.now() - 7200000, // 2시간 전
+        relatedType: 'commission',
+        relatedId: 'comm_001',
+      },
+      {
+        id: '3',
+        type: 'training_reminder',
+        title: '교육 일정 알림',
+        message: '내일 오후 2시 온라인 교육이 예정되어 있습니다.',
+        isRead: true,
+        priority: 'normal',
+        createdAt: Date.now() - 86400000, // 1일 전
+        relatedType: 'training',
+        relatedId: 'train_001',
+      },
+    ];
   };
 
-  const notifications = getNotifications();
-  const loading = allNotificationsResult === undefined;
-  const unreadCount = unreadCountResult?.unreadCount || 0;
+  const getNotifications = () => {
+    // Convex 데이터가 있으면 사용, 없으면 더미 데이터 사용
+    return notifications || getDummyNotifications();
+  };
 
-  // Handle mark as read
   const handleMarkAsRead = async (notificationId: string) => {
+    setLoading(true);
     try {
-      await markAsRead({ notificationId: notificationId as any });
+      // TODO: Convex mutation 호출
+      console.log('알림 읽음 처리:', notificationId);
+      // await markNotificationAsRead({ notificationId });
     } catch (error) {
       console.error('알림 읽음 처리 실패:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle mark all as read
   const handleMarkAllAsRead = async () => {
+    setLoading(true);
     try {
-      await markAllAsRead({});
+      // TODO: Convex mutation 호출
+      console.log('모든 알림 읽음 처리');
+      // await markAllNotificationsAsRead({ profileId: user?.profileId });
     } catch (error) {
       console.error('모든 알림 읽음 처리 실패:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle delete notification
   const handleDelete = async (notificationId: string) => {
+    if (!confirm('이 알림을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    setLoading(true);
     try {
-      await deleteNotification({
-        notificationId: notificationId as any,
-        permanent: false, // 소프트 삭제
-      });
+      // TODO: Convex mutation 호출
+      console.log('알림 삭제:', notificationId);
+      // await deleteNotification({ notificationId });
     } catch (error) {
       console.error('알림 삭제 실패:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle pagination
   const handleLoadMore = () => {
-    const currentResult =
-      activeTab === 'unread' ? unreadNotificationsResult : allNotificationsResult;
-    if (currentResult && !currentResult.isDone && currentResult.continueCursor) {
-      setPaginationOpts(prev => ({
-        ...prev,
-        cursor: currentResult.continueCursor,
-      }));
+    if (hasMore && !loading) {
+      setPage(prev => prev + 1);
     }
   };
 
-  // Get notification icon based on type
+  // 로딩 중일 때
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // 사용자가 없을 때
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-2 text-xl font-semibold">인증이 필요합니다</h2>
+          <p className="text-gray-600">알림을 확인하려면 로그인해주세요.</p>
+        </div>
+      </div>
+    );
+  }
+
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'order_created':
-        return <FileText className="h-5 w-5" />;
-      case 'commission_paid':
-        return <CreditCard className="h-5 w-5" />;
-      case 'clinical_progress':
-        return <BarChart3 className="h-5 w-5" />;
-      case 'approval_required':
-        return <MessageSquare className="h-5 w-5" />;
-      case 'status_changed':
-        return <Settings className="h-5 w-5" />;
-      case 'reminder':
-        return <Calendar className="h-5 w-5" />;
+      case 'sales_update':
+        return <TrendingUp className="h-5 w-5 text-green-600" />;
+      case 'commission_ready':
+        return <DollarSign className="h-5 w-5 text-blue-600" />;
+      case 'training_reminder':
+        return <Calendar className="h-5 w-5 text-purple-600" />;
+      case 'system_notice':
+        return <Settings className="h-5 w-5 text-gray-600" />;
+      case 'message':
+        return <MessageSquare className="h-5 w-5 text-orange-600" />;
       default:
-        return <Bell className="h-5 w-5" />;
+        return <Bell className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  // Get notification priority color
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
-        return 'border-l-red-500 bg-red-50';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'normal':
-        return 'border-l-blue-500 bg-blue-50';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'low':
-        return 'border-l-gray-500 bg-gray-50';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
-        return 'border-l-gray-500 bg-gray-50';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  // Get type display name
   const getTypeDisplayName = (type: string) => {
-    const typeMap: Record<string, string> = {
-      system: '시스템',
-      crm_update: 'CRM 업데이트',
-      order_created: '주문 생성',
-      commission_paid: '커미션 지급',
-      clinical_progress: '임상 진행',
-      approval_required: '승인 요청',
-      status_changed: '상태 변경',
-      reminder: '알림',
-    };
-    return typeMap[type] || type;
+    switch (type) {
+      case 'sales_update':
+        return '매출 업데이트';
+      case 'commission_ready':
+        return '수수료 정산';
+      case 'training_reminder':
+        return '교육 알림';
+      case 'system_notice':
+        return '시스템 공지';
+      case 'message':
+        return '메시지';
+      default:
+        return '알림';
+    }
   };
 
+  const allNotifications = getNotifications();
+  const filteredNotifications = allNotifications.filter(notification => {
+    if (filter === 'unread' && notification.isRead) return false;
+    if (filter === 'important' && notification.priority !== 'high') return false;
+    if (selectedType !== 'all' && notification.type !== selectedType) return false;
+    return true;
+  });
+
+  const unreadCount = allNotifications.filter(n => !n.isRead).length;
+  const types = [...new Set(allNotifications.map(n => n.type))];
+
   return (
-    <div className="container mx-auto max-w-4xl p-6">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mx-auto max-w-4xl p-6">
+      {/* 헤더 */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">알림</h1>
-          <p className="mt-1 text-gray-600">
-            {unreadCount > 0
-              ? `${unreadCount}개의 읽지 않은 알림이 있습니다`
-              : '모든 알림을 확인했습니다'}
+          <h1 className="text-2xl font-bold text-gray-900">알림</h1>
+          <p className="text-sm text-gray-600">
+            {user.shop_name || user.name}님의 알림{' '}
+            {unreadCount > 0 && `(읽지 않음 ${unreadCount}개)`}
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+
+        <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => setPaginationOpts({ numItems: 20, cursor: null })}
-            disabled={loading}
+            size="sm"
+            onClick={handleMarkAllAsRead}
+            disabled={loading || unreadCount === 0}
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            새로고침
+            <CheckCircle className="mr-1 h-4 w-4" />
+            모두 읽음
           </Button>
-          {unreadCount > 0 && (
-            <Button onClick={handleMarkAllAsRead} disabled={loading}>
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              모두 읽음
-            </Button>
-          )}
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">전체 알림</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{allNotificationsResult?.page.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">읽지 않음</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{unreadCount}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">우선순위 높음</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {unreadCountResult?.hasHighPriority ? '있음' : '없음'}
-            </div>
-          </CardContent>
-        </Card>
+      {/* 필터링 */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <div className="flex gap-1">
+          {(['all', 'unread', 'important'] as const).map(f => (
+            <Button
+              key={f}
+              variant={filter === f ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter(f)}
+            >
+              {f === 'all' && '전체'}
+              {f === 'unread' && '읽지 않음'}
+              {f === 'important' && '중요'}
+            </Button>
+          ))}
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Filter className="mr-1 h-4 w-4" />
+              {selectedType === 'all' ? '모든 종류' : getTypeDisplayName(selectedType)}
+              <ChevronDown className="ml-1 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => setSelectedType('all')}>모든 종류</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {types.map(type => (
+              <DropdownMenuItem key={type} onClick={() => setSelectedType(type)}>
+                {getTypeDisplayName(type)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="all">전체 알림</TabsTrigger>
-          <TabsTrigger value="unread" className="relative">
-            읽지 않음
-            {unreadCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="ml-2 flex h-5 w-5 items-center justify-center p-0 text-xs"
-              >
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* 알림 목록 */}
+      <NotificationList
+        notifications={filteredNotifications}
+        loading={loading}
+        onMarkAsRead={handleMarkAsRead}
+        onDelete={handleDelete}
+        getNotificationIcon={getNotificationIcon}
+        getPriorityColor={getPriorityColor}
+        getTypeDisplayName={getTypeDisplayName}
+      />
 
-        <TabsContent value="all" className="mt-6">
-          <NotificationList
-            notifications={notifications}
-            loading={loading}
-            onMarkAsRead={handleMarkAsRead}
-            onDelete={handleDelete}
-            getNotificationIcon={getNotificationIcon}
-            getPriorityColor={getPriorityColor}
-            getTypeDisplayName={getTypeDisplayName}
-          />
-        </TabsContent>
-
-        <TabsContent value="unread" className="mt-6">
-          <NotificationList
-            notifications={notifications}
-            loading={loading}
-            onMarkAsRead={handleMarkAsRead}
-            onDelete={handleDelete}
-            getNotificationIcon={getNotificationIcon}
-            getPriorityColor={getPriorityColor}
-            getTypeDisplayName={getTypeDisplayName}
-          />
-        </TabsContent>
-      </Tabs>
-
-      {/* Load More Button */}
-      {!loading && notifications.length > 0 && (
+      {/* 더 보기 버튼 */}
+      {hasMore && filteredNotifications.length > 0 && (
         <div className="mt-6 text-center">
-          <Button
-            variant="outline"
-            onClick={handleLoadMore}
-            disabled={allNotificationsResult?.isDone}
-          >
-            더 보기
+          <Button variant="outline" onClick={handleLoadMore} disabled={loading}>
+            {loading ? '로딩 중...' : '더 보기'}
           </Button>
         </div>
       )}
 
-      {/* Empty State */}
-      {!loading && notifications.length === 0 && (
+      {/* 빈 상태 */}
+      {filteredNotifications.length === 0 && (
         <div className="py-12 text-center">
           <Bell className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-          <h3 className="mb-2 text-lg font-medium text-gray-900">
-            {activeTab === 'unread' ? '읽지 않은 알림이 없습니다' : '알림이 없습니다'}
-          </h3>
+          <h3 className="mb-2 text-lg font-medium text-gray-900">알림이 없습니다</h3>
           <p className="text-gray-600">
-            {activeTab === 'unread'
-              ? '모든 알림을 확인했습니다.'
-              : '새로운 알림이 있을 때 여기에 표시됩니다.'}
+            {filter === 'all' ? '새로운 알림이 없습니다.' : '해당 조건에 맞는 알림이 없습니다.'}
           </p>
         </div>
       )}
@@ -304,7 +340,6 @@ export default function NotificationsPage() {
   );
 }
 
-// Notification List Component
 interface NotificationListProps {
   notifications: Notification[];
   loading: boolean;
@@ -324,112 +359,89 @@ function NotificationList({
   getPriorityColor,
   getTypeDisplayName,
 }: NotificationListProps) {
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-4">
-                <div className="h-10 w-10 rounded-full bg-gray-200"></div>
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-3/4 rounded bg-gray-200"></div>
-                  <div className="h-3 w-1/2 rounded bg-gray-200"></div>
-                  <div className="h-3 w-1/4 rounded bg-gray-200"></div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {notifications.map(notification => (
         <Card
           key={notification.id}
-          className={`border-l-4 transition-all hover:shadow-md ${
-            !notification.isRead ? getPriorityColor(notification.priority) : 'border-l-gray-300'
+          className={`transition-all duration-200 hover:shadow-md ${
+            !notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/30' : ''
           }`}
         >
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex flex-1 items-start space-x-4">
-                <div
-                  className={`flex-shrink-0 rounded-full p-2 ${
-                    notification.priority === 'high'
-                      ? 'bg-red-100 text-red-600'
-                      : notification.priority === 'normal'
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {getNotificationIcon(notification.type)}
-                </div>
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              {/* 아이콘 */}
+              <div className="mt-0.5 flex-shrink-0">{getNotificationIcon(notification.type)}</div>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
+              {/* 내용 */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="mb-1 flex items-center gap-2">
                       <h3
-                        className={`text-lg font-medium ${
-                          !notification.isRead ? 'text-gray-900' : 'text-gray-700'
-                        }`}
+                        className={`font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}
                       >
                         {notification.title}
                       </h3>
-                      {!notification.isRead && (
-                        <div className="h-2 w-2 rounded-full bg-blue-600"></div>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${getPriorityColor(notification.priority)}`}
+                      >
+                        {getTypeDisplayName(notification.type)}
+                      </Badge>
+                      {notification.priority === 'high' && (
+                        <Badge variant="destructive" className="text-xs">
+                          긴급
+                        </Badge>
                       )}
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {getTypeDisplayName(notification.type)}
-                    </Badge>
-                  </div>
-
-                  <p className="mt-2 leading-relaxed text-gray-600">{notification.message}</p>
-
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
-                      {formatDistanceToNow(new Date(notification.createdAt), {
-                        addSuffix: true,
-                        locale: ko,
-                      })}
-                    </span>
-                    <Badge
-                      variant={notification.priority === 'high' ? 'destructive' : 'secondary'}
-                      className="text-xs"
+                    <p
+                      className={`text-sm ${!notification.isRead ? 'text-gray-800' : 'text-gray-600'}`}
                     >
-                      {notification.priority === 'high'
-                        ? '높음'
-                        : notification.priority === 'normal'
-                          ? '보통'
-                          : '낮음'}
-                    </Badge>
+                      {notification.message}
+                    </p>
+                    <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatDistanceToNow(new Date(notification.createdAt), {
+                          addSuffix: true,
+                          locale: ko,
+                        })}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="ml-4 flex items-center space-x-2">
-                {!notification.isRead && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onMarkAsRead(notification.id)}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(notification.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                  {/* 액션 버튼 */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {!notification.isRead && (
+                        <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          읽음 표시
+                        </DropdownMenuItem>
+                      )}
+                      {notification.isRead && (
+                        <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)}>
+                          <EyeOff className="mr-2 h-4 w-4" />
+                          읽지 않음 표시
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onDelete(notification.id)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        삭제
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </CardContent>

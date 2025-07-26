@@ -14,7 +14,7 @@ interface LayoutProps {
 
 export default function KolNewLayout({ children }: LayoutProps) {
   return (
-    <ProtectedRoute allowedRoles={['kol']}>
+    <ProtectedRoute allowedRoles={['kol', 'admin', 'ol', 'shop_owner']}>
       <KolNewLayoutContent>{children}</KolNewLayoutContent>
     </ProtectedRoute>
   );
@@ -24,10 +24,10 @@ function KolNewLayoutContent({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useSimpleAuth();
 
-  // 사용자 정보 준비
+  // 실제 Convex 프로필 데이터 사용
   const userData = {
     name: user?.name || '사용자',
-    shopName: '매장명 미설정',
+    shopName: user?.shop_name || '매장명 미설정',
     userImage: undefined,
   };
 
@@ -49,12 +49,7 @@ function KolNewLayoutContent({ children }: LayoutProps) {
 
       {/* 메인 콘텐츠 영역 */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <KolHeader
-          userName={userData.name}
-          shopName={userData.shopName}
-          userImage={userData.userImage}
-          onMenuClick={() => setSidebarOpen(true)}
-        />
+        <KolHeader />
         <main className="flex-1 overflow-y-auto px-4 pb-4 md:px-6 md:pb-6">{children}</main>
         <KolFooter />
       </div>
