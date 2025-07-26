@@ -6,6 +6,11 @@ import { useState, useEffect } from 'react';
 import PageHeader from './PageHeader';
 import { toast } from 'sonner';
 
+// Convex 관련 imports
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
+
 // isNew와 같은 로컬 상태를 포함하는 확장된 고객 타입
 type LocalCustomer = Customer & {
   customer_progress?: CustomerProgress[];
@@ -21,76 +26,47 @@ export default function CustomerList({ kolId }: Props) {
   const [localCustomers, setLocalCustomers] = useState<LocalCustomer[]>([]);
   const [isAdding, setIsAdding] = useState(false);
 
-  // 더미 데이터 초기화
+  // 현재는 임시로 하드코딩된 프로필 ID 사용 (실제로는 profiles에서 조회해야 함)
+  const actualKolId = 'mock-profile-id' as Id<'profiles'>;
+
+  // Convex queries and mutations
+  const customers = useQuery(api.customers.getCustomersByKol, {
+    kolId: actualKolId,
+    paginationOpts: { numItems: 100, cursor: null },
+  });
+
+  const createCustomer = useMutation(api.customers.createCustomer);
+
+  // 실제 고객 데이터 로드
   useEffect(() => {
-    // 더미 고객 데이터 생성
-    const dummyCustomers: LocalCustomer[] = [
-      {
-        id: '1',
-        kol_id: kolId,
-        name: '김철수',
-        shopName: '뷰티샵 강남점',
-        phone: '010-1234-5678',
-        region: '서울',
-        placeAddress: '서울시 강남구 테헤란로 123',
-        assignee: '이영희',
-        manager: '박민수',
-        status: 'active',
-        notes: '우수 고객',
-        completed_stages: 3,
-        total_stages: 6,
-        created_at: new Date().toISOString(),
-        customer_progress: [
-          {
-            id: 'p1',
-            customerId: '1',
-            stageData: {
-              inflow: { source: '온라인' },
-              contract: { type: '구매', purchaseDate: '2024-01-15' },
-              delivery: { type: '설치', installDate: '2024-01-20' },
-            },
-            achievements: {},
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-      },
-      {
-        id: '2',
-        kol_id: kolId,
-        name: '이미영',
-        shopName: '더뷰티 청담점',
-        phone: '010-2345-6789',
-        region: '서울',
-        placeAddress: '서울시 강남구 청담동 456',
-        assignee: '최지훈',
-        manager: '김수진',
-        status: 'active',
-        notes: '신규 고객',
-        completed_stages: 1,
-        total_stages: 6,
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        customer_progress: [
-          {
-            id: 'p2',
-            customerId: '2',
-            stageData: {
-              inflow: { source: '오프라인' },
-            },
-            achievements: {},
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-      },
-    ];
-    setLocalCustomers(dummyCustomers);
-  }, [kolId]);
+    if (customers?.page) {
+      const formattedCustomers: LocalCustomer[] = customers.page.map(c => ({
+        id: c._id as string,
+        kol_id: 1, // 임시로 숫자로 설정 (실제로는 kolId를 숫자로 변환해야 함)
+        name: c.name,
+        shopName: c.shop_name,
+        phone: c.phone,
+        region: c.region,
+        placeAddress: c.place_address,
+        assignee: c.assignee,
+        manager: c.manager,
+        status: c.status,
+        notes: c.notes,
+        completed_stages: c.completed_stages || 0,
+        total_stages: c.total_stages || 6,
+        created_at: new Date(c.created_at).toISOString(),
+        customer_progress: [], // 일단 빈 배열로 설정
+      }));
+      setLocalCustomers(formattedCustomers);
+    }
+  }, [customers]);
 
   const handleAddCustomer = () => {
     if (isAdding) return;
 
     const newCustomer: LocalCustomer = {
       id: `new-${Date.now()}`,
-      kol_id: kolId, // Convex ID 그대로 사용
+      kol_id: 1, // 임시로 숫자로 설정
       name: '신규 고객',
       shopName: '',
       phone: '',
@@ -120,32 +96,43 @@ export default function CustomerList({ kolId }: Props) {
     manager: string;
     notes?: string;
   }) => {
-    // 더미 데이터로 저장 시뮬레이션
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const customerId = await createCustomer({
+        kolId: actualKolId,
+        name: customerData.name,
+        shopName: customerData.shopName,
+        phone: customerData.phone,
+        region: customerData.region,
+        placeAddress: customerData.placeAddress,
+        assignee: customerData.assignee,
+        manager: customerData.manager,
+        notes: customerData.notes,
+      });
 
-    const newCustomerId = `customer-${Date.now()}`;
-    const savedCustomer: LocalCustomer = {
-      id: newCustomerId,
-      kol_id: kolId,
-      ...customerData,
-      status: 'active',
-      completed_stages: 0,
-      total_stages: 6,
-      created_at: new Date().toISOString(),
-      customer_progress: [],
-    };
+      // 임시 고객 제거 (실제 데이터는 useQuery를 통해 자동으로 업데이트됨)
+      setLocalCustomers(prev => prev.filter(c => !c.isNew));
+      setIsAdding(false);
 
-    // 임시 고객 제거하고 저장된 고객 추가
-    setLocalCustomers(prev => [savedCustomer, ...prev.filter(c => !c.isNew)]);
-    setIsAdding(false);
-
-    toast.success('고객이 성공적으로 등록되었습니다.');
+      toast.success('고객이 성공적으로 등록되었습니다.');
+    } catch (error) {
+      console.error('고객 생성 실패:', error);
+      toast.error('고객 등록에 실패했습니다.');
+    }
   };
 
   const handleDeleteNewCustomer = (customerId: string | number) => {
     setLocalCustomers(prev => prev.filter(c => c.id !== customerId));
     setIsAdding(false);
   };
+
+  // 로딩 상태
+  if (customers === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   // 빈 상태 처리
   if (!localCustomers || localCustomers.length === 0) {
@@ -185,7 +172,7 @@ export default function CustomerList({ kolId }: Props) {
               isNew={c.isNew}
               onDelete={() => handleDeleteNewCustomer(c.id)}
               onSave={c.isNew ? handleSaveNewCustomer : undefined}
-              isDummyMode={true} // 하드코딩 인증으로 더미 모드 사용
+              isDummyMode={false} // 실제 Convex 연동 모드로 변경
             />
           ))}
         </div>
