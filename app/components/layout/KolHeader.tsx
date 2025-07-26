@@ -159,12 +159,6 @@ export default function KolHeader() {
           대시보드
         </Link>
         <Link
-          href="/kol-new/sales-journal"
-          className="text-gray-700 transition-colors hover:text-blue-600"
-        >
-          영업일지
-        </Link>
-        <Link
           href="/kol-new/customer-manager"
           className="text-gray-700 transition-colors hover:text-blue-600"
         >

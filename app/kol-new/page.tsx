@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { redirect } from 'next/navigation';
-// TODO: Supabase 인증으로 교체 예정
 import Link from 'next/link';
 import {
   CoinsIcon,
@@ -19,103 +18,32 @@ import StoreRankingTable from '../../components/store-ranking-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useAuth } from '@/hooks/useAuth';
 
-// 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
   if (value === 0) return '0원';
-
-  // 만 단위 계산
   const man = Math.floor(value / 10000);
   const rest = value % 10000;
-
   if (man > 0) {
-    // 만 단위가 있는 경우
-    if (rest > 0) {
-      // 나머지가 있는 경우 (예: 510만 4740원)
-      return `${man.toLocaleString()}만 ${rest}원`;
-    }
-    // 나머지가 없는 경우 (예: 500만원)
+    if (rest > 0) return `${man.toLocaleString()}만 ${rest}원`;
     return `${man.toLocaleString()}만원`;
-  } else {
-    // 만 단위가 없는 경우 (예: 9800원)
-    return `${value.toLocaleString()}원`;
   }
+  return `${value.toLocaleString()}원`;
 };
 
-// 대시보드 데이터 타입 정의
-interface DashboardData {
-  kol: {
-    id: number;
-    name: string;
-    shopName: string;
-  };
-  sales: {
-    currentMonth: number;
-    previousMonth: number;
-    growth: number;
-  };
-  allowance: {
-    currentMonth: number;
-    previousMonth: number;
-    growth: number;
-  };
-  shops: {
-    total: number;
-    ordering: number;
-    notOrdering: number;
-    lastAddedDate?: string;
-  };
-}
-
-// 전문점 데이터 타입 정의
-interface ShopData {
-  id: number;
-  ownerName: string;
-  shop_name: string;
-  region: string;
-  status: string;
-  createdAt: string;
-  is_self_shop?: boolean;
-  sales: {
-    total: number;
-    product: number;
-    device: number;
-    hasOrdered: boolean;
-    commission?: number;
-  };
-}
-
-// 태스크 데이터 타입 정의
-interface ActivityData {
-  id: number;
-  shopId?: number;
-  shopName?: string;
-  activityDate: string;
-  content: string;
-  createdAt: string;
-  timeAgo: string;
-  icon: React.ReactNode;
-}
-
 export default function KolNewPage() {
-  // TODO: Supabase 인증으로 교체 예정
-  const [isKol, setIsKol] = useState<boolean | null>(true); // 임시로 KOL로 설정
+  const { profile, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const kolId = profile?._id;
 
-  const { data: dashboardCompleteData, isLoading: loading, error, refetch } = useDashboardData();
+  const { data: dashboardData, isLoading, error, refetch } = useDashboardData(kolId);
 
   useEffect(() => {
-    // TODO: Supabase 인증 로직 구현
-    setIsKol(true); // 임시로 KOL로 설정
-  }, []);
+    if (!isAuthLoading && !isAuthenticated) {
+      redirect('/');
+    }
+  }, [isAuthLoading, isAuthenticated]);
 
-  const dashboardData = dashboardCompleteData;
-  const shopsData = dashboardCompleteData?.shops?.list || [];
-
-  const handleRetry = () => {
-    refetch();
-  };
-
-  if (isKol === null || loading) {
+  if (isAuthLoading || isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -130,13 +58,12 @@ export default function KolNewPage() {
     );
   }
 
-  if (!isKol) {
-    return redirect('/');
+  if (!isAuthenticated) {
+    return null;
   }
 
   if (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : '데이터를 불러오는데 실패했습니다.';
+    const errorMessage = (error as any)?.message || '데이터를 불러오는데 실패했습니다.';
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -150,7 +77,7 @@ export default function KolNewPage() {
             <p className="text-center text-muted-foreground">{errorMessage}</p>
           </CardContent>
           <CardFooter>
-            <Button variant="default" onClick={handleRetry} className="w-full">
+            <Button variant="default" onClick={refetch} className="w-full">
               다시 시도
             </Button>
           </CardFooter>
@@ -262,7 +189,7 @@ export default function KolNewPage() {
       <div className="mb-6">
         <Card className="flex h-full flex-col">
           <CardContent className="flex flex-1 flex-col overflow-auto p-0">
-            <StoreRankingTable shops={shopsData} />
+            <StoreRankingTable shops={dashboardData?.shops?.list || []} />
           </CardContent>
           <CardFooter className="mt-auto border-t px-6 py-3">
             <div className="ml-auto">
