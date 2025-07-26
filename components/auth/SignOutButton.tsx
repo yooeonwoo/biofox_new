@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthActions } from '@convex-dev/auth/react';
+import { useAuth } from '@/providers/supabase-auth-provider';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { LogOut, Loader2 } from 'lucide-react';
@@ -35,7 +35,7 @@ export const SignOutButton: React.FC<SignOutButtonProps> = ({
   confirmDialog = true,
   className,
 }) => {
-  const { signOut } = useAuthActions();
+  const { signOut } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);

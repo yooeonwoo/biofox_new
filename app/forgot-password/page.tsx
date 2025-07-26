@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 import { Loader2, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('올바른 이메일 형식이 아닙니다.'),
@@ -44,11 +45,14 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (values: ForgotPasswordFormValues) => {
     setIsSubmitting(true);
     try {
-      // TODO: 실제 비밀번호 재설정 이메일 발송 API 호출
-      // await sendPasswordResetEmail(values.email);
+      const supabase = createClient();
 
-      // 임시로 성공 처리
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Supabase 비밀번호 재설정 이메일 발송
+      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
 
       setIsSuccess(true);
 

@@ -3,12 +3,13 @@ import { v } from 'convex/values';
 import { authTables } from '@convex-dev/auth/server';
 
 export default defineSchema({
-  // Convex Auth 시스템 테이블
+  // Convex Auth 시스템 테이블 (기존 호환성 유지)
   ...authTables,
 
-  // 💼 사용자 프로필 - 실제 Supabase 구조 정확 매핑
+  // 💼 사용자 프로필 - Convex Auth + Supabase Auth 하이브리드
   profiles: defineTable({
-    userId: v.id('users'), // Convex Auth users 테이블 참조
+    userId: v.optional(v.id('users')), // Convex Auth users 테이블 참조 (기존 데이터)
+    supabaseUserId: v.optional(v.string()), // Supabase Auth UUID (새로운 필드)
     // 기본 정보
     email: v.string(),
     name: v.string(),
@@ -39,6 +40,7 @@ export default defineSchema({
     updated_at: v.number(),
   })
     .index('by_userId', ['userId'])
+    .index('by_supabaseUserId', ['supabaseUserId'])
     .index('by_email', ['email'])
     .index('by_role', ['role'])
     .index('by_status', ['status'])

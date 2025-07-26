@@ -10,6 +10,7 @@
 
 import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server';
 import type * as auth from '../auth.js';
+import type * as authHelpers from '../authHelpers.js';
 import type * as auth_old from '../auth_old.js';
 import type * as clinical from '../clinical.js';
 import type * as commissions from '../commissions.js';
@@ -28,6 +29,7 @@ import type * as realtime_optimized from '../realtime_optimized.js';
 import type * as relationships from '../relationships.js';
 import type * as salesJournal from '../salesJournal.js';
 import type * as shops from '../shops.js';
+import type * as supabaseAuth from '../supabaseAuth.js';
 import type * as userMutations from '../userMutations.js';
 import type * as users from '../users.js';
 import type * as utils from '../utils.js';
@@ -43,6 +45,7 @@ import type * as validation from '../validation.js';
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  authHelpers: typeof authHelpers;
   auth_old: typeof auth_old;
   clinical: typeof clinical;
   commissions: typeof commissions;
@@ -61,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   relationships: typeof relationships;
   salesJournal: typeof salesJournal;
   shops: typeof shops;
+  supabaseAuth: typeof supabaseAuth;
   userMutations: typeof userMutations;
   users: typeof users;
   utils: typeof utils;

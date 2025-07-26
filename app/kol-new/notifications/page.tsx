@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -65,8 +66,13 @@ export default function NotificationsPage() {
 
   // 실제 Convex 알림 데이터 조회 (사용자 프로필 ID 기반)
   const notifications = useQuery(
-    api.notifications.getNotificationsByProfile,
-    user?.profileId ? { profileId: user.profileId, limit: 20, offset: (page - 1) * 20 } : 'skip'
+    api.notifications.getUserNotifications,
+    user?.profile?._id
+      ? {
+          paginationOpts: { numItems: 20, cursor: null },
+          type: undefined,
+        }
+      : 'skip'
   );
 
   // 더미 데이터 (실제 Convex 연동 전까지 사용)
@@ -78,7 +84,7 @@ export default function NotificationsPage() {
         id: '1',
         type: 'sales_update',
         title: '매출 업데이트',
-        message: `${user.shop_name || user.name}님의 이번 달 매출이 전월 대비 15% 증가했습니다.`,
+        message: `${user.profile?.shop_name || user.name}님의 이번 달 매출이 전월 대비 15% 증가했습니다.`,
         isRead: false,
         priority: 'high',
         createdAt: Date.now() - 3600000, // 1시간 전
@@ -233,15 +239,15 @@ export default function NotificationsPage() {
   };
 
   const allNotifications = getNotifications();
-  const filteredNotifications = allNotifications.filter(notification => {
+  const filteredNotifications = allNotifications.filter((notification: Notification) => {
     if (filter === 'unread' && notification.isRead) return false;
     if (filter === 'important' && notification.priority !== 'high') return false;
     if (selectedType !== 'all' && notification.type !== selectedType) return false;
     return true;
   });
 
-  const unreadCount = allNotifications.filter(n => !n.isRead).length;
-  const types = [...new Set(allNotifications.map(n => n.type))];
+  const unreadCount = allNotifications.filter((n: Notification) => !n.isRead).length;
+  const types = [...new Set(allNotifications.map((n: Notification) => n.type))];
 
   return (
     <div className="mx-auto max-w-4xl p-6">
@@ -250,7 +256,7 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">알림</h1>
           <p className="text-sm text-gray-600">
-            {user.shop_name || user.name}님의 알림{' '}
+            {user.profile?.shop_name || user.name}님의 알림{' '}
             {unreadCount > 0 && `(읽지 않음 ${unreadCount}개)`}
           </p>
         </div>
@@ -296,7 +302,7 @@ export default function NotificationsPage() {
           <DropdownMenuContent>
             <DropdownMenuItem onClick={() => setSelectedType('all')}>모든 종류</DropdownMenuItem>
             <DropdownMenuSeparator />
-            {types.map(type => (
+            {types.map((type: string) => (
               <DropdownMenuItem key={type} onClick={() => setSelectedType(type)}>
                 {getTypeDisplayName(type)}
               </DropdownMenuItem>

@@ -1,19 +1,18 @@
 /**
- * 임시 auth 파일 - Convex Auth로 마이그레이션 필요
+ * 인증 유틸리티 - Convex Auth 사용
  */
 
 import { redirect } from 'next/navigation';
 
-export async function checkAuthSupabase() {
-  // TODO: Convex Auth로 마이그레이션
-  // 현재는 빌드 에러 해결을 위한 임시 구현
-  console.warn('checkAuthSupabase is deprecated. Please migrate to Convex Auth.');
+// Supabase 관련 함수들은 모두 제거됨
+// Convex Auth를 사용하세요:
+//
+// 1. 클라이언트에서: useAuthActions(), useCurrentUser()
+// 2. 서버에서: convex/auth.ts의 getCurrentUser() 함수 사용
+//
+// 예시:
+// import { useAuthActions, useCurrentUser } from "@convex-dev/auth/react";
+// const { signIn, signOut } = useAuthActions();
+// const user = useCurrentUser();
 
-  // 임시로 인증되지 않은 것으로 처리
-  redirect('/signin');
-}
-
-export async function getUserFromSupabase() {
-  // TODO: Convex Auth로 마이그레이션
-  return null;
-}
+console.info('lib/auth.ts: Supabase 인증 함수들이 제거되었습니다. Convex Auth를 사용하세요.');

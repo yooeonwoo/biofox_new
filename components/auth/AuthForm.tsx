@@ -15,10 +15,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useAuthActions } from '@convex-dev/auth/react';
+import { useAuth } from '@/providers/supabase-auth-provider';
+import { useMutation } from '@tanstack/react-query';
+import { api } from '@convex/_generated/api';
+import { useMutation as useConvexMutation } from 'convex/react';
 import Link from 'next/link';
 import { Loader2, Mail, Lock, User } from 'lucide-react';
 import Image from 'next/image';
+import { useEffect } from 'react';
 
 // 스키마 정의
 const signInSchema = z.object({
@@ -50,10 +54,24 @@ interface AuthFormProps {
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
-  const { signIn } = useAuthActions();
+  const { signIn, signUp, user } = useAuth();
+  const syncProfile = useConvexMutation(api.supabaseAuth.syncSupabaseProfile);
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 사용자가 로그인되면 Convex 프로필 동기화
+  useEffect(() => {
+    if (user) {
+      syncProfile({
+        supabaseUserId: user.id,
+        email: user.email!,
+        metadata: user.user_metadata,
+      }).catch(error => {
+        console.error('프로필 동기화 오류:', error);
+      });
+    }
+  }, [user, syncProfile]);
 
   const form = useForm<any>({
     resolver: zodResolver(type === 'signup' ? signUpSchema : signInSchema),
@@ -69,11 +87,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     setIsSubmitting(true);
     try {
       if (type === 'signin') {
-        await signIn('password', {
-          flow: 'signIn',
-          email: values.email,
-          password: values.password,
-        });
+        await signIn(values.email, values.password);
 
         toast({
           title: '로그인 성공',
@@ -83,11 +97,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         // 로그인 후 대시보드로 이동
         router.push('/kol-new');
       } else {
-        await signIn('password', {
-          flow: 'signUp',
-          email: values.email,
-          password: values.password,
+        await signUp(values.email, values.password, {
           name: values.name,
+          shop_name: '매장명 미입력',
+          role: 'shop_owner',
+          region: '지역 미입력',
         });
 
         toast({

@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider';
 import { ConvexClientProvider } from '@/components/providers/ConvexProvider';
+import { SupabaseAuthProvider } from '@/providers/supabase-auth-provider';
 import { Toaster as SonnerToaster } from 'sonner';
 
 const inter = Inter({
@@ -41,9 +42,11 @@ export default function RootLayout({
       <body className={`${inter.variable} ${notoSansKr.variable}`}>
         <ConvexClientProvider>
           <ReactQueryProvider>
-            {children}
-            <Toaster />
-            <SonnerToaster />
+            <SupabaseAuthProvider>
+              {children}
+              <Toaster />
+              <SonnerToaster />
+            </SupabaseAuthProvider>
           </ReactQueryProvider>
         </ConvexClientProvider>
       </body>
