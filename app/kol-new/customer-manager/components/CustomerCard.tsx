@@ -127,7 +127,6 @@ export default function CustomerCard({
           onBasicInfoChange={setBasicInfo}
           isNew={isNew}
           onDelete={onDelete}
-          onSave={onSave}
         />
 
         {/* 스테이지 블록 */}
@@ -137,6 +136,13 @@ export default function CustomerCard({
             onStageChange={handleStageChange}
             achievements={localProgress.achievements}
             onAchievementsChange={handleAchievementChange}
+            customerId={
+              // 새로운 고객이거나 임시 ID인 경우 undefined로 처리
+              isNew || (typeof customer.id === 'string' && customer.id.startsWith('new-'))
+                ? undefined
+                : (customer.id as any)
+            }
+            isDummyMode={isDummyMode}
           />
         </div>
       </ConnectionLineProvider>
