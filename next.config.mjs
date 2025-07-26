@@ -24,6 +24,19 @@ const nextConfig = {
       config.cache = false;
     }
     
+    // Fix case-sensitive paths
+    config.resolve = {
+      ...config.resolve,
+      alias: {
+        ...config.resolve.alias,
+        '@/components': './components',
+        '@/lib': './lib',
+        '@/hooks': './hooks',
+        '@/app': './app',
+        '@/convex': './convex',
+      },
+    };
+    
     return config;
   },
 
