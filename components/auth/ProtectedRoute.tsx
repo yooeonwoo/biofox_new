@@ -2,7 +2,7 @@
 
 import React, { useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 type UserRole = 'kol' | 'sales' | 'admin' | 'ol' | 'shop_owner';
 
@@ -10,34 +10,58 @@ interface ProtectedRouteProps {
   children: ReactNode;
   allowedRoles?: UserRole[];
   redirectTo?: string;
+  requireAuth?: boolean;
+  fallbackUrl?: string;
 }
 
 export function ProtectedRoute({
   children,
-  allowedRoles = ['kol', 'sales'],
-  redirectTo = '/signin',
+  allowedRoles,
+  redirectTo,
+  requireAuth = true,
+  fallbackUrl = '/signin',
 }: ProtectedRouteProps) {
-  const { user, isLoading, isAuthenticated } = useSimpleAuth();
+  const { isAuthenticated, isLoading, profile } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading) {
-      // 인증되지 않은 경우 로그인 페이지로 리다이렉트
-      if (!isAuthenticated) {
-        router.push(redirectTo);
+      // 인증이 필요한데 인증되지 않은 경우
+      if (requireAuth && !isAuthenticated) {
+        router.push(fallbackUrl);
         return;
       }
 
-      // 권한이 없는 경우 홈페이지로 리다이렉트
-      if (user && !allowedRoles.includes(user.role as UserRole)) {
-        router.push('/');
-        return;
+      // 권한 체크가 필요한 경우
+      if (isAuthenticated && allowedRoles && profile?.role) {
+        if (!allowedRoles.includes(profile.role as UserRole)) {
+          router.push(redirectTo || '/');
+          return;
+        }
       }
     }
-  }, [isLoading, isAuthenticated, user, allowedRoles, redirectTo, router]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    profile,
+    allowedRoles,
+    requireAuth,
+    fallbackUrl,
+    redirectTo,
+    router,
+  ]);
 
-  // 로딩 중이거나 인증되지 않은 경우 로딩 스피너 표시
-  if (isLoading || !isAuthenticated || !user) {
+  // 로딩 중
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // 인증이 필요한데 인증되지 않은 경우
+  if (requireAuth && !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
@@ -46,7 +70,12 @@ export function ProtectedRoute({
   }
 
   // 권한이 없는 경우
-  if (!allowedRoles.includes(user.role as UserRole)) {
+  if (
+    isAuthenticated &&
+    allowedRoles &&
+    profile?.role &&
+    !allowedRoles.includes(profile.role as UserRole)
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">

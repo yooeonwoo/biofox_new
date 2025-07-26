@@ -3,7 +3,8 @@ const nextConfig = {
   // Base settings
   poweredByHeader: false,
   reactStrictMode: true,
-  allowedDevOrigins: ["192.168.1.15:3003", "localhost:3003", "*.local"],
+  // 모든 origin 허용 (개발/테스트용)
+  allowedDevOrigins: ["*"],
 
   // WebSocket and HMR settings
   experimental: {

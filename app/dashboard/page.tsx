@@ -2,22 +2,24 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function DashboardPage() {
-  const { user, isLoading } = useSimpleAuth();
+  const { profile, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && user) {
+    if (!isLoading && profile) {
       // 역할에 따라 적절한 페이지로 리다이렉트
-      if (user.role === 'kol') {
+      if (profile.role === 'kol' || profile.role === 'ol') {
         router.push('/kol-new');
-      } else if (user.role === 'sales') {
+      } else if (profile.role === 'admin') {
         router.push('/admin-new');
+      } else if (profile.role === 'shop_owner') {
+        router.push('/shop');
       }
     }
-  }, [user, isLoading, router]);
+  }, [profile, isLoading, router]);
 
   if (isLoading) {
     return (

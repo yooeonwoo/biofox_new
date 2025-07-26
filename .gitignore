@@ -47,6 +47,9 @@ logs
 # OS 생성 파일
 .DS_Store
 *.pem
+private_key.pem
+public_key.pem
+jwks.json
 Thumbs.db
 
 # debug

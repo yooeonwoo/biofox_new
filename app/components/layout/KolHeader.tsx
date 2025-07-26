@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -25,9 +26,11 @@ import {
   Check,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { SignOutButton } from '@/components/auth/SignOutButton';
 
 interface Notification {
   id: string;
@@ -42,11 +45,11 @@ interface Notification {
 }
 
 export default function KolHeader() {
-  const { user, logout } = useSimpleAuth();
+  const currentUser = useQuery(api.auth.getCurrentUserWithProfile);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  // 간단한 인증에서는 알림 기능 비활성화
+  // 알림 데이터 (추후 실제 데이터로 교체)
   const notifications: Notification[] = [];
   const unreadCount = 0;
   const hasHighPriority = false;
@@ -68,14 +71,14 @@ export default function KolHeader() {
     };
   }, [notificationOpen]);
 
-  // Handle mark all as read (비활성화)
+  // Handle mark all as read
   const handleMarkAllAsRead = async () => {
-    // 간단한 인증에서는 알림 기능 비활성화
+    // TODO: 알림 읽음 처리 구현
   };
 
-  // Handle individual notification click (비활성화)
+  // Handle individual notification click
   const handleNotificationClick = async (notification: Notification) => {
-    // 간단한 인증에서는 알림 기능 비활성화
+    // TODO: 개별 알림 클릭 처리 구현
   };
 
   // Get notification icon based on type
@@ -110,6 +113,19 @@ export default function KolHeader() {
       default:
         return 'text-gray-600 bg-gray-50 border-gray-200';
     }
+  };
+
+  // 사용자 이름의 첫 글자 추출
+  const getUserInitials = () => {
+    if (currentUser?.user?.name) {
+      return currentUser.user.name
+        .split(' ')
+        .map((word: string) => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return 'U';
   };
 
   return (
@@ -268,12 +284,14 @@ export default function KolHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center space-x-2 hover:bg-gray-100">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={undefined} />
-                <AvatarFallback>{user?.name?.slice(0, 2) || 'U'}</AvatarFallback>
+                <AvatarImage src={currentUser?.user?.image} />
+                <AvatarFallback>{getUserInitials()}</AvatarFallback>
               </Avatar>
               <div className="hidden text-left md:block">
-                <div className="text-sm font-medium text-gray-900">{user?.name || '사용자'}</div>
-                <div className="text-xs text-gray-500">BIOFOX</div>
+                <div className="text-sm font-medium text-gray-900">
+                  {currentUser?.user?.name || '사용자'}
+                </div>
+                <div className="text-xs text-gray-500">{currentUser?.user?.email || 'BIOFOX'}</div>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </Button>
@@ -292,13 +310,14 @@ export default function KolHeader() {
                 설정
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="flex items-center text-red-600 focus:text-red-600"
-              onClick={() => logout()}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              로그아웃
-            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div className="p-2">
+              <SignOutButton
+                variant="ghost"
+                className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700"
+                confirmDialog={true}
+              />
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { SimpleAuthForm } from '@/components/auth/SimpleAuthForm';
+import { AuthForm } from '@/components/auth/AuthForm';
 
 export default function SignInPage() {
-  return <SimpleAuthForm initialTab="dev" />;
+  return <AuthForm type="signin" />;
 }

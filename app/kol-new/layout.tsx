@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react';
 import KolHeader from '@/app/components/layout/KolHeader';
 import KolSidebar from '@/app/components/layout/KolSidebar';
 import KolFooter from '@/app/components/layout/KolFooter';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { cn } from '@/lib/utils';
 
@@ -22,13 +22,13 @@ export default function KolNewLayout({ children }: LayoutProps) {
 
 function KolNewLayoutContent({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useSimpleAuth();
+  const { user, profile } = useAuth();
 
   // 실제 Convex 프로필 데이터 사용
   const userData = {
-    name: user?.name || '사용자',
-    shopName: user?.shop_name || '매장명 미설정',
-    userImage: undefined,
+    name: user?.name || profile?.display_name || '사용자',
+    shopName: profile?.shop_name || '매장명 미설정',
+    userImage: user?.image,
   };
 
   return (

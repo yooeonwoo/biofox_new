@@ -5,10 +5,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CardContainer, CardBody, CardItem } from '@/components/ui/aceternity/3d-card';
 import Aurora from '@/components/ui/Aurora';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
-  const { isAuthenticated, isLoading, user } = useSimpleAuth();
+  const { isAuthenticated, isLoading, profile } = useAuth();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -19,10 +19,10 @@ export default function Home() {
 
   // 이미 로그인된 사용자는 대시보드로 리다이렉트
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      router.push('/dashboard');
+    if (!isLoading && isAuthenticated && profile) {
+      router.push('/kol-new');
     }
-  }, [isAuthenticated, isLoading, user, router]);
+  }, [isAuthenticated, isLoading, profile, router]);
 
   // 서버 사이드 렌더링과 하이드레이션 미스매치 방지
   if (!isMounted || isLoading) {

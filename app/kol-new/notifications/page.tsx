@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
@@ -57,7 +56,7 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
-  const { user, isLoading: authLoading } = useSimpleAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [loading, setLoading] = useState(false);

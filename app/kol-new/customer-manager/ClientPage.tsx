@@ -1,11 +1,11 @@
 'use client';
 
 import { Suspense } from 'react';
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import CustomerList from './components/CustomerList';
 
 function CustomerManagerContent() {
-  const { user } = useSimpleAuth();
+  const { user } = useAuth();
 
   // 사용자가 없으면 로딩 상태 표시
   if (!user) {
@@ -20,7 +20,7 @@ function CustomerManagerContent() {
     <div className="mx-auto w-full px-0">
       <CustomerList
         initialData={[]} // 실제 데이터는 CustomerList에서 로드
-        kolId={user.email} // 사용자 email을 ID로 사용 (임시)
+        kolId={user.email || ''} // 사용자 email을 ID로 사용 (임시)
       />
     </div>
   );
