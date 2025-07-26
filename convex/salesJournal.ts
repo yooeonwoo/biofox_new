@@ -84,22 +84,11 @@ export const getSalesJournals = query({
       const sortOrder = args.sortOrder || 'desc';
 
       filteredJournals.sort((a, b) => {
-        let aValue: number, bValue: number;
-
-        switch (sortBy) {
-          case 'created_at':
-            aValue = a.created_at;
-            bValue = b.created_at;
-            break;
-          default: // date
-            aValue = new Date(a.date).getTime();
-            bValue = new Date(b.date).getTime();
-        }
-
-        if (sortOrder === 'asc') {
-          return aValue - bValue;
+        if (sortBy === 'date') {
+          return sortOrder === 'asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
         } else {
-          return bValue - aValue;
+          // created_at (number)
+          return sortOrder === 'asc' ? a.created_at - b.created_at : b.created_at - a.created_at;
         }
       });
 
