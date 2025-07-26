@@ -29,7 +29,6 @@ import type * as realtime_optimized from '../realtime_optimized.js';
 import type * as relationships from '../relationships.js';
 import type * as salesJournal from '../salesJournal.js';
 import type * as shops from '../shops.js';
-import type * as supabaseAuth from '../supabaseAuth.js';
 import type * as userMutations from '../userMutations.js';
 import type * as users from '../users.js';
 import type * as utils from '../utils.js';
@@ -64,7 +63,6 @@ declare const fullApi: ApiFromModules<{
   relationships: typeof relationships;
   salesJournal: typeof salesJournal;
   shops: typeof shops;
-  supabaseAuth: typeof supabaseAuth;
   userMutations: typeof userMutations;
   users: typeof users;
   utils: typeof utils;

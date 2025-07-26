@@ -150,3 +150,46 @@ export const approveProfile = mutation({
     return { success: true };
   },
 });
+
+/**
+ * 관리자가 Supabase 사용자를 위해 특정 역할을 가진 프로필을 생성하는 뮤테이션
+ */
+export const adminCreateUserProfile = mutation({
+  args: {
+    supabaseUserId: v.string(),
+    email: v.string(),
+    name: v.string(),
+    role: v.union(
+      v.literal('admin'),
+      v.literal('kol'),
+      v.literal('ol'),
+      v.literal('shop_owner'),
+      v.literal('sales')
+    ),
+    shop_name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existingProfile = await ctx.db
+      .query('profiles')
+      .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.supabaseUserId))
+      .unique();
+
+    if (existingProfile) {
+      throw new Error('Profile already exists for this Supabase user.');
+    }
+
+    const now = Date.now();
+    const profileId = await ctx.db.insert('profiles', {
+      supabaseUserId: args.supabaseUserId,
+      email: args.email,
+      name: args.name,
+      role: args.role,
+      status: 'approved',
+      shop_name: args.shop_name || '매장명 미입력',
+      created_at: now,
+      updated_at: now,
+    });
+
+    return profileId;
+  },
+});
