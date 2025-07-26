@@ -81,17 +81,6 @@ export const useDashboardData = (kolId?: string | Id<'profiles'>) => {
     kolId ? { parentId: kolId as Id<'profiles'> } : 'skip'
   );
 
-  // 최근 영업일지 (활동 피드용) - 단순 쿼리로 변경
-  const allJournals = useQuery(
-    api.salesJournal.getSalesJournals,
-    kolId
-      ? {
-          user_id: kolId as Id<'profiles'>,
-          paginationOpts: { numItems: 5, cursor: null },
-        }
-      : 'skip'
-  );
-
   // 최근 주문 (활동 피드용)
   const recentOrders = useQuery(
     api.relationships.getAllRelatedOrders,
@@ -108,7 +97,6 @@ export const useDashboardData = (kolId?: string | Id<'profiles'>) => {
     kolProfile === undefined ||
     dashboardStats === undefined ||
     subordinateShops === undefined ||
-    allJournals === undefined ||
     recentOrders === undefined;
 
   // 에러 상태 (Convex는 자동으로 에러를 throw하므로 일반적으로 false)
@@ -143,7 +131,7 @@ export const useDashboardData = (kolId?: string | Id<'profiles'>) => {
         },
 
         // 활동 피드
-        activities: combineActivities(allJournals?.page || [], recentOrders || []),
+        activities: combineActivities(recentOrders || []),
       };
 
   return {
@@ -211,24 +199,11 @@ function transformShopsData(shops: any[], orders: any[]): any[] {
 /**
  * 영업일지와 주문 데이터를 결합하여 활동 피드 생성
  */
-function combineActivities(journals: any[], orders: any[]): any[] {
+function combineActivities(orders: any[]): any[] {
   const activities: any[] = [];
 
-  // 영업일지 활동 추가
-  journals.slice(0, 3).forEach((journal, index) => {
-    activities.push({
-      id: `journal-${journal._id}`,
-      type: 'journal' as const,
-      title: '영업일지 작성',
-      content: journal.content || '영업일지를 작성했습니다.',
-      shopName: journal.shop_name,
-      date: new Date(journal.date || journal.created_at).toISOString(),
-      timeAgo: getTimeAgo(journal.date || journal.created_at),
-    });
-  });
-
   // 최근 주문 활동 추가
-  orders.slice(0, 5).forEach((order, index) => {
+  orders.slice(0, 8).forEach((order, index) => {
     activities.push({
       id: `order-${order._id}`,
       type: 'order' as const,

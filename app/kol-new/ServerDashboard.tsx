@@ -46,16 +46,14 @@ function DashboardLoading() {
 // 메인 클라이언트 컴포넌트
 export default function ServerDashboard() {
   // Convex 쿼리를 사용하여 실시간 대시보드 데이터 조회
-  const dashboardStats = useQuery(api.realtime.getKolDashboardStats, {});
-  const shopsData = useQuery(api.shops.getShopsWithFilters, {});
-  const salesJournalData = useQuery(api.salesJournal.getSalesJournals, {
-    paginationOpts: { numItems: 10, cursor: null },
-    sortBy: 'date',
-    sortOrder: 'desc',
-  });
+  const dashboardStats = useQuery(api.kols.getKolDashboardStats);
+  const shopsData = useQuery(api.shops.getShopsWithFilters, {}); // 올바른 함수명으로 수정
+  const monthlySales = useQuery(api.orders.getMonthlySales); // 올바른 함수명으로 수정
 
-  // 로딩 중이면 로딩 컴포넌트 표시
-  if (dashboardStats === undefined || shopsData === undefined || salesJournalData === undefined) {
+  const isLoading =
+    dashboardStats === undefined || shopsData === undefined || monthlySales === undefined;
+
+  if (isLoading) {
     return <DashboardLoading />;
   }
 
@@ -85,7 +83,7 @@ export default function ServerDashboard() {
       ordering: dashboardStats.shops.ordering || 0,
       notOrdering: dashboardStats.shops.notOrdering || 0,
     },
-    recentActivities: salesJournalData?.page || [],
+    recentActivities: [], // salesJournalData?.page || [],
     shops_list: shopsData || [],
   };
 
