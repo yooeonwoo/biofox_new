@@ -84,7 +84,7 @@ export const getSalesJournals = query({
       const sortOrder = args.sortOrder || 'desc';
 
       filteredJournals.sort((a, b) => {
-        let aValue: any, bValue: any;
+        let aValue: number, bValue: number;
 
         switch (sortBy) {
           case 'created_at':

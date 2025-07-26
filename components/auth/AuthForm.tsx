@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/providers/supabase-auth-provider';
+import { useSupabaseAuth } from '@/providers/supabase-auth-provider';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Loader2, Mail, Lock, User } from 'lucide-react';
@@ -52,7 +52,7 @@ interface AuthFormProps {
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp } = useSupabaseAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
