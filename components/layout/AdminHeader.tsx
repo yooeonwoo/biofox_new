@@ -1,35 +1,39 @@
 'use client';
 
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/hooks/useAuth';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User } from 'lucide-react';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { ChevronDown, LogOut, User as UserIcon } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
+import Link from 'next/link';
 
 export default function AdminHeader() {
-  const currentUser = useQuery(api.auth.getCurrentUserWithProfile);
+  const { user: currentUser, profile, isLoading } = useAuth();
 
-  // 사용자 이름의 첫 글자 추출
-  const getUserInitials = () => {
-    if (currentUser?.user?.name) {
-      return currentUser.user.name
-        .split(' ')
-        .map((word: string) => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return 'A';
+  const getUserInitials = (name?: string) => {
+    if (!name) return 'A';
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase();
   };
+
+  if (isLoading) {
+    return (
+      <header className="flex h-16 items-center justify-end border-b bg-gray-50 px-4">
+        <div className="h-8 w-24 animate-pulse rounded-md bg-gray-200" />
+      </header>
+    );
+  }
 
   return (
     <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
@@ -42,13 +46,16 @@ export default function AdminHeader() {
         {/* 사용자 메뉴 */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={currentUser?.user?.image} alt={currentUser?.user?.name} />
-                <AvatarFallback>
-                  {currentUser?.user ? getUserInitials() : <User className="h-4 w-4" />}
-                </AvatarFallback>
+            <Button variant="ghost" className="relative h-8 w-full justify-start text-sm">
+              <Avatar className="mr-2 h-8 w-8">
+                <AvatarImage src={currentUser?.user_metadata?.avatar_url} />
+                <AvatarFallback>{getUserInitials(profile?.name)}</AvatarFallback>
               </Avatar>
+              <div className="flex flex-col items-start">
+                <span className="font-medium">{profile?.name || 'Admin'}</span>
+                <span className="text-xs text-gray-500">{currentUser?.email}</span>
+              </div>
+              <ChevronDown className="ml-auto h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

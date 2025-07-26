@@ -31,6 +31,7 @@ import { api } from '@/convex/_generated/api';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { SignOutButton } from '@/components/auth/SignOutButton';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Notification {
   id: string;
@@ -45,7 +46,7 @@ interface Notification {
 }
 
 export default function KolHeader() {
-  const currentUser = useQuery(api.auth.getCurrentUserWithProfile);
+  const { user: currentUser, profile, isLoading } = useAuth();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -117,16 +118,31 @@ export default function KolHeader() {
 
   // 사용자 이름의 첫 글자 추출
   const getUserInitials = () => {
-    if (currentUser?.user?.name) {
-      return currentUser.user.name
+    if (profile?.name) {
+      return profile.name
         .split(' ')
         .map((word: string) => word[0])
         .join('')
         .toUpperCase()
         .slice(0, 2);
     }
+    if (currentUser?.email) {
+      return currentUser.email[0].toUpperCase();
+    }
     return 'U';
   };
+
+  if (isLoading) {
+    return (
+      <header className="flex h-[68px] items-center justify-between border-b border-gray-200 bg-white px-6 py-4 lg:px-8">
+        <div className="h-6 w-32 animate-pulse rounded-md bg-gray-200" />
+        <div className="flex items-center space-x-4">
+          <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />
+          <div className="h-8 w-24 animate-pulse rounded-md bg-gray-200" />
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 lg:px-8">
@@ -284,14 +300,14 @@ export default function KolHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center space-x-2 hover:bg-gray-100">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={currentUser?.user?.image} />
+                <AvatarImage src={currentUser?.user_metadata?.avatar_url} />
                 <AvatarFallback>{getUserInitials()}</AvatarFallback>
               </Avatar>
               <div className="hidden text-left md:block">
                 <div className="text-sm font-medium text-gray-900">
-                  {currentUser?.user?.name || '사용자'}
+                  {profile?.name || currentUser?.email || '사용자'}
                 </div>
-                <div className="text-xs text-gray-500">{currentUser?.user?.email || 'BIOFOX'}</div>
+                <div className="text-xs text-gray-500">{profile?.shop_name || 'BIOFOX'}</div>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </Button>
