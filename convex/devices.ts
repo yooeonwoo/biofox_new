@@ -65,7 +65,7 @@ export const addDeviceSale = mutation({
     serial_numbers: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const userId = await requireAdmin(ctx);
+    const { userId, profile } = await requireAdmin(ctx);
 
     const saleId = await ctx.db.insert('device_sales', {
       shop_id: args.shop_id,
@@ -80,7 +80,7 @@ export const addDeviceSale = mutation({
       serial_numbers: args.serial_numbers,
       created_at: Date.now(),
       updated_at: Date.now(),
-      created_by: userId,
+      created_by: profile._id,
     });
 
     // KOL 누적 데이터 업데이트

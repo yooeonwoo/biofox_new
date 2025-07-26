@@ -3,11 +3,16 @@
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { fetchCases, ClinicalCase } from "@/lib/clinical-photos";
+import { Plus, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  useClinicalCases,
+  useEnsurePersonalCase,
+  useCustomerCases,
+  ClinicalCase,
+} from '@/lib/clinical-photos-convex';
 
 interface KolInfo {
   id: number;
@@ -27,7 +32,9 @@ interface CheckItemProps {
 
 const CheckItem: React.FC<CheckItemProps> = ({ label, checked }) => {
   return (
-    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs ${checked ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
+    <div
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ${checked ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+    >
       {checked && <Check size={12} className="text-blue-600" />}
       <span>{label}</span>
     </div>
@@ -42,15 +49,15 @@ interface PlayerProductsProps {
   allInOneSerum?: boolean;
 }
 
-const PlayerProducts: React.FC<PlayerProductsProps> = ({ 
-  cureBooster, 
-  cureMask, 
-  premiumMask, 
-  allInOneSerum 
+const PlayerProducts: React.FC<PlayerProductsProps> = ({
+  cureBooster,
+  cureMask,
+  premiumMask,
+  allInOneSerum,
 }) => {
   return (
     <div className="mt-2">
-      <div className="text-xs font-medium text-gray-500 mb-1">플레이어 제품</div>
+      <div className="mb-1 text-xs font-medium text-gray-500">플레이어 제품</div>
       <div className="flex flex-wrap gap-1">
         <CheckItem label="큐어 부스터" checked={cureBooster} />
         <CheckItem label="큐어 마스크" checked={cureMask} />
@@ -77,11 +84,11 @@ const SkinTypes: React.FC<SkinTypesProps> = ({
   skinPore,
   skinTrouble,
   skinWrinkle,
-  skinEtc
+  skinEtc,
 }) => {
   return (
     <div className="mt-2">
-      <div className="text-xs font-medium text-gray-500 mb-1">고객 피부타입</div>
+      <div className="mb-1 text-xs font-medium text-gray-500">고객 피부타입</div>
       <div className="flex flex-wrap gap-1">
         <CheckItem label="붉고 예민함" checked={skinRedSensitive} />
         <CheckItem label="색소/피멘" checked={skinPigment} />
@@ -99,51 +106,43 @@ export default function ClinicalPhotosPage() {
   const tempUser = {
     isLoaded: true,
     isSignedIn: true,
-    role: "kol",
-    publicMetadata: { role: "kol" }
+    role: 'kol',
+    publicMetadata: { role: 'kol' },
   };
 
   const [isKol, setIsKol] = useState<boolean | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [cases, setCases] = useState<ClinicalCase[]>([]);
-  const [casesLoading, setCasesLoading] = useState(false);
+
+  // Convex 훅 사용
+  const { data: allCases = [], isLoading: casesLoading } = useClinicalCases();
+  const { personalCase, ensurePersonalCaseExists } = useEnsurePersonalCase();
+  const { data: customerCases = [] } = useCustomerCases();
 
   // 사용자 역할 확인
   useEffect(() => {
     if (tempUser.isLoaded && tempUser.isSignedIn) {
-      const userRole = tempUser.publicMetadata?.role as string || "kol";
-      setIsKol(userRole === "kol" || userRole === "test");
+      const userRole = (tempUser.publicMetadata?.role as string) || 'kol';
+      setIsKol(userRole === 'kol' || userRole === 'test');
       setLoading(false);
     }
   }, []);
 
-  // 케이스 목록 조회
-  useEffect(() => {
-    const loadCases = async () => {
-      if (!isKol || loading) return;
-      setCasesLoading(true);
-      try {
-        const casesData = await fetchCases();
-        setCases(casesData);
-      } catch (error) {
-        console.error('임상사진: 케이스 로드 실패:', error);
-      } finally {
-        setCasesLoading(false);
-      }
-    };
-    loadCases();
-  }, [isKol, loading]);
+  // 개인 케이스 배열 형태로 변환 (기존 로직 호환성)
+  const personalCases = personalCase ? [personalCase] : [];
 
-  const personalCases = cases.filter(c => c.customerName === "본인");
-  const customerCases = cases.filter(c => c.customerName !== "본인");
-  
-  const personalProgress = personalCases.length > 0 
-    ? Math.round((personalCases.filter(c => c.status === 'completed').length / personalCases.length) * 100)
-    : 0;
-    
-  const customerProgress = customerCases.length > 0
-    ? Math.round((customerCases.filter(c => c.status === 'completed').length / customerCases.length) * 100)
-    : 0;
+  const personalProgress =
+    personalCases.length > 0
+      ? Math.round(
+          (personalCases.filter(c => c.status === 'completed').length / personalCases.length) * 100
+        )
+      : 0;
+
+  const customerProgress =
+    customerCases.length > 0
+      ? Math.round(
+          (customerCases.filter(c => c.status === 'completed').length / customerCases.length) * 100
+        )
+      : 0;
 
   if (!tempUser.isLoaded || isKol === null || loading) {
     return (
@@ -153,7 +152,9 @@ export default function ClinicalPhotosPage() {
             <CardTitle className="text-center">로딩 중...</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center text-muted-foreground">임상사진 페이지를 준비하는 중입니다.</p>
+            <p className="text-center text-muted-foreground">
+              임상사진 페이지를 준비하는 중입니다.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -167,8 +168,8 @@ export default function ClinicalPhotosPage() {
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold">임상사진 관리</h1>
-        <p className="text-sm text-muted-foreground mt-1">관리 전후 사진을 체계적으로 관리하세요</p>
+        <h1 className="text-lg font-bold sm:text-xl md:text-2xl">임상사진 관리</h1>
+        <p className="mt-1 text-sm text-muted-foreground">관리 전후 사진을 체계적으로 관리하세요</p>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -185,8 +186,11 @@ export default function ClinicalPhotosPage() {
                   <span>진행률</span>
                   <span className="font-medium">{casesLoading ? '-' : `${personalProgress}%`}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${personalProgress}%` }}></div>
+                <div className="h-2 w-full rounded-full bg-gray-200">
+                  <div
+                    className="h-2 rounded-full bg-blue-600"
+                    style={{ width: `${personalProgress}%` }}
+                  ></div>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {casesLoading ? '로딩 중...' : `${personalCases.length}개 케이스`}
@@ -215,8 +219,11 @@ export default function ClinicalPhotosPage() {
                   <span>진행률</span>
                   <span className="font-medium">{casesLoading ? '-' : `${customerProgress}%`}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: `${customerProgress}%` }}></div>
+                <div className="h-2 w-full rounded-full bg-gray-200">
+                  <div
+                    className="h-2 rounded-full bg-green-600"
+                    style={{ width: `${customerProgress}%` }}
+                  ></div>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {casesLoading ? '로딩 중...' : `${customerCases.length}개 케이스`}

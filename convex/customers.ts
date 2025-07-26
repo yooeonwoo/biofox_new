@@ -209,7 +209,7 @@ export const updateCustomer = mutation({
   },
 });
 
-// 📈 고객 진행상황 업데이트
+// 📈 고객 진행상황 업데이트 (자동 단계 수 계산 포함)
 export const updateCustomerProgress = mutation({
   args: {
     customerId: v.id('customers'),
@@ -220,11 +220,74 @@ export const updateCustomerProgress = mutation({
     const { customerId, stageData, achievements } = args;
     const now = Date.now();
 
+    // 완료된 단계 수 계산
+    const calculateCompletedStages = (stageData: any): number => {
+      let completed = 0;
+      const stages = ['inflow', 'contract', 'delivery', 'educationNotes', 'growth', 'expert'];
+
+      for (const stage of stages) {
+        if (stageData[stage] && Object.keys(stageData[stage]).length > 0) {
+          // 각 단계별 완료 조건 체크
+          switch (stage) {
+            case 'inflow':
+              if (stageData.inflow.source) completed++;
+              break;
+            case 'contract':
+              if (
+                stageData.contract.type &&
+                (stageData.contract.purchaseDate ||
+                  stageData.contract.depositDate ||
+                  stageData.contract.rejectDate)
+              ) {
+                completed++;
+              }
+              break;
+            case 'delivery':
+              if (
+                stageData.delivery.type &&
+                (stageData.delivery.installDate || stageData.delivery.shipDate)
+              ) {
+                completed++;
+              }
+              break;
+            case 'educationNotes':
+              if (stageData.educationNotes.q1Level || stageData.educationNotes.memo) {
+                completed++;
+              }
+              break;
+            case 'growth':
+              if (
+                stageData.growth.clinicalProgress ||
+                stageData.growth.learningProgress ||
+                stageData.growth.salesData
+              ) {
+                completed++;
+              }
+              break;
+            case 'expert':
+              if (stageData.expert.topic || stageData.expert.memo) {
+                completed++;
+              }
+              break;
+          }
+        }
+      }
+      return completed;
+    };
+
+    const completedStages = calculateCompletedStages(stageData);
+
     // 기존 진행상황 확인
     const existingProgress = await ctx.db
       .query('customer_progress')
       .withIndex('by_customer', q => q.eq('customer_id', customerId))
       .first();
+
+    // 고객 테이블의 완료 단계 수도 업데이트
+    await ctx.db.patch(customerId, {
+      completed_stages: completedStages,
+      updated_at: now,
+    });
 
     if (existingProgress) {
       // 업데이트
@@ -304,7 +367,7 @@ export const deleteCustomer = mutation({
   },
 });
 
-// 🔍 고객 검색 (이름, 전화번호, 매장명으로)
+// 🔍 고객 검색 (이름, 전화번호, 매장명으로 부분 검색)
 export const searchCustomers = query({
   args: {
     kolId: v.id('profiles'),
@@ -314,19 +377,49 @@ export const searchCustomers = query({
   handler: async (ctx, args) => {
     const { kolId, searchTerm, paginationOpts } = args;
 
-    const customers = await ctx.db
+    // 빈 검색어인 경우 모든 고객 반환
+    if (!searchTerm.trim()) {
+      return await ctx.db
+        .query('customers')
+        .withIndex('by_kol', q => q.eq('kol_id', kolId))
+        .order('desc')
+        .paginate(paginationOpts);
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+
+    // KOL의 모든 고객을 가져온 후 메모리에서 필터링 (부분 문자열 검색)
+    const allCustomers = await ctx.db
       .query('customers')
       .withIndex('by_kol', q => q.eq('kol_id', kolId))
-      .filter(q =>
-        q.or(
-          q.eq(q.field('name'), searchTerm),
-          q.eq(q.field('phone'), searchTerm),
-          q.eq(q.field('shop_name'), searchTerm)
-        )
-      )
-      .order('desc')
-      .paginate(paginationOpts);
+      .collect();
 
-    return customers;
+    const filteredCustomers = allCustomers.filter(customer => {
+      const name = customer.name?.toLowerCase() || '';
+      const phone = customer.phone?.toLowerCase() || '';
+      const shopName = customer.shop_name?.toLowerCase() || '';
+
+      return (
+        name.includes(searchLower) || phone.includes(searchLower) || shopName.includes(searchLower)
+      );
+    });
+
+    // 수동 페이지네이션 구현
+    const { numItems, cursor } = paginationOpts;
+    const startIndex = cursor ? parseInt(cursor) : 0;
+    const endIndex = startIndex + numItems;
+
+    const paginatedResults = filteredCustomers
+      .sort((a, b) => b.created_at - a.created_at) // 최신순 정렬
+      .slice(startIndex, endIndex);
+
+    const hasMore = endIndex < filteredCustomers.length;
+    const nextCursor = hasMore ? endIndex.toString() : undefined;
+
+    return {
+      page: paginatedResults,
+      isDone: !hasMore,
+      continueCursor: nextCursor || '',
+    };
   },
 });

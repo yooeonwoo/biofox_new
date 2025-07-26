@@ -3,8 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Search, 
+import {
+  Search,
   Store,
   FilterIcon,
   ChevronDown,
@@ -13,41 +13,47 @@ import {
   Download,
   TrendingUp,
   Minus,
-  CrownIcon
-} from "lucide-react";
+  CrownIcon,
+} from 'lucide-react';
 
 // UI 컴포넌트
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuCheckboxItem
-} from "@/components/ui/dropdown-menu";
-import {
-  ResponsiveContainer, 
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip
-} from 'recharts';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // 타입 정의
 interface ShopData {
@@ -71,15 +77,14 @@ interface ShopData {
   };
 }
 
-
 // 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
-  if (value === 0) return "0원";
-  
+  if (value === 0) return '0원';
+
   // 만 단위 계산
   const man = Math.floor(value / 10000);
   const rest = value % 10000;
-  
+
   if (man > 0) {
     // 만 단위가 있는 경우
     if (rest > 0) {
@@ -99,8 +104,8 @@ export default function StoresPage() {
   const tempUser = {
     isLoaded: true,
     isSignedIn: true,
-    role: "kol",
-    publicMetadata: { role: "kol" }
+    role: 'kol',
+    publicMetadata: { role: 'kol' },
   };
 
   const [isKol, setIsKol] = useState<boolean | null>(null);
@@ -110,10 +115,12 @@ export default function StoresPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [kolInfo, setKolInfo] = useState<{ name: string; shopName: string } | null>(null);
   // 전문점 통계 정보를 저장할 상태 추가
-  const [shopStats, setShopStats] = useState<{ totalShopsCount: number; activeShopsCount: number }>({
-    totalShopsCount: 0,
-    activeShopsCount: 0
-  });
+  const [shopStats, setShopStats] = useState<{ totalShopsCount: number; activeShopsCount: number }>(
+    {
+      totalShopsCount: 0,
+      activeShopsCount: 0,
+    }
+  );
 
   // 선택된 상점의 상세 정보를 저장할 상태 추가
   const [selectedShop, setSelectedShop] = useState<ShopData | null>(null);
@@ -128,19 +135,19 @@ export default function StoresPage() {
         // 1순위: 당월 매출 (내림차순)
         const aSales = a.sales.total || 0;
         const bSales = b.sales.total || 0;
-        
+
         if (aSales !== bSales) {
           return bSales - aSales; // 매출 많은 순
         }
-        
+
         // 2순위: 당월 수당 (내림차순)
         const aCommission = a.sales.commission || 0;
         const bCommission = b.sales.commission || 0;
-        
+
         if (aCommission !== bCommission) {
           return bCommission - aCommission; // 수당 많은 순
         }
-        
+
         // 3순위: 전문점명 (오름차순)
         return a.shop_name.localeCompare(b.shop_name);
       });
@@ -150,16 +157,15 @@ export default function StoresPage() {
   const currentMonthBarData = useMemo(() => {
     return filteredShops.map(shop => ({
       name: shop.shop_name,
-      매출: shop.sales.total
+      매출: shop.sales.total,
     }));
   }, [filteredShops]);
-
 
   // 사용자 역할 확인
   useEffect(() => {
     if (tempUser.isLoaded && tempUser.isSignedIn) {
-      const userRole = tempUser.publicMetadata?.role as string || "kol";
-      setIsKol(userRole === "kol");
+      const userRole = (tempUser.publicMetadata?.role as string) || 'kol';
+      setIsKol(userRole === 'kol');
     }
   }, []);
 
@@ -169,23 +175,31 @@ export default function StoresPage() {
       const fetchData = async () => {
         try {
           setLoading(true);
-          
+
           // 대시보드 및 전문점 데이터를 병렬로 로드
           const [dashboardResult, shopsResult] = await Promise.all([
-            fetch('/api/kol-new/dashboard').then(async (r) => {
+            fetch('/api/kol-new/dashboard').then(async r => {
               if (!r.ok) throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
               return r.json();
             }),
-            fetch('/api/kol-new/shops').then(async (r) => {
+            fetch('/api/kol-new/shops').then(async r => {
               if (!r.ok) throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
               return r.json();
-            })
+            }),
           ]);
 
-          setKolInfo({
-            name: dashboardResult.kol.name,
-            shopName: dashboardResult.kol.shopName
-          });
+          // KOL 정보가 있는지 확인
+          if (dashboardResult && dashboardResult.kol) {
+            setKolInfo({
+              name: dashboardResult.kol.name || 'KOL 사용자',
+              shopName: dashboardResult.kol.shopName || '',
+            });
+          } else {
+            setKolInfo({
+              name: 'KOL 사용자',
+              shopName: '',
+            });
+          }
 
           // 전문점 데이터 로드
           // API 응답 구조 확인 및 로그
@@ -196,7 +210,7 @@ export default function StoresPage() {
           //   hasMeta: Boolean(shopsResult.meta),
           //   meta: shopsResult.meta
           // });
-          
+
           // 변경된 API 구조 처리 (shops와 meta 객체)
           if (shopsResult.shops && Array.isArray(shopsResult.shops)) {
             const formattedShops = shopsResult.shops.map((shop: any) => ({
@@ -207,12 +221,12 @@ export default function StoresPage() {
                 total: shop.sales.total,
                 product: shop.sales.product,
                 device: shop.sales.device,
-                commission: shop.sales.commission
-              }
+                commission: shop.sales.commission,
+              },
             }));
-            
+
             setShopsData(formattedShops);
-            
+
             // 메타 데이터가 있으면 사용 (새 API 구조)
             if (shopsResult.meta) {
               // console.log('메타 데이터 상세:', {
@@ -220,10 +234,10 @@ export default function StoresPage() {
               //   activeShopsCount: shopsResult.meta.activeShopsCount,
               //   activeShopsFormatted: typeof shopsResult.meta.activeShopsCount
               // });
-              
+
               // 활성 전문점 상태 체크
-              const activeShopsFromAPI = formattedShops.filter((shop: ShopData) => 
-                shop.status === 'active' // 수정: 매출 여부는 고려하지 않음
+              const activeShopsFromAPI = formattedShops.filter(
+                (shop: ShopData) => shop.status === 'active' // 수정: 매출 여부는 고려하지 않음
               );
               // console.log('활성 전문점 직접 계산:', activeShopsFromAPI.length);
               // console.log('활성 전문점 목록:', activeShopsFromAPI.map((shop: ShopData) => ({
@@ -232,12 +246,12 @@ export default function StoresPage() {
               //   total: shop.sales.total,
               //   status: shop.status
               // })));
-              
+
               setShopStats({
                 totalShopsCount: shopsResult.meta.totalShopsCount || 0,
-                activeShopsCount: shopsResult.meta.activeShopsCount || 0
+                activeShopsCount: shopsResult.meta.activeShopsCount || 0,
               });
-              
+
               // 상태 업데이트 후 확인
               // setTimeout(() => {
               //   console.log('설정된 상태 값:', shopStats);
@@ -247,9 +261,8 @@ export default function StoresPage() {
               // console.log('메타 데이터 없음, 직접 계산');
               setShopStats({
                 totalShopsCount: formattedShops.length,
-                activeShopsCount: formattedShops.filter((shop: ShopData) => 
-                  shop.sales.hasOrdered
-                ).length
+                activeShopsCount: formattedShops.filter((shop: ShopData) => shop.sales.hasOrdered)
+                  .length,
               });
             }
           } else if (Array.isArray(shopsResult)) {
@@ -263,28 +276,26 @@ export default function StoresPage() {
                 total: shop.sales.total,
                 product: shop.sales.product,
                 device: shop.sales.device,
-                commission: shop.sales.commission
-              }
+                commission: shop.sales.commission,
+              },
             }));
-            
+
             setShopsData(formattedShops);
-            
+
             // 이전 API 구조에서는 직접 계산
             setShopStats({
               totalShopsCount: formattedShops.length,
-              activeShopsCount: formattedShops.filter((shop: ShopData) => 
-                shop.sales.hasOrdered
-              ).length
+              activeShopsCount: formattedShops.filter((shop: ShopData) => shop.sales.hasOrdered)
+                .length,
             });
           } else {
             // console.log('API 응답에 샵 데이터 없음');
             setShopsData([]);
             setShopStats({
               totalShopsCount: 0,
-              activeShopsCount: 0
+              activeShopsCount: 0,
             });
           }
-
 
           setLoading(false);
         } catch (err: unknown) {
@@ -357,27 +368,24 @@ export default function StoresPage() {
             <p className="text-center text-muted-foreground">{error}</p>
           </CardContent>
           <CardFooter className="flex justify-center">
-            <Button onClick={() => window.location.reload()}>
-              다시 시도
-            </Button>
+            <Button onClick={() => window.location.reload()}>다시 시도</Button>
           </CardFooter>
         </Card>
       </div>
     );
   }
 
-
   // 테이블 행 배경색 결정 함수
   const getRowColorClass = (rank: number, sales: number, index: number) => {
     // 매출이 0원 초과인 행
     if (sales > 0) {
       // 짝수는 보라색 계열, 홀수는 하늘색 계열 배경색 적용 + 호버 효과
-      return index % 2 === 0 
-        ? "bg-purple-100 hover:bg-purple-200 cursor-pointer" 
-        : "bg-sky-50 hover:bg-sky-100 cursor-pointer";
+      return index % 2 === 0
+        ? 'bg-purple-100 hover:bg-purple-200 cursor-pointer'
+        : 'bg-sky-50 hover:bg-sky-100 cursor-pointer';
     } else {
       // 매출이 0원인 경우 배경색 없음 + 가벼운 회색 호버 효과
-      return "hover:bg-gray-50 cursor-pointer";
+      return 'hover:bg-gray-50 cursor-pointer';
     }
   };
 
@@ -390,43 +398,46 @@ export default function StoresPage() {
   // 상점 상세 정보 모달 컴포넌트
   const ShopDetailModal = () => {
     if (!selectedShop) return null;
-    
+
     // 현재 날짜와 시간 포맷팅
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    
 
     return (
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-white border border-gray-200">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border border-gray-200 bg-white sm:max-w-[600px]">
           <DialogHeader>
-            <div className="flex items-center justify-between pb-2 border-b">
-              <DialogTitle className="text-xl font-bold">{selectedShop.shop_name} 전문점</DialogTitle>
+            <div className="flex items-center justify-between border-b pb-2">
+              <DialogTitle className="text-xl font-bold">
+                {selectedShop.shop_name} 전문점
+              </DialogTitle>
               <div className="text-sm text-gray-600">기준일: {formattedDate}</div>
             </div>
           </DialogHeader>
-          
+
           {/* 상점 정보 요약 */}
           <div className="py-4">
             <div className="mb-4 grid grid-cols-1 gap-4">
-              <div className="border rounded-md p-4 bg-blue-50">
-                <h3 className="font-medium mb-4">당월 매출 및 수당</h3>
+              <div className="rounded-md border bg-blue-50 p-4">
+                <h3 className="mb-4 font-medium">당월 매출 및 수당</h3>
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <div className="flex justify-between items-center mt-1">
+                    <div className="mt-1 flex items-center justify-between">
                       <div className="text-sm">매출</div>
                       <div className="font-bold">{formatToManUnit(selectedShop.sales.total)}</div>
                     </div>
-                    <div className="flex justify-between items-center mt-1">
+                    <div className="mt-1 flex items-center justify-between">
                       <div className="text-sm">수당</div>
-                      <div className="font-bold">{formatToManUnit(selectedShop.sales.commission || 0)}</div>
+                      <div className="font-bold">
+                        {formatToManUnit(selectedShop.sales.commission || 0)}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
           </DialogFooter>
@@ -438,7 +449,7 @@ export default function StoresPage() {
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold">전문점 현황</h1>
+        <h1 className="text-lg font-bold sm:text-xl md:text-2xl">전문점 현황</h1>
       </div>
 
       {/* 차트 영역 */}
@@ -446,9 +457,9 @@ export default function StoresPage() {
         {/* 전문점별 순위 */}
         <Card>
           <CardHeader className="pb-2">
-            <div className="flex flex-row items-center justify-between flex-wrap gap-2">
+            <div className="flex flex-row flex-wrap items-center justify-between gap-2">
               <div>
-                <CardTitle className="text-sm sm:text-base md:text-lg whitespace-normal">
+                <CardTitle className="whitespace-normal text-sm sm:text-base md:text-lg">
                   <span className="hidden sm:inline">전문점별 순위</span>
                   <span className="sm:hidden">순위</span>
                 </CardTitle>
@@ -460,34 +471,37 @@ export default function StoresPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px] overflow-x-auto custom-scrollbar">
+            <div className="custom-scrollbar h-[400px] overflow-x-auto">
               {currentMonthBarData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-muted-foreground">
                   전문점 매출 데이터가 없습니다.
                 </div>
               ) : (
                 <div className="h-full pl-0">
-                  <ResponsiveContainer width={Math.max(800, currentMonthBarData.length * 120)} height="100%">
+                  <ResponsiveContainer
+                    width={Math.max(800, currentMonthBarData.length * 120)}
+                    height="100%"
+                  >
                     <BarChart
                       data={currentMonthBarData}
                       margin={{ top: 30, right: 30, left: 0, bottom: 40 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
                         tickLine={false}
                         height={50}
                         interval={0}
-                        tick={(props) => {
+                        tick={props => {
                           const { x, y, payload } = props;
                           return (
                             <g transform={`translate(${x},${y})`}>
-                              <text 
-                                x={0} 
-                                y={0} 
-                                dy={16} 
-                                textAnchor="end" 
+                              <text
+                                x={0}
+                                y={0}
+                                dy={16}
+                                textAnchor="end"
                                 transform="rotate(-90)"
                                 fill="#555"
                                 fontSize={13}
@@ -500,32 +514,27 @@ export default function StoresPage() {
                           );
                         }}
                       />
-                      <YAxis 
-                        tickFormatter={(value) => formatToManUnit(value).replace('원', '')} 
+                      <YAxis
+                        tickFormatter={value => formatToManUnit(value).replace('원', '')}
                         axisLine={false}
                         tickLine={false}
                         tick={{
-                          fill: "#555",
+                          fill: '#555',
                           fontSize: 13,
                           fontFamily: "'SF Compact Text', system-ui, sans-serif",
-                          fontWeight: "500"
+                          fontWeight: '500',
                         }}
                       />
-                      <Tooltip 
-                        formatter={(value) => formatToManUnit(value as number)} 
+                      <Tooltip
+                        formatter={value => formatToManUnit(value as number)}
                         cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
                         contentStyle={{
                           borderRadius: '8px',
                           fontFamily: "'SF Compact Text', system-ui, sans-serif",
-                          fontSize: '13px'
+                          fontSize: '13px',
                         }}
                       />
-                      <Bar 
-                        dataKey="매출" 
-                        fill="#8884d8" 
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={70}
-                      />
+                      <Bar dataKey="매출" fill="#8884d8" radius={[4, 4, 0, 0]} maxBarSize={70} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -536,11 +545,11 @@ export default function StoresPage() {
       </div>
 
       {/* 전문점 통계 정보 */}
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col">
-              <div className="text-sm text-gray-500 mb-1">전체 전문점</div>
+              <div className="mb-1 text-sm text-gray-500">전체 전문점</div>
               <div className="flex items-baseline">
                 <span className="text-2xl font-bold">{shopStats.totalShopsCount}</span>
                 <span className="ml-1 text-sm text-gray-500">개</span>
@@ -551,7 +560,7 @@ export default function StoresPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col">
-              <div className="text-sm text-gray-500 mb-1">활성 전문점</div>
+              <div className="mb-1 text-sm text-gray-500">활성 전문점</div>
               <div className="flex items-baseline">
                 <span className="text-2xl font-bold">{shopStats.activeShopsCount}</span>
                 <span className="ml-1 text-sm text-gray-500">개</span>
@@ -568,22 +577,28 @@ export default function StoresPage() {
           <CardTitle className="text-sm sm:text-base md:text-lg">전문점 목록</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
-          <div className="rounded-lg p-0 overflow-hidden">
-            <div className="overflow-x-auto overflow-y-auto max-h-[500px] border border-gray-200">
-              <Table className="border-collapse w-full relative">
+          <div className="overflow-hidden rounded-lg p-0">
+            <div className="max-h-[500px] overflow-x-auto overflow-y-auto border border-gray-200">
+              <Table className="relative w-full border-collapse">
                 <TableHeader className="sticky top-0 z-20 bg-gray-50 shadow-sm">
                   <TableRow className="bg-gray-50">
-                    <TableHead className="w-[40px] sm:w-[60px] text-center border-b border-gray-200">순위</TableHead>
+                    <TableHead className="w-[40px] border-b border-gray-200 text-center sm:w-[60px]">
+                      순위
+                    </TableHead>
                     <TableHead className="w-[30px] border-b border-gray-200"></TableHead>
                     <TableHead className="w-[30%] border-b border-gray-200">전문점명</TableHead>
-                    <TableHead className="w-[30%] text-center border-b border-gray-200">당월 매출</TableHead>
-                    <TableHead className="w-[30%] text-center border-b border-gray-200">당월 수당</TableHead>
+                    <TableHead className="w-[30%] border-b border-gray-200 text-center">
+                      당월 매출
+                    </TableHead>
+                    <TableHead className="w-[30%] border-b border-gray-200 text-center">
+                      당월 수당
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredShops.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-16 text-center border-b border-gray-200">
+                      <TableCell colSpan={5} className="h-16 border-b border-gray-200 text-center">
                         전문점 데이터가 없습니다.
                       </TableCell>
                     </TableRow>
@@ -594,15 +609,18 @@ export default function StoresPage() {
                         className={getRowColorClass(index + 1, shop.sales.total, index)}
                         onClick={() => handleShopClick(shop)}
                       >
-                        <TableCell className="text-center font-medium border-b border-gray-200">
+                        <TableCell className="border-b border-gray-200 text-center font-medium">
                           <div className="flex items-center justify-center">
                             {index < 3 && shop.sales.total > 0 ? (
-                              <div className={`
-                                flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold
-                                ${index === 0 ? 'bg-yellow-100 text-yellow-800' : 
-                                  index === 1 ? 'bg-blue-100 text-blue-800' : 
-                                  'bg-orange-100 text-orange-800'}
-                              `}>
+                              <div
+                                className={`flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold ${
+                                  index === 0
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : index === 1
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-orange-100 text-orange-800'
+                                } `}
+                              >
                                 {index + 1}
                               </div>
                             ) : (
@@ -610,18 +628,14 @@ export default function StoresPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="w-[30px] text-center border-b border-gray-200">
-                          {shop.is_self_shop && (
-                            <CrownIcon className="h-4 w-4 text-yellow-500" />
-                          )}
+                        <TableCell className="w-[30px] border-b border-gray-200 text-center">
+                          {shop.is_self_shop && <CrownIcon className="h-4 w-4 text-yellow-500" />}
                         </TableCell>
-                        <TableCell className="border-b border-gray-200">
-                          {shop.shop_name}
-                        </TableCell>
-                        <TableCell className="text-center border-b border-gray-200">
+                        <TableCell className="border-b border-gray-200">{shop.shop_name}</TableCell>
+                        <TableCell className="border-b border-gray-200 text-center">
                           <span className="font-medium">{formatToManUnit(shop.sales.total)}</span>
                         </TableCell>
-                        <TableCell className="text-center border-b border-gray-200">
+                        <TableCell className="border-b border-gray-200 text-center">
                           {formatToManUnit(shop.sales.commission || 0)}
                         </TableCell>
                       </TableRow>
@@ -631,7 +645,7 @@ export default function StoresPage() {
               </Table>
             </div>
           </div>
-          <div className="text-sm text-gray-600 mt-2 ml-1">
+          <div className="ml-1 mt-2 text-sm text-gray-600">
             총 {filteredShops.length}개의 전문점
           </div>
         </CardContent>
@@ -639,7 +653,7 @@ export default function StoresPage() {
 
       {/* 상점 상세 정보 모달 렌더링 */}
       <ShopDetailModal />
-      
+
       {/* 커스텀 스크롤바 스타일 */}
       <style jsx global>{`
         .overflow-x-auto::-webkit-scrollbar,
@@ -664,14 +678,18 @@ export default function StoresPage() {
       `}</style>
 
       {/* 차트 초기 위치 설정을 위한 스크립트 */}
-      <script dangerouslySetInnerHTML={{ __html: `
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
         document.addEventListener('DOMContentLoaded', function() {
           const chartContainers = document.querySelectorAll('.custom-scrollbar');
           chartContainers.forEach(container => {
             container.scrollLeft = 0;
           });
         });
-      `}} />
+      `,
+        }}
+      />
     </div>
   );
 }

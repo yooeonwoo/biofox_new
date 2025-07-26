@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Customer, CustomerProgress, StageData, Achievements } from '@/lib/types/customer';
 import StageBlocks from './StageBlocks';
-import { useUpdateCustomerProgress, useUpdateCustomer } from '@/hooks/useCustomers';
 import { debounce } from '@/lib/utils';
 import CustomerHeader, { BasicInfoValue } from './CustomerHeader';
 import { ConnectionLineProvider } from '../contexts/ConnectionLineProvider';
 import ConnectionLines from './ConnectionLines';
-import { Id } from '@/convex/_generated/dataModel';
 
 interface Props {
   customer: Customer & { customer_progress?: CustomerProgress[] };
@@ -16,6 +14,16 @@ interface Props {
   cardNumber: number;
   isNew?: boolean;
   onDelete?: () => void;
+  onSave?: (customerData: {
+    name: string;
+    shopName?: string;
+    phone: string;
+    region: string;
+    placeAddress?: string;
+    assignee: string;
+    manager: string;
+    notes?: string;
+  }) => void;
   isDummyMode?: boolean;
 }
 
@@ -32,6 +40,7 @@ export default function CustomerCard({
   cardNumber,
   isNew,
   onDelete,
+  onSave,
   isDummyMode = false,
 }: Props) {
   const initialProgress: CustomerProgress = customer.customer_progress?.[0] || {
@@ -43,24 +52,16 @@ export default function CustomerCard({
   };
 
   const [localProgress, setLocalProgress] = useState<CustomerProgress>(initialProgress);
-  const { updateProgress } = useUpdateCustomerProgress();
-  const { updateCustomer } = useUpdateCustomer();
 
   const debouncedSave = useCallback(
     debounce((p: CustomerProgress) => {
       // 더미 모드에서는 API 호출하지 않음
-      if (isDummyMode) {
-        console.log('더미 모드: 진행 상황 업데이트', p);
-        return;
+      if (!isDummyMode) {
+        console.log('Production mode would save:', p);
+        // 실제 API 호출은 하지 않음 (하드코딩 인증 시스템)
       }
-
-      updateProgress({
-        customerId: customer.id as Id<'customers'>,
-        stageData: p.stageData,
-        achievements: p.achievements,
-      });
     }, 1000),
-    [customer.id, updateProgress, isDummyMode]
+    [customer.id, isDummyMode]
   );
 
   useEffect(() => {
@@ -90,24 +91,12 @@ export default function CustomerCard({
   const debouncedSaveInfo = useCallback(
     debounce((info: BasicInfoValue) => {
       // 더미 모드에서는 API 호출하지 않음
-      if (isDummyMode) {
-        console.log('더미 모드: 고객 정보 업데이트', info);
-        return;
+      if (!isDummyMode) {
+        console.log('Production mode would save info:', info);
+        // 실제 API 호출은 하지 않음 (하드코딩 인증 시스템)
       }
-
-      updateCustomer({
-        customerId: customer.id as Id<'customers'>,
-        updates: {
-          shopName: info.shopName,
-          phone: info.phone,
-          region: info.region,
-          placeAddress: info.placeAddress,
-          assignee: info.assignee,
-          manager: info.manager,
-        },
-      });
     }, 1000),
-    [updateCustomer, isDummyMode, customer.id]
+    [isDummyMode, customer.id]
   );
 
   useEffect(() => {
@@ -138,6 +127,7 @@ export default function CustomerCard({
           onBasicInfoChange={setBasicInfo}
           isNew={isNew}
           onDelete={onDelete}
+          onSave={onSave}
         />
 
         {/* 스테이지 블록 */}

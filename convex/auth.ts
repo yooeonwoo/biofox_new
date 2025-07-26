@@ -80,7 +80,7 @@ export const getCurrentUserWithProfile = query({
     // 사용자 프로필 조회
     const profile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', userId))
+      .withIndex('by_userId', (q: any) => q.eq('userId', userId))
       .unique();
 
     return {
@@ -125,7 +125,7 @@ export const getProfileCompleteness = query({
 
     const profile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', userId))
+      .withIndex('by_userId', (q: any) => q.eq('userId', userId))
       .unique();
 
     if (!profile) {
@@ -151,7 +151,13 @@ export const ensureUserProfile = mutation({
   args: {
     email: v.string(),
     name: v.string(),
-    role: v.union(v.literal('admin'), v.literal('kol'), v.literal('ol'), v.literal('shop_owner')),
+    role: v.union(
+      v.literal('admin'),
+      v.literal('kol'),
+      v.literal('ol'),
+      v.literal('shop_owner'),
+      v.literal('sales')
+    ),
     shop_name: v.string(),
     display_name: v.optional(v.string()),
     region: v.optional(v.string()),
@@ -178,7 +184,7 @@ export const ensureUserProfile = mutation({
     // 기존 프로필 확인
     const existingProfile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', userId))
+      .withIndex('by_userId', (q: any) => q.eq('userId', userId))
       .unique();
 
     const now = Date.now();
@@ -236,7 +242,7 @@ export const updateUserProfile = mutation({
 
     const profile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', userId))
+      .withIndex('by_userId', (q: any) => q.eq('userId', userId))
       .unique();
 
     if (!profile) {
@@ -292,7 +298,7 @@ export const approveUserProfile = mutation({
     // 관리자 권한 확인
     const adminProfile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', userId))
+      .withIndex('by_userId', (q: any) => q.eq('userId', userId))
       .unique();
 
     if (!adminProfile || adminProfile.role !== 'admin') {
@@ -326,7 +332,7 @@ export const updateOnlineStatus = mutation({
 
     const profile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', userId))
+      .withIndex('by_userId', (q: any) => q.eq('userId', userId))
       .unique();
 
     if (!profile) {
@@ -362,7 +368,7 @@ export const getInactiveUsers = query({
     // 관리자 권한 확인
     const adminProfile = await ctx.db
       .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', userId))
+      .withIndex('by_userId', (q: any) => q.eq('userId', userId))
       .unique();
 
     if (!adminProfile || adminProfile.role !== 'admin') {
@@ -406,7 +412,7 @@ export const requireAdmin = async (ctx: any) => {
 
   const profile = await ctx.db
     .query('profiles')
-    .withIndex('by_userId', q => q.eq('userId', userId))
+    .withIndex('by_userId', (q: any) => q.eq('userId', userId))
     .unique();
 
   if (!profile || profile.role !== 'admin') {
@@ -421,7 +427,7 @@ export const requireRole = async (ctx: any, allowedRoles: string[]) => {
 
   const profile = await ctx.db
     .query('profiles')
-    .withIndex('by_userId', q => q.eq('userId', userId))
+    .withIndex('by_userId', (q: any) => q.eq('userId', userId))
     .unique();
 
   if (!profile || !allowedRoles.includes(profile.role)) {
@@ -494,7 +500,13 @@ export const getAllUsers = query({
 export const updateUserRole = mutation({
   args: {
     profileId: v.id('profiles'),
-    role: v.union(v.literal('admin'), v.literal('kol'), v.literal('ol'), v.literal('shop_owner')),
+    role: v.union(
+      v.literal('admin'),
+      v.literal('kol'),
+      v.literal('ol'),
+      v.literal('shop_owner'),
+      v.literal('sales')
+    ),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);

@@ -13,7 +13,13 @@ export default defineSchema({
     email: v.string(),
     name: v.string(),
     // 역할 및 상태 (실제 enum 값들)
-    role: v.union(v.literal('admin'), v.literal('kol'), v.literal('ol'), v.literal('shop_owner')),
+    role: v.union(
+      v.literal('admin'),
+      v.literal('kol'),
+      v.literal('ol'),
+      v.literal('shop_owner'),
+      v.literal('sales')
+    ),
     status: v.union(v.literal('pending'), v.literal('approved'), v.literal('rejected')),
     // 매장 정보
     shop_name: v.string(),

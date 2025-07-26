@@ -4,6 +4,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider';
 import { ConvexClientProvider } from '@/components/providers/ConvexProvider';
+import { AuthProvider } from '@/contexts/SimpleAuthContext';
+import { Toaster as SonnerToaster } from 'sonner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -38,12 +40,15 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`${inter.variable} ${notoSansKr.variable}`}>
-        <ConvexClientProvider>
-          <ReactQueryProvider>
-            {children}
-            <Toaster />
-          </ReactQueryProvider>
-        </ConvexClientProvider>
+        <AuthProvider>
+          <ConvexClientProvider>
+            <ReactQueryProvider>
+              {children}
+              <Toaster />
+              <SonnerToaster />
+            </ReactQueryProvider>
+          </ConvexClientProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,11 +1,10 @@
 'use client';
 
-import { useCustomers } from '@/hooks/useCustomers';
 import CustomerCard from './CustomerCard';
 import { CustomerProgress, Customer } from '@/lib/types/customer';
 import { useState, useEffect } from 'react';
 import PageHeader from './PageHeader';
-import { Id } from '@/convex/_generated/dataModel';
+import { toast } from 'sonner';
 
 // isNew와 같은 로컬 상태를 포함하는 확장된 고객 타입
 type LocalCustomer = Customer & {
@@ -15,73 +14,83 @@ type LocalCustomer = Customer & {
 
 interface Props {
   initialData: LocalCustomer[];
-  kolId?: string; // Convex ID는 문자열, 더미 모드에서는 undefined 가능
+  kolId: string; // 간단한 문자열 ID
 }
 
-export default function CustomerList({ initialData, kolId }: Props) {
-  // 더미 모드인지 확인
-  const isDummyMode = kolId === 'dummy-kol-id' || !kolId;
-
-  // 더미 모드가 아닐 때만 useCustomers 훅 사용
-  const { results: customers, status } = useCustomers(isDummyMode ? undefined : (kolId as any));
-
-  const [localCustomers, setLocalCustomers] = useState<LocalCustomer[]>(initialData);
+export default function CustomerList({ kolId }: Props) {
+  const [localCustomers, setLocalCustomers] = useState<LocalCustomer[]>([]);
   const [isAdding, setIsAdding] = useState(false);
 
-  const isLoading = !isDummyMode && status === 'LoadingFirstPage';
-  const isError = false; // Convex는 다른 에러 처리 방식 사용
-
+  // 더미 데이터 초기화
   useEffect(() => {
-    // 더미 모드에서는 initialData 사용
-    if (isDummyMode) {
-      setLocalCustomers(initialData);
-      return;
-    }
-
-    // useCustomers 훅에서 데이터가 변경되면 로컬 상태도 업데이트
-    // 단, 새 고객 추가 중일 때는 업데이트하지 않음
-    if (customers && !isAdding) {
-      // Convex 데이터를 기존 타입에 맞게 변환
-      const transformedCustomers: LocalCustomer[] = customers.map(customer => ({
-        id: customer._id,
-        kol_id: kolId ? parseInt(kolId) : 0, // kolId 없으면 0
-        name: customer.name,
-        shopName: customer.shop_name,
-        phone: customer.phone,
-        region: customer.region,
-        placeAddress: customer.place_address,
-        assignee: customer.assignee,
-        manager: customer.manager,
-        status: customer.status,
-        notes: customer.notes,
-        completed_stages: customer.completed_stages,
-        total_stages: customer.total_stages,
-        created_at: new Date(customer.created_at).toISOString(),
-        updated_at: customer.updated_at ? new Date(customer.updated_at).toISOString() : undefined,
-        customer_progress: customer.customer_progress
-          ? [
-              {
-                id: customer.customer_progress._id,
-                customerId: customer.customer_progress.customer_id,
-                stageData: customer.customer_progress.stage_data,
-                achievements: customer.customer_progress.achievements,
-                updatedAt: customer.customer_progress.updated_at
-                  ? new Date(customer.customer_progress.updated_at).toISOString()
-                  : null,
-              },
-            ]
-          : [],
-      }));
-      setLocalCustomers(transformedCustomers);
-    }
-  }, [customers, isAdding, isDummyMode, initialData, kolId]);
+    // 더미 고객 데이터 생성
+    const dummyCustomers: LocalCustomer[] = [
+      {
+        id: '1',
+        kol_id: kolId,
+        name: '김철수',
+        shopName: '뷰티샵 강남점',
+        phone: '010-1234-5678',
+        region: '서울',
+        placeAddress: '서울시 강남구 테헤란로 123',
+        assignee: '이영희',
+        manager: '박민수',
+        status: 'active',
+        notes: '우수 고객',
+        completed_stages: 3,
+        total_stages: 6,
+        created_at: new Date().toISOString(),
+        customer_progress: [
+          {
+            id: 'p1',
+            customerId: '1',
+            stageData: {
+              inflow: { source: '온라인' },
+              contract: { type: '구매', purchaseDate: '2024-01-15' },
+              delivery: { type: '설치', installDate: '2024-01-20' },
+            },
+            achievements: {},
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      {
+        id: '2',
+        kol_id: kolId,
+        name: '이미영',
+        shopName: '더뷰티 청담점',
+        phone: '010-2345-6789',
+        region: '서울',
+        placeAddress: '서울시 강남구 청담동 456',
+        assignee: '최지훈',
+        manager: '김수진',
+        status: 'active',
+        notes: '신규 고객',
+        completed_stages: 1,
+        total_stages: 6,
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        customer_progress: [
+          {
+            id: 'p2',
+            customerId: '2',
+            stageData: {
+              inflow: { source: '오프라인' },
+            },
+            achievements: {},
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    ];
+    setLocalCustomers(dummyCustomers);
+  }, [kolId]);
 
   const handleAddCustomer = () => {
     if (isAdding) return;
 
     const newCustomer: LocalCustomer = {
       id: `new-${Date.now()}`,
-      kol_id: kolId ? parseInt(kolId) : 0,
+      kol_id: kolId, // Convex ID 그대로 사용
       name: '신규 고객',
       shopName: '',
       phone: '',
@@ -93,7 +102,6 @@ export default function CustomerList({ initialData, kolId }: Props) {
       created_at: new Date().toISOString(),
       customer_progress: [],
       isNew: true,
-      // Customer 타입의 다른 필수 필드가 있다면 여기에 기본값 추가
       notes: '',
       completed_stages: 0,
       total_stages: 6,
@@ -102,21 +110,58 @@ export default function CustomerList({ initialData, kolId }: Props) {
     setIsAdding(true);
   };
 
+  const handleSaveNewCustomer = async (customerData: {
+    name: string;
+    shopName?: string;
+    phone: string;
+    region: string;
+    placeAddress?: string;
+    assignee: string;
+    manager: string;
+    notes?: string;
+  }) => {
+    // 더미 데이터로 저장 시뮬레이션
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const newCustomerId = `customer-${Date.now()}`;
+    const savedCustomer: LocalCustomer = {
+      id: newCustomerId,
+      kol_id: kolId,
+      ...customerData,
+      status: 'active',
+      completed_stages: 0,
+      total_stages: 6,
+      created_at: new Date().toISOString(),
+      customer_progress: [],
+    };
+
+    // 임시 고객 제거하고 저장된 고객 추가
+    setLocalCustomers(prev => [savedCustomer, ...prev.filter(c => !c.isNew)]);
+    setIsAdding(false);
+
+    toast.success('고객이 성공적으로 등록되었습니다.');
+  };
+
   const handleDeleteNewCustomer = (customerId: string | number) => {
     setLocalCustomers(prev => prev.filter(c => c.id !== customerId));
     setIsAdding(false);
   };
 
-  if (isLoading && localCustomers.length === 0) {
-    return <p>로딩 중...</p>;
-  }
-
-  if (isError) {
-    return <p>데이터를 불러오는 데 실패했습니다.</p>;
-  }
-
+  // 빈 상태 처리
   if (!localCustomers || localCustomers.length === 0) {
-    return <p>등록된 고객이 없습니다.</p>;
+    return (
+      <div className="py-8 text-center">
+        <h3 className="mb-2 text-lg font-medium text-gray-900">등록된 고객이 없습니다</h3>
+        <p className="mb-4 text-gray-600">첫 번째 고객을 등록해보세요.</p>
+        <button
+          onClick={handleAddCustomer}
+          className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          disabled={isAdding}
+        >
+          고객 추가
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -139,7 +184,8 @@ export default function CustomerList({ initialData, kolId }: Props) {
               cardNumber={idx + 1}
               isNew={c.isNew}
               onDelete={() => handleDeleteNewCustomer(c.id)}
-              isDummyMode={isDummyMode}
+              onSave={c.isNew ? handleSaveNewCustomer : undefined}
+              isDummyMode={true} // 하드코딩 인증으로 더미 모드 사용
             />
           ))}
         </div>

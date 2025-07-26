@@ -98,7 +98,7 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
  */
 export async function requireRole(
   ctx: QueryCtx | MutationCtx,
-  allowedRoles: Array<'admin' | 'kol' | 'ol' | 'shop_owner'>
+  allowedRoles: Array<'admin' | 'kol' | 'ol' | 'shop_owner' | 'sales'>
 ) {
   const user = await getCurrentUser(ctx);
 

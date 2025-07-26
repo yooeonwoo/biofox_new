@@ -4,7 +4,8 @@ import { ReactNode, useState } from 'react';
 import KolHeader from '@/app/components/layout/KolHeader';
 import KolSidebar from '@/app/components/layout/KolSidebar';
 import KolFooter from '@/app/components/layout/KolFooter';
-import { useAuth } from '@/hooks/useAuth';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -12,19 +13,22 @@ interface LayoutProps {
 }
 
 export default function KolNewLayout({ children }: LayoutProps) {
-  // 인증 우회: ProtectedRoute 제거
-  return <KolNewLayoutContent>{children}</KolNewLayoutContent>;
+  return (
+    <ProtectedRoute allowedRoles={['kol']}>
+      <KolNewLayoutContent>{children}</KolNewLayoutContent>
+    </ProtectedRoute>
+  );
 }
 
 function KolNewLayoutContent({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, profile } = useAuth();
+  const { user } = useSimpleAuth();
 
   // 사용자 정보 준비
   const userData = {
-    name: profile?.display_name || user?.name || '사용자',
-    shopName: profile?.shop_name || '매장명 미설정',
-    userImage: profile?.profile_image_url || user?.image,
+    name: user?.name || '사용자',
+    shopName: '매장명 미설정',
+    userImage: undefined,
   };
 
   return (

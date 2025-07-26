@@ -1,11 +1,31 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { CardContainer, CardBody, CardItem } from '@/components/ui/aceternity/3d-card';
-import { AuthButton } from '@/components/auth/AuthButton';
 import Aurora from '@/components/ui/Aurora';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 
 export default function Home() {
+  const { isAuthenticated, isLoading, user } = useSimpleAuth();
+  const router = useRouter();
+
+  // 이미 로그인된 사용자는 대시보드로 리다이렉트
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, user, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       {/* Aurora 배경 효과 */}
@@ -28,11 +48,14 @@ export default function Home() {
               BIOFOX
             </CardItem>
 
-            {/* 인증 버튼 */}
+            {/* 로그인 버튼 */}
             <CardItem translateZ={120} className="mt-8">
-              <div className="flex items-center">
-                <AuthButton />
-              </div>
+              <Link
+                href="/signin"
+                className="rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 px-8 py-3 font-semibold text-white transition-all duration-300 hover:scale-105 hover:shadow-lg"
+              >
+                로그인
+              </Link>
             </CardItem>
           </CardBody>
         </CardContainer>

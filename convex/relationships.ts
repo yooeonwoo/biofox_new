@@ -498,17 +498,19 @@ export const getRelationships = query({
     // 관리자 권한 필요 (일단 주석 처리 - 원본 API도 주석 처리됨)
     // await requireAdmin(ctx);
 
-    let relationshipsQuery = ctx.db.query('shop_relationships');
+    let relationshipsQuery;
 
     // 필터 적용
     if (args.shop_id) {
-      relationshipsQuery = relationshipsQuery.withIndex('by_shop_owner', q =>
-        q.eq('shop_owner_id', args.shop_id)
-      );
+      relationshipsQuery = ctx.db
+        .query('shop_relationships')
+        .withIndex('by_shop_owner', q => q.eq('shop_owner_id', args.shop_id!));
     } else if (args.parent_id) {
-      relationshipsQuery = relationshipsQuery.withIndex('by_parent', q =>
-        q.eq('parent_id', args.parent_id)
-      );
+      relationshipsQuery = ctx.db
+        .query('shop_relationships')
+        .withIndex('by_parent', q => q.eq('parent_id', args.parent_id!));
+    } else {
+      relationshipsQuery = ctx.db.query('shop_relationships');
     }
 
     if (args.active_only) {
@@ -725,7 +727,7 @@ export const deleteRelationship = mutation({
       // 특정 매장 소유자의 모든 관계 삭제
       const relationships = await ctx.db
         .query('shop_relationships')
-        .withIndex('by_shop_owner', q => q.eq('shop_owner_id', args.shop_owner_id))
+        .withIndex('by_shop_owner', q => q.eq('shop_owner_id', args.shop_owner_id!))
         .collect();
 
       for (const relationship of relationships) {
@@ -801,7 +803,7 @@ export const getRelationshipStats = query({
       inactive_relationships: allRelationships.filter(r => !r.is_active).length,
       relationships_by_type: {
         direct: allRelationships.filter(r => r.relationship_type === 'direct').length,
-        indirect: allRelationships.filter(r => r.relationship_type === 'indirect').length,
+        transferred: allRelationships.filter(r => r.relationship_type === 'transferred').length,
       },
     };
 

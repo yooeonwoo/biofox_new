@@ -14,6 +14,7 @@ import type * as auth_old from '../auth_old.js';
 import type * as clinical from '../clinical.js';
 import type * as commissions from '../commissions.js';
 import type * as customers from '../customers.js';
+import type * as devHelpers from '../devHelpers.js';
 import type * as devices from '../devices.js';
 import type * as fileStorage from '../fileStorage.js';
 import type * as http from '../http.js';
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   clinical: typeof clinical;
   commissions: typeof commissions;
   customers: typeof customers;
+  devHelpers: typeof devHelpers;
   devices: typeof devices;
   fileStorage: typeof fileStorage;
   http: typeof http;

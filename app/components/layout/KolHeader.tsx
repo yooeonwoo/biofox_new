@@ -25,13 +25,9 @@ import {
   Check,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
-
-// Convex imports
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
 
 interface Notification {
   id: string;
@@ -46,35 +42,14 @@ interface Notification {
 }
 
 export default function KolHeader() {
-  const { user, profile, signOut } = useAuth();
+  const { user, logout } = useSimpleAuth();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  // Convex queries와 뮤테이션은 로그인된 경우에만 실행
-  const notificationsResult = useQuery(
-    api.notifications.getUserNotifications,
-    profile
-      ? {
-          paginationOpts: { numItems: 10, cursor: null },
-          isRead: false,
-          sortBy: 'created_at',
-          sortOrder: 'desc',
-        }
-      : 'skip'
-  );
-
-  const unreadCountResult = useQuery(
-    api.notifications.getUnreadNotificationCount,
-    profile ? {} : 'skip'
-  );
-
-  const markAsRead = useMutation(api.notifications.markNotificationAsRead);
-  const markAllAsRead = useMutation(api.notifications.markAllNotificationsAsRead);
-
-  // Extract data from Convex queries
-  const notifications = notificationsResult?.page || [];
-  const unreadCount = unreadCountResult?.unreadCount || 0;
-  const hasHighPriority = unreadCountResult?.hasHighPriority || false;
+  // 간단한 인증에서는 알림 기능 비활성화
+  const notifications: Notification[] = [];
+  const unreadCount = 0;
+  const hasHighPriority = false;
 
   // Close notification dropdown when clicking outside
   useEffect(() => {
@@ -93,31 +68,14 @@ export default function KolHeader() {
     };
   }, [notificationOpen]);
 
-  // Handle mark all as read
+  // Handle mark all as read (비활성화)
   const handleMarkAllAsRead = async () => {
-    try {
-      await markAllAsRead({});
-    } catch (error) {
-      console.error('모든 알림 읽음 처리 실패:', error);
-    }
+    // 간단한 인증에서는 알림 기능 비활성화
   };
 
-  // Handle individual notification click
+  // Handle individual notification click (비활성화)
   const handleNotificationClick = async (notification: Notification) => {
-    try {
-      if (!notification.isRead) {
-        await markAsRead({ notificationId: notification.id as any });
-      }
-
-      // Handle navigation based on notification type
-      if (notification.relatedType && notification.relatedId) {
-        // Navigate to related content if available
-        // This would be implemented based on your routing logic
-        console.log('Navigate to:', notification.relatedType, notification.relatedId);
-      }
-    } catch (error) {
-      console.error('알림 처리 실패:', error);
-    }
+    // 간단한 인증에서는 알림 기능 비활성화
   };
 
   // Get notification icon based on type
@@ -310,16 +268,12 @@ export default function KolHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center space-x-2 hover:bg-gray-100">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={profile?.profile_image_url || undefined} />
-                <AvatarFallback>
-                  {profile?.display_name?.slice(0, 2) || profile?.name?.slice(0, 2) || 'U'}
-                </AvatarFallback>
+                <AvatarImage src={undefined} />
+                <AvatarFallback>{user?.name?.slice(0, 2) || 'U'}</AvatarFallback>
               </Avatar>
               <div className="hidden text-left md:block">
-                <div className="text-sm font-medium text-gray-900">
-                  {profile?.display_name || profile?.name || '사용자'}
-                </div>
-                <div className="text-xs text-gray-500">{profile?.shop_name || '매장명 없음'}</div>
+                <div className="text-sm font-medium text-gray-900">{user?.name || '사용자'}</div>
+                <div className="text-xs text-gray-500">BIOFOX</div>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </Button>
@@ -340,7 +294,7 @@ export default function KolHeader() {
             </DropdownMenuItem>
             <DropdownMenuItem
               className="flex items-center text-red-600 focus:text-red-600"
-              onClick={() => signOut()}
+              onClick={() => logout()}
             >
               <LogOut className="mr-2 h-4 w-4" />
               로그아웃
