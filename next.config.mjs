@@ -1,3 +1,10 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Base settings
@@ -25,16 +32,19 @@ const nextConfig = {
     }
     
     // Fix case-sensitive paths
-    config.resolve = {
-      ...config.resolve,
-      alias: {
-        ...config.resolve.alias,
-        '@/components': './components',
-        '@/lib': './lib',
-        '@/hooks': './hooks',
-        '@/app': './app',
-        '@/convex': './convex',
-      },
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@/components': path.resolve(__dirname, './components'),
+      '@/lib': path.resolve(__dirname, './lib'),
+      '@/hooks': path.resolve(__dirname, './hooks'),
+      '@/app': path.resolve(__dirname, './app'),
+      '@/convex': path.resolve(__dirname, './convex'),
+      '@/utils': path.resolve(__dirname, './utils'),
+      '@/contexts': path.resolve(__dirname, './contexts'),
+      '@/constants': path.resolve(__dirname, './constants'),
+      '@/services': path.resolve(__dirname, './services'),
+      '@/providers': path.resolve(__dirname, './providers'),
+      '@/types': path.resolve(__dirname, './types'),
     };
     
     return config;
