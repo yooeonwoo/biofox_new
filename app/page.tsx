@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CardContainer, CardBody, CardItem } from '@/components/ui/aceternity/3d-card';
 import Aurora from '@/components/ui/Aurora';
@@ -10,6 +10,12 @@ import { useSimpleAuth } from '@/contexts/SimpleAuthContext';
 export default function Home() {
   const { isAuthenticated, isLoading, user } = useSimpleAuth();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // 클라이언트에서만 렌더링하도록 설정
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // 이미 로그인된 사용자는 대시보드로 리다이렉트
   useEffect(() => {
@@ -18,7 +24,8 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading, user, router]);
 
-  if (isLoading) {
+  // 서버 사이드 렌더링과 하이드레이션 미스매치 방지
+  if (!isMounted || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
