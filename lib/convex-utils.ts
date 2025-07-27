@@ -5,7 +5,7 @@
  * 타입 변환 및 데이터 구조 변환을 돕는 헬퍼 함수들
  */
 
-import { Id } from '@/convex/_generated/dataModel';
+import { Id, TableNames } from '@/convex/_generated/dataModel';
 
 /**
  * Legacy number ID를 Convex string ID로 변환
@@ -155,7 +155,7 @@ export function dateToConvexTimestamp(date: Date): number {
 /**
  * Convex Document ID 유효성 검사
  */
-export function isValidConvexId(id: string, tableName: string): id is Id<typeof tableName> {
+export function isValidConvexId(id: string, tableName?: string): boolean {
   // Convex ID는 보통 특정 패턴을 따름
   const convexIdPattern = /^[a-zA-Z0-9]{16,}$/;
   return convexIdPattern.test(id);
@@ -165,11 +165,11 @@ export function isValidConvexId(id: string, tableName: string): id is Id<typeof 
  * 안전한 Convex ID 변환
  * 유효하지 않은 ID에 대해 null 반환
  */
-export function safeConvexId<T extends string>(
+export function safeConvexId<T extends TableNames>(
   id: string | null | undefined,
-  tableName: T
+  tableName?: T
 ): Id<T> | null {
-  if (!id || !isValidConvexId(id, tableName)) {
+  if (!id || !isValidConvexId(id)) {
     return null;
   }
   return id as Id<T>;

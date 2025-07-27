@@ -26,9 +26,9 @@ export const ProductSection: React.FC<ProductSectionProps> = ({ caseItem, onUpda
     <div className="space-y-2">
       <h3 className="text-sm font-medium text-gray-700">사용 제품</h3>
       <div className="grid grid-cols-2 gap-2">
-        {SYSTEM_OPTIONS.products.map((opt) => {
+        {SYSTEM_OPTIONS.products.map(opt => {
           const field = PRODUCT_FIELD_MAP[opt.value];
-          const checked = caseItem[field] as boolean | undefined;
+          const checked = field ? (caseItem[field] as boolean | undefined) : false;
           return (
             <label key={opt.value} className="flex items-center space-x-2 text-sm">
               <Checkbox
@@ -43,4 +43,4 @@ export const ProductSection: React.FC<ProductSectionProps> = ({ caseItem, onUpda
       </div>
     </div>
   );
-}; 
+};

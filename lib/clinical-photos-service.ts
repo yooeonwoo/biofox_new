@@ -21,9 +21,9 @@ export {
   useEnsurePersonalCase,
   useCustomerCases,
   type ClinicalCase,
-  type PhotoSlot,
   type UploadResponse,
 } from '@/lib/clinical-photos-convex';
+import type { PhotoSlot } from '@/types/clinical';
 
 /**
  * @deprecated 레거시 함수 - useEnsurePersonalCase() 훅 사용을 권장

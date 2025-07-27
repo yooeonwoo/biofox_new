@@ -213,7 +213,7 @@ export const mapUIToConvexShop = (uiData: Partial<UIShopDetail>): Partial<Convex
   const result: Partial<ConvexShopDetail> = {};
 
   if (uiData.shop_name !== undefined) result.shop_name = uiData.shop_name;
-  if (uiData.owner_name !== undefined) result.name = uiData.owner_name;
+  if (uiData.owner_name !== undefined) result.name = uiData.owner_name || undefined;
   if (uiData.region !== undefined) result.region = uiData.region || undefined;
   if (uiData.smart_place_link !== undefined)
     result.naver_place_link = uiData.smart_place_link || undefined;

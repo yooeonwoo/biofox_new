@@ -1,52 +1,53 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import PhotoRoundCarousel from '@/app/shop/clinical-photos/components/PhotoRoundCarousel';
-import { fetchPhotos } from '@/lib/clinical-photos-api';
-import type { PhotoSlot } from '@/lib/clinical-photos';
-import { usePhotoManagement } from '@/app/shop/clinical-photos/hooks/usePhotoManagement';
+import {
+  useClinicalPhotosConvex,
+  useUploadClinicalPhotoConvex,
+  useDeleteClinicalPhotoConvex,
+} from '@/lib/clinical-photos-hooks';
+import type { PhotoSlot } from '@/types/clinical';
 import { LoadingSpinner } from '@/components/ui/loading';
 
 interface PhotoSectionProps {
-  caseId: number;
+  caseId: string;
   isCompleted?: boolean;
 }
 
 export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted }) => {
-  const [photos, setPhotos] = useState<PhotoSlot[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const { handlePhotoUpload, handlePhotoDelete } = usePhotoManagement();
+  // Convex 훅을 사용하여 실시간 데이터 로드
+  const { data: photos, isLoading } = useClinicalPhotosConvex(caseId);
+  const uploadPhoto = useUploadClinicalPhotoConvex();
+  const deletePhoto = useDeleteClinicalPhotoConvex();
 
-  const loadPhotos = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchPhotos(caseId);
-      setPhotos(data);
-    } finally {
-      setLoading(false);
-    }
-  }, [caseId]);
-
-  useEffect(() => {
-    loadPhotos();
-  }, [loadPhotos]);
-
-  if (loading) {
+  if (isLoading) {
     return <LoadingSpinner className="py-8" />;
   }
 
   return (
     <PhotoRoundCarousel
-      caseId={String(caseId)}
+      caseId={caseId}
       photos={photos}
       isCompleted={isCompleted}
       onPhotoUpload={async (round, angle, file) => {
-        await handlePhotoUpload(caseId, round, angle as any, file);
-        await loadPhotos();
+        await uploadPhoto.mutateAsync({
+          caseId,
+          roundNumber: round,
+          angle,
+          file,
+        });
+        // Convex는 실시간 동기화로 자동 업데이트
       }}
       onPhotoDelete={async (round, angle) => {
-        await handlePhotoDelete(caseId, round, angle as any);
-        await loadPhotos();
+        // 해당 사진 ID 찾기
+        const photo = photos.find(p => p.roundDay === round && p.angle === angle);
+        if (photo?.photoId) {
+          await deletePhoto.mutateAsync(photo.photoId);
+        }
+        // Convex는 실시간 동기화로 자동 업데이트
       }}
-      onPhotosRefresh={loadPhotos}
+      onPhotosRefresh={() => {
+        // Convex는 실시간 동기화로 별도 새로고침 불필요
+      }}
     />
   );
-}; 
+};

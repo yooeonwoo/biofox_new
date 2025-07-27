@@ -14,7 +14,8 @@ import {
 } from '@/lib/clinical-photos-hooks';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { toConvexId } from '@/lib/clinical-photos-mapper';
+import { Id } from '@/convex/_generated/dataModel';
+// toConvexId 제거 - string ID를 직접 사용
 
 interface UseCustomerCaseHandlersParams {
   user: any;
@@ -264,11 +265,11 @@ export function useCustomerCaseHandlers({
           setCases(prev =>
             prev.map(case_ =>
               case_.id === caseId
-                ? {
+                ? ({
                     ...case_,
                     customerName: customerInfo.name || case_.customerName,
                     customerInfo: { ...case_.customerInfo, ...customerInfo },
-                  }
+                  } as ClinicalCase)
                 : case_
             )
           );
@@ -285,25 +286,25 @@ export function useCustomerCaseHandlers({
         setCases(prev =>
           prev.map(case_ =>
             case_.id === caseId
-              ? {
+              ? ({
                   ...case_,
                   customerName: customerInfo.name || case_.customerName,
                   customerInfo: { ...case_.customerInfo, ...customerInfo },
                   roundCustomerInfo: {
                     ...case_.roundCustomerInfo,
                     [currentRounds[caseId] || 1]: {
-                      ...case_.roundCustomerInfo[currentRounds[caseId] || 1],
+                      ...(case_.roundCustomerInfo?.[currentRounds[caseId] || 1] || {}),
                       age:
                         customerInfo.age !== undefined
                           ? customerInfo.age
-                          : case_.roundCustomerInfo[currentRounds[caseId] || 1]?.age,
+                          : case_.roundCustomerInfo?.[currentRounds[caseId] || 1]?.age,
                       gender:
                         customerInfo.gender !== undefined
                           ? customerInfo.gender
-                          : case_.roundCustomerInfo[currentRounds[caseId] || 1]?.gender,
+                          : case_.roundCustomerInfo?.[currentRounds[caseId] || 1]?.gender,
                     },
                   },
-                }
+                } as ClinicalCase)
               : case_
           )
         );
@@ -329,7 +330,7 @@ export function useCustomerCaseHandlers({
           setCases(prev =>
             prev.map(case_ =>
               case_.id === caseId
-                ? {
+                ? ({
                     ...case_,
                     roundCustomerInfo: {
                       ...case_.roundCustomerInfo,
@@ -337,11 +338,13 @@ export function useCustomerCaseHandlers({
                         treatmentType: '',
                         memo: '',
                         date: '',
-                        ...case_.roundCustomerInfo[roundDay],
+                        products: [],
+                        skinTypes: [],
+                        ...(case_.roundCustomerInfo?.[roundDay] || {}),
                         ...roundInfo,
                       },
                     },
-                  }
+                  } as ClinicalCase)
                 : case_
             )
           );
@@ -367,7 +370,9 @@ export function useCustomerCaseHandlers({
                       treatmentType: '',
                       memo: '',
                       date: '',
-                      ...case_.roundCustomerInfo[roundDay],
+                      products: [],
+                      skinTypes: [],
+                      ...(case_.roundCustomerInfo?.[roundDay] || {}),
                       ...roundInfo,
                     },
                   },
@@ -407,8 +412,10 @@ export function useCustomerCaseHandlers({
       try {
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
-          // TODO: Convex mutation으로 업데이트
-          console.log('Checkbox update not implemented yet');
+          await updateCaseFields({
+            caseId: caseId as Id<'clinical_cases'>,
+            updates: updates as any,
+          });
         }
 
         // 로컬 상태 업데이트
@@ -422,7 +429,7 @@ export function useCustomerCaseHandlers({
         // 조용히 실패 처리
       }
     },
-    [setCases, isNewCustomer]
+    [setCases, isNewCustomer, updateCaseFields]
   );
 
   // 현재 회차 변경 핸들러
@@ -453,7 +460,7 @@ export function useCustomerCaseHandlers({
       id: newCustomerId,
       customerName: '',
       status: 'active',
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString().split('T')[0] || '',
       consentReceived: false,
       consentImageUrl: undefined,
       photos: [],
@@ -472,7 +479,7 @@ export function useCustomerCaseHandlers({
           skinTypes: [],
           memo: '',
           date: new Date().toISOString().split('T')[0],
-        },
+        } as RoundCustomerInfo,
       },
       cureBooster: false,
       cureMask: false,

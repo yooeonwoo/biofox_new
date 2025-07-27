@@ -2,24 +2,28 @@ import React from 'react';
 import { useCaseManagement } from '@/app/kol-new/clinical-photos/hooks/useCaseManagement';
 import CaseCard from '@/app/kol-new/clinical-photos/components/CaseCard';
 import { LoadingState } from '@/components/ui/loading';
-import { updateCase, deleteCase, createCase } from '@/lib/clinical-photos';
+import { useCreateClinicalCase, useDeleteClinicalCase } from '@/lib/clinical-photos-convex';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export default function CustomerClinicalUploadPageRefactor() {
-  const { cases, loading, refresh, setCases } = useCaseManagement('customer');
+  const { cases, loading, refresh } = useCaseManagement('customer');
+  const createCase = useCreateClinicalCase();
+  const deleteCase = useDeleteClinicalCase();
+  const updateCase = useMutation(api.clinical.updateClinicalCase);
 
   const handleAddCustomer = async () => {
-    const newCase = await createCase({
-      customerName: '',
+    await createCase.mutateAsync({
+      customerName: '새 고객',
       caseName: '신규 케이스',
+      consentReceived: false,
     });
-    if (newCase) {
-      setCases(prev => [newCase, ...prev]);
-    }
+    refresh();
   };
 
-  const handleDelete = async (caseId: number) => {
-    await deleteCase(caseId);
-    refresh();
+  const handleDelete = async (caseId: string) => {
+    await deleteCase.mutateAsync(caseId);
   };
 
   if (loading) {
@@ -40,8 +44,10 @@ export default function CustomerClinicalUploadPageRefactor() {
           editableName={true}
           showDelete={true}
           onUpdate={async (caseId, updates) => {
-            await updateCase(caseId, updates);
-            refresh();
+            await updateCase({
+              caseId: caseId as Id<'clinical_cases'>,
+              updates: updates as any,
+            });
           }}
           onDelete={handleDelete}
         />

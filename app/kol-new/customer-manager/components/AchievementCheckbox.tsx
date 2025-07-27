@@ -1,7 +1,7 @@
-import { Star } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Achievements } from "@/lib/types/customer";
+import { Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Achievements } from '@/lib/types/customer';
 
 interface Props {
   level: 1 | 2 | 3;
@@ -10,39 +10,38 @@ interface Props {
 }
 
 const LABELS: Record<1 | 2 | 3, string> = {
-  1: "본사 실무교육 이수",
-  2: "본사 표준 프로토콜을 잘 따르는가?",
-  3: "본사 전문가 과정을 모두 이수하였는가?",
+  1: '본사 실무교육 이수',
+  2: '본사 표준 프로토콜을 잘 따르는가?',
+  3: '본사 전문가 과정을 모두 이수하였는가?',
 };
 
 const CONTAINER_STYLES: Record<1 | 2 | 3, string> = {
-  1: "bg-white border-gray-200",
-  2: "bg-white border-green-200",
-  3: "bg-white border-violet-200",
+  1: 'bg-white border-gray-200',
+  2: 'bg-white border-green-200',
+  3: 'bg-white border-violet-200',
 };
 
-export default function AchievementCheckbox({
-  level,
-  achievements,
-  onChange,
-}: Props) {
-  const keys: (keyof Achievements)[] = [
-    "basicTraining",
-    "standardProtocol",
-    "expertCourse",
-  ];
+export default function AchievementCheckbox({ level, achievements, onChange }: Props) {
+  const keys: (keyof Achievements)[] = ['basicTraining', 'standardProtocol', 'expertCourse'];
   const key = keys[level - 1];
+  if (!key) throw new Error(`Invalid level: ${level}`);
   const checked = achievements[key];
 
-  const toggle = (isChecked: boolean | "indeterminate") => {
-    if (typeof isChecked !== "boolean") return;
+  const toggle = (isChecked: boolean | 'indeterminate') => {
+    if (typeof isChecked !== 'boolean') return;
     const newVal = { ...achievements };
     if (isChecked) {
       // 체크 → 하위레벨까지 모두 true
-      for (let i = 0; i < level; i++) newVal[keys[i]] = true;
+      for (let i = 0; i < level; i++) {
+        const keyAtIndex = keys[i];
+        if (keyAtIndex) newVal[keyAtIndex] = true;
+      }
     } else {
       // 해제 → 상위레벨부터 모두 false
-      for (let i = level - 1; i < 3; i++) newVal[keys[i]] = false;
+      for (let i = level - 1; i < 3; i++) {
+        const keyAtIndex = keys[i];
+        if (keyAtIndex) newVal[keyAtIndex] = false;
+      }
     }
     onChange(newVal);
   };
@@ -50,14 +49,11 @@ export default function AchievementCheckbox({
   const id = `achieve-level-${level}-${key}`;
 
   return (
-    <div className={cn("p-3 rounded-lg border", CONTAINER_STYLES[level])}>
+    <div className={cn('rounded-lg border p-3', CONTAINER_STYLES[level])}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Checkbox id={id} checked={checked} onCheckedChange={toggle} />
-          <label
-            htmlFor={id}
-            className="text-sm font-medium text-gray-700 select-none"
-          >
+          <label htmlFor={id} className="select-none text-sm font-medium text-gray-700">
             {LABELS[level]}
           </label>
         </div>
@@ -73,4 +69,4 @@ export default function AchievementCheckbox({
       </div>
     </div>
   );
-} 
+}

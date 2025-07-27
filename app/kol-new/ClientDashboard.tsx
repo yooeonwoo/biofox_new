@@ -93,9 +93,9 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 🚀 Convex 실시간 쿼리로 교체 - KOL 대시보드 데이터
-  const dashboardStats = useQuery(api.realtime.getKolDashboardStats);
+  const dashboardStats = useQuery(api.realtime.getKolDashboardStats, {});
   const recentOrders = useQuery(api.realtime.getRecentOrderUpdates, { limit: 5 });
-  const unreadNotifications = useQuery(api.realtime.getUnreadNotificationCount);
+  const unreadNotifications = useQuery(api.realtime.getUnreadNotificationCount, {});
 
   // 🚀 성능 모니터링
   const dashboardMetrics = usePerformanceMonitor('getKolDashboardStats', dashboardStats, {
@@ -142,7 +142,7 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
         setTimeout(() => setIsUpdating(false), 2000);
       }
     }
-    setLastData(prev => ({ ...prev, orders: recentOrders }));
+    setLastData((prev: any) => ({ ...prev, orders: recentOrders }));
   }, [recentOrders]);
 
   // TODO: Supabase 인증 로직 구현
@@ -398,9 +398,20 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
             <StoreRankingTable
               shops={[
                 {
-                  name: dashboardStats?.kol?.shopName || '내 매장',
-                  sales: dashboardStats?.sales?.currentMonth || 0,
-                  isOwn: true,
+                  id: dashboardStats?.kol?.id || 'my-shop',
+                  ownerName: dashboardStats?.kol?.name || '내 이름',
+                  shop_name: dashboardStats?.kol?.shopName || '내 매장',
+                  region: '지역 미지정', // region 속성이 kol 객체에 없으므로 기본값 사용
+                  status: 'active',
+                  createdAt: new Date().toISOString(),
+                  is_self_shop: true,
+                  sales: {
+                    total: dashboardStats?.sales?.currentMonth || 0,
+                    product: 0,
+                    device: 0,
+                    hasOrdered: true,
+                    commission: dashboardStats?.commission?.currentMonth || 0,
+                  },
                 },
               ]}
             />

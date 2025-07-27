@@ -54,8 +54,9 @@ export const usePerformanceMonitor = (
     const now = Date.now();
     const responseTime = now - startTimeRef.current;
 
-    // 데이터가 변경되었는지 확인
-    const hasDataChanged = JSON.stringify(data) !== JSON.stringify(prevDataRef.current);
+    // 데이터가 변경되었는지 확인 - 참조 비교로 최적화
+    // JSON.stringify는 큰 객체에서 성능 저하를 유발할 수 있음
+    const hasDataChanged = data !== prevDataRef.current;
 
     if (hasDataChanged) {
       // 업데이트 시간 기록
@@ -65,8 +66,20 @@ export const usePerformanceMonitor = (
       const oneMinuteAgo = now - 60000;
       updateTimesRef.current = updateTimesRef.current.filter(time => time > oneMinuteAgo);
 
-      // 데이터 크기 계산 (JSON 문자열 길이로 근사치)
-      const dataSize = JSON.stringify(data).length;
+      // 데이터 크기 계산 - 성능을 위해 샘플링 방식 사용
+      let dataSize = 0;
+      try {
+        // 큰 데이터의 경우 전체 stringify 대신 대략적인 크기 추정
+        if (Array.isArray(data)) {
+          dataSize = data.length * 100; // 배열 항목당 평균 100바이트로 추정
+        } else if (typeof data === 'object' && data !== null) {
+          dataSize = Object.keys(data).length * 50; // 객체 키당 평균 50바이트로 추정
+        } else {
+          dataSize = JSON.stringify(data).length;
+        }
+      } catch (e) {
+        dataSize = 0;
+      }
 
       // 업데이트 빈도 계산 (분당 업데이트 수)
       const updateFrequency = updateTimesRef.current.length;
@@ -106,26 +119,30 @@ export const usePerformanceMonitor = (
     return () => clearInterval(interval);
   }, [enabled, trackMemory, logInterval]);
 
-  // 성능 로그 출력
+  // 성능 로그 출력 - metrics 대신 ref 사용하여 불필요한 재실행 방지
+  const metricsRef = useRef(metrics);
+  metricsRef.current = metrics;
+
   useEffect(() => {
     if (!enabled) return;
 
     const logMetrics = () => {
+      const currentMetrics = metricsRef.current;
       console.group(`🚀 Performance Monitor: ${queryName}`);
       console.table({
-        'Query Response Time (ms)': metrics.queryResponseTime,
-        'Render Count': metrics.renderCount,
-        'Data Size (bytes)': metrics.dataSize,
-        'Update Frequency (per min)': metrics.updateFrequency,
-        'Memory Usage (MB)': metrics.memoryUsage || 'N/A',
-        'Last Update': new Date(metrics.lastUpdateTime).toLocaleTimeString(),
+        'Query Response Time (ms)': currentMetrics.queryResponseTime,
+        'Render Count': currentMetrics.renderCount,
+        'Data Size (bytes)': currentMetrics.dataSize,
+        'Update Frequency (per min)': currentMetrics.updateFrequency,
+        'Memory Usage (MB)': currentMetrics.memoryUsage || 'N/A',
+        'Last Update': new Date(currentMetrics.lastUpdateTime).toLocaleTimeString(),
       });
       console.groupEnd();
     };
 
     const interval = setInterval(logMetrics, logInterval);
     return () => clearInterval(interval);
-  }, [enabled, metrics, queryName, logInterval]);
+  }, [enabled, queryName, logInterval]); // metrics 의존성 제거
 
   return metrics;
 };
@@ -134,6 +151,7 @@ export const usePerformanceMonitor = (
 export const usePerformanceThresholds = (metrics: PerformanceMetrics) => {
   const [warnings, setWarnings] = useState<string[]>([]);
 
+  // 개별 metrics 속성을 의존성으로 사용하여 정밀한 업데이트 제어
   useEffect(() => {
     const newWarnings: string[] = [];
 
@@ -163,7 +181,13 @@ export const usePerformanceThresholds = (metrics: PerformanceMetrics) => {
     }
 
     setWarnings(newWarnings);
-  }, [metrics]);
+  }, [
+    metrics.queryResponseTime,
+    metrics.renderCount,
+    metrics.dataSize,
+    metrics.updateFrequency,
+    metrics.memoryUsage,
+  ]); // 개별 속성들을 의존성으로 분리
 
   return warnings;
 };

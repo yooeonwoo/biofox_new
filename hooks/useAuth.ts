@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useSupabaseAuth } from '@/providers/supabase-auth-provider';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Supabase와 Convex 프로필 데이터를 결합하기 위한 사용자 역할 타입 정의
@@ -26,6 +26,8 @@ interface AuthState {
   user: any | null; // Supabase 사용자 객체
   profile: any | null; // Convex 프로필 객체
   role: UserRole;
+  signOut: () => Promise<void>; // 가이드 요구사항 추가
+  syncError: Error | null; // 가이드 요구사항 추가
 }
 
 /**
@@ -39,8 +41,9 @@ interface AuthState {
  */
 export function useAuth(): AuthState {
   // 1. Supabase 인증 프로바이더로부터 인증 상태를 가져옵니다.
-  const { user, loading: isSupabaseLoading } = useSupabaseAuth();
+  const { user, loading: isSupabaseLoading, signOut: supabaseSignOut } = useSupabaseAuth();
   const isAuthenticated = !!user;
+  const [syncError, setSyncError] = useState<Error | null>(null); // syncError 상태 추가
 
   // 2. Supabase ID로 Convex 프로필 조회 (이메일 대신)
   const profile = useQuery(
@@ -67,6 +70,7 @@ export function useAuth(): AuthState {
         },
       }).catch(error => {
         console.error('Failed to sync profile:', error);
+        setSyncError(error instanceof Error ? error : new Error('Profile sync failed'));
       });
     }
   }, [user, profile, isSupabaseLoading, syncProfile]);
@@ -79,11 +83,27 @@ export function useAuth(): AuthState {
   // Convex 프로필에 역할이 있으면 그 값을 사용하고, 없으면 'unassigned'로 처리합니다.
   const role = (profile?.role as UserRole) ?? (isAuthenticated ? 'unassigned' : null);
 
+  // 7. signOut 함수 구현
+  const signOut = async () => {
+    try {
+      setSyncError(null);
+      if (supabaseSignOut) {
+        await supabaseSignOut();
+      }
+    } catch (error) {
+      console.error('Sign out error:', error);
+      setSyncError(error instanceof Error ? error : new Error('Sign out failed'));
+      throw error;
+    }
+  };
+
   return {
     isAuthenticated,
     isLoading,
     user,
     profile,
     role,
+    signOut, // 가이드 요구사항 추가
+    syncError, // 가이드 요구사항 추가
   };
 }

@@ -1,14 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
+'use client';
 
-import React from "react";
-// @ts-expect-error Unable to resolve types in this context
-// eslint-disable-next-line import/no-unresolved
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { AdminNewShopRow } from "@/lib/hooks/adminNewShops";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import React from 'react';
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { AdminNewShopRow } from '@/lib/hooks/adminNewShops';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 interface Props {
   data: AdminNewShopRow[];
@@ -19,22 +24,27 @@ interface Props {
 export default function AdminNewShopTable({ data, onRowSelect, selectedId }: Props) {
   const columns = React.useMemo<ColumnDef<AdminNewShopRow>[]>(
     () => [
-      { accessorKey: "id", header: "ID" },
-      { accessorKey: "shopName", header: "전문점명" },
-      { accessorKey: "kolName", header: "KOL" },
-      { accessorKey: "region", header: "지역" },
+      { accessorKey: 'id', header: 'ID' },
+      { accessorKey: 'shopName', header: '전문점명' },
+      { accessorKey: 'kolName', header: 'KOL' },
+      { accessorKey: 'region', header: '지역' },
       {
-        accessorKey: "status",
-        header: "상태",
+        accessorKey: 'status',
+        header: '상태',
         cell: ({ row }: { row: any }) => (
-          <Badge variant={row.original.status === "active" ? "default" : "secondary"}>{row.original.status}</Badge>
+          <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'}>
+            {row.original.status}
+          </Badge>
         ),
       },
-      { accessorKey: "deviceCnt", header: "기기수" },
+      { accessorKey: 'deviceCnt', header: '기기수' },
       {
-        accessorKey: "contractDate",
-        header: "계약일",
-        cell: ({ row }: { row: any }) => (row.original.contractDate ? format(new Date(row.original.contractDate), "yyyy-MM-dd") : "-"),
+        accessorKey: 'contractDate',
+        header: '계약일',
+        cell: ({ row }: { row: any }) =>
+          row.original.contractDate
+            ? format(new Date(row.original.contractDate), 'yyyy-MM-dd')
+            : '-',
       },
     ],
     []
@@ -61,7 +71,7 @@ export default function AdminNewShopTable({ data, onRowSelect, selectedId }: Pro
             table.getRowModel().rows.map((row: any) => (
               <TableRow
                 key={row.id}
-                className={`${row.original.id === selectedId ? 'bg-gray-100' : 'hover:bg-gray-50 cursor-pointer'}`}
+                className={`${row.original.id === selectedId ? 'bg-gray-100' : 'cursor-pointer hover:bg-gray-50'}`}
                 onClick={() => onRowSelect?.(row.original.id)}
               >
                 {row.getVisibleCells().map((cell: any) => (
@@ -82,4 +92,4 @@ export default function AdminNewShopTable({ data, onRowSelect, selectedId }: Pro
       </Table>
     </div>
   );
-} 
+}

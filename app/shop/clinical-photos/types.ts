@@ -4,8 +4,8 @@ export const PERSONAL_PREFIX = '[본인] ' as const;
 // Case 상태 리터럴 타입
 export type CaseStatus = 'active' | 'completed' | 'archived';
 
-// 기존 lib/clinical-photos 에 정의된 타입을 재사용하여 중복 정의를 방지한다.
-import type { ClinicalCase as BaseClinicalCase } from '@/lib/clinical-photos';
+// 통합된 타입을 사용하여 중복 정의를 방지한다.
+import type { ClinicalCase as BaseClinicalCase } from '@/types/clinical';
 
 export type ClinicalCase = BaseClinicalCase;
 
@@ -22,7 +22,7 @@ export interface CaseCardProps {
   /** 신규 케이스 뱃지 표시 여부 */
   showNewBadge?: boolean;
   /** 케이스 업데이트 콜백 */
-  onUpdate: (caseId: number, updates: Partial<ClinicalCase>) => void;
+  onUpdate: (caseId: string, updates: Partial<ClinicalCase>) => void;
   /** 케이스 삭제 콜백 */
-  onDelete?: (caseId: number) => void;
-} 
+  onDelete?: (caseId: string) => void;
+}

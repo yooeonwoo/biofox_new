@@ -7,7 +7,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { toast } from 'sonner';
-import { convexToUICase, uiToConvexCreateArgs, toConvexId } from './clinical-photos-mapper';
+import { convexToUICase, uiToConvexCreateArgs } from './clinical-photos-mapper';
 
 /**
  * 케이스 목록 조회 훅 (실시간 동기화)
@@ -31,7 +31,7 @@ export function useClinicalCasesConvex(status?: string) {
 export function useClinicalCaseConvex(caseId: string | null) {
   const caseData = useQuery(
     api.clinical.getClinicalCase,
-    caseId ? { caseId: toConvexId(caseId) } : 'skip'
+    caseId ? { caseId: caseId as Id<'clinical_cases'> } : 'skip'
   );
 
   return {
@@ -84,7 +84,7 @@ export function useUpdateClinicalCaseStatusConvex() {
   }) => {
     try {
       await updateMutation({
-        caseId: toConvexId(caseId),
+        caseId: caseId as Id<'clinical_cases'>,
         status,
       });
       toast.success('케이스 상태가 업데이트되었습니다.');
@@ -110,7 +110,7 @@ export function useDeleteClinicalCaseConvex() {
   const deleteCase = async (caseId: string) => {
     try {
       await deleteMutation({
-        caseId: toConvexId(caseId),
+        caseId: caseId as Id<'clinical_cases'>,
       });
       toast.success('케이스가 삭제되었습니다.');
     } catch (error: any) {
@@ -132,7 +132,7 @@ export function useDeleteClinicalCaseConvex() {
 export function useClinicalPhotosConvex(caseId: string | null) {
   const photos = useQuery(
     api.fileStorage.getClinicalPhotos,
-    caseId ? { clinical_case_id: toConvexId(caseId) } : 'skip'
+    caseId ? { clinical_case_id: caseId as Id<'clinical_cases'> } : 'skip'
   );
 
   return {
@@ -187,7 +187,7 @@ export function useUploadClinicalPhotoConvex() {
       // Step 3: 메타데이터 저장
       const photoResult = await savePhoto({
         storageId,
-        clinical_case_id: toConvexId(caseId),
+        clinical_case_id: caseId as Id<'clinical_cases'>,
         session_number: roundNumber,
         photo_type: angle as 'front' | 'left_side' | 'right_side',
         file_size: file.size,
@@ -239,7 +239,7 @@ export function useDeleteClinicalPhotoConvex() {
 export function useRoundCustomerInfoConvex(caseId: string | null) {
   const roundInfo = useQuery(
     api.clinical.getRoundCustomerInfo,
-    caseId ? { caseId: toConvexId(caseId) } : 'skip'
+    caseId ? { caseId: caseId as Id<'clinical_cases'> } : 'skip'
   );
 
   return {

@@ -57,7 +57,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // 타입 정의
 interface ShopData {
-  id: number;
+  id: string; // Convex ID는 string 타입
   ownerName: string;
   shop_name: string;
   region: string;
@@ -65,7 +65,7 @@ interface ShopData {
   createdAt: string;
   is_self_shop?: boolean;
   relationship_type?: 'owner' | 'manager';
-  owner_kol_id?: number | null;
+  owner_kol_id?: string | null; // Convex ID는 string 타입
   sales: {
     total: number;
     product: number;

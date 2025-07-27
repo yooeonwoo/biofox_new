@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 
 export default function ShopLayout({ children }: { children: ReactNode }) {
   return (
-    <ProtectedRoute requireAuth={true} requiredRole="shop_owner" fallbackUrl="/signin">
+    <ProtectedRoute requireAuth={true} allowedRoles={['shop_owner']} fallbackUrl="/signin">
       <ShopLayoutContent>{children}</ShopLayoutContent>
     </ProtectedRoute>
   );

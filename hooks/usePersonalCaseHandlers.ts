@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ClinicalCase, CustomerInfo, RoundCustomerInfo } from '@/types/clinical';
+import {
+  useUpdateClinicalCaseStatusConvex,
+  useUploadClinicalPhotoConvex,
+  useDeleteClinicalPhotoConvex,
+} from '@/lib/clinical-photos-hooks';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 interface UsePersonalCaseHandlersParams {
   user: any;
@@ -63,14 +71,24 @@ export function usePersonalCaseHandlers({
     }
   }, [router]);
 
+  // Convex mutations
+  const updateCaseStatus = useUpdateClinicalCaseStatusConvex();
+  const updateCase = useMutation(api.clinical.updateClinicalCase);
+  const uploadPhoto = useUploadClinicalPhotoConvex();
+  const deletePhoto = useDeleteClinicalPhotoConvex();
+  const saveRoundInfo = useMutation(api.clinical.saveRoundCustomerInfo);
+
   // 개인 케이스 상태 변경 핸들러
   const handleCaseStatusChange = useCallback(
     async (caseId: string, status: 'active' | 'completed') => {
       try {
         // 새 개인 케이스가 아닌 경우에만 실제 API 호출
         if (!isNewPersonalCase(caseId)) {
-          const { updateCase } = await import('@/lib/clinical-photos');
-          await updateCase(parseInt(caseId), { status });
+          const convexStatus = status === 'active' ? 'in_progress' : 'completed';
+          await updateCaseStatus.mutateAsync({
+            caseId,
+            status: convexStatus,
+          });
         }
 
         // 로컬 상태 업데이트
@@ -91,8 +109,13 @@ export function usePersonalCaseHandlers({
       try {
         // 새 개인 케이스가 아닌 경우에만 실제 API 호출
         if (!isNewPersonalCase(caseId)) {
-          const { updateCase } = await import('@/lib/clinical-photos');
-          await updateCase(parseInt(caseId), { consentReceived });
+          await updateCase({
+            caseId: caseId as Id<'clinical_cases'>,
+            updates: {
+              consent_status: consentReceived ? 'consented' : 'no_consent',
+              consent_date: consentReceived ? Date.now() : undefined,
+            },
+          });
         }
 
         // 로컬 상태 업데이트
@@ -167,60 +190,48 @@ export function usePersonalCaseHandlers({
               })
             );
           } else {
-            // 실제 개인 케이스의 경우 Supabase에 업로드
-            const { uploadPhoto, fetchPhotos } = await import('@/lib/clinical-photos');
-            imageUrl = await uploadPhoto(parseInt(caseId), roundDay, angle, file);
-            console.log('Received imageUrl from upload:', imageUrl);
+            // 실제 개인 케이스의 경우 Convex에 업로드
+            const result = await uploadPhoto.mutateAsync({
+              caseId,
+              roundNumber: roundDay,
+              angle,
+              file,
+            });
+            console.log('Upload result:', result);
 
-            // 업로드 성공 후 해당 케이스의 사진 목록을 데이터베이스에서 다시 불러오기
-            try {
-              const updatedPhotos = await fetchPhotos(parseInt(caseId));
-              const photoSlots = updatedPhotos.map(p => ({
-                id: p.id,
-                roundDay: p.roundDay,
-                angle: p.angle as 'front' | 'left' | 'right',
-                imageUrl: p.imageUrl,
-                uploaded: true,
-              }));
+            // 업로드 성공 후 사진 URL 설정
+            imageUrl = URL.createObjectURL(file); // 임시 URL, 실제로는 Convex에서 받은 URL 사용
 
-              // 해당 케이스의 사진만 업데이트
-              setCases(prev =>
-                prev.map(case_ => (case_.id === caseId ? { ...case_, photos: photoSlots } : case_))
-              );
+            // 로컬 상태 업데이트
+            setCases(prev =>
+              prev.map(case_ => {
+                if (case_.id === caseId) {
+                  const existingPhotoIndex = case_.photos.findIndex(
+                    p => p.roundDay === roundDay && p.angle === angle
+                  );
 
-              console.log('사진 목록을 데이터베이스에서 새로고침했습니다.');
-            } catch (refreshError) {
-              console.error('사진 목록 새로고침 실패:', refreshError);
-              // 새로고침 실패 시 기존 방식으로 로컬 업데이트
-              setCases(prev =>
-                prev.map(case_ => {
-                  if (case_.id === caseId) {
-                    const existingPhotoIndex = case_.photos.findIndex(
-                      p => p.roundDay === roundDay && p.angle === angle
-                    );
+                  const newPhoto = {
+                    id: `${caseId}-${roundDay}-${angle}`,
+                    roundDay: roundDay,
+                    angle: angle as 'front' | 'left' | 'right',
+                    imageUrl: imageUrl,
+                    uploaded: true,
+                    photoId: typeof result === 'string' ? result : (result as any)?._id || '', // Convex에서 받은 ID 저장
+                  };
 
-                    const newPhoto = {
-                      id: `${caseId}-${roundDay}-${angle}`,
-                      roundDay: roundDay,
-                      angle: angle as 'front' | 'left' | 'right',
-                      imageUrl: imageUrl,
-                      uploaded: true,
-                    };
-
-                    let updatedPhotos;
-                    if (existingPhotoIndex >= 0) {
-                      updatedPhotos = [...case_.photos];
-                      updatedPhotos[existingPhotoIndex] = newPhoto;
-                    } else {
-                      updatedPhotos = [...case_.photos, newPhoto];
-                    }
-
-                    return { ...case_, photos: updatedPhotos };
+                  let updatedPhotos;
+                  if (existingPhotoIndex >= 0) {
+                    updatedPhotos = [...case_.photos];
+                    updatedPhotos[existingPhotoIndex] = newPhoto;
+                  } else {
+                    updatedPhotos = [...case_.photos, newPhoto];
                   }
-                  return case_;
-                })
-              );
-            }
+
+                  return { ...case_, photos: updatedPhotos };
+                }
+                return case_;
+              })
+            );
           }
 
           console.log('개인 사진이 성공적으로 업로드되었습니다.');
@@ -251,41 +262,26 @@ export function usePersonalCaseHandlers({
       try {
         // 새 개인 케이스가 아닌 경우에만 실제 삭제 API 호출
         if (!isNewPersonalCase(caseId)) {
-          const { deletePhoto, fetchPhotos } = await import('@/lib/clinical-photos');
-          await deletePhoto(parseInt(caseId), roundDay, angle);
+          // 사진을 찾아서 삭제
+          const case_ = cases.find(c => c.id === caseId);
+          const photo = case_?.photos.find(p => p.roundDay === roundDay && p.angle === angle);
 
-          // 삭제 성공 후 해당 케이스의 사진 목록을 데이터베이스에서 다시 불러오기
-          try {
-            const updatedPhotos = await fetchPhotos(parseInt(caseId));
-            const photoSlots = updatedPhotos.map(p => ({
-              id: p.id,
-              roundDay: p.roundDay,
-              angle: p.angle as 'front' | 'left' | 'right',
-              imageUrl: p.imageUrl,
-              uploaded: true,
-            }));
-
-            // 해당 케이스의 사진만 업데이트
-            setCases(prev =>
-              prev.map(case_ => (case_.id === caseId ? { ...case_, photos: photoSlots } : case_))
-            );
-
-            console.log('사진 목록을 데이터베이스에서 새로고침했습니다.');
-          } catch (refreshError) {
-            console.error('사진 목록 새로고침 실패:', refreshError);
-            // 새로고침 실패 시 기존 방식으로 로컬 업데이트
-            setCases(prev =>
-              prev.map(case_ => {
-                if (case_.id === caseId) {
-                  const updatedPhotos = case_.photos.filter(
-                    p => !(p.roundDay === roundDay && p.angle === angle)
-                  );
-                  return { ...case_, photos: updatedPhotos };
-                }
-                return case_;
-              })
-            );
+          if (photo?.photoId) {
+            await deletePhoto.mutateAsync(photo.photoId);
           }
+
+          // 로컬 상태에서 사진 제거
+          setCases(prev =>
+            prev.map(case_ => {
+              if (case_.id === caseId) {
+                const updatedPhotos = case_.photos.filter(
+                  p => !(p.roundDay === roundDay && p.angle === angle)
+                );
+                return { ...case_, photos: updatedPhotos };
+              }
+              return case_;
+            })
+          );
         } else {
           // 새 개인 케이스의 경우 로컬 상태만 업데이트
           setCases(prev =>
@@ -339,10 +335,13 @@ export function usePersonalCaseHandlers({
         if (!isNewPersonalCase(caseId)) {
           // 나이, 성별이 있으면 round_customer_info에 저장
           if (personalInfo.age !== undefined || personalInfo.gender !== undefined) {
-            const { saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
-            await saveRoundCustomerInfo(parseInt(caseId), currentRound, {
-              age: personalInfo.age,
-              gender: personalInfo.gender,
+            await saveRoundInfo({
+              caseId: caseId as Id<'clinical_cases'>,
+              roundNumber: currentRound,
+              info: {
+                age: personalInfo.age,
+                gender: personalInfo.gender,
+              },
             });
           }
         }
@@ -424,16 +423,17 @@ export function usePersonalCaseHandlers({
         // 새 개인 케이스가 아닌 경우에만 실제 API 호출
         if (!isNewPersonalCase(caseId)) {
           await enqueue(caseId, async () => {
-            const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
-            const updateData: any = {};
+            // 메모가 있으면 케이스 업데이트
             if (roundInfo.memo !== undefined) {
-              updateData.treatmentPlan = roundInfo.memo;
-            }
-            if (Object.keys(updateData).length > 0) {
-              await updateCase(parseInt(caseId), updateData);
+              await updateCase({
+                caseId: caseId as Id<'clinical_cases'>,
+                updates: {
+                  treatment_plan: roundInfo.memo,
+                },
+              });
             }
 
-            // undefined 값들을 필터링하여 API 호출
+            // 라운드 정보 저장
             const roundData: any = {};
             if (roundInfo.age !== undefined) roundData.age = roundInfo.age;
             if (roundInfo.gender !== undefined) roundData.gender = roundInfo.gender;
@@ -445,7 +445,11 @@ export function usePersonalCaseHandlers({
             if (roundInfo.skinTypes !== undefined) roundData.skinTypes = roundInfo.skinTypes;
             if (roundInfo.memo !== undefined) roundData.memo = roundInfo.memo;
 
-            await saveRoundCustomerInfo(parseInt(caseId), roundDay, roundData);
+            await saveRoundInfo({
+              caseId: caseId as Id<'clinical_cases'>,
+              roundNumber: roundDay,
+              info: roundData,
+            });
           });
         }
 
@@ -484,7 +488,7 @@ export function usePersonalCaseHandlers({
   );
 
   // 개인 케이스 추가 핸들러 (Personal은 1개만 허용)
-  const handleAddPersonalCase = useCallback(() => {
+  const handleAddPersonalCase = useCallback(async () => {
     // Personal 페이지에서는 케이스를 1개만 허용
     if (cases.length > 0) {
       toast.warning('본인 케이스는 1개만 생성할 수 있습니다.');
@@ -496,7 +500,7 @@ export function usePersonalCaseHandlers({
       id: newCaseId,
       customerName: '본인',
       status: 'active',
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString().split('T')[0] || '',
       consentReceived: false,
       photos: [],
       customerInfo: {

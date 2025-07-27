@@ -5,10 +5,7 @@ import type {
   CustomerInfo,
   RoundCustomerInfo,
 } from '@/types/clinical';
-import type {
-  ClinicalCase as APIClinicalCase,
-  PhotoSlot as APIPhotoSlot,
-} from '@/lib/clinical-photos';
+// Legacy import 제거 - 직접 타입 정의 사용
 import { safeParseStringArray } from '@/types/clinical';
 
 // API 응답 스키마 정의
@@ -22,8 +19,8 @@ const apiPhotoSlotSchema = z.object({
 });
 
 const apiClinicalCaseSchema = z.object({
-  id: z.number(),
-  kolId: z.number(),
+  id: z.string(),
+  kolId: z.string(),
   customerId: z.string().optional(),
   customerName: z.string(),
   caseName: z.string(),
@@ -105,6 +102,8 @@ const domainClinicalCaseSchema = z.object({
 });
 
 // 타입 추출
+export type APIClinicalCase = z.infer<typeof apiClinicalCaseSchema>;
+export type APIPhotoSlot = z.infer<typeof apiPhotoSlotSchema>;
 export type APIClinicalCaseValidated = z.infer<typeof apiClinicalCaseSchema>;
 export type DomainClinicalCaseValidated = z.infer<typeof domainClinicalCaseSchema>;
 
@@ -173,7 +172,7 @@ export async function toDomainCase(
 
   // Domain 케이스 객체 생성
   const domainCase: DomainClinicalCase = {
-    id: validatedApiCase.id.toString(),
+    id: validatedApiCase.id,
     customerName: validatedApiCase.customerName,
     status: validatedApiCase.status as 'active' | 'completed' | 'archived',
     createdAt: (validatedApiCase.createdAt?.split('T')[0] ||
@@ -217,7 +216,7 @@ export function toAPICase(domainCase: DomainClinicalCase): Partial<APIClinicalCa
 
   // API 형식으로 변환
   const apiCase: Partial<APIClinicalCase> = {
-    id: parseInt(validatedDomainCase.id, 10),
+    id: validatedDomainCase.id,
     customerName: validatedDomainCase.customerName,
     caseName: validatedDomainCase.customerName, // caseName은 customerName과 동일하게 설정
     treatmentPlan: validatedDomainCase.customerInfo.memo,

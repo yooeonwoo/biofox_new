@@ -18,17 +18,19 @@ import { Trash2 } from 'lucide-react';
 interface CaseHeaderProps {
   caseItem: ClinicalCase;
   showDelete?: boolean;
-  onDelete?: (caseId: number) => void;
+  onDelete?: (caseId: string) => void;
 }
 
-export const CaseHeader: React.FC<CaseHeaderProps> = ({ caseItem, showDelete = false, onDelete }) => {
+export const CaseHeader: React.FC<CaseHeaderProps> = ({
+  caseItem,
+  showDelete = false,
+  onDelete,
+}) => {
   return (
     <CardHeader className="relative flex flex-row items-center justify-between pr-9">
       {/* 고객 이름은 값이 있을 때만 보여줌 */}
       {caseItem.customerName && (
-        <CardTitle className="text-lg font-medium truncate">
-          {caseItem.customerName}
-        </CardTitle>
+        <CardTitle className="truncate text-lg font-medium">{caseItem.customerName}</CardTitle>
       )}
 
       {/* 삭제 버튼 */}
@@ -38,18 +40,16 @@ export const CaseHeader: React.FC<CaseHeaderProps> = ({ caseItem, showDelete = f
             <Button
               size="icon"
               variant="ghost"
-              className="absolute top-1 right-1 text-gray-400 hover:text-red-600"
+              className="absolute right-1 top-1 text-gray-400 hover:text-red-600"
               aria-label="delete case"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="sm:max-w-sm bg-white">
+          <AlertDialogContent className="bg-white sm:max-w-sm">
             <AlertDialogHeader>
               <AlertDialogTitle>케이스를 삭제하시겠습니까?</AlertDialogTitle>
-              <AlertDialogDescription>
-                삭제 후에는 복구할 수 없습니다.
-              </AlertDialogDescription>
+              <AlertDialogDescription>삭제 후에는 복구할 수 없습니다.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>취소</AlertDialogCancel>
@@ -65,4 +65,4 @@ export const CaseHeader: React.FC<CaseHeaderProps> = ({ caseItem, showDelete = f
       )}
     </CardHeader>
   );
-}; 
+};

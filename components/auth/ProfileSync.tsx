@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, CheckCircle, Wifi, WifiOff } from 'lucide-react';
@@ -12,10 +12,11 @@ interface ProfileSyncProps {
 }
 
 export function ProfileSync({ children, showSyncStatus = false }: ProfileSyncProps) {
-  const { syncError, isLoading, isAuthenticated, profile } = useAuth();
+  const { isLoading, isAuthenticated, profile } = useAuth();
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // 온라인/오프라인 상태 감지
   useEffect(() => {
@@ -50,7 +51,7 @@ export function ProfileSync({ children, showSyncStatus = false }: ProfileSyncPro
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [isAuthenticated, toast]);
+  }, [isAuthenticated]); // toast 함수는 안정적이므로 의존성 제거
 
   // 프로필 변경 감지 및 마지막 동기화 시간 업데이트
   useEffect(() => {
@@ -69,7 +70,7 @@ export function ProfileSync({ children, showSyncStatus = false }: ProfileSyncPro
         variant: 'destructive',
       });
     }
-  }, [syncError, isOnline, toast]);
+  }, [syncError, isOnline]); // toast 함수는 안정적이므로 의존성 제거
 
   // 프로필 상태별 동기화 상태 표시
   const getSyncStatus = () => {

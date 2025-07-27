@@ -385,18 +385,22 @@ export const generateTestData = mutation({
       results.profiles = profileIds.length;
 
       // 🏪 매장 관계 생성 (KOL → 매장)
-      if (profileIds.length > 1) {
-        const kolId = profileIds[0]; // 첫 번째를 KOL로
-        for (let i = 1; i < Math.min(4, profileIds.length); i++) {
-          await ctx.db.insert('shop_relationships', {
-            shop_owner_id: profileIds[i],
-            parent_id: kolId,
-            started_at: Date.now(),
-            is_active: true,
-            relationship_type: 'direct',
-            created_at: Date.now(),
-            updated_at: Date.now(),
-          });
+      const validProfileIds = profileIds.filter((id): id is Id<'profiles'> => id !== undefined);
+      if (validProfileIds.length > 1) {
+        const kolId = validProfileIds[0]; // 첫 번째를 KOL로
+        for (let i = 1; i < Math.min(4, validProfileIds.length); i++) {
+          const shopOwnerId = validProfileIds[i];
+          if (shopOwnerId) {
+            await ctx.db.insert('shop_relationships', {
+              shop_owner_id: shopOwnerId,
+              parent_id: kolId,
+              started_at: Date.now(),
+              is_active: true,
+              relationship_type: 'direct',
+              created_at: Date.now(),
+              updated_at: Date.now(),
+            });
+          }
         }
         results.shop_relationships = 3;
       }

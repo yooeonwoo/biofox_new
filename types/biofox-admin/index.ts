@@ -97,18 +97,12 @@ export interface Order {
   id: string;
   shop_id: string;
   order_date: string;
-  order_number?: string;
   total_amount: number;
-  commission_rate?: number;
-  commission_amount?: number;
-  commission_status?: string;
-  order_status?: string;
-  is_self_shop_order: boolean;
+  order_number?: string;
+  items?: OrderItem[];
+  is_self_shop_order?: boolean;
   notes?: string;
-  created_by: string;
   created_at: string;
-  updated_at: string;
-  // 조인된 데이터
   shop?: {
     shop_name: string;
     name: string;
@@ -117,7 +111,10 @@ export interface Order {
       role: string;
     };
   };
-  items?: OrderItem[];
+  commission_amount?: number;
+  commission_rate?: number;
+  commission_status?: 'calculated' | 'adjusted' | 'paid' | 'cancelled';
+  order_status: 'pending' | 'completed' | 'cancelled' | 'refunded';
 }
 
 export interface OrderItem {

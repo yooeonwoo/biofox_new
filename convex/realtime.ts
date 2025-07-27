@@ -93,7 +93,9 @@ export const getDashboardStats = query({
       const salesByDate: Record<string, number> = {};
       recentOrders.forEach(order => {
         const dateStr = new Date(order.order_date).toISOString().split('T')[0];
-        salesByDate[dateStr] = (salesByDate[dateStr] || 0) + (order.total_amount || 0);
+        if (dateStr) {
+          salesByDate[dateStr] = (salesByDate[dateStr] || 0) + (order.total_amount || 0);
+        }
       });
 
       // 차트 데이터 생성
@@ -103,10 +105,12 @@ export const getDashboardStats = query({
         const dateStr = date.toISOString().split('T')[0];
         const formattedDate = `${date.getMonth() + 1}/${date.getDate()}`;
 
-        salesChart.push({
-          date: formattedDate,
-          sales: salesByDate[dateStr] || 0,
-        });
+        if (dateStr) {
+          salesChart.push({
+            date: formattedDate,
+            sales: salesByDate[dateStr] || 0,
+          });
+        }
       }
 
       return {

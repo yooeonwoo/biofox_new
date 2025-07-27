@@ -92,7 +92,7 @@ export const syncSupabaseProfile = mutation({
     const newProfileId = await ctx.db.insert('profiles', {
       supabaseUserId: args.supabaseUserId,
       email: args.email,
-      name: args.metadata?.name || args.email.split('@')[0],
+      name: args.metadata?.name || args.email.split('@')[0] || '',
       role: (args.metadata?.role as any) || 'shop_owner',
       status: 'pending',
       shop_name: args.metadata?.shop_name || '',

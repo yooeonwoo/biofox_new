@@ -9,7 +9,8 @@ import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { toast } from 'sonner';
 import { ConvexHttpClient } from 'convex/browser';
-import { convexToUICase, uiToConvexCreateArgs, toConvexId } from './clinical-photos-mapper';
+import { convexToUICase, uiToConvexCreateArgs, isConvexId } from './clinical-photos-mapper';
+import { PhotoSlot } from '@/types/clinical';
 
 // Convex HTTP 클라이언트 초기화
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -44,15 +45,6 @@ export interface ClinicalCase {
   skinTrouble?: boolean;
   skinWrinkle?: boolean;
   skinEtc?: boolean;
-}
-
-export interface PhotoSlot {
-  id: string;
-  roundDay: number;
-  angle: string;
-  imageUrl?: string;
-  uploaded: boolean;
-  photoId?: string;
 }
 
 export interface UploadResponse {

@@ -4,6 +4,7 @@
  */
 
 import { Id } from '@/convex/_generated/dataModel';
+import { ClinicalCase, UIClinicalCase as UICase, PhotoSlot } from '@/types/clinical';
 
 // ===================================
 // 타입 정의
@@ -127,27 +128,85 @@ export const mapConvexStatusToUI = (
 
 /**
  * Convex Clinical Case를 UI 형식으로 변환
+ * 이제 완전한 ClinicalCase 타입을 반환합니다
  */
-export const convexToUICase = (convexCase: ConvexClinicalCase): UIClinicalCase => {
-  return {
-    id: convexCase._id,
-    kolId: 0, // TODO: 실제 매핑 필요
-    customerId: undefined, // Convex에는 customer_id가 없음
-    customerName: convexCase.name,
-    caseName: convexCase.case_title || '케이스',
-    concernArea: convexCase.concern_area,
-    treatmentPlan: convexCase.treatment_plan || convexCase.treatment_item,
-    consentReceived: convexCase.consent_status === 'consented',
-    consentDate: convexCase.consent_date
-      ? new Date(convexCase.consent_date).toISOString()
-      : undefined,
-    status: mapConvexStatusToUI(convexCase.status),
-    createdAt: new Date(convexCase._creationTime || convexCase.created_at).toISOString(),
-    updatedAt: new Date(convexCase.updated_at || convexCase._creationTime).toISOString(),
-    totalPhotos: convexCase.photo_count || 0,
-    consentImageUrl: undefined, // 별도로 조회 필요
+export const convexToUICase = (convexCase: ConvexClinicalCase): ClinicalCase => {
+  // 제품 정보 추출
+  const extractProducts = (): string[] => {
+    const products: string[] = [];
+    if (convexCase.metadata?.cureBooster || convexCase.tags?.includes('cure_booster')) {
+      products.push('cure_booster');
+    }
+    if (convexCase.metadata?.cureMask || convexCase.tags?.includes('cure_mask')) {
+      products.push('cure_mask');
+    }
+    if (convexCase.metadata?.premiumMask || convexCase.tags?.includes('premium_mask')) {
+      products.push('premium_mask');
+    }
+    if (convexCase.metadata?.allInOneSerum || convexCase.tags?.includes('all_in_one_serum')) {
+      products.push('all_in_one_serum');
+    }
+    return products;
+  };
 
-    // 메타데이터에서 추출 (없으면 태그에서 추출)
+  // 피부타입 정보 추출
+  const extractSkinTypes = (): string[] => {
+    const skinTypes: string[] = [];
+    if (convexCase.metadata?.skinRedSensitive || convexCase.tags?.includes('skin_red_sensitive')) {
+      skinTypes.push('red_sensitive');
+    }
+    if (convexCase.metadata?.skinPigment || convexCase.tags?.includes('skin_pigment')) {
+      skinTypes.push('pigment');
+    }
+    if (convexCase.metadata?.skinPore || convexCase.tags?.includes('skin_pore')) {
+      skinTypes.push('pore');
+    }
+    if (convexCase.metadata?.skinTrouble || convexCase.tags?.includes('skin_trouble')) {
+      skinTypes.push('acne_trouble');
+    }
+    if (convexCase.metadata?.skinWrinkle || convexCase.tags?.includes('skin_wrinkle')) {
+      skinTypes.push('wrinkle');
+    }
+    if (convexCase.metadata?.skinEtc || convexCase.tags?.includes('skin_etc')) {
+      skinTypes.push('other');
+    }
+    return skinTypes;
+  };
+
+  return {
+    // 기본 정보 - Convex ID를 그대로 사용
+    id: convexCase._id,
+    customerName: convexCase.case_title || convexCase.name, // case_title을 우선 사용
+    status: mapConvexStatusToUI(convexCase.status) as 'active' | 'completed' | 'archived',
+    createdAt: new Date(convexCase._creationTime || convexCase.created_at).toISOString(),
+    consentReceived: convexCase.consent_status === 'consented',
+    consentImageUrl: undefined, // TODO: 별도 조회 필요
+
+    // 필수 속성들 - 빈 배열/객체로 초기화
+    photos: [], // TODO: 별도 조회 필요
+
+    // 고객 정보
+    customerInfo: {
+      name: convexCase.name,
+      age: convexCase.age,
+      gender: convexCase.gender,
+      treatmentType: convexCase.treatment_plan || convexCase.treatment_item || '',
+      products: extractProducts(),
+      skinTypes: extractSkinTypes(),
+      memo: convexCase.notes || '',
+    },
+
+    // 회차별 정보 초기화
+    roundCustomerInfo: {},
+
+    // 메타데이터
+    metadata: {
+      rounded: false,
+      tags: convexCase.tags || [],
+      ...(convexCase.metadata || {}),
+    },
+
+    // 제품 boolean 필드들
     cureBooster:
       convexCase.metadata?.cureBooster || convexCase.tags?.includes('cure_booster') || false,
     cureMask: convexCase.metadata?.cureMask || convexCase.tags?.includes('cure_mask') || false,
@@ -155,6 +214,8 @@ export const convexToUICase = (convexCase: ConvexClinicalCase): UIClinicalCase =
       convexCase.metadata?.premiumMask || convexCase.tags?.includes('premium_mask') || false,
     allInOneSerum:
       convexCase.metadata?.allInOneSerum || convexCase.tags?.includes('all_in_one_serum') || false,
+
+    // 피부타입 boolean 필드들
     skinRedSensitive:
       convexCase.metadata?.skinRedSensitive ||
       convexCase.tags?.includes('skin_red_sensitive') ||
@@ -167,6 +228,11 @@ export const convexToUICase = (convexCase: ConvexClinicalCase): UIClinicalCase =
     skinWrinkle:
       convexCase.metadata?.skinWrinkle || convexCase.tags?.includes('skin_wrinkle') || false,
     skinEtc: convexCase.metadata?.skinEtc || convexCase.tags?.includes('skin_etc') || false,
+
+    // Convex 스키마와 일치하는 추가 필드들
+    treatmentPlan: convexCase.treatment_plan,
+    concernArea: convexCase.concern_area,
+    caseTitle: convexCase.case_title,
   };
 };
 
@@ -236,48 +302,50 @@ export const uiToConvexCreateArgs = (uiData: Partial<UIClinicalCase>) => {
 };
 
 // ===================================
-// ID 변환 유틸리티
+// ID 변환 유틸리티 (더 이상 필요하지 않음)
 // ===================================
 
 /**
- * 숫자 ID를 Convex ID 형식으로 변환 (임시)
- * TODO: 실제 ID 매핑 테이블 필요
- */
-export const numberIdToConvexId = (numberId: number): Id<'clinical_cases'> => {
-  return `clinical_cases_${numberId}` as Id<'clinical_cases'>;
-};
-
-/**
- * Convex ID를 숫자 ID로 변환 (임시)
- * TODO: 실제 ID 매핑 테이블 필요
- */
-export const convexIdToNumberId = (convexId: Id<'clinical_cases'>): number => {
-  const match = convexId.match(/clinical_cases_(\d+)/);
-  return match && match[1] ? parseInt(match[1], 10) : 0;
-};
-
-/**
- * ID가 Convex 형식인지 확인
+ * Convex는 문자열 ID를 사용하므로 별도 변환 불필요
  */
 export const isConvexId = (id: string | number): boolean => {
-  return typeof id === 'string' && id.includes('_');
+  return typeof id === 'string';
 };
 
+// ===================================
+// 새로운 매퍼 함수 (가이드에서 요구하는 함수)
+// ===================================
+
 /**
- * 범용 ID 변환 (string | number → Convex ID)
+ * 레거시 UI 데이터를 ClinicalCase로 변환하는 헬퍼 함수
+ * 주로 마이그레이션이나 하위 호환성을 위해 사용
  */
-export const toConvexId = (id: string | number): Id<'clinical_cases'> => {
-  if (typeof id === 'string' && isConvexId(id)) {
-    return id as Id<'clinical_cases'>;
+export function ensureClinicalCaseFormat(data: any): ClinicalCase {
+  // 이미 ClinicalCase 형식이면 그대로 반환
+  if (data.photos && data.customerInfo && data.roundCustomerInfo) {
+    return data as ClinicalCase;
   }
-  if (typeof id === 'number') {
-    return numberIdToConvexId(id);
+
+  // Convex 형식이면 convexToUICase 사용
+  if (data._id && data._creationTime) {
+    return convexToUICase(data as ConvexClinicalCase);
   }
-  // 문자열이지만 Convex ID가 아닌 경우 (숫자 문자열)
-  const numId = parseInt(id as string, 10);
-  if (!isNaN(numId)) {
-    return numberIdToConvexId(numId);
-  }
-  // 기본값
-  return id as Id<'clinical_cases'>;
-};
+
+  // 그 외의 경우 최선을 다해 변환
+  return {
+    id: data.id || data._id || '',
+    customerName: data.customerName || data.name || '',
+    status: data.status || 'active',
+    createdAt: data.createdAt || new Date().toISOString(),
+    consentReceived: data.consentReceived || false,
+    consentImageUrl: data.consentImageUrl,
+    photos: data.photos || [],
+    customerInfo: data.customerInfo || {
+      name: data.customerName || data.name || '',
+      products: [],
+      skinTypes: [],
+    },
+    roundCustomerInfo: data.roundCustomerInfo || {},
+    metadata: data.metadata || {},
+  };
+}

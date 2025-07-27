@@ -269,7 +269,7 @@ export function ClinicalPhotoModal({
       if (!acc[photo.session_number]) {
         acc[photo.session_number] = [];
       }
-      acc[photo.session_number].push(photo);
+      acc[photo.session_number]?.push(photo);
       return acc;
     },
     {} as Record<number, Photo[]>

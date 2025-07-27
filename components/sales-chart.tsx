@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 // 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
@@ -60,7 +61,7 @@ const formatDetailedAmount = (value: number): string => {
 
 // Props 타입 정의
 interface SalesChartProps {
-  kolId?: number;
+  kolId?: string; // Convex ID는 string 타입
 }
 
 // 월별 데이터 타입
@@ -88,7 +89,7 @@ export default function SalesChart({ kolId }: SalesChartProps) {
     api.orders.getMonthlySales,
     kolId
       ? {
-          shop_id: kolId as any,
+          shop_id: kolId as Id<'profiles'>, // Convex ID 타입으로 변환
           year: new Date().getFullYear(),
           month: new Date().getMonth() + 1,
         }
@@ -198,7 +199,6 @@ export default function SalesChart({ kolId }: SalesChartProps) {
                 content={
                   <ChartTooltipContent
                     indicator="dot"
-                    className="border border-gray-200 bg-white/90 shadow-lg backdrop-blur-sm"
                     formatter={(value, name) => [formatDetailedAmount(value as number), '']}
                   />
                 }

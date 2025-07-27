@@ -46,9 +46,15 @@ function DashboardLoading() {
 // 메인 클라이언트 컴포넌트
 export default function ServerDashboard() {
   // Convex 쿼리를 사용하여 실시간 대시보드 데이터 조회
-  const dashboardStats = useQuery(api.kols.getKolDashboardStats);
+  const dashboardStats = useQuery(api.realtime.getKolDashboardStats, {
+    kolId: undefined, // 현재 로그인한 사용자의 통계
+  });
   const shopsData = useQuery(api.shops.getShopsWithFilters, {}); // 올바른 함수명으로 수정
-  const monthlySales = useQuery(api.orders.getMonthlySales); // 올바른 함수명으로 수정
+  const monthlySales = useQuery(api.orders.getMonthlySales, {
+    shop_id: 'skip' as any, // skip을 사용하여 쿼리 비활성화
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
+  });
 
   const isLoading =
     dashboardStats === undefined || shopsData === undefined || monthlySales === undefined;

@@ -54,6 +54,7 @@ function SingleAchieveCheckbox({
 }) {
   const keys: (keyof Achievements)[] = ['basicTraining', 'standardProtocol', 'expertCourse'];
   const key = keys[level - 1];
+  if (!key) throw new Error(`Invalid level: ${level}`);
   const checked = achievements[key];
 
   const toggle = (isChecked: boolean | 'indeterminate') => {
@@ -61,10 +62,16 @@ function SingleAchieveCheckbox({
     const newVal = { ...achievements };
     if (isChecked) {
       // 체크 → 하위레벨까지 모두 true
-      for (let i = 0; i < level; i++) newVal[keys[i]] = true;
+      for (let i = 0; i < level; i++) {
+        const keyAtIndex = keys[i];
+        if (keyAtIndex) newVal[keyAtIndex] = true;
+      }
     } else {
       // 해제 → 상위레벨부터 모두 false
-      for (let i = level - 1; i < 3; i++) newVal[keys[i]] = false;
+      for (let i = level - 1; i < 3; i++) {
+        const keyAtIndex = keys[i];
+        if (keyAtIndex) newVal[keyAtIndex] = false;
+      }
     }
     onChange(newVal);
   };

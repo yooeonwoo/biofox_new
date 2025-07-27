@@ -37,13 +37,16 @@ interface DashboardData {
     list: Array<{
       id: string;
       ownerName: string;
-      shopName: string;
+      shop_name: string;
       region: string;
       status: string;
       createdAt: string;
       sales: {
         total: number;
+        product: number;
+        device: number;
         hasOrdered: boolean;
+        commission?: number;
       };
     }>;
   };
@@ -184,13 +187,16 @@ function transformShopsData(shops: any[], orders: any[]): any[] {
     return {
       id: shop._id,
       ownerName: shop.name || 'Unknown',
-      shopName: shop.shop_name || 'Unknown Shop',
+      shop_name: shop.shop_name || 'Unknown Shop',
       region: shop.region || '',
       status: shop.status || 'pending',
       createdAt: new Date(shop._creationTime || Date.now()).toISOString(),
       sales: {
         total: totalSales,
+        product: 0, // TODO: 실제 상품 매출 계산 로직 구현 필요
+        device: 0, // TODO: 실제 기기 매출 계산 로직 구현 필요
         hasOrdered: shopOrders.length > 0,
+        commission: 0, // TODO: 실제 수수료 계산 로직 구현 필요
       },
     };
   });

@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Trash, Calculator, Building, User as UserIcon, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import type { Order, User } from '@/types/biofox-admin';
+import type { Order, OrderItem, User } from '@/types/biofox-admin';
 
 interface OrderFormModalProps {
   order?: Order;
@@ -31,20 +31,9 @@ interface OrderFormData {
   shop_id: string;
   order_date: string;
   order_number?: string;
-  items: Array<{
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-  }>;
+  items: OrderItem[];
   is_self_shop_order?: boolean;
   notes?: string;
-}
-
-interface OrderItem {
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  subtotal?: number;
 }
 
 export function OrderFormModal({ order, open, onClose, onSubmit }: OrderFormModalProps) {
@@ -52,7 +41,17 @@ export function OrderFormModal({ order, open, onClose, onSubmit }: OrderFormModa
     shop_id: '',
     order_date: format(new Date(), 'yyyy-MM-dd'),
     order_number: '',
-    items: [{ product_name: '', quantity: 1, unit_price: 0 }],
+    items: [
+      {
+        id: `temp-${Date.now()}`,
+        order_id: '',
+        product_name: '',
+        quantity: 1,
+        unit_price: 0,
+        subtotal: 0,
+        created_at: new Date().toISOString(),
+      },
+    ],
     is_self_shop_order: false,
     notes: '',
   });
@@ -77,16 +76,46 @@ export function OrderFormModal({ order, open, onClose, onSubmit }: OrderFormModa
         order_number: order.order_number || '',
         items:
           order.items?.map(item => ({
+            id: item.id,
+            order_id: item.order_id,
             product_name: item.product_name,
             quantity: item.quantity,
             unit_price: item.unit_price,
+            subtotal: item.subtotal,
+            created_at: item.created_at,
+            product_id: item.product_id,
+            product_code: item.product_code,
           })) || [],
         is_self_shop_order: order.is_self_shop_order,
         notes: order.notes || '',
       });
 
       if (order.shop) {
-        setSelectedShop(order.shop);
+        // order.shop을 User 형태로 변환
+        const shopAsUser: User = {
+          id: order.shop_id,
+          shop_name: order.shop.shop_name,
+          name: order.shop.name,
+          email: '', // 기본값
+          role: 'shop_owner',
+          status: 'approved',
+          total_subordinates: 0,
+          active_subordinates: 0,
+          created_at: '',
+          updated_at: '',
+          current_relationship: order.shop.parent
+            ? {
+                parent_name: order.shop.parent.name,
+                parent_role: order.shop.parent.role,
+              }
+            : undefined,
+          stats: {
+            total_sales_this_month: 0,
+            total_commission_this_month: 0,
+            total_clinical_cases: 0,
+          },
+        };
+        setSelectedShop(shopAsUser);
         setSearchTerm(order.shop.shop_name);
       }
     }
@@ -165,14 +194,46 @@ export function OrderFormModal({ order, open, onClose, onSubmit }: OrderFormModa
 
   const handleItemChange = (index: number, field: keyof OrderItem, value: any) => {
     const newItems = [...formData.items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    const currentItem = newItems[index];
+
+    // OrderItem 타입에 맞게 기본값 제공, currentItem이 undefined일 경우를 대비
+    const updatedItem: OrderItem = {
+      id: currentItem?.id || `temp-${Date.now()}`,
+      order_id: currentItem?.order_id || '',
+      product_name: currentItem?.product_name || '',
+      quantity: currentItem?.quantity || 1,
+      unit_price: currentItem?.unit_price || 0,
+      subtotal: currentItem?.subtotal || 0,
+      created_at: currentItem?.created_at || new Date().toISOString(),
+      product_id: currentItem?.product_id,
+      product_code: currentItem?.product_code,
+    };
+
+    // 필드 업데이트
+    (updatedItem as any)[field] = value;
+
+    // subtotal 자동 계산
+    if (field === 'quantity' || field === 'unit_price') {
+      updatedItem.subtotal = updatedItem.quantity * updatedItem.unit_price;
+    }
+
+    newItems[index] = updatedItem;
     setFormData({ ...formData, items: newItems });
   };
 
   const addItem = () => {
+    const newItem: OrderItem = {
+      id: `temp-${Date.now()}`, // 임시 ID
+      order_id: order?.id || '',
+      product_name: '',
+      quantity: 1,
+      unit_price: 0,
+      subtotal: 0,
+      created_at: new Date().toISOString(),
+    };
     setFormData({
       ...formData,
-      items: [...formData.items, { product_name: '', quantity: 1, unit_price: 0 }],
+      items: [...formData.items, newItem],
     });
   };
 

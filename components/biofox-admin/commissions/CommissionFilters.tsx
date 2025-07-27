@@ -92,7 +92,10 @@ export function CommissionFilters({ filters, onFiltersChange }: CommissionFilter
             onValueChange={value =>
               onFiltersChange({
                 ...filters,
-                status: value === 'all' ? undefined : value,
+                status:
+                  value === 'all'
+                    ? undefined
+                    : (value as 'calculated' | 'adjusted' | 'paid' | 'cancelled'),
               })
             }
           >

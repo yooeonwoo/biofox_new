@@ -181,7 +181,7 @@ export default function EntitySidebar({
                   {/* 확장된 전문점 목록 */}
                   <CollapsibleContent>
                     <div className="border-t bg-muted/30 px-3 pb-3">
-                      {shopsByKol[kol.id]?.length > 0 ? (
+                      {(shopsByKol[kol.id]?.length || 0) > 0 ? (
                         <div className="mt-2 space-y-1">
                           {shopsByKol[kol.id]?.map(shop => (
                             <div

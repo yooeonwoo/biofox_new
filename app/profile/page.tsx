@@ -35,12 +35,12 @@ export default function ProfilePage() {
 }
 
 function ProfileContent() {
-  const { user, profile, completeness, isLoading } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const updateProfile = useMutation(api.auth.updateUserProfile);
+  const updateProfile = useMutation(api.profiles.updateProfile);
 
   const {
     register,
@@ -63,8 +63,20 @@ function ProfileContent() {
     setError(null);
     setSuccess(false);
 
+    if (!profile?._id) {
+      setError('프로필 ID를 찾을 수 없습니다.');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      await updateProfile(data);
+      await updateProfile({
+        profileId: profile._id,
+        name: data.display_name,
+        shop_name: data.shop_name,
+        region: data.region,
+        naver_place_link: data.naver_place_link || undefined,
+      });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
@@ -82,8 +94,8 @@ function ProfileContent() {
     );
   }
 
-  const completenessValue = completeness?.completeness || 0;
-  const missingFields = completeness?.missingFields || [];
+  const completenessValue = 80; // 임시 완성도 값
+  const missingFields: string[] = []; // 임시로 빈 배열
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

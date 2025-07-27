@@ -20,15 +20,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
+import {
+  MoreHorizontal,
+  Eye,
+  Edit,
   Trash,
   Receipt,
   TrendingUp,
   Building,
-  User
+  User,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -46,15 +46,15 @@ interface OrderTableProps {
 
 const statusConfig = {
   pending: { label: '대기중', variant: 'secondary' as const },
-  completed: { label: '완료', variant: 'success' as const },
+  completed: { label: '완료', variant: 'default' as const },
   cancelled: { label: '취소', variant: 'destructive' as const },
   refunded: { label: '반품', variant: 'outline' as const },
 };
 
 const commissionStatusConfig = {
   calculated: { label: '계산됨', variant: 'secondary' as const },
-  adjusted: { label: '조정됨', variant: 'warning' as const },
-  paid: { label: '지급됨', variant: 'success' as const },
+  adjusted: { label: '조정됨', variant: 'outline' as const },
+  paid: { label: '지급됨', variant: 'default' as const },
   cancelled: { label: '취소됨', variant: 'destructive' as const },
 };
 
@@ -104,8 +104,8 @@ export function OrderTable({
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -129,7 +129,10 @@ export function OrderTable({
             <TableHead>전문점</TableHead>
             <TableHead>소속</TableHead>
             <TableHead>상품</TableHead>
-            <TableHead className="text-right cursor-pointer" onClick={() => handleSort('total_amount')}>
+            <TableHead
+              className="cursor-pointer text-right"
+              onClick={() => handleSort('total_amount')}
+            >
               주문금액
             </TableHead>
             <TableHead className="text-right">수수료</TableHead>
@@ -138,18 +141,16 @@ export function OrderTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders.map((order) => (
+          {orders.map(order => (
             <TableRow key={order.id}>
               <TableCell>
                 <Checkbox
                   checked={selectedOrders.includes(order.id)}
-                  onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
+                  onCheckedChange={checked => handleSelectOrder(order.id, checked as boolean)}
                   aria-label={`주문 ${order.order_number || order.id} 선택`}
                 />
               </TableCell>
-              <TableCell>
-                {format(new Date(order.order_date), 'yyyy.MM.dd')}
-              </TableCell>
+              <TableCell>{format(new Date(order.order_date), 'yyyy.MM.dd')}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
                   <Receipt className="h-4 w-4 text-gray-400" />
@@ -188,9 +189,7 @@ export function OrderTable({
                     </p>
                   ))}
                   {order.items && order.items.length > 2 && (
-                    <p className="text-sm text-gray-500">
-                      외 {order.items.length - 2}개
-                    </p>
+                    <p className="text-sm text-gray-500">외 {order.items.length - 2}개</p>
                   )}
                 </div>
               </TableCell>
@@ -198,20 +197,30 @@ export function OrderTable({
                 <div className="space-y-1">
                   <p className="font-medium">{formatCurrency(order.total_amount)}</p>
                   {order.is_self_shop_order && (
-                    <Badge variant="outline" className="text-xs">본인샵</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      본인샵
+                    </Badge>
                   )}
                 </div>
               </TableCell>
               <TableCell className="text-right">
-                {order.commission ? (
+                {order.commission_amount && order.commission_rate ? (
                   <div className="space-y-1">
-                    <p className="font-medium">{formatCurrency(order.commission.amount)}</p>
-                    <p className="text-xs text-gray-500">{order.commission.rate}%</p>
-                    <Badge 
-                      variant={commissionStatusConfig[order.commission.status as keyof typeof commissionStatusConfig]?.variant}
+                    <p className="font-medium">{formatCurrency(order.commission_amount)}</p>
+                    <p className="text-xs text-gray-500">{order.commission_rate}%</p>
+                    <Badge
+                      variant={
+                        commissionStatusConfig[
+                          order.commission_status as keyof typeof commissionStatusConfig
+                        ]?.variant
+                      }
                       className="text-xs"
                     >
-                      {commissionStatusConfig[order.commission.status as keyof typeof commissionStatusConfig]?.label}
+                      {
+                        commissionStatusConfig[
+                          order.commission_status as keyof typeof commissionStatusConfig
+                        ]?.label
+                      }
                     </Badge>
                   </div>
                 ) : (
@@ -219,8 +228,10 @@ export function OrderTable({
                 )}
               </TableCell>
               <TableCell>
-                <Badge variant={statusConfig[order.status as keyof typeof statusConfig]?.variant}>
-                  {statusConfig[order.status as keyof typeof statusConfig]?.label}
+                <Badge
+                  variant={statusConfig[order.order_status as keyof typeof statusConfig]?.variant}
+                >
+                  {statusConfig[order.order_status as keyof typeof statusConfig]?.label}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
@@ -242,10 +253,10 @@ export function OrderTable({
                       수정
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={() => onDeleteOrder(order)}
                       className="text-red-600"
-                      disabled={order.commission?.status === 'paid'}
+                      disabled={order.commission_status === 'paid'}
                     >
                       <Trash className="mr-2 h-4 w-4" />
                       삭제

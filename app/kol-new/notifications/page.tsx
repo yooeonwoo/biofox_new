@@ -116,9 +116,28 @@ export default function NotificationsPage() {
     ];
   };
 
-  const getNotifications = () => {
-    // Convex 데이터가 있으면 사용, 없으면 더미 데이터 사용
-    return notifications || getDummyNotifications();
+  // Convex 알림 객체를 로컬 인터페이스로 변환
+  const mapConvexNotification = (convexNotification: any): Notification => ({
+    id: convexNotification._id || convexNotification.id,
+    type: convexNotification.type,
+    title: convexNotification.title,
+    message: convexNotification.message,
+    isRead: convexNotification.is_read || false,
+    priority: convexNotification.priority || 'normal',
+    createdAt: convexNotification._creationTime || convexNotification.createdAt || Date.now(),
+    relatedType: convexNotification.related_type,
+    relatedId: convexNotification.related_id,
+    metadata: convexNotification.metadata,
+  });
+
+  const getNotifications = (): Notification[] => {
+    // Convex 데이터가 있으면 변환해서 사용, 없으면 더미 데이터 사용
+    if (notifications && Array.isArray(notifications)) {
+      return notifications.map(mapConvexNotification);
+    } else if (notifications && 'page' in notifications && Array.isArray(notifications.page)) {
+      return notifications.page.map(mapConvexNotification);
+    }
+    return getDummyNotifications();
   };
 
   const handleMarkAsRead = async (notificationId: string) => {

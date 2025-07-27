@@ -150,8 +150,10 @@ function generateSalesChart(orders: any[], now: Date) {
   for (let i = 0; i < orders.length; i++) {
     const order = orders[i];
     const dateStr = new Date(order.order_date).toISOString().split('T')[0];
-    const currentAmount = salesByDate.get(dateStr) || 0;
-    salesByDate.set(dateStr, currentAmount + (order.total_amount || 0));
+    if (dateStr) {
+      const currentAmount = salesByDate.get(dateStr) || 0;
+      salesByDate.set(dateStr, currentAmount + (order.total_amount || 0));
+    }
   }
 
   // 차트 데이터 생성 (메모리 효율적)
@@ -161,10 +163,12 @@ function generateSalesChart(orders: any[], now: Date) {
     const dateStr = date.toISOString().split('T')[0];
     const formattedDate = `${date.getMonth() + 1}/${date.getDate()}`;
 
-    salesChart.push({
-      date: formattedDate,
-      sales: salesByDate.get(dateStr) || 0,
-    });
+    if (dateStr) {
+      salesChart.push({
+        date: formattedDate,
+        sales: salesByDate.get(dateStr) || 0,
+      });
+    }
   }
 
   return salesChart;
@@ -263,9 +267,10 @@ export const getOptimizedRecentActivities = query({
       const limitedActivities = activities.slice(0, limit);
 
       // 다음 커서 계산
+      const lastActivity = limitedActivities[limitedActivities.length - 1];
       const nextCursor =
-        limitedActivities.length > 0
-          ? limitedActivities[limitedActivities.length - 1].timestamp.toString()
+        limitedActivities.length > 0 && lastActivity?.timestamp
+          ? lastActivity.timestamp.toString()
           : null;
 
       return {
