@@ -1,39 +1,67 @@
-"use client";
+'use client';
 
-import ShopCustomerCard from "./components/ShopCustomerCard";
-import { PageHeader } from "@/components/clinical/PageHeader";
-
-// As per the new requirement, we display a single card for the shop's self-growth system.
-// This data is based on the sample from docs/고객 관리 시스템 (전문점샵용)/App.tsx
-const sampleShopData = {
-    name: '바이오포톤 강남점',
-    contractDate: '2024-01-15',
-    manager: '김대표',
-};
-
-// TODO: 실제 인증된 Shop의 ID를 가져오는 로직으로 교체 예정
-const TEMP_SHOP_ID = "550e8400-e29b-41d4-a716-446655440001"; // UUID 형태의 임시 shopId
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import ShopCustomerCard from './components/ShopCustomerCard';
+import { PageHeader } from '@/components/clinical/PageHeader';
 
 export default function ShopCustomerManagerPage() {
+  const router = useRouter();
+  const { user: authUser, isLoading: authLoading } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
+
+  // 인증 확인
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      router.push('/signin');
+    }
+  }, [authUser, authLoading, router]);
+
+  // 로딩 상태
+  if (authLoading || !profile) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">로딩 중...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">
+              셀프 성장 관리 페이지를 준비하고 있습니다.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 실제 프로필 데이터 사용
+  const shopData = {
+    name: profile.shop_name || profile.name || '전문점',
+    contractDate: profile.created_at
+      ? new Date(profile.created_at).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0],
+    manager: profile.name || authUser.email,
+  };
+
   return (
     <div>
       {/* 헤더 */}
-      <PageHeader
-        title="셀프 성장 관리"
-        backPath="/shop"
-        showAddButton={false}
-      />
-      
+      <PageHeader title="셀프 성장 관리" backPath="/shop" showAddButton={false} />
+
       {/* 메인 컨테이너 */}
       <main className="mx-auto w-full max-w-none xs:max-w-full sm:max-w-2xl">
-        <div className="space-y-4 xs:space-y-5 p-2 xs:p-3 md:px-0 md:py-6">
-          <ShopCustomerCard 
-            customer={sampleShopData} 
-            cardNumber={1} 
-            shopId={TEMP_SHOP_ID}
-          />
+        <div className="space-y-4 p-2 xs:space-y-5 xs:p-3 md:px-0 md:py-6">
+          <ShopCustomerCard customer={shopData} cardNumber={1} shopId={profile._id} />
         </div>
       </main>
     </div>
   );
-} 
+}

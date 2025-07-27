@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { redirect } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 // import { fetchCases, ClinicalCase } from "@/lib/clinical-photos"; // 임시로 주석 처리
 
 // 임시 타입 정의
@@ -35,29 +38,29 @@ const mockCases: ClinicalCase[] = [
     customerName: '본인',
     caseName: '보톡스 이마',
     status: 'completed',
-    createdAt: '2024-01-15T00:00:00Z'
+    createdAt: '2024-01-15T00:00:00Z',
   },
   {
     id: '2',
     customerName: '본인',
     caseName: '필러 팔자주름',
     status: 'in_progress',
-    createdAt: '2024-01-20T00:00:00Z'
+    createdAt: '2024-01-20T00:00:00Z',
   },
   {
     id: '3',
     customerName: '김고객',
     caseName: '리프팅',
     status: 'completed',
-    createdAt: '2024-01-10T00:00:00Z'
+    createdAt: '2024-01-10T00:00:00Z',
   },
   {
     id: '4',
     customerName: '이고객',
     caseName: '스킨부스터',
     status: 'in_progress',
-    createdAt: '2024-01-25T00:00:00Z'
-  }
+    createdAt: '2024-01-25T00:00:00Z',
+  },
 ];
 
 // 체크 아이템 컴포넌트
@@ -68,7 +71,9 @@ interface CheckItemProps {
 
 const CheckItem: React.FC<CheckItemProps> = ({ label, checked }) => {
   return (
-    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs ${checked ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
+    <div
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ${checked ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+    >
       {checked && <Check size={12} className="text-blue-600" />}
       <span>{label}</span>
     </div>
@@ -83,15 +88,15 @@ interface PlayerProductsProps {
   allInOneSerum?: boolean;
 }
 
-const PlayerProducts: React.FC<PlayerProductsProps> = ({ 
-  cureBooster, 
-  cureMask, 
-  premiumMask, 
-  allInOneSerum 
+const PlayerProducts: React.FC<PlayerProductsProps> = ({
+  cureBooster,
+  cureMask,
+  premiumMask,
+  allInOneSerum,
 }) => {
   return (
     <div className="mt-2">
-      <div className="text-xs font-medium text-gray-500 mb-1">플레이어 제품</div>
+      <div className="mb-1 text-xs font-medium text-gray-500">플레이어 제품</div>
       <div className="flex flex-wrap gap-1">
         <CheckItem label="큐어 부스터" checked={cureBooster} />
         <CheckItem label="큐어 마스크" checked={cureMask} />
@@ -118,11 +123,11 @@ const SkinTypes: React.FC<SkinTypesProps> = ({
   skinPore,
   skinTrouble,
   skinWrinkle,
-  skinEtc
+  skinEtc,
 }) => {
   return (
     <div className="mt-2">
-      <div className="text-xs font-medium text-gray-500 mb-1">고객 피부타입</div>
+      <div className="mb-1 text-xs font-medium text-gray-500">고객 피부타입</div>
       <div className="flex flex-wrap gap-1">
         <CheckItem label="붉고 예민함" checked={skinRedSensitive} />
         <CheckItem label="색소/피멘" checked={skinPigment} />
@@ -136,38 +141,33 @@ const SkinTypes: React.FC<SkinTypesProps> = ({
 };
 
 export default function ClinicalPhotosPage() {
-  // 임시 사용자 정보 (로컬 개발용)
-  const tempUser = {
-    isLoaded: true,
-    isSignedIn: true,
-    role: "shop",
-    publicMetadata: { role: "shop" }
-  };
+  const router = useRouter();
+  const { user: authUser, isLoading: authLoading } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
 
-  const [isShop, setIsShop] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [cases, setCases] = useState<ClinicalCase[]>([]);
   const [casesLoading, setCasesLoading] = useState(false);
 
-  // 사용자 역할 확인
+  // 인증 확인
   useEffect(() => {
-    if (tempUser.isLoaded && tempUser.isSignedIn) {
-      const userRole = tempUser.publicMetadata?.role as string || "shop";
-      setIsShop(userRole === "shop" || userRole === "test");
-      setLoading(false);
+    if (!authLoading && !authUser) {
+      router.push('/signin');
     }
-  }, []);
+  }, [authUser, authLoading, router]);
 
   // 케이스 목록 조회 (모킹)
   useEffect(() => {
     const loadCases = async () => {
-      if (!isShop || loading) return;
+      if (!profile) return;
       setCasesLoading(true);
       try {
         // 실제 API 호출 대신 모킹 데이터 사용
         // const casesData = await fetchCases();
         // setCases(casesData);
-        
+
         // 로딩 시뮬레이션
         await new Promise(resolve => setTimeout(resolve, 1000));
         setCases(mockCases);
@@ -181,20 +181,26 @@ export default function ClinicalPhotosPage() {
       }
     };
     loadCases();
-  }, [isShop, loading]);
+  }, [profile]);
 
-  const personalCases = cases.filter(c => c.customerName === "본인");
-  const customerCases = cases.filter(c => c.customerName !== "본인");
-  
-  const personalProgress = personalCases.length > 0 
-    ? Math.round((personalCases.filter(c => c.status === 'completed').length / personalCases.length) * 100)
-    : 0;
-    
-  const customerProgress = customerCases.length > 0
-    ? Math.round((customerCases.filter(c => c.status === 'completed').length / customerCases.length) * 100)
-    : 0;
+  const personalCases = cases.filter(c => c.customerName === '본인');
+  const customerCases = cases.filter(c => c.customerName !== '본인');
 
-  if (!tempUser.isLoaded || isShop === null || loading) {
+  const personalProgress =
+    personalCases.length > 0
+      ? Math.round(
+          (personalCases.filter(c => c.status === 'completed').length / personalCases.length) * 100
+        )
+      : 0;
+
+  const customerProgress =
+    customerCases.length > 0
+      ? Math.round(
+          (customerCases.filter(c => c.status === 'completed').length / customerCases.length) * 100
+        )
+      : 0;
+
+  if (authLoading || !profile) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -202,22 +208,20 @@ export default function ClinicalPhotosPage() {
             <CardTitle className="text-center">로딩 중...</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center text-muted-foreground">임상사진 페이지를 준비하는 중입니다.</p>
+            <p className="text-center text-muted-foreground">
+              임상사진 페이지를 준비하는 중입니다.
+            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (!isShop) {
-    return redirect('/');
-  }
-
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold">임상사진 관리</h1>
-        <p className="text-sm text-muted-foreground mt-1">관리 전후 사진을 체계적으로 관리하세요</p>
+        <h1 className="text-lg font-bold sm:text-xl md:text-2xl">임상사진 관리</h1>
+        <p className="mt-1 text-sm text-muted-foreground">관리 전후 사진을 체계적으로 관리하세요</p>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -234,8 +238,11 @@ export default function ClinicalPhotosPage() {
                   <span>진행률</span>
                   <span className="font-medium">{casesLoading ? '-' : `${personalProgress}%`}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${personalProgress}%` }}></div>
+                <div className="h-2 w-full rounded-full bg-gray-200">
+                  <div
+                    className="h-2 rounded-full bg-blue-600"
+                    style={{ width: `${personalProgress}%` }}
+                  ></div>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {casesLoading ? '로딩 중...' : `${personalCases.length}개 케이스`}
@@ -264,8 +271,11 @@ export default function ClinicalPhotosPage() {
                   <span>진행률</span>
                   <span className="font-medium">{casesLoading ? '-' : `${customerProgress}%`}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: `${customerProgress}%` }}></div>
+                <div className="h-2 w-full rounded-full bg-gray-200">
+                  <div
+                    className="h-2 rounded-full bg-green-600"
+                    style={{ width: `${customerProgress}%` }}
+                  ></div>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {casesLoading ? '로딩 중...' : `${customerCases.length}개 케이스`}
@@ -295,8 +305,11 @@ export default function ClinicalPhotosPage() {
             </div>
           ) : cases.length > 0 ? (
             <div className="space-y-3">
-              {cases.map((case_) => (
-                <div key={case_.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+              {cases.map(case_ => (
+                <div
+                  key={case_.id}
+                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-gray-50"
+                >
                   <div className="flex-1">
                     <h4 className="font-medium">{case_.customerName}</h4>
                     <p className="text-sm text-gray-500">{case_.caseName}</p>
@@ -314,13 +327,11 @@ export default function ClinicalPhotosPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Plus className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">등록된 케이스가 없습니다</h3>
-              <p className="text-gray-500 mb-4">첫 번째 임상사진 케이스를 등록해보세요</p>
+              <Plus className="mb-4 h-12 w-12 text-gray-400" />
+              <h3 className="mb-2 text-lg font-medium text-gray-900">등록된 케이스가 없습니다</h3>
+              <p className="mb-4 text-gray-500">첫 번째 임상사진 케이스를 등록해보세요</p>
               <Button asChild>
-                <Link href="/shop/clinical-photos/upload">
-                  케이스 등록하기
-                </Link>
+                <Link href="/shop/clinical-photos/upload">케이스 등록하기</Link>
               </Button>
             </div>
           )}

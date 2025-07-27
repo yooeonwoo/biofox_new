@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -57,17 +58,30 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const { user: authUser, isLoading: authLoading } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
+
   const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
+  // 인증 확인
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      router.push('/signin');
+    }
+  }, [authUser, authLoading, router]);
+
   // 실제 Convex 알림 데이터 조회 (사용자 프로필 ID 기반)
   const notifications = useQuery(
     api.notifications.getUserNotifications,
-    user?.profile?._id
+    profile?._id
       ? {
           paginationOpts: { numItems: 20, cursor: null },
           type: undefined,
@@ -77,14 +91,14 @@ export default function NotificationsPage() {
 
   // 더미 데이터 (실제 Convex 연동 전까지 사용)
   const getDummyNotifications = (): Notification[] => {
-    if (!user) return [];
+    if (!authUser || !profile) return [];
 
     return [
       {
         id: '1',
         type: 'sales_update',
         title: '매출 업데이트',
-        message: `${user.profile?.shop_name || user.name}님의 이번 달 매출이 전월 대비 15% 증가했습니다.`,
+        message: `${profile.name || authUser.email}님의 이번 달 매출이 전월 대비 15% 증가했습니다.`,
         isRead: false,
         priority: 'high',
         createdAt: Date.now() - 3600000, // 1시간 전
@@ -190,7 +204,7 @@ export default function NotificationsPage() {
   };
 
   // 로딩 중일 때
-  if (authLoading) {
+  if (authLoading || !profile) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
@@ -199,7 +213,7 @@ export default function NotificationsPage() {
   }
 
   // 사용자가 없을 때
-  if (!user) {
+  if (!authUser) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -275,7 +289,7 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">알림</h1>
           <p className="text-sm text-gray-600">
-            {user.profile?.shop_name || user.name}님의 알림{' '}
+            {profile.name || authUser.email}님의 알림{' '}
             {unreadCount > 0 && `(읽지 않음 ${unreadCount}개)`}
           </p>
         </div>

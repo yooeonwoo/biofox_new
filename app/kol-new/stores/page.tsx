@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { redirect } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Search,
@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useKolStoresData } from '@/hooks/useKolStoresData';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 // UI 컴포넌트
 import { Button } from '@/components/ui/button';
@@ -81,7 +83,12 @@ const formatToManUnit = (value: number): string => {
 };
 
 export default function StoresPage() {
-  const { profile, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const { user: authUser, isLoading: isAuthLoading } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
   const kolId = profile?._id;
 
   // Convex를 사용한 매장 데이터 로드
@@ -135,15 +142,15 @@ export default function StoresPage() {
     }));
   }, [filteredShops]);
 
-  // 인증 리다이렉트
+  // 인증 확인
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      redirect('/');
+    if (!isAuthLoading && !authUser) {
+      router.push('/signin');
     }
-  }, [isAuthLoading, isAuthenticated]);
+  }, [authUser, isAuthLoading, router]);
 
   // 로딩 상태
-  const loading = isAuthLoading || isStoresLoading;
+  const loading = isAuthLoading || isStoresLoading || !profile;
 
   if (loading) {
     return (
