@@ -14,7 +14,7 @@ import {
  * 케이스 데이터를 Convex에서 실시간으로 관리하는 훅
  * @param type 'personal' | 'customer'
  */
-export const useCaseManagement = (type: 'personal' | 'customer') => {
+export const useCaseManagement = (type: 'personal' | 'customer', profileId?: string) => {
   // Convex 훅들 사용 - 조건부 호출 방지를 위해 항상 같은 훅 사용
   const {
     data: allCases = [],
@@ -29,14 +29,20 @@ export const useCaseManagement = (type: 'personal' | 'customer') => {
       const personalCase = allCases.find(c => c.customerName?.trim() === '본인');
       const ensurePersonalCaseExists = async () => {
         if (personalCase) return personalCase;
+        if (!profileId) {
+          throw new Error('프로필 ID가 필요합니다.');
+        }
 
-        return await createCase.mutateAsync({
-          customerName: '본인',
-          caseName: '본인 임상 케이스',
-          concernArea: '본인 케어',
-          treatmentPlan: '개인 관리 계획',
-          consentReceived: false,
-        });
+        return await createCase.mutateAsync(
+          {
+            customerName: '본인',
+            caseName: '본인 임상 케이스',
+            concernArea: '본인 케어',
+            treatmentPlan: '개인 관리 계획',
+            consentReceived: false,
+          },
+          profileId as any
+        ); // profileId 전달
       };
 
       return {
@@ -68,7 +74,7 @@ export const useCaseManagement = (type: 'personal' | 'customer') => {
         },
       };
     }
-  }, [type, allCases, allCasesLoading, refetchAll, createCase]);
+  }, [type, allCases, allCasesLoading, refetchAll, profileId]); // createCase를 의존성에서 제거하여 무한 루프 방지
 
   return result;
 };

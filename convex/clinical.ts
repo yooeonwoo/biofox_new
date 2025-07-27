@@ -207,6 +207,7 @@ export const getClinicalCase = query({
  */
 export const createClinicalCase = mutation({
   args: {
+    profileId: v.id('profiles'), // 프로필 ID를 직접 전달받음
     subject_type: v.union(v.literal('self'), v.literal('customer')),
     name: v.string(),
     case_title: v.optional(v.string()), // 추가
@@ -224,10 +225,10 @@ export const createClinicalCase = mutation({
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
-      if (!currentUser) {
-        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      // 프로필 존재 확인
+      const profile = await ctx.db.get(args.profileId);
+      if (!profile) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
       }
 
       // 입력 데이터 검증
@@ -243,7 +244,7 @@ export const createClinicalCase = mutation({
 
       // 임상 케이스 생성
       const caseId = await ctx.db.insert('clinical_cases', {
-        shop_id: currentUser._id,
+        shop_id: args.profileId,
         subject_type: args.subject_type,
         name: args.name.trim(),
         case_title: args.case_title,
@@ -266,7 +267,7 @@ export const createClinicalCase = mutation({
         latest_session: 0,
         created_at: now,
         updated_at: now,
-        created_by: currentUser._id,
+        created_by: args.profileId,
       });
 
       // 감사 로그 생성
@@ -274,8 +275,8 @@ export const createClinicalCase = mutation({
         tableName: 'clinical_cases',
         recordId: caseId,
         action: 'INSERT',
-        userId: currentUser._id,
-        userRole: currentUser.role,
+        userId: args.profileId,
+        userRole: profile.role,
         oldValues: null,
         newValues: {
           name: args.name,
@@ -292,10 +293,10 @@ export const createClinicalCase = mutation({
       // 관리자에게 알림 생성 (동의한 케이스의 경우)
       if (args.consent_status === 'consented') {
         await createNotification(ctx, {
-          userId: currentUser._id, // 향후 관리자 ID로 변경 필요
+          userId: args.profileId, // 향후 관리자 ID로 변경 필요
           type: 'clinical_progress',
           title: '새로운 임상 케이스 생성',
-          message: `${currentUser.name}님이 새로운 임상 케이스를 생성했습니다: ${args.name}`,
+          message: `${profile.name}님이 새로운 임상 케이스를 생성했습니다: ${args.name}`,
           relatedType: 'clinical_case',
           relatedId: caseId,
           priority: 'normal',
@@ -306,7 +307,11 @@ export const createClinicalCase = mutation({
       const createdCase = await ctx.db.get(caseId);
       return createdCase;
     } catch (error) {
-      throw formatError(error);
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      console.error('Unexpected error in createClinicalCase:', error);
+      throw new Error('임상 케이스 생성 중 오류가 발생했습니다.');
     }
   },
 });

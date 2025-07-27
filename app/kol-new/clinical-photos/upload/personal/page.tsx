@@ -10,28 +10,38 @@ import { EmptyStateCard } from '@/components/clinical/EmptyStateCard';
 import { PersonalCaseList } from '@/components/clinical/PersonalCaseList';
 import { CaseInfoMessage } from '@/components/clinical/CaseInfoMessage';
 import { LOADING_MESSAGES, EMPTY_STATE, INFO_MESSAGES, BUTTON_TEXTS } from '@/constants/ui';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 export default function PersonalPage() {
+  // 인증 정보 가져오기 - customer-manager 패턴 따라가기
+  const { user: authUser } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
+
   // Personal용 상태 관리 훅
   const pageState = usePersonalPageState({ initialRound: 1 });
-  
+
   // 큐 관리
   const { enqueue } = useSerialQueue();
-  
+
   // 디바운스 업데이트 함수
   const debouncedUpdate = (key: string, updateFn: () => void, delay = 300) => {
     setTimeout(updateFn, delay);
   };
-  
+
   // 상태 관리 함수들
   const markSaving = (caseId: string) => {
     pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'saving' }));
   };
-  
+
   const markSaved = (caseId: string) => {
     pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'saved' }));
   };
-  
+
   const markError = (caseId: string) => {
     pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'error' }));
   };
@@ -54,12 +64,13 @@ export default function PersonalPage() {
     },
     hasUnsavedPersonalCase: pageState.hasUnsavedPersonalCase,
     setHasUnsavedPersonalCase: pageState.setHasUnsavedPersonalCase,
+    profileId: profile?._id, // 프로필 ID 추가
   });
 
   // 로딩 상태
-  if (pageState.isLoading) {
+  if (pageState.isLoading || !profile) {
     return (
-      <LoadingScreen 
+      <LoadingScreen
         title={LOADING_MESSAGES.personal.title}
         description={LOADING_MESSAGES.personal.description}
       />
@@ -76,11 +87,11 @@ export default function PersonalPage() {
         backPath="/kol-new/clinical-photos"
         showAddButton={true}
       />
-      
+
       {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
       <main ref={pageState.mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
         {/* 메인 컨텐츠 - Legacy 반응형 패딩과 간격 적용 */}
-        <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
+        <div className="space-y-4 p-3 xs:space-y-5 xs:p-4 md:px-0 md:py-6">
           {/* 케이스가 없을 때 */}
           {pageState.cases.length === 0 && (
             <EmptyStateCard
@@ -129,12 +140,10 @@ export default function PersonalPage() {
           )}
 
           {/* 케이스가 이미 있는 경우 메시지 */}
-          {pageState.cases.length > 0 && pageState.cases.some(c => handlers.isNewPersonalCase(c.id)) && (
-            <CaseInfoMessage 
-              message={INFO_MESSAGES.personalCaseLimit}
-              type="info"
-            />
-          )}
+          {pageState.cases.length > 0 &&
+            pageState.cases.some(c => handlers.isNewPersonalCase(c.id)) && (
+              <CaseInfoMessage message={INFO_MESSAGES.personalCaseLimit} type="info" />
+            )}
         </div>
       </main>
     </div>

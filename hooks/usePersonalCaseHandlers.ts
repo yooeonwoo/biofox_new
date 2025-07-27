@@ -29,6 +29,7 @@ interface UsePersonalCaseHandlersParams {
   enqueue: (caseId: string, task: () => Promise<void>) => Promise<void>;
   hasUnsavedPersonalCase: boolean;
   setHasUnsavedPersonalCase: React.Dispatch<React.SetStateAction<boolean>>;
+  profileId?: Id<'profiles'>; // 프로필 ID 추가
 }
 
 /**
@@ -51,6 +52,7 @@ export function usePersonalCaseHandlers({
   enqueue,
   hasUnsavedPersonalCase,
   setHasUnsavedPersonalCase,
+  profileId,
 }: UsePersonalCaseHandlersParams) {
   const router = useRouter();
   const queryClient = useQueryClient();

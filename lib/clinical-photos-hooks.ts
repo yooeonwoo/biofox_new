@@ -47,10 +47,13 @@ export function useClinicalCaseConvex(caseId: string | null) {
 export function useCreateClinicalCaseConvex() {
   const createMutation = useMutation(api.clinical.createClinicalCase);
 
-  const createCase = async (caseData: any) => {
+  const createCase = async (caseData: any, profileId: Id<'profiles'>) => {
     try {
       const convexArgs = uiToConvexCreateArgs(caseData);
-      const result = await createMutation(convexArgs);
+      const result = await createMutation({
+        ...convexArgs,
+        profileId, // 프로필 ID 추가
+      });
       toast.success('케이스가 생성되었습니다.');
       if (!result) {
         throw new Error('케이스 생성 결과를 받지 못했습니다.');

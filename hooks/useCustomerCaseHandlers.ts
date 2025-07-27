@@ -33,6 +33,7 @@ interface UseCustomerCaseHandlersParams {
   markSaved: (caseId: string) => void;
   markError: (caseId: string) => void;
   enqueue: (caseId: string, task: () => Promise<void>) => Promise<void>;
+  profileId?: Id<'profiles'>; // 프로필 ID 추가
 }
 
 /**
@@ -51,6 +52,7 @@ export function useCustomerCaseHandlers({
   markSaved,
   markError,
   enqueue,
+  profileId,
 }: UseCustomerCaseHandlersParams) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -501,6 +503,11 @@ export function useCustomerCaseHandlers({
       return;
     }
 
+    if (!profileId) {
+      toast.error('프로필 정보를 찾을 수 없습니다.');
+      return;
+    }
+
     // 낙관적 업데이트 준비
     const tempId = `temp-${Date.now()}`;
     const tempCase: ClinicalCase = {
@@ -548,44 +555,47 @@ export function useCustomerCaseHandlers({
       // 재시도 로직과 함께 Convex에 케이스 생성
       const newCase = await retry(
         async () =>
-          createCase.mutateAsync({
-            customerName: '새 고객', // 빈 문자열 대신 기본값 설정
-            caseName: '새 고객 케이스',
-            concernArea: '',
-            treatmentPlan: '',
-            consentReceived: false,
-            metadata: {
-              // 기본 체크박스 값들
-              cureBooster: false,
-              cureMask: false,
-              premiumMask: false,
-              allInOneSerum: false,
-              skinRedSensitive: false,
-              skinPigment: false,
-              skinPore: false,
-              skinTrouble: false,
-              skinWrinkle: false,
-              skinEtc: false,
-              // 기본 고객 정보
-              customerInfo: {
-                name: '새 고객', // 빈 문자열 대신 기본값 설정
-                age: undefined,
-                gender: undefined,
-                products: [],
-                skinTypes: [],
-                memo: '',
-              },
-              roundCustomerInfo: {
-                1: {
-                  treatmentType: '',
+          createCase.mutateAsync(
+            {
+              customerName: '새 고객', // 빈 문자열 대신 기본값 설정
+              caseName: '새 고객 케이스',
+              concernArea: '',
+              treatmentPlan: '',
+              consentReceived: false,
+              metadata: {
+                // 기본 체크박스 값들
+                cureBooster: false,
+                cureMask: false,
+                premiumMask: false,
+                allInOneSerum: false,
+                skinRedSensitive: false,
+                skinPigment: false,
+                skinPore: false,
+                skinTrouble: false,
+                skinWrinkle: false,
+                skinEtc: false,
+                // 기본 고객 정보
+                customerInfo: {
+                  name: '새 고객', // 빈 문자열 대신 기본값 설정
+                  age: undefined,
+                  gender: undefined,
                   products: [],
                   skinTypes: [],
                   memo: '',
-                  date: new Date().toISOString().split('T')[0],
+                },
+                roundCustomerInfo: {
+                  1: {
+                    treatmentType: '',
+                    products: [],
+                    skinTypes: [],
+                    memo: '',
+                    date: new Date().toISOString().split('T')[0],
+                  },
                 },
               },
             },
-          }),
+            profileId // profileId 전달
+          ),
         {
           maxAttempts: 3,
           onRetry: attempt => {
@@ -628,7 +638,7 @@ export function useCustomerCaseHandlers({
 
       showErrorToast(error, '새 고객 추가에 실패했습니다. 다시 시도해 주세요.');
     }
-  }, [user, createCase, setCases, setCurrentRounds]);
+  }, [user, createCase, setCases, setCurrentRounds, profileId]);
 
   // 케이스 삭제 핸들러 - 개선된 낙관적 업데이트와 에러 처리
   const handleDeleteCase = useCallback(

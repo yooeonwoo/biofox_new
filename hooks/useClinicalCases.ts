@@ -74,14 +74,15 @@ export function useClinicalConsent(caseId: Id<'clinical_cases'> | null) {
 }
 
 // 케이스 생성 뮤테이션 (Convex)
-export function useCreateCase() {
+export function useCreateClinicalCase() {
   const createCase = useMutation(api.clinical.createClinicalCase);
 
   const mutate = useCallback(
-    async (caseData: any) => {
+    async (caseData: any, profileId: Id<'profiles'>) => {
       try {
         // 파라미터 변환 (임시)
         const transformedData = {
+          profileId, // 프로필 ID 추가
           name: caseData.subject_name,
           age: caseData.subject_age,
           gender: caseData.subject_gender,

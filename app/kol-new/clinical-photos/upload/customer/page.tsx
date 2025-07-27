@@ -9,10 +9,20 @@ import { PageHeader } from '@/components/clinical/PageHeader';
 import { CaseCard } from '@/components/clinical/CaseCard';
 import { createSaveStatusUtils, createEnqueueUtil, createDebounceUtil } from '@/utils/customer';
 import type { RoundCustomerInfo } from '@/types/clinical';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 // 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 
 export default function CustomerClinicalUploadPage() {
+  // 인증 정보 가져오기 - customer-manager 패턴 따라가기
+  const { user: authUser } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
+
   // 모든 상태와 사이드 이펙트를 커스텀 훅으로 분리
   const {
     // States (only used ones)
@@ -63,10 +73,11 @@ export default function CustomerClinicalUploadPage() {
     markSaved,
     markError,
     enqueue,
+    profileId: profile?._id, // 프로필 ID 전달
   });
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!user || isLoading) {
+  if (!user || isLoading || !profile) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
