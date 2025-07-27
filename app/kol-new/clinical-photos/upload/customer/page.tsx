@@ -155,6 +155,7 @@ export default function CustomerClinicalUploadPage() {
                       setCases={setCases}
                       handlers={handlers}
                       totalCases={cases.length}
+                      profileId={profile?._id}
                     />
                   );
                 })

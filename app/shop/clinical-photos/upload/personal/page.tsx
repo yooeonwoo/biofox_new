@@ -74,6 +74,7 @@ export default function PersonalPage() {
     },
     hasUnsavedPersonalCase: pageState.hasUnsavedPersonalCase,
     setHasUnsavedPersonalCase: pageState.setHasUnsavedPersonalCase,
+    profileId: profile?._id,
   });
 
   // 로딩 상태
@@ -126,6 +127,7 @@ export default function PersonalPage() {
               isNewPersonalCase={handlers.isNewPersonalCase}
               setIsComposing={pageState.setIsComposing}
               setCases={pageState.setCases}
+              profileId={profile?._id}
               handlers={{
                 handleConsentChange: handlers.handleConsentChange,
                 handleCaseStatusChange: handlers.handleCaseStatusChange,

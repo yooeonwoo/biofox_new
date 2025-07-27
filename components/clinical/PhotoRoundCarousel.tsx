@@ -19,6 +19,7 @@ const rightGuideImage = 'https://i.ibb.co/KcM7kDQg/right-guide.png';
 interface PhotoRoundCarouselProps {
   caseId: string;
   photos: PhotoSlot[];
+  profileId?: string;
   onPhotoUpload: (roundDay: number, angle: string, file: File) => Promise<void>;
   onPhotoDelete?: (roundDay: number, angle: string) => Promise<void>;
   isCompleted?: boolean;
@@ -30,6 +31,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
   ({
     caseId,
     photos,
+    profileId,
     onPhotoUpload,
     onPhotoDelete,
     isCompleted = false,

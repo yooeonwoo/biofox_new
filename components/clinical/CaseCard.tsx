@@ -52,6 +52,7 @@ interface CaseCardProps {
     updateCaseCheckboxes: (caseId: string, updates: any) => void;
   };
   totalCases: number;
+  profileId?: string;
 }
 
 export const CaseCard: React.FC<CaseCardProps> = ({
@@ -65,6 +66,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
   setCases,
   handlers,
   totalCases,
+  profileId,
 }) => {
   const {
     handleConsentChange,
@@ -280,6 +282,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                   onUploaded={() => refreshCases()}
                   disabled={case_.status === 'completed'}
                   className="max-w-md"
+                  profileId={profileId}
                 />
               </div>
             )}
@@ -288,6 +291,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
             <PhotoRoundCarousel
               caseId={case_.id}
               photos={case_.photos}
+              profileId={profileId}
               onPhotoUpload={async (roundDay: number, angle: string, file: File) => {
                 // TODO: PhotoUpload 로직 구현 필요
                 console.log('Photo upload:', { roundDay, angle, file });
@@ -349,16 +353,14 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                     id={`name-${case_.id}`}
                     value={case_.customerInfo.name}
                     onChange={e => {
-                      // 로컬 상태만 업데이트 (한글 조합 중에는 저장하지 않음)
-                      if (!localIsComposing) {
-                        setCases(prev =>
-                          prev.map(c =>
-                            c.id === case_.id
-                              ? { ...c, customerInfo: { ...c.customerInfo, name: e.target.value } }
-                              : c
-                          )
-                        );
-                      }
+                      // 로컬 상태 업데이트
+                      setCases(prev =>
+                        prev.map(c =>
+                          c.id === case_.id
+                            ? { ...c, customerInfo: { ...c.customerInfo, name: e.target.value } }
+                            : c
+                        )
+                      );
                     }}
                     onCompositionStart={() => {
                       setLocalIsComposing(true);
@@ -731,30 +733,28 @@ export const CaseCard: React.FC<CaseCardProps> = ({
               <Textarea
                 value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || ''}
                 onChange={e => {
-                  // 로컬 상태만 업데이트 (한글 조합 중에는 저장하지 않음)
-                  if (!localIsComposing) {
-                    const currentRound = currentRounds[case_.id] || 1;
-                    const currentRoundInfo = case_.roundCustomerInfo[currentRound] || {
-                      products: [],
-                      skinTypes: [],
-                    };
-                    setCases(prev =>
-                      prev.map(c =>
-                        c.id === case_.id
-                          ? {
-                              ...c,
-                              roundCustomerInfo: {
-                                ...c.roundCustomerInfo,
-                                [currentRound]: {
-                                  ...currentRoundInfo,
-                                  memo: e.target.value,
-                                },
+                  // 로컬 상태 업데이트
+                  const currentRound = currentRounds[case_.id] || 1;
+                  const currentRoundInfo = case_.roundCustomerInfo[currentRound] || {
+                    products: [],
+                    skinTypes: [],
+                  };
+                  setCases(prev =>
+                    prev.map(c =>
+                      c.id === case_.id
+                        ? {
+                            ...c,
+                            roundCustomerInfo: {
+                              ...c.roundCustomerInfo,
+                              [currentRound]: {
+                                ...currentRoundInfo,
+                                memo: e.target.value,
                               },
-                            }
-                          : c
-                      )
-                    );
-                  }
+                            },
+                          }
+                        : c
+                    )
+                  );
                 }}
                 onCompositionStart={() => {
                   setLocalIsComposing(true);

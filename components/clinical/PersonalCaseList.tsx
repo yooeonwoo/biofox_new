@@ -24,6 +24,7 @@ interface PersonalCaseListProps {
   setIsComposing: (composing: boolean) => void;
   setCases: React.Dispatch<React.SetStateAction<any[]>>;
   handlers: PersonalHandlers;
+  profileId?: string;
 }
 
 export const PersonalCaseList: React.FC<PersonalCaseListProps> = ({
@@ -34,16 +35,17 @@ export const PersonalCaseList: React.FC<PersonalCaseListProps> = ({
   isNewPersonalCase,
   setIsComposing,
   setCases,
-  handlers
+  handlers,
+  profileId,
 }) => {
   return (
     <>
       {cases.map((case_, index) => {
         // Personal용 핸들러 객체 생성
         const personalHandlers = {
-          handleConsentChange: (caseId: string, consent: boolean) => 
+          handleConsentChange: (caseId: string, consent: boolean) =>
             handlers.handleConsentChange(caseId, consent),
-          handleCaseStatusChange: (caseId: string, status: 'active' | 'completed') => 
+          handleCaseStatusChange: (caseId: string, status: 'active' | 'completed') =>
             handlers.handleCaseStatusChange(caseId, status),
           handleDeleteCase: (caseId: string) => {
             // Personal 케이스 삭제는 새 케이스만 가능
@@ -72,9 +74,10 @@ export const PersonalCaseList: React.FC<PersonalCaseListProps> = ({
             setCases={setCases}
             handlers={personalHandlers}
             totalCases={cases.length}
+            profileId={profileId}
           />
         );
       })}
     </>
   );
-}; 
+};

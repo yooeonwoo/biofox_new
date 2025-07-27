@@ -102,10 +102,7 @@ export function useCustomerCaseHandlers({
   const handleConsentChange = useCallback(
     async (caseId: string, consentReceived: boolean) => {
       try {
-        // TODO: Convex mutation으로 동의서 상태 업데이트
-        console.log('Consent update not implemented yet');
-
-        // 로컬 상태 업데이트
+        // 로컬 상태 업데이트 (낙관적 업데이트)
         setCases(prev =>
           prev.map(case_ =>
             case_.id === caseId
@@ -119,13 +116,41 @@ export function useCustomerCaseHandlers({
           )
         );
 
-        console.log(`동의서 상태가 ${consentReceived ? '동의' : '미동의'}로 변경되었습니다.`);
+        // Convex에 상태 업데이트
+        markSaving(caseId);
+        try {
+          await updateCaseFields({
+            caseId: caseId as Id<'clinical_cases'>,
+            updates: {
+              consent_status: consentReceived ? 'consented' : 'no_consent',
+              consent_date: consentReceived ? Date.now() : undefined,
+            },
+            profileId: profileId as Id<'profiles'> | undefined,
+          });
+          markSaved(caseId);
+          toast.success(`동의서 상태가 ${consentReceived ? '동의' : '미동의'}로 변경되었습니다.`);
+        } catch (error) {
+          markError(caseId);
+          // 실패 시 롤백
+          setCases(prev =>
+            prev.map(case_ =>
+              case_.id === caseId
+                ? {
+                    ...case_,
+                    consentReceived: !consentReceived,
+                    ...(consentReceived === true ? { consentImageUrl: undefined } : {}),
+                  }
+                : case_
+            )
+          );
+          throw error;
+        }
       } catch (error) {
         console.error('동의서 상태 변경 실패:', error);
         toast.error('동의서 상태 변경에 실패했습니다. 다시 시도해주세요.');
       }
     },
-    [setCases]
+    [setCases, updateCaseFields, markSaving, markSaved, markError, profileId]
   );
 
   // 사진 업로드 핸들러
@@ -325,6 +350,7 @@ export function useCustomerCaseHandlers({
       isComposing,
       debouncedUpdate,
       updateCaseFields,
+      profileId,
     ]
   );
 
@@ -407,7 +433,12 @@ export function useCustomerCaseHandlers({
             } catch (error) {
               markError(caseId);
               console.error('회차 정보 업데이트 실패:', error);
-              toast.error('회차 정보 저장에 실패했습니다.');
+              console.error('caseId:', caseId);
+              console.error('field:', field);
+              console.error('value:', value);
+              console.error('profileId:', profileId);
+              const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+              toast.error(`회차 정보 저장 실패: ${errorMessage}`);
             }
           }
         });
@@ -423,6 +454,7 @@ export function useCustomerCaseHandlers({
       isComposing,
       debouncedUpdate,
       updateCaseFields,
+      profileId,
     ]
   );
 
@@ -480,11 +512,15 @@ export function useCustomerCaseHandlers({
           });
         } catch (error) {
           console.error('체크박스 업데이트 실패:', error);
-          toast.error('체크박스 저장에 실패했습니다.');
+          console.error('caseId:', caseId);
+          console.error('checkboxes:', checkboxes);
+          console.error('profileId:', profileId);
+          const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+          toast.error(`체크박스 저장 실패: ${errorMessage}`);
         }
       });
     },
-    [setCases, cases, updateCaseFields, debouncedUpdate]
+    [setCases, cases, updateCaseFields, debouncedUpdate, profileId]
   );
 
   // 현재 회차 변경 핸들러
