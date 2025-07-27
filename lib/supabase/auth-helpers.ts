@@ -1,10 +1,10 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/client';
 import { redirect } from 'next/navigation';
 import { api } from '@/convex/_generated/api';
 import { fetchQuery, fetchMutation } from 'convex/nextjs';
 
 export async function requireAuth() {
-  const supabase = await createClient();
+  const supabase = createClient(); // await 제거
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -76,7 +76,7 @@ export async function requireRole(allowedRoles: string[]) {
 }
 
 export async function getOptionalUser() {
-  const supabase = await createClient();
+  const supabase = createClient(); // await 제거
   const {
     data: { user },
   } = await supabase.auth.getUser();

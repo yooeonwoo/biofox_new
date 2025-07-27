@@ -68,19 +68,29 @@ export async function getCurrentUser(ctx: QueryCtx | MutationCtx) {
     return null; // 인증 정보가 없으면 null 반환
   }
 
-  // Supabase UUID를 사용하여 프로필 조회
-  const user = await ctx.db
+  // 먼저 Convex Auth userId로 조회 시도
+  const userByConvexId = await ctx.db
+    .query('profiles')
+    .withIndex('by_userId', q => q.eq('userId', identity.subject as any))
+    .unique();
+
+  if (userByConvexId) {
+    return userByConvexId;
+  }
+
+  // Convex Auth로 찾지 못하면 Supabase UUID로 조회 시도 (하위 호환성)
+  const userBySupabaseId = await ctx.db
     .query('profiles')
     .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', identity.subject))
     .unique();
 
-  if (!user) {
+  if (!userBySupabaseId) {
     // 프로필이 없어도 에러를 던지지 않고 null 반환
-    console.warn(`Profile not found for supabaseUserId: ${identity.subject}`);
+    console.warn(`Profile not found for identity.subject: ${identity.subject}`);
     return null;
   }
 
-  return user;
+  return userBySupabaseId;
 }
 
 /**

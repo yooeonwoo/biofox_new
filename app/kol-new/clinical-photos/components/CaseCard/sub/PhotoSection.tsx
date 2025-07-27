@@ -3,7 +3,7 @@ import PhotoRoundCarousel from '@/app/kol-new/clinical-photos/components/PhotoRo
 import type { PhotoSlot } from '@/types/clinical';
 import { usePhotoManagement } from '@/app/kol-new/clinical-photos/hooks/usePhotoManagement';
 import { LoadingSpinner } from '@/components/ui/loading';
-import { useClinicalPhotos } from '@/lib/clinical-photos-convex';
+import { useClinicalPhotos } from '@/hooks/useClinicalCases';
 
 interface PhotoSectionProps {
   caseId: string;
@@ -12,7 +12,7 @@ interface PhotoSectionProps {
 }
 
 export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted, profileId }) => {
-  const { data: photos = [], isLoading: loading, refetch: loadPhotos } = useClinicalPhotos(caseId);
+  const { data: photos = [], isLoading: loading } = useClinicalPhotos(caseId);
   const { handlePhotoUpload, handlePhotoDelete } = usePhotoManagement(profileId);
 
   if (loading) {
@@ -26,13 +26,15 @@ export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted,
       isCompleted={isCompleted}
       onPhotoUpload={async (round, angle, file) => {
         await handlePhotoUpload(caseId, round, angle as 'front' | 'left' | 'right', file);
-        await loadPhotos();
+        // React Query의 캐시 무효화가 자동으로 처리됨
       }}
       onPhotoDelete={async photoId => {
         await handlePhotoDelete(String(photoId));
-        await loadPhotos();
+        // React Query의 캐시 무효화가 자동으로 처리됨
       }}
-      onPhotosRefresh={loadPhotos}
+      onPhotosRefresh={() => {
+        // React Query의 자동 무효화로 인해 별도 refetch 불필요
+      }}
     />
   );
 };

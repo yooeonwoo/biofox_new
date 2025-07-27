@@ -1,8 +1,8 @@
 import {
-  useUploadClinicalPhoto,
-  useDeleteClinicalPhoto,
-  useClinicalPhotos,
-} from '@/lib/clinical-photos-convex';
+  useUploadClinicalPhotoSupabase as useUploadClinicalPhoto,
+  useDeleteClinicalPhotoSupabase as useDeleteClinicalPhoto,
+  useClinicalPhotosSupabase as useClinicalPhotos,
+} from '@/lib/clinical-photos-supabase-hooks';
 
 /**
  * 사진 업로드 / 삭제 로직을 공통화한 훅 - Convex 기반 구현

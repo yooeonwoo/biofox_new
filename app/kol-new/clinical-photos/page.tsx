@@ -1,49 +1,62 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Plus } from 'lucide-react';
+
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingState } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
-  useClinicalCasesConvex,
-  useCustomerCasesConvex,
-  useCreateClinicalCaseConvex,
-} from '@/lib/clinical-photos-hooks';
+  useClinicalCasesSupabase,
+  useCreateClinicalCaseSupabase,
+  useUpdateClinicalCaseSupabase,
+  useDeleteClinicalCaseSupabase,
+} from '@/lib/clinical-photos-supabase-hooks';
+import { useCustomerCases } from '@/hooks/useClinicalCases';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { CaseCard } from './components/CaseCard';
 import { useAuth } from '@/hooks/useAuth';
-import type { ClinicalCase } from '@/types/clinical';
+import { toast } from 'sonner';
 
-interface KolInfo {
-  id: number;
-  name: string;
-  shopName: string;
-  email: string;
-  phone: string;
-  imageUrl?: string;
-  region?: string;
-}
-
-export default function ClinicalPhotosPage() {
+// ✅ 클라이언트 컴포넌트 분리
+function ClinicalPhotosContent() {
   const router = useRouter();
 
-  // 실제 인증 정보 사용
-  const { isAuthenticated, isLoading: authLoading, profile, role } = useAuth();
+  // 실제 인증 정보 사용 - Supabase user ID 직접 사용
+  const { isAuthenticated, isLoading: authLoading, profile, role, user } = useAuth();
   const [isKol, setIsKol] = useState<boolean | null>(null);
 
-  // Convex 훅 사용 - profile이 없으면 빈 결과 반환
-  const { data: allCases = [], isLoading: casesLoading } = useClinicalCasesConvex(
-    profile?._id,
+  // Supabase 사용자 ID 추출 (다른 페이지와 동일한 패턴)
+  const supabaseUserId = user?.id;
+
+  // ✅ 완전한 Supabase 마이그레이션: Supabase 훅 사용
+  const { data: allCases = [], isLoading: casesLoading } = useClinicalCasesSupabase(
+    isAuthenticated && supabaseUserId ? supabaseUserId : undefined, // 인증된 경우만 조회
     undefined
   );
-  const createCase = useCreateClinicalCaseConvex();
-  const { data: customerCases = [] } = useCustomerCasesConvex(profile?._id);
+  const createCase = useCreateClinicalCaseSupabase();
+  const updateCase = useUpdateClinicalCaseSupabase();
+  const deleteCase = useDeleteClinicalCaseSupabase();
+  const { data: customerCases = [] } = useCustomerCases(
+    isAuthenticated && supabaseUserId ? supabaseUserId : undefined // 인증된 경우만 조회
+  );
 
   // profile이 없을 때를 위한 early return 처리
-  const isProfileLoading = authLoading || !profile;
-  // 본인 케이스를 allCases에서 직접 찾기 (별도 state 사용하지 않음)
-  const personalCase = allCases.find(c => c.customerName?.trim() === '본인');
+  const isProfileLoading = !profile && authLoading;
+
+  // 본인 케이스를 allCases에서 찾기 - useMemo로 최적화
+  const personalCase = useMemo(
+    () => allCases.find((c: any) => c.name?.trim() === '본인'),
+    [allCases]
+  );
+
+  // ✅ 인증 체크 (다른 페이지와 동일한 패턴)
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/signin');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -52,6 +65,13 @@ export default function ClinicalPhotosPage() {
       setIsKol(userRole === 'kol' || userRole === 'admin' || userRole === 'test');
     }
   }, [authLoading, isAuthenticated, profile, role]);
+
+  // KOL이 아닌 경우 홈으로 리다이렉트
+  useEffect(() => {
+    if (!authLoading && isKol === false) {
+      router.push('/');
+    }
+  }, [authLoading, isKol, router]);
 
   // 개인 케이스 배열 형태로 변환 (기존 로직 호환성)
   const personalCases = personalCase ? [personalCase] : [];
@@ -63,118 +83,142 @@ export default function ClinicalPhotosPage() {
         )
       : 0;
 
-  const customerProgress =
-    customerCases.length > 0
-      ? Math.round(
-          (customerCases.filter(c => c.status === 'completed').length / customerCases.length) * 100
-        )
-      : 0;
+  const totalCases = customerCases.length;
+  const activeCases = customerCases.filter((c: any) => c.status === 'in_progress').length;
 
-  // 인증되지 않은 경우 로그인 페이지로 리다이렉트
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+  // ✅ 케이스 업데이트 핸들러 (실제 구현)
+  const handleCaseUpdate = (caseId: string, updates: any) => {
+    if (!supabaseUserId) {
+      toast.error('인증이 필요합니다.');
       router.push('/signin');
+      return;
     }
-  }, [authLoading, isAuthenticated, router]);
 
-  // KOL이 아닌 경우 홈으로 리다이렉트
-  useEffect(() => {
-    if (!authLoading && isKol === false) {
-      router.push('/');
+    updateCase.mutate({ caseId, updates });
+  };
+
+  // ✅ 케이스 삭제 핸들러 (실제 구현)
+  const handleCaseDelete = (caseId: string) => {
+    if (!supabaseUserId) {
+      toast.error('인증이 필요합니다.');
+      router.push('/signin');
+      return;
     }
-  }, [authLoading, isKol, router]);
+
+    if (confirm('정말로 이 케이스를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) {
+      deleteCase.mutate(caseId);
+    }
+  };
 
   if (isProfileLoading || isKol === null || casesLoading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">로딩 중...</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center text-muted-foreground">
-              임상사진 페이지를 준비하는 중입니다.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LoadingState title="임상사진 페이지를 준비하는 중입니다..." />;
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="mb-6">
-        <h1 className="text-lg font-bold sm:text-xl md:text-2xl">임상사진 관리</h1>
-        <p className="mt-1 text-sm text-muted-foreground">관리 전후 사진을 체계적으로 관리하세요</p>
-      </div>
+    <div className="container mx-auto space-y-6 p-6">
+      {/* 개인 케이스 섹션 */}
+      <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-100">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold text-blue-800">내 임상 진행상황</CardTitle>
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              진행률 {personalProgress}%
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {personalCase ? (
+            <CaseCard
+              type="personal"
+              case={personalCase as any} // ✅ 타입 호환성을 위한 assertion
+              editableName={false}
+              showDelete={false}
+              onUpdate={handleCaseUpdate}
+              profileId={supabaseUserId}
+            />
+          ) : (
+            <EmptyState
+              title="아직 내 케이스가 없습니다"
+              description="첫 번째 임상 케이스를 등록해보세요"
+              action={{
+                label: createCase.isPending ? '생성 중...' : '내 케이스 등록하기',
+                onClick: () => {
+                  if (!supabaseUserId) {
+                    router.push('/signin');
+                    return;
+                  }
+                  createCase.mutate({
+                    name: '본인',
+                    profile_id: supabaseUserId,
+                    concern_area: '전체적인 피부 관리',
+                    treatment_plan: '개인 맞춤 관리',
+                    status: 'in_progress',
+                    consent_status: 'pending',
+                    subject_type: 'self',
+                  });
+                },
+              }}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* 본인 임상 카드 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">본인 임상</CardTitle>
-            <CardDescription>내 관리 기록</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>진행률</span>
-                  <span className="font-medium">{casesLoading ? '-' : `${personalProgress}%`}</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-200">
-                  <div
-                    className="h-2 rounded-full bg-blue-600"
-                    style={{ width: `${personalProgress}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {casesLoading ? '로딩 중...' : `${personalCases.length}개 케이스`}
-                </p>
-              </div>
-              <Button asChild size="sm" className="w-full">
-                <Link href="/kol-new/clinical-photos/upload/personal">
-                  <Plus className="mr-2 h-4 w-4" />
-                  {personalCase ? '업로드하기' : '케이스 생성하기'}
-                </Link>
-              </Button>
+      {/* 고객 케이스 섹션 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold">고객 임상 관리</CardTitle>
+            <div className="flex gap-2">
+              <Badge variant="outline">전체 {totalCases}건</Badge>
+              <Badge variant="default" className="bg-green-600">
+                진행중 {activeCases}건
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* 고객 임상 카드 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">고객 임상</CardTitle>
-            <CardDescription>고객 관리 기록</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>진행률</span>
-                  <span className="font-medium">{casesLoading ? '-' : `${customerProgress}%`}</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-200">
-                  <div
-                    className="h-2 rounded-full bg-green-600"
-                    style={{ width: `${customerProgress}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {casesLoading ? '로딩 중...' : `${customerCases.length}개 케이스`}
-                </p>
-              </div>
-              <Button asChild size="sm" className="w-full">
-                <Link href="/kol-new/clinical-photos/upload/customer">
-                  <Plus className="mr-2 h-4 w-4" />
-                  업로드하기
-                </Link>
-              </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {customerCases.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {customerCases.map((caseData: any) => (
+                <CaseCard
+                  key={caseData._id}
+                  type="customer"
+                  case={caseData as any} // ✅ 타입 호환성을 위한 assertion
+                  editableName={true}
+                  showDelete={true}
+                  onUpdate={handleCaseUpdate}
+                  onDelete={handleCaseDelete}
+                  profileId={supabaseUserId}
+                />
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : (
+            <EmptyState
+              title="등록된 고객 케이스가 없습니다"
+              description="첫 번째 고객 케이스를 등록해보세요"
+              action={{
+                label: '고객 케이스 등록하기',
+                onClick: () => router.push('/kol-new/clinical-photos/upload/customer'),
+              }}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
+}
+
+// ✅ 메인 컴포넌트 - SSR Hydration 문제 해결을 위해 CSR로 전환
+export default function ClinicalPhotosPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <LoadingState title="페이지를 로드하는 중..." />;
+  }
+
+  return <ClinicalPhotosContent />;
 }
