@@ -498,15 +498,21 @@ export function useCustomerCaseHandlers({
 
   // 새 고객 추가 핸들러 - 개선된 에러 처리와 재시도
   const handleAddCustomer = useCallback(async () => {
+    console.log('[handleAddCustomer] 시작');
+
     if (!user) {
+      console.error('[handleAddCustomer] 사용자 없음');
       toast.error('로그인이 필요합니다.');
       return;
     }
 
     if (!profileId) {
+      console.error('[handleAddCustomer] 프로필 ID 없음');
       toast.error('프로필 정보를 찾을 수 없습니다.');
       return;
     }
+
+    console.log('[handleAddCustomer] 프로필 ID:', profileId);
 
     // 낙관적 업데이트 준비
     const tempId = `temp-${Date.now()}`;
@@ -552,6 +558,11 @@ export function useCustomerCaseHandlers({
     setCurrentRounds(prev => ({ ...prev, [tempId]: 1 }));
 
     try {
+      console.log('[handleAddCustomer] Convex mutation 호출 중...', {
+        customerName: '새 고객',
+        profileId: profileId,
+      });
+
       // 재시도 로직과 함께 Convex에 케이스 생성
       const newCase = await retry(
         async () =>
@@ -604,6 +615,8 @@ export function useCustomerCaseHandlers({
         }
       );
 
+      console.log('[handleAddCustomer] Convex mutation 성공:', newCase);
+
       // 성공 시 임시 ID를 실제 ID로 교체
       setCases(prev =>
         prev.map(c =>
@@ -619,7 +632,14 @@ export function useCustomerCaseHandlers({
 
       toast.success('새 고객이 추가되었습니다.');
     } catch (error) {
-      // 실패 시 낙관적 업데이트 롤백
+      console.error('[handleAddCustomer] 에러 발생:', error);
+      console.error('[handleAddCustomer] 에러 상세:', {
+        message: (error as any)?.message,
+        stack: (error as any)?.stack,
+        data: (error as any)?.data,
+      });
+
+      // 낙관적 업데이트 롤백
       setCases(prev => prev.filter(c => c.id !== tempId));
       setCurrentRounds(prev => {
         const newRounds = { ...prev };
@@ -627,18 +647,10 @@ export function useCustomerCaseHandlers({
         return newRounds;
       });
 
-      // 상세한 에러 로깅
-      console.error('케이스 생성 상세 에러:', {
-        error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        tempId,
-        userData: { customerName: '새 고객' },
-      });
-
-      showErrorToast(error, '새 고객 추가에 실패했습니다. 다시 시도해 주세요.');
+      // 사용자에게 구체적인 에러 메시지 표시
+      showErrorToast(error, '새 고객 추가에 실패했습니다.');
     }
-  }, [user, createCase, setCases, setCurrentRounds, profileId]);
+  }, [user, profileId, createCase, setCases, setCurrentRounds]);
 
   // 케이스 삭제 핸들러 - 개선된 낙관적 업데이트와 에러 처리
   const handleDeleteCase = useCallback(

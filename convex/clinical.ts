@@ -225,11 +225,15 @@ export const createClinicalCase = mutation({
   },
   handler: async (ctx, args) => {
     try {
+      console.log('[createClinicalCase] 시작:', { profileId: args.profileId, name: args.name });
+
       // 프로필 존재 확인
       const profile = await ctx.db.get(args.profileId);
       if (!profile) {
+        console.error('[createClinicalCase] 프로필을 찾을 수 없음:', args.profileId);
         throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
       }
+      console.log('[createClinicalCase] 프로필 확인 완료:', profile.name);
 
       // 입력 데이터 검증
       if (!args.name || args.name.trim().length < 2) {
@@ -243,8 +247,9 @@ export const createClinicalCase = mutation({
       const now = Date.now();
 
       // 임상 케이스 생성
+      console.log('[createClinicalCase] 케이스 데이터 생성 중...');
       const caseId = await ctx.db.insert('clinical_cases', {
-        shop_id: args.profileId,
+        shop_id: args.profileId, // KOL의 프로필 ID를 그대로 사용
         subject_type: args.subject_type,
         name: args.name.trim(),
         case_title: args.case_title,
@@ -269,8 +274,10 @@ export const createClinicalCase = mutation({
         updated_at: now,
         created_by: args.profileId,
       });
+      console.log('[createClinicalCase] 케이스 생성 완료:', caseId);
 
       // 감사 로그 생성
+      console.log('[createClinicalCase] 감사 로그 생성 중...');
       await createAuditLog(ctx, {
         tableName: 'clinical_cases',
         recordId: caseId,
@@ -289,9 +296,11 @@ export const createClinicalCase = mutation({
           timestamp: now,
         },
       });
+      console.log('[createClinicalCase] 감사 로그 생성 완료');
 
       // 관리자에게 알림 생성 (동의한 케이스의 경우)
       if (args.consent_status === 'consented') {
+        console.log('[createClinicalCase] 알림 생성 중...');
         await createNotification(ctx, {
           userId: args.profileId, // 향후 관리자 ID로 변경 필요
           type: 'clinical_progress',
@@ -301,12 +310,20 @@ export const createClinicalCase = mutation({
           relatedId: caseId,
           priority: 'normal',
         });
+        console.log('[createClinicalCase] 알림 생성 완료');
       }
 
       // 생성된 케이스 반환
+      console.log('[createClinicalCase] 케이스 조회 중...');
       const createdCase = await ctx.db.get(caseId);
+      console.log('[createClinicalCase] 성공적으로 완료:', {
+        caseId,
+        name: createdCase?.name,
+        shop_id: createdCase?.shop_id,
+      });
       return createdCase;
     } catch (error) {
+      console.error('[createClinicalCase] 에러 발생:', error);
       if (error instanceof ApiError) {
         throw error;
       }
