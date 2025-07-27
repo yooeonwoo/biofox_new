@@ -505,13 +505,13 @@ export function useCustomerCaseHandlers({
     const tempId = `temp-${Date.now()}`;
     const tempCase: ClinicalCase = {
       id: tempId,
-      customerName: '',
+      customerName: '새 고객', // 빈 문자열 대신 기본값 설정
       status: 'active',
       createdAt: new Date().toISOString(),
       consentReceived: false,
       photos: [],
       customerInfo: {
-        name: '',
+        name: '새 고객', // 빈 문자열 대신 기본값 설정
         age: undefined,
         gender: undefined,
         products: [],
@@ -549,7 +549,7 @@ export function useCustomerCaseHandlers({
       const newCase = await retry(
         async () =>
           createCase.mutateAsync({
-            customerName: '',
+            customerName: '새 고객', // 빈 문자열 대신 기본값 설정
             caseName: '새 고객 케이스',
             concernArea: '',
             treatmentPlan: '',
@@ -568,7 +568,7 @@ export function useCustomerCaseHandlers({
               skinEtc: false,
               // 기본 고객 정보
               customerInfo: {
-                name: '',
+                name: '새 고객', // 빈 문자열 대신 기본값 설정
                 age: undefined,
                 gender: undefined,
                 products: [],
@@ -595,7 +595,11 @@ export function useCustomerCaseHandlers({
       );
 
       // 성공 시 임시 ID를 실제 ID로 교체
-      setCases(prev => prev.map(c => (c.id === tempId ? { ...c, id: newCase.id } : c)));
+      setCases(prev =>
+        prev.map(c =>
+          c.id === tempId ? { ...c, id: newCase.id, customerName: newCase.customerName } : c
+        )
+      );
       setCurrentRounds(prev => {
         const newRounds = { ...prev };
         delete newRounds[tempId];
@@ -613,7 +617,16 @@ export function useCustomerCaseHandlers({
         return newRounds;
       });
 
-      showErrorToast(error, '새 고객 추가에 실패했습니다.');
+      // 상세한 에러 로깅
+      console.error('케이스 생성 상세 에러:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        tempId,
+        userData: { customerName: '새 고객' },
+      });
+
+      showErrorToast(error, '새 고객 추가에 실패했습니다. 다시 시도해 주세요.');
     }
   }, [user, createCase, setCases, setCurrentRounds]);
 
