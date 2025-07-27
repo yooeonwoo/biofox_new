@@ -224,11 +224,13 @@ export function useCustomerCaseHandlers({
   // 기본 고객 정보 업데이트 핸들러 - 개선된 검증과 에러 처리
   const handleBasicCustomerInfoUpdate = useCallback(
     (caseId: string, field: keyof CustomerInfo, value: any) => {
-      // 입력값 검증
-      const validationError = validateField(field === 'name' ? 'customerName' : field, value);
-      if (validationError) {
-        toast.error(validationError);
-        return;
+      // 입력값 검증 (빈 값은 허용하되, 유효하지 않은 값만 검증)
+      if (value && value.toString().trim()) {
+        const validationError = validateField(field === 'name' ? 'customerName' : field, value);
+        if (validationError && !validationError.includes('입력하세요')) {
+          toast.error(validationError);
+          return;
+        }
       }
 
       // 이전 값 저장 (롤백용)

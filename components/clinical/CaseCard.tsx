@@ -77,6 +77,8 @@ export const CaseCard: React.FC<CaseCardProps> = ({
     updateCaseCheckboxes,
   } = handlers;
 
+  const [localIsComposing, setLocalIsComposing] = React.useState(false);
+
   return (
     <motion.div
       key={case_.id}
@@ -346,13 +348,43 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                   <Input
                     id={`name-${case_.id}`}
                     value={case_.customerInfo.name}
-                    onChange={e =>
-                      handleBasicCustomerInfoUpdate(case_.id, { name: e.target.value })
-                    }
-                    onCompositionStart={() => setIsComposing(true)}
+                    onChange={e => {
+                      // 로컬 상태만 업데이트 (한글 조합 중에는 저장하지 않음)
+                      if (!localIsComposing) {
+                        setCases(prev =>
+                          prev.map(c =>
+                            c.id === case_.id
+                              ? { ...c, customerInfo: { ...c.customerInfo, name: e.target.value } }
+                              : c
+                          )
+                        );
+                      }
+                    }}
+                    onCompositionStart={() => {
+                      setLocalIsComposing(true);
+                      setIsComposing(true);
+                    }}
                     onCompositionEnd={e => {
+                      setLocalIsComposing(false);
                       setIsComposing(false);
-                      handleBasicCustomerInfoUpdate(case_.id, { name: e.currentTarget.value });
+                      // 한글 조합이 끝난 후 로컬 상태 업데이트
+                      setCases(prev =>
+                        prev.map(c =>
+                          c.id === case_.id
+                            ? {
+                                ...c,
+                                customerInfo: { ...c.customerInfo, name: e.currentTarget.value },
+                              }
+                            : c
+                        )
+                      );
+                    }}
+                    onBlur={e => {
+                      // 포커스를 잃을 때만 서버에 저장
+                      const value = e.target.value.trim();
+                      if (value || case_.customerInfo.name) {
+                        handleBasicCustomerInfoUpdate(case_.id, { name: value });
+                      }
                     }}
                     placeholder="고객 이름"
                     className="h-7 min-w-0 flex-1 border-gray-200 text-xs transition-all duration-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 xs:h-8 xs:text-sm sm:h-9"
@@ -395,11 +427,22 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                     id={`age-${case_.id}`}
                     type="number"
                     value={case_.customerInfo.age || ''}
-                    onChange={e =>
-                      handleBasicCustomerInfoUpdate(case_.id, {
-                        age: e.target.value ? parseInt(e.target.value) : undefined,
-                      })
-                    }
+                    onChange={e => {
+                      // 로컬 상태만 업데이트
+                      const value = e.target.value ? parseInt(e.target.value) : undefined;
+                      setCases(prev =>
+                        prev.map(c =>
+                          c.id === case_.id
+                            ? { ...c, customerInfo: { ...c.customerInfo, age: value } }
+                            : c
+                        )
+                      );
+                    }}
+                    onBlur={e => {
+                      // 포커스를 잃을 때만 서버에 저장
+                      const value = e.target.value ? parseInt(e.target.value) : undefined;
+                      handleBasicCustomerInfoUpdate(case_.id, { age: value });
+                    }}
                     placeholder="나이"
                     className="h-7 flex-1 border-gray-200 text-xs transition-all duration-200 focus:border-biofox-blue-violet focus:ring-1 focus:ring-biofox-blue-violet/30 xs:h-8 xs:text-sm sm:h-9"
                   />
@@ -688,6 +731,63 @@ export const CaseCard: React.FC<CaseCardProps> = ({
               <Textarea
                 value={case_.roundCustomerInfo[currentRounds[case_.id] || 1]?.memo || ''}
                 onChange={e => {
+                  // 로컬 상태만 업데이트 (한글 조합 중에는 저장하지 않음)
+                  if (!localIsComposing) {
+                    const currentRound = currentRounds[case_.id] || 1;
+                    const currentRoundInfo = case_.roundCustomerInfo[currentRound] || {
+                      products: [],
+                      skinTypes: [],
+                    };
+                    setCases(prev =>
+                      prev.map(c =>
+                        c.id === case_.id
+                          ? {
+                              ...c,
+                              roundCustomerInfo: {
+                                ...c.roundCustomerInfo,
+                                [currentRound]: {
+                                  ...currentRoundInfo,
+                                  memo: e.target.value,
+                                },
+                              },
+                            }
+                          : c
+                      )
+                    );
+                  }
+                }}
+                onCompositionStart={() => {
+                  setLocalIsComposing(true);
+                  setIsComposing(true);
+                }}
+                onCompositionEnd={e => {
+                  setLocalIsComposing(false);
+                  setIsComposing(false);
+                  // 한글 조합이 끝난 후 로컬 상태 업데이트
+                  const currentRound = currentRounds[case_.id] || 1;
+                  const currentRoundInfo = case_.roundCustomerInfo[currentRound] || {
+                    products: [],
+                    skinTypes: [],
+                  };
+                  setCases(prev =>
+                    prev.map(c =>
+                      c.id === case_.id
+                        ? {
+                            ...c,
+                            roundCustomerInfo: {
+                              ...c.roundCustomerInfo,
+                              [currentRound]: {
+                                ...currentRoundInfo,
+                                memo: e.currentTarget.value,
+                              },
+                            },
+                          }
+                        : c
+                    )
+                  );
+                }}
+                onBlur={e => {
+                  // 포커스를 잃을 때만 서버에 저장
                   const currentRound = currentRounds[case_.id] || 1;
                   handleRoundCustomerInfoUpdate(case_.id, currentRound, { memo: e.target.value });
                 }}
