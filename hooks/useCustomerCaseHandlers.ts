@@ -84,7 +84,11 @@ export function useCustomerCaseHandlers({
       try {
         // Convex에 상태 업데이트
         const convexStatus = status === 'active' ? 'in_progress' : 'completed';
-        await updateCaseStatus.mutateAsync({ caseId, status: convexStatus, profileId });
+        await updateCaseStatus.mutateAsync({
+          caseId: caseId as Id<'clinical_cases'>,
+          status: convexStatus,
+          profileId,
+        });
 
         // 로컬 상태 업데이트
         setCases(prev => prev.map(case_ => (case_.id === caseId ? { ...case_, status } : case_)));
@@ -595,36 +599,34 @@ export function useCustomerCaseHandlers({
       // 재시도 로직과 함께 Convex에 케이스 생성
       const newCase = await retry(
         async () =>
-          createCase.mutateAsync(
-            {
-              customerName: '새 고객', // 빈 문자열 대신 기본값 설정
-              caseName: '새 고객 케이스',
-              concernArea: '',
-              treatmentPlan: '',
-              consentReceived: false,
-              metadata: {
-                // 기본 고객 정보
-                customerInfo: {
-                  name: '새 고객', // 빈 문자열 대신 기본값 설정
-                  age: undefined,
-                  gender: undefined,
+          createCase.mutateAsync({
+            profileId, // profileId를 객체 내부로 이동
+            customerName: '새 고객', // 빈 문자열 대신 기본값 설정
+            caseName: '새 고객 케이스',
+            concernArea: '',
+            treatmentPlan: '',
+            consentReceived: false,
+            metadata: {
+              // 기본 고객 정보
+              customerInfo: {
+                name: '새 고객', // 빈 문자열 대신 기본값 설정
+                age: undefined,
+                gender: undefined,
+                products: [],
+                skinTypes: [],
+                memo: '',
+              },
+              roundCustomerInfo: {
+                1: {
+                  treatmentType: '',
                   products: [],
                   skinTypes: [],
                   memo: '',
-                },
-                roundCustomerInfo: {
-                  1: {
-                    treatmentType: '',
-                    products: [],
-                    skinTypes: [],
-                    memo: '',
-                    date: new Date().toISOString().split('T')[0],
-                  },
+                  date: new Date().toISOString().split('T')[0],
                 },
               },
             },
-            profileId // profileId 전달
-          ),
+          }),
         {
           maxAttempts: 3,
           onRetry: attempt => {
@@ -638,13 +640,13 @@ export function useCustomerCaseHandlers({
       // 성공 시 임시 ID를 실제 ID로 교체
       setCases(prev =>
         prev.map(c =>
-          c.id === tempId ? { ...c, id: newCase.id, customerName: newCase.customerName } : c
+          c.id === tempId ? { ...c, id: newCase!._id, customerName: newCase!.name } : c
         )
       );
       setCurrentRounds(prev => {
         const newRounds = { ...prev };
         delete newRounds[tempId];
-        newRounds[newCase.id] = 1;
+        newRounds[newCase!._id] = 1;
         return newRounds;
       });
 
@@ -689,13 +691,20 @@ export function useCustomerCaseHandlers({
 
       try {
         // 재시도 로직과 함께 Convex에서 삭제
-        await retry(async () => deleteCase.mutateAsync(caseId, profileId), {
-          maxAttempts: 2,
-          delay: 500,
-          onRetry: attempt => {
-            toast.loading(`케이스 삭제 중... (재시도 ${attempt}/2)`);
-          },
-        });
+        await retry(
+          async () =>
+            deleteCase.mutateAsync({
+              caseId: caseId as Id<'clinical_cases'>,
+              profileId,
+            }),
+          {
+            maxAttempts: 2,
+            delay: 500,
+            onRetry: attempt => {
+              toast.loading(`케이스 삭제 중... (재시도 ${attempt}/2)`);
+            },
+          }
+        );
 
         toast.success('케이스가 삭제되었습니다.');
       } catch (error) {

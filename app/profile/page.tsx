@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -71,7 +72,7 @@ function ProfileContent() {
 
     try {
       await updateProfile({
-        profileId: profile._id,
+        profileId: profile._id as Id<'profiles'>,
         name: data.display_name,
         shop_name: data.shop_name,
         region: data.region,

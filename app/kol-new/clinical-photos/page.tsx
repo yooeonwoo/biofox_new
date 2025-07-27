@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingState } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import {
   useClinicalCasesSupabase,
   useCreateClinicalCaseSupabase,
   useUpdateClinicalCaseSupabase,
   useDeleteClinicalCaseSupabase,
 } from '@/lib/clinical-photos-supabase-hooks';
-import { useCustomerCases } from '@/hooks/useClinicalCases';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CaseCard } from './components/CaseCard';
@@ -23,27 +24,36 @@ import { toast } from 'sonner';
 function ClinicalPhotosContent() {
   const router = useRouter();
 
-  // 실제 인증 정보 사용 - Supabase user ID 직접 사용
-  const { isAuthenticated, isLoading: authLoading, profile, role, user } = useAuth();
+  // 인증 정보 사용 - 표준 패턴 적용
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const [isKol, setIsKol] = useState<boolean | null>(null);
 
-  // Supabase 사용자 ID 추출 (다른 페이지와 동일한 패턴)
-  const supabaseUserId = user?.id;
+  // 이메일 기반 프로필 조회 (표준 패턴)
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    user?.email ? { email: user.email } : 'skip'
+  );
 
-  // ✅ 완전한 Supabase 마이그레이션: Supabase 훅 사용
+  // Supabase 쿼리 사용 - profile._id 기반
   const { data: allCases = [], isLoading: casesLoading } = useClinicalCasesSupabase(
-    isAuthenticated && supabaseUserId ? supabaseUserId : undefined, // 인증된 경우만 조회
+    profile?._id, // Convex profile ID를 Supabase에 전달
     undefined
   );
+
+  // Supabase 뮤테이션
   const createCase = useCreateClinicalCaseSupabase();
   const updateCase = useUpdateClinicalCaseSupabase();
   const deleteCase = useDeleteClinicalCaseSupabase();
-  const { data: customerCases = [] } = useCustomerCases(
-    isAuthenticated && supabaseUserId ? supabaseUserId : undefined // 인증된 경우만 조회
+
+  // 고객 케이스 필터링
+  const customerCases = useMemo(
+    () => allCases.filter((c: any) => c.subject_type === 'customer'),
+    [allCases]
   );
 
-  // profile이 없을 때를 위한 early return 처리
-  const isProfileLoading = !profile && authLoading;
+  // 로딩 상태 세분화
+  const isProfileLoading = profile === undefined && !authLoading;
+  const isDataLoading = casesLoading || isProfileLoading || !profile?._id;
 
   // 본인 케이스를 allCases에서 찾기 - useMemo로 최적화
   const personalCase = useMemo(
@@ -61,10 +71,10 @@ function ClinicalPhotosContent() {
   // 사용자 역할 확인
   useEffect(() => {
     if (!authLoading && isAuthenticated && profile) {
-      const userRole = profile.role || role;
-      setIsKol(userRole === 'kol' || userRole === 'admin' || userRole === 'test');
+      const userRole = profile.role;
+      setIsKol(userRole === 'kol' || userRole === 'admin');
     }
-  }, [authLoading, isAuthenticated, profile, role]);
+  }, [authLoading, isAuthenticated, profile]);
 
   // KOL이 아닌 경우 홈으로 리다이렉트
   useEffect(() => {
@@ -86,32 +96,48 @@ function ClinicalPhotosContent() {
   const totalCases = customerCases.length;
   const activeCases = customerCases.filter((c: any) => c.status === 'in_progress').length;
 
-  // ✅ 케이스 업데이트 핸들러 (실제 구현)
+  // 케이스 업데이트 핸들러
   const handleCaseUpdate = (caseId: string, updates: any) => {
-    if (!supabaseUserId) {
-      toast.error('인증이 필요합니다.');
-      router.push('/signin');
+    if (!profile?._id) {
+      toast.error('프로필을 찾을 수 없습니다.');
       return;
     }
 
     updateCase.mutate({ caseId, updates });
   };
 
-  // ✅ 케이스 삭제 핸들러 (실제 구현)
+  // 케이스 삭제 핸들러
   const handleCaseDelete = (caseId: string) => {
-    if (!supabaseUserId) {
-      toast.error('인증이 필요합니다.');
-      router.push('/signin');
+    if (!profile?._id) {
+      toast.error('프로필을 찾을 수 없습니다.');
       return;
     }
 
     if (confirm('정말로 이 케이스를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) {
-      deleteCase.mutate(caseId);
+      deleteCase.mutate({ caseId, profileId: profile._id });
     }
   };
 
-  if (isProfileLoading || isKol === null || casesLoading) {
-    return <LoadingState title="임상사진 페이지를 준비하는 중입니다..." />;
+  // 로딩 상태 처리
+  if (authLoading || isProfileLoading) {
+    return <LoadingState title="프로필을 불러오는 중입니다..." />;
+  }
+
+  // 프로필을 찾을 수 없는 경우
+  if (profile === null) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4 text-red-500">프로필을 찾을 수 없습니다.</p>
+          <p className="text-gray-500">관리자에게 문의하여 프로필을 생성해주세요.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 데이터 로딩 중
+  if (isDataLoading || isKol === null) {
+    return <LoadingState title="임상 데이터를 불러오는 중입니다..." />;
   }
 
   return (
@@ -134,7 +160,7 @@ function ClinicalPhotosContent() {
               editableName={false}
               showDelete={false}
               onUpdate={handleCaseUpdate}
-              profileId={supabaseUserId}
+              profileId={profile?._id}
             />
           ) : (
             <EmptyState
@@ -143,13 +169,13 @@ function ClinicalPhotosContent() {
               action={{
                 label: createCase.isPending ? '생성 중...' : '내 케이스 등록하기',
                 onClick: () => {
-                  if (!supabaseUserId) {
-                    router.push('/signin');
+                  if (!profile?._id) {
+                    toast.error('프로필을 찾을 수 없습니다.');
                     return;
                   }
                   createCase.mutate({
                     name: '본인',
-                    profile_id: supabaseUserId,
+                    profile_id: profile._id,
                     concern_area: '전체적인 피부 관리',
                     treatment_plan: '개인 맞춤 관리',
                     status: 'in_progress',
@@ -188,7 +214,7 @@ function ClinicalPhotosContent() {
                   showDelete={true}
                   onUpdate={handleCaseUpdate}
                   onDelete={handleCaseDelete}
-                  profileId={supabaseUserId}
+                  profileId={profile?._id}
                 />
               ))}
             </div>

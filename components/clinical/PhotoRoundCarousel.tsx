@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useUploadPhoto } from '@/hooks/useClinicalCases';
+import { useUploadClinicalPhotoConvex as useUploadPhoto } from '@/lib/clinical-photos-hooks';
 import { useCaseSerialQueues } from '@/hooks/useSerialQueue';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PhotoSlot } from '@/types/clinical';

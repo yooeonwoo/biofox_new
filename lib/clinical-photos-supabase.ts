@@ -26,8 +26,10 @@ const logSuccess = (operation: string, data?: any) => {
 // Convex 호환 Clinical Case 타입
 interface ConvexCompatibleCase {
   _id: string; // Supabase id → _id 변환
+  id: string; // 호환성을 위해 추가
   profile_id: string;
   name: string;
+  customerName: string; // 호환성을 위해 추가
   concern_area?: string;
   treatment_plan?: string;
   consent_status: 'no_consent' | 'consented' | 'pending';
@@ -53,6 +55,11 @@ interface ConvexCompatibleCase {
   skin_etc?: boolean;
   created_at: string;
   updated_at: string;
+  createdAt: string; // ClinicalCase 호환성
+  consentReceived: boolean; // ClinicalCase 호환성
+  photos: any[]; // ClinicalCase 호환성
+  customerInfo: any; // ClinicalCase 호환성
+  roundCustomerInfo: any; // ClinicalCase 호환성
   case_title?: string;
   treatment_item?: string;
   start_date?: string;
@@ -72,16 +79,18 @@ const transformCaseForConvex = (supabaseCase: any): ConvexCompatibleCase => {
   logSuccess('transformCaseForConvex', supabaseCase);
 
   return {
-    _id: supabaseCase.id,
-    profile_id: supabaseCase.profile_id,
-    name: supabaseCase.name,
+    _id: String(supabaseCase.id), // integer → string 변환
+    id: String(supabaseCase.id), // ClinicalCase 호환성
+    profile_id: supabaseCase.profile_id, // 뷰에서 제공
+    name: supabaseCase.customer_name, // ✅ DB 필드 매핑 수정
+    customerName: supabaseCase.customer_name, // ClinicalCase 호환성
     concern_area: supabaseCase.concern_area,
     treatment_plan: supabaseCase.treatment_plan,
-    consent_status: supabaseCase.consent_status || 'no_consent',
+    consent_status: supabaseCase.consent_received ? 'consented' : 'no_consent', // ✅ boolean → enum 변환
     consent_date: supabaseCase.consent_date,
     consent_image_url: supabaseCase.consent_image_url,
     status: supabaseCase.status || 'in_progress',
-    subject_type: supabaseCase.subject_type || 'customer',
+    subject_type: supabaseCase.customer_name === '본인' ? 'self' : 'customer', // ✅ 자동 판단
     metadata: supabaseCase.metadata || {},
     age: supabaseCase.age,
     gender: supabaseCase.gender,
@@ -100,13 +109,27 @@ const transformCaseForConvex = (supabaseCase: any): ConvexCompatibleCase => {
     skin_etc: supabaseCase.skin_etc || false,
     created_at: supabaseCase.created_at,
     updated_at: supabaseCase.updated_at,
-    case_title: supabaseCase.case_title,
+    createdAt: supabaseCase.created_at, // ClinicalCase 호환성
+    consentReceived: supabaseCase.consent_received || false, // ClinicalCase 호환성
+    photos: [], // ClinicalCase 호환성 - 나중에 채워짐
+    customerInfo: {
+      // ClinicalCase 호환성
+      name: supabaseCase.customer_name,
+      age: supabaseCase.age,
+      gender: supabaseCase.gender,
+      treatmentType: supabaseCase.treatment_item,
+      products: [],
+      skinTypes: [],
+      memo: supabaseCase.notes,
+    },
+    roundCustomerInfo: {}, // ClinicalCase 호환성
+    case_title: supabaseCase.case_name, // ✅ DB 필드 매핑 수정
     treatment_item: supabaseCase.treatment_item,
     start_date: supabaseCase.start_date,
     end_date: supabaseCase.end_date,
-    latest_session: supabaseCase.latest_session || 0,
+    latest_session: supabaseCase.total_sessions || 0, // ✅ 뷰에서 제공
     total_sessions: supabaseCase.total_sessions || 0,
-    photo_count: supabaseCase.photo_count || 0,
+    photo_count: supabaseCase.total_photos || 0, // ✅ 뷰에서 제공
     custom_fields: supabaseCase.custom_fields || {},
   };
 };
@@ -116,25 +139,30 @@ const transformPhotoSlot = (supabasePhoto: any): PhotoSlot => {
   logSuccess('transformPhotoSlot', supabasePhoto);
 
   return {
-    id: supabasePhoto.id,
-    roundDay: supabasePhoto.session_number || 1,
-    angle: mapPhotoType(supabasePhoto.photo_type),
-    imageUrl: supabasePhoto.storage_path,
-    url: supabasePhoto.storage_path,
-    session_number: supabasePhoto.session_number,
-    uploaded: !!supabasePhoto.storage_path,
-    photoId: supabasePhoto.id,
+    id: String(supabasePhoto.id), // ✅ integer → string 변환
+    roundDay: supabasePhoto.round_number || 1, // ✅ DB 필드명 매핑
+    angle: mapPhotoType(supabasePhoto.angle), // ✅ DB에서는 이미 'front', 'left', 'right' 사용
+    imageUrl: supabasePhoto.file_url, // ✅ DB 필드명 매핑
+    url: supabasePhoto.file_url,
+    session_number: supabasePhoto.round_number,
+    uploaded: !!supabasePhoto.file_url, // file_url이 있으면 업로드된 것
+    photoId: String(supabasePhoto.id),
   };
 };
 
-// photo_type 매핑 헬퍼
-const mapPhotoType = (photoType: string): 'front' | 'left' | 'right' => {
-  switch (photoType) {
+// photo_type 매핑 헬퍼 (✅ DB에서 이미 올바른 값 사용)
+const mapPhotoType = (angle: string): 'front' | 'left' | 'right' => {
+  // DB에서 이미 'front', 'left', 'right' 값을 사용하므로 직접 반환
+  if (angle === 'front' || angle === 'left' || angle === 'right') {
+    return angle as 'front' | 'left' | 'right';
+  }
+
+  // 예외적인 경우를 위한 fallback
+  switch (angle) {
     case 'left_side':
       return 'left';
     case 'right_side':
       return 'right';
-    case 'front':
     default:
       return 'front';
   }
@@ -145,30 +173,34 @@ const transformCreateCaseForSupabase = (convexData: any) => {
   logSuccess('transformCreateCaseForSupabase', convexData);
 
   return {
-    profile_id: convexData.profileId || convexData.profile_id,
-    name: convexData.customerName || convexData.name,
+    // ✅ profile_id → kol_id 변환 (실제 케이스 생성 시에는 kol.id가 필요)
+    // 주의: 이 함수는 실제로는 kol.id를 받아야 하므로 호출하는 곳에서 변환 필요
+    kol_id: convexData.kolId || convexData.kol_id, // kol.id 값이 필요
+    customer_name: convexData.customerName || convexData.name || convexData.customer_name, // ✅ DB 필드명 사용
+    case_name: convexData.caseName || convexData.case_title || convexData.case_name, // ✅ DB 필드명 사용
     concern_area: convexData.concernArea || convexData.concern_area,
     treatment_plan: convexData.treatmentPlan || convexData.treatment_plan,
-    consent_status: convexData.consentReceived ? 'consented' : 'no_consent',
-    subject_type: convexData.subject_type || 'customer',
+    consent_received: convexData.consentReceived || convexData.consent_status === 'consented', // ✅ enum → boolean 변환
+    consent_date: convexData.consent_date,
+    consent_image_url: convexData.consent_image_url,
+    status: convexData.status || 'active', // ✅ DB 기본값 사용
     age: convexData.age,
     gender: convexData.gender,
     marketing_consent: convexData.marketing_consent || false,
     notes: convexData.notes || '',
-    case_title: convexData.caseName || convexData.case_title,
     treatment_item: convexData.treatment_item,
     // 제품 선택들
-    cure_booster: convexData.cureBooster || false,
-    cure_mask: convexData.cureMask || false,
-    premium_mask: convexData.premiumMask || false,
-    all_in_one_serum: convexData.allInOneSerum || false,
+    cure_booster: convexData.cureBooster || convexData.cure_booster || false,
+    cure_mask: convexData.cureMask || convexData.cure_mask || false,
+    premium_mask: convexData.premiumMask || convexData.premium_mask || false,
+    all_in_one_serum: convexData.allInOneSerum || convexData.all_in_one_serum || false,
     // 피부타입들
-    skin_red_sensitive: convexData.skinRedSensitive || false,
-    skin_pigment: convexData.skinPigment || false,
-    skin_pore: convexData.skinPore || false,
-    skin_trouble: convexData.skinTrouble || false,
-    skin_wrinkle: convexData.skinWrinkle || false,
-    skin_etc: convexData.skinEtc || false,
+    skin_red_sensitive: convexData.skinRedSensitive || convexData.skin_red_sensitive || false,
+    skin_pigment: convexData.skinPigment || convexData.skin_pigment || false,
+    skin_pore: convexData.skinPore || convexData.skin_pore || false,
+    skin_trouble: convexData.skinTrouble || convexData.skin_trouble || false,
+    skin_wrinkle: convexData.skinWrinkle || convexData.skin_wrinkle || false,
+    skin_etc: convexData.skinEtc || convexData.skin_etc || false,
     metadata: convexData.metadata || {},
   };
 };
@@ -182,6 +214,36 @@ export {
   transformPhotoSlot,
   transformCreateCaseForSupabase,
 };
+
+// =================================
+// 유틸리티 함수들
+// =================================
+
+/**
+ * Supabase User ID로 KOL ID 조회
+ */
+export async function getKolIdByProfileId(profileId: string): Promise<number | null> {
+  try {
+    logSuccess('getKolIdByProfileId', { profileId });
+
+    const { data, error } = await supabase
+      .from('kols')
+      .select('id')
+      .eq('clerk_user_id', profileId)
+      .single();
+
+    if (error) {
+      console.warn('KOL not found for profile_id:', profileId, error);
+      return null;
+    }
+
+    logSuccess('getKolIdByProfileId result', data);
+    return data?.id || null;
+  } catch (error) {
+    console.error('getKolIdByProfileId error:', error);
+    return null;
+  }
+}
 
 // =================================
 // Clinical Cases 관리 함수들
@@ -252,7 +314,20 @@ export async function createClinicalCase(caseData: any) {
   try {
     logSuccess('createClinicalCase', caseData);
 
-    const supabaseData = transformCreateCaseForSupabase(caseData);
+    // ✅ profile_id를 kol_id로 변환
+    let kolId = caseData.kol_id;
+    if (!kolId && caseData.profile_id) {
+      kolId = await getKolIdByProfileId(caseData.profile_id);
+      if (!kolId) {
+        throw new Error(`KOL not found for profile_id: ${caseData.profile_id}`);
+      }
+    }
+
+    // 변환된 데이터에 kol_id 설정
+    const supabaseData = {
+      ...transformCreateCaseForSupabase(caseData),
+      kol_id: kolId,
+    };
 
     const { data, error } = await supabase
       .from('clinical_cases')
@@ -263,7 +338,10 @@ export async function createClinicalCase(caseData: any) {
     if (error) handleSupabaseError(error, 'createClinicalCase');
 
     logSuccess('createClinicalCase result', data);
-    return transformCaseForConvex(data);
+
+    // ✅ 통계 뷰에서 데이터 다시 조회 (profile_id 포함)
+    const fullCase = await getClinicalCase(String(data.id));
+    return fullCase || transformCaseForConvex(data);
   } catch (error) {
     handleSupabaseError(error, 'createClinicalCase');
     throw error;

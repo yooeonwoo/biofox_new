@@ -522,11 +522,10 @@ export function usePersonalCaseHandlers({
         consentReceived: false,
       };
 
-      const createdCase = await createCase.mutate(newCaseData, profileId as Id<'profiles'>);
-
-      if (!createdCase) {
-        throw new Error('케이스 생성에 실패했습니다.');
-      }
+      const createdCase = await createCase.mutateAsync({
+        ...newCaseData,
+        profileId: profileId as Id<'profiles'>,
+      });
 
       // 생성된 케이스를 상태에 반영
       setCases([createdCase]);

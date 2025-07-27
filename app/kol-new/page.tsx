@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 const formatToManUnit = (value: number): string => {
   if (value === 0) return '0원';
@@ -32,9 +34,15 @@ const formatToManUnit = (value: number): string => {
 };
 
 export default function KolNewPage() {
-  const { profile, isLoading: isAuthLoading, isAuthenticated } = useAuth();
-  const kolId = profile?._id;
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
 
+  // 이메일 기반 프로필 조회 (표준 패턴)
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    user?.email ? { email: user.email } : 'skip'
+  );
+
+  const kolId = profile?._id;
   const { data: dashboardData, isLoading, error, refetch } = useDashboardData(kolId);
 
   useEffect(() => {
@@ -43,7 +51,72 @@ export default function KolNewPage() {
     }
   }, [isAuthLoading, isAuthenticated]);
 
-  if (isAuthLoading || isLoading) {
+  // 로딩 상태 세분화
+  if (isAuthLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">인증 확인 중...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">사용자 정보를 확인하는 중입니다.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // 프로필 로딩 중
+  if (profile === undefined) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">프로필 로딩 중...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">프로필 정보를 불러오는 중입니다.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 프로필을 찾을 수 없는 경우
+  if (profile === null) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <div className="mb-2 flex items-center justify-center text-destructive">
+              <AlertTriangle className="mr-2 h-8 w-8" />
+              <CardTitle className="text-center text-destructive">
+                프로필을 찾을 수 없습니다
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">
+              관리자에게 문의하여 프로필을 생성해주세요.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button variant="default" onClick={() => redirect('/signin')} className="w-full">
+              로그인 페이지로 이동
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // 대시보드 데이터 로딩 중
+  if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -56,10 +129,6 @@ export default function KolNewPage() {
         </Card>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   if (error) {

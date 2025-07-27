@@ -146,8 +146,17 @@ export function useUpdateClinicalCaseStatusSupabase() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ caseId, status, notes }: { caseId: string; status: string; notes?: string }) =>
-      api.updateClinicalCaseStatus(caseId, status, notes),
+    mutationFn: ({
+      caseId,
+      status,
+      notes,
+      profileId,
+    }: {
+      caseId: string;
+      status: string;
+      notes?: string;
+      profileId?: string;
+    }) => api.updateClinicalCaseStatus(caseId, status, notes),
     onSuccess: (data, { caseId }) => {
       queryClient.setQueryData(['clinical-case-supabase', caseId], data);
       queryClient.invalidateQueries({ queryKey: ['clinical-cases-supabase'] });
@@ -169,8 +178,9 @@ export function useDeleteClinicalCaseSupabase() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: api.deleteClinicalCase,
-    onSuccess: (_, caseId) => {
+    mutationFn: ({ caseId, profileId }: { caseId: string; profileId?: string }) =>
+      api.deleteClinicalCase(caseId),
+    onSuccess: (_, { caseId }) => {
       // 해당 케이스 캐시 제거
       queryClient.removeQueries({ queryKey: ['clinical-case-supabase', caseId] });
       queryClient.removeQueries({ queryKey: ['clinical-photos-supabase', caseId] });
@@ -228,7 +238,7 @@ export function useUploadClinicalPhotoSupabase() {
         }
 
         // Step 3: URL에서 파일 경로 추출
-        const filePath = uploadUrl.split('?')[0].split('/').pop() || '';
+        const filePath = uploadUrl?.split('?')[0]?.split('/')?.pop() || '';
 
         // Step 4: 메타데이터 저장
         return api.saveClinicalPhoto({

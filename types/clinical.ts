@@ -51,7 +51,13 @@ export interface RoundCustomerInfo {
 }
 
 // 케이스 상태 타입
-export type CaseStatus = 'active' | 'completed' | 'archived' | 'cancelled';
+export type CaseStatus =
+  | 'active'
+  | 'completed'
+  | 'archived'
+  | 'cancelled'
+  | 'in_progress'
+  | 'paused';
 
 // 사진 슬롯 타입
 export interface PhotoSlot {
@@ -87,6 +93,20 @@ export interface ClinicalCase {
   treatmentPlan?: string; // 치료 계획
   concernArea?: string; // 관심 부위
   caseTitle?: string; // 케이스 제목
+
+  // 제품 사용 체크박스
+  cureBooster?: boolean;
+  cureMask?: boolean;
+  premiumMask?: boolean;
+  allInOneSerum?: boolean;
+
+  // 피부 타입 체크박스
+  skinRedSensitive?: boolean;
+  skinPigment?: boolean;
+  skinPore?: boolean;
+  skinTrouble?: boolean;
+  skinWrinkle?: boolean;
+  skinEtc?: boolean;
 }
 
 // UI용 Clinical Case 타입 (Convex 데이터 구조)

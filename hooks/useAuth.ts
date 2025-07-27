@@ -21,10 +21,14 @@ type UserRole =
  */
 interface Profile {
   id: string;
+  _id?: string; // Convex ID
   userId?: string;
   supabaseUserId?: string;
   email: string;
   name: string;
+  display_name?: string; // 표시 이름
+  bio?: string; // 자기소개
+  image?: string; // 프로필 이미지
   role: UserRole;
   status: 'pending' | 'approved' | 'rejected';
   shop_name: string;

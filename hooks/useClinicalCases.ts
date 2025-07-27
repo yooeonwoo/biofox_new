@@ -153,7 +153,7 @@ export function useDeleteClinicalCase() {
   const deleteCase = useCallback(
     async (caseId: string, profileId?: string) => {
       try {
-        return await mutation.mutateAsync(caseId);
+        return await mutation.mutateAsync({ caseId, profileId });
       } catch (error) {
         console.error('Case deletion error:', error);
         throw error;

@@ -14,7 +14,11 @@ import KolFooter from '../../../components/layout/KolFooter';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DialogTitle } from '@/components/ui/dialog';
 import KolMobileMenu from '../../../components/layout/KolMobileMenu';
-import { useAuth } from '@/hooks/useAuth';
+import { useCurrentProfile } from '@/hooks/useCurrentProfile';
+import {
+  useClinicalCasesSupabase,
+  useCreateClinicalCaseSupabase,
+} from '@/lib/clinical-photos-supabase-hooks';
 
 interface FormDataState {
   customerName: string;
@@ -24,10 +28,9 @@ interface FormDataState {
 }
 
 export default function ClinicalPhotosUploadPage() {
-  const { user, profile, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { profile, profileId, isLoading, isAuthenticated } = useCurrentProfile();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [existingCases, setExistingCases] = useState<any[]>([]);
   const [formData, setFormData] = useState<FormDataState>({
     customerName: '',
     caseName: '',
@@ -35,47 +38,22 @@ export default function ClinicalPhotosUploadPage() {
     consentDate: '',
   });
 
-  useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      redirect('/signin');
-    }
-  }, [isAuthLoading, isAuthenticated]);
+  // Supabase로 케이스 조회
+  const { data: existingCases = [] } = useClinicalCasesSupabase(profileId);
+  const createCase = useCreateClinicalCaseSupabase();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const fetchExistingCases = async () => {
-        try {
-          const dummyCases = [
-            {
-              id: 1,
-              customerName: '김미영 고객님',
-              caseName: '보톡스 이마',
-              status: 'active',
-              createdAt: '2024-01-10T09:00:00.000Z',
-            },
-            {
-              id: 2,
-              customerName: '이정희 고객님',
-              caseName: '필러 팔자주름',
-              status: 'completed',
-              createdAt: '2024-01-05T14:30:00.000Z',
-            },
-            {
-              id: 3,
-              customerName: '박소연 고객님',
-              caseName: '리프팅 시술',
-              status: 'active',
-              createdAt: '2024-01-03T11:00:00.000Z',
-            },
-          ];
-          setExistingCases(dummyCases);
-        } catch (error) {
-          console.error('기존 케이스 로드 실패:', error);
-        }
-      };
-      fetchExistingCases();
+    if (!isLoading && !isAuthenticated) {
+      redirect('/signin');
     }
-  }, [isAuthenticated]);
+  }, [isLoading, isAuthenticated]);
+
+  // 사용자 역할 확인
+  useEffect(() => {
+    if (!isLoading && profile && profile.role !== 'kol' && profile.role !== 'admin') {
+      router.push('/');
+    }
+  }, [isLoading, profile, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -104,9 +82,22 @@ export default function ClinicalPhotosUploadPage() {
   };
 
   const handleCreateCase = async () => {
+    if (!profileId) {
+      alert('프로필을 찾을 수 없습니다.');
+      return;
+    }
+
     try {
-      console.log('케이스 생성 (더미):', formData);
-      alert('케이스가 성공적으로 생성되었습니다! (더미)');
+      await createCase.mutateAsync({
+        name: formData.customerName,
+        profile_id: profileId,
+        case_name: formData.caseName,
+        consent_received: formData.consentReceived,
+        consent_date: formData.consentDate,
+        status: 'active',
+        subject_type: formData.customerName === '본인' ? 'self' : 'customer',
+      });
+      alert('케이스가 성공적으로 생성되었습니다!');
       setFormData({ customerName: '', caseName: '', consentReceived: false, consentDate: '' });
       router.push('/kol-new/clinical-photos/upload/customer');
     } catch (error) {
@@ -142,15 +133,36 @@ export default function ClinicalPhotosUploadPage() {
     }
   }, []);
 
-  if (isAuthLoading) {
+  // 로딩 상태 처리
+  if (isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center">로딩 중...</CardTitle>
+            <CardTitle className="text-center">프로필 로딩 중...</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center text-muted-foreground">업로드 페이지를 준비하는 중입니다.</p>
+            <p className="text-center text-muted-foreground">사용자 정보를 확인하는 중입니다.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 프로필을 찾을 수 없는 경우
+  if (profile === null) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center text-destructive">
+              프로필을 찾을 수 없습니다
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">
+              관리자에게 문의하여 프로필을 생성해주세요.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -304,16 +316,21 @@ export default function ClinicalPhotosUploadPage() {
               <CardContent>
                 {existingCases.length > 0 ? (
                   <div className="space-y-3">
-                    {existingCases.map(case_ => (
+                    {existingCases.map((case_: any) => (
                       <div
-                        key={case_.id}
+                        key={case_._id || case_.id}
                         className="flex items-center justify-between rounded-lg border p-3 hover:bg-gray-50"
                       >
                         <div className="flex-1">
-                          <h4 className="font-medium">{case_.customerName}</h4>
-                          <p className="text-sm text-gray-500">{case_.caseName || '시술명 없음'}</p>
+                          <h4 className="font-medium">{case_.name || case_.customerName}</h4>
+                          <p className="text-sm text-gray-500">
+                            {case_.case_title || case_.caseName || '시술명 없음'}
+                          </p>
                           <p className="text-xs text-gray-400">
-                            생성일: {new Date(case_.createdAt).toLocaleDateString('ko-KR')}
+                            생성일:{' '}
+                            {new Date(case_.created_at || case_.createdAt).toLocaleDateString(
+                              'ko-KR'
+                            )}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -379,9 +396,9 @@ export default function ClinicalPhotosUploadPage() {
           <KolMobileMenu
             isOpen={mobileMenuOpen}
             onClose={() => setMobileMenuOpen(false)}
-            userName={profile?.name || user?.email || 'KOL'}
+            userName={profile?.name || 'KOL'}
             shopName={'임상사진 업로드'}
-            userImage={user?.user_metadata?.avatar_url}
+            userImage={undefined}
             onSignOut={() => router.push('/api/auth/signout')}
           />
         </SheetContent>

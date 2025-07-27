@@ -36,7 +36,7 @@ export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted 
   return (
     <PhotoRoundCarousel
       caseId={caseId}
-      photos={photos}
+      photos={photos || []}
       isCompleted={isCompleted}
       onPhotoUpload={async (round, angle, file) => {
         await uploadPhoto.mutateAsync({
@@ -50,7 +50,7 @@ export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted 
       }}
       onPhotoDelete={async (round, angle) => {
         // 해당 사진 ID 찾기
-        const photo = photos.find(p => p.roundDay === round && p.angle === angle);
+        const photo = photos?.find(p => p.roundDay === round && p.angle === angle);
         if (photo?.photoId) {
           await deletePhoto.mutateAsync(photo.photoId);
         }

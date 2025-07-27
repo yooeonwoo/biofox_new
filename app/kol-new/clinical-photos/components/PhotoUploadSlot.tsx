@@ -274,9 +274,10 @@ const PhotoUploadSlot: React.FC<PhotoUploadSlotProps> = ({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={async e => await handleFileSelect(e.target.files)}
+        aria-label={`${getAngleName(angle)} 사진 업로드`}
+        title={`${getAngleName(angle)} 사진 선택`}
       />
     </div>
   );
