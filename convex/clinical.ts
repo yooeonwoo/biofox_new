@@ -155,11 +155,19 @@ export const listClinicalCases = query({
 export const getClinicalCase = query({
   args: {
     caseId: v.id('clinical_cases'),
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
+      // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
+      let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
+      if (args.profileId) {
+        const profile = await ctx.db.get(args.profileId);
+        currentUser = profile;
+      } else {
+        currentUser = await getCurrentUser(ctx);
+      }
+
       if (!currentUser) {
         throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
       }
@@ -356,13 +364,27 @@ export const updateClinicalCaseStatus = mutation({
       v.literal('cancelled')
     ),
     notes: v.optional(v.string()),
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
-      if (!currentUser) {
-        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
+      let currentUser: { _id: Id<'profiles'>; role: string };
+      if (args.profileId) {
+        const profile = await ctx.db.get(args.profileId);
+        if (!profile) {
+          throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
+        }
+        currentUser = profile;
+      } else {
+        const user = await getCurrentUser(ctx);
+        if (!user) {
+          throw new ApiError(
+            ERROR_CODES.UNAUTHORIZED,
+            'User not authenticated or profile not found'
+          );
+        }
+        currentUser = user;
       }
 
       // 케이스 존재 및 권한 확인
@@ -428,13 +450,27 @@ export const updateClinicalCaseStatus = mutation({
 export const deleteClinicalCase = mutation({
   args: {
     caseId: v.id('clinical_cases'),
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
-      if (!currentUser) {
-        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
+      let currentUser: { _id: Id<'profiles'>; role: string };
+      if (args.profileId) {
+        const profile = await ctx.db.get(args.profileId);
+        if (!profile) {
+          throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
+        }
+        currentUser = profile;
+      } else {
+        const user = await getCurrentUser(ctx);
+        if (!user) {
+          throw new ApiError(
+            ERROR_CODES.UNAUTHORIZED,
+            'User not authenticated or profile not found'
+          );
+        }
+        currentUser = user;
       }
 
       // 케이스 존재 및 권한 확인
@@ -534,13 +570,27 @@ export const updateClinicalCase = mutation({
       tags: v.optional(v.array(v.string())),
       metadata: v.optional(v.any()),
     }),
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
-      if (!currentUser) {
-        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
+      let currentUser: { _id: Id<'profiles'>; role: string };
+      if (args.profileId) {
+        const profile = await ctx.db.get(args.profileId);
+        if (!profile) {
+          throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
+        }
+        currentUser = profile;
+      } else {
+        const user = await getCurrentUser(ctx);
+        if (!user) {
+          throw new ApiError(
+            ERROR_CODES.UNAUTHORIZED,
+            'User not authenticated or profile not found'
+          );
+        }
+        currentUser = user;
       }
 
       // 케이스 존재 및 권한 확인
@@ -600,13 +650,27 @@ export const saveRoundCustomerInfo = mutation({
       skinTypes: v.optional(v.array(v.string())),
       memo: v.optional(v.string()),
     }),
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
-      if (!currentUser) {
-        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
+      let currentUser: { _id: Id<'profiles'>; role: string };
+      if (args.profileId) {
+        const profile = await ctx.db.get(args.profileId);
+        if (!profile) {
+          throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
+        }
+        currentUser = profile;
+      } else {
+        const user = await getCurrentUser(ctx);
+        if (!user) {
+          throw new ApiError(
+            ERROR_CODES.UNAUTHORIZED,
+            'User not authenticated or profile not found'
+          );
+        }
+        currentUser = user;
       }
 
       // 케이스 존재 및 권한 확인
@@ -650,11 +714,19 @@ export const saveRoundCustomerInfo = mutation({
 export const getRoundCustomerInfo = query({
   args: {
     caseId: v.id('clinical_cases'),
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
+      // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
+      let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
+      if (args.profileId) {
+        const profile = await ctx.db.get(args.profileId);
+        currentUser = profile;
+      } else {
+        currentUser = await getCurrentUser(ctx);
+      }
+
       if (!currentUser) {
         return [];
       }
@@ -721,11 +793,20 @@ export const getRoundCustomerInfo = query({
  * 임상 케이스 통계 조회
  */
 export const getClinicalCaseStats = query({
-  args: {},
-  handler: async ctx => {
+  args: {
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
+  },
+  handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
+      // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
+      let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
+      if (args.profileId) {
+        const profile = await ctx.db.get(args.profileId);
+        currentUser = profile;
+      } else {
+        currentUser = await getCurrentUser(ctx);
+      }
+
       if (!currentUser) {
         // 데이터가 없는 것으로 처리
         return {

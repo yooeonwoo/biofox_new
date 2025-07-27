@@ -49,9 +49,16 @@ export const saveClinicalPhoto = mutation({
     profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) {
-      throw new Error('User not authenticated');
+    // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
+    let userId: Id<'profiles'>;
+    if (args.profileId) {
+      userId = args.profileId;
+    } else {
+      const user = await getCurrentUser(ctx);
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      userId = user._id;
     }
 
     // 기존 같은 세션/타입의 사진이 있는지 확인
@@ -84,7 +91,7 @@ export const saveClinicalPhoto = mutation({
       metadata: args.metadata,
       upload_date: Date.now(),
       created_at: Date.now(),
-      uploaded_by: user._id,
+      uploaded_by: userId,
     });
 
     return photoId;
@@ -102,22 +109,30 @@ export const saveConsentFile = mutation({
     file_size: v.optional(v.number()),
     file_type: v.optional(v.string()),
     metadata: v.optional(v.any()),
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
-    // 사용자 인증 확인
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('Unauthorized: Must be logged in');
-    }
+    // profileId가 제공되면 사용, 아니면 현재 사용자 프로필 조회
+    let userId: Id<'profiles'>;
+    if (args.profileId) {
+      userId = args.profileId;
+    } else {
+      // 사용자 인증 확인
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        throw new Error('Unauthorized: Must be logged in');
+      }
 
-    // 현재 사용자 프로필 조회
-    const userProfile = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', identity.subject as Id<'users'>))
-      .first();
+      // 현재 사용자 프로필 조회
+      const userProfile = await ctx.db
+        .query('profiles')
+        .withIndex('by_userId', q => q.eq('userId', identity.subject as Id<'users'>))
+        .first();
 
-    if (!userProfile) {
-      throw new Error('User profile not found');
+      if (!userProfile) {
+        throw new Error('User profile not found');
+      }
+      userId = userProfile._id;
     }
 
     // 기존 동의서 파일이 있는지 확인
@@ -149,7 +164,7 @@ export const saveConsentFile = mutation({
       metadata: args.metadata,
       upload_date: Date.now(),
       created_at: Date.now(),
-      uploaded_by: userProfile._id,
+      uploaded_by: userId,
     });
 
     return consentId;
