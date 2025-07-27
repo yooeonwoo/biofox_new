@@ -21,6 +21,7 @@ interface ClinicalPhotoModalProps {
   open: boolean;
   onClose: () => void;
   onUpdate?: () => void;
+  profileId?: string;
 }
 
 interface Photo {
@@ -40,6 +41,7 @@ export function ClinicalPhotoModal({
   open,
   onClose,
   onUpdate,
+  profileId,
 }: ClinicalPhotoModalProps) {
   const [uploading, setUploading] = useState(false);
   const [activeSession, setActiveSession] = useState(0);
@@ -126,6 +128,7 @@ export function ClinicalPhotoModal({
           session_number: activeSession,
           photo_type: photoType as 'front' | 'left_side' | 'right_side',
           file_size: file.size,
+          profileId: profileId as Id<'profiles'> | undefined,
         });
 
         console.log('Clinical photo metadata saved');
@@ -213,6 +216,7 @@ export function ClinicalPhotoModal({
           file_name: file.name,
           file_size: file.size,
           file_type: file.type,
+          profileId: profileId as Id<'profiles'> | undefined,
         });
 
         console.log('Consent file metadata saved');

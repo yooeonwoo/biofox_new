@@ -20,6 +20,7 @@ interface PhotoUploaderProps {
   className?: string;
   disabled?: boolean;
   maxSizeMB?: number;
+  profileId?: string;
 }
 
 export function PhotoUploader({
@@ -30,6 +31,7 @@ export function PhotoUploader({
   className = '',
   disabled = false,
   maxSizeMB = 20,
+  profileId,
 }: PhotoUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -141,6 +143,7 @@ export function PhotoUploader({
               session_number: parseInt(roundId, 10),
               photo_type: photoType,
               file_size: file.size,
+              profileId: profileId as Id<'profiles'> | undefined,
             });
 
             console.log('Clinical photo metadata saved:', saveResult);

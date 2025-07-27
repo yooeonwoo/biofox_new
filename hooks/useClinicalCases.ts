@@ -171,11 +171,13 @@ export function useUploadPhoto() {
       sessionNumber,
       photoType,
       file,
+      profileId,
     }: {
       caseId: Id<'clinical_cases'>;
       sessionNumber: number;
       photoType: 'front' | 'left' | 'right' | 'close_up' | 'etc';
       file: File;
+      profileId?: Id<'profiles'>;
     }) => {
       try {
         // Step 1: Generate secure upload URL
@@ -202,6 +204,7 @@ export function useUploadPhoto() {
           photo_type: photoType,
           file_size: file.size,
           metadata: { fileName: file.name, mimeType: file.type },
+          profileId,
         } as any);
 
         toast.success('사진이 성공적으로 업로드되었습니다.');
@@ -252,7 +255,15 @@ export function useUploadConsent() {
   const saveConsentFile = useMutation(api.fileStorage.saveConsentFile);
 
   const mutate = useCallback(
-    async ({ caseId, file }: { caseId: Id<'clinical_cases'>; file: File }) => {
+    async ({
+      caseId,
+      file,
+      profileId,
+    }: {
+      caseId: Id<'clinical_cases'>;
+      file: File;
+      profileId?: Id<'profiles'>;
+    }) => {
       try {
         // Step 1: Generate secure upload URL
         const uploadUrl = await generateUploadUrl({});
@@ -277,6 +288,7 @@ export function useUploadConsent() {
           file_name: file.name,
           file_size: file.size,
           file_type: file.type,
+          profileId,
         });
 
         toast.success('동의서가 성공적으로 업로드되었습니다.');

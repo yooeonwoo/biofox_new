@@ -18,6 +18,7 @@ interface ConsentUploaderProps {
   onUploaded?: () => void;
   disabled?: boolean;
   className?: string;
+  profileId?: string;
 }
 
 export function ConsentUploader({
@@ -26,6 +27,7 @@ export function ConsentUploader({
   onUploaded,
   disabled = false,
   className = '',
+  profileId,
 }: ConsentUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -117,6 +119,7 @@ export function ConsentUploader({
               file_name: file.name,
               file_size: file.size,
               file_type: file.type,
+              profileId: profileId as Id<'profiles'> | undefined,
             });
 
             console.log('Consent file metadata saved:', saveResult);
