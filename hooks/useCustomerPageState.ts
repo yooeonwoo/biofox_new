@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useClinicalCasesConvex } from '@/lib/clinical-photos-hooks';
-import { useCasesWithRoundInfo } from './useCasesWithRoundInfo';
+import { enrichCasesWithRoundInfo } from './useCasesWithRoundInfo';
 import type { ClinicalCase } from '@/types/clinical';
 
 export const useCustomerPageState = () => {
@@ -36,14 +36,14 @@ export const useCustomerPageState = () => {
   // Convex 훅으로 케이스 데이터 로드
   const { data: convexCases = [], isLoading: convexCasesLoading } = useClinicalCasesConvex();
 
-  // 고객 케이스만 필터링 (본인 제외)
-  const customerCases = convexCases.filter(
-    case_ =>
-      case_.customerName?.trim().toLowerCase() !== '본인' && !case_.customerName?.includes('본인')
-  );
-
-  // 라운드 정보와 통합된 케이스 데이터
-  const cases = useCasesWithRoundInfo(customerCases);
+  // 고객 케이스만 필터링 (본인 제외) 및 라운드 정보 통합
+  const cases = useMemo(() => {
+    const customerCases = convexCases.filter(
+      case_ =>
+        case_.customerName?.trim().toLowerCase() !== '본인' && !case_.customerName?.includes('본인')
+    );
+    return enrichCasesWithRoundInfo(customerCases);
+  }, [convexCases]);
 
   // 사용자 인증 확인 - 실제 인증 정보 사용
   useEffect(() => {
