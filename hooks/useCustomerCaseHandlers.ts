@@ -3,7 +3,6 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 import type { ClinicalCase, CustomerInfo, RoundCustomerInfo, PhotoSlot } from '@/types/clinical';
 import {
   useCreateClinicalCaseConvex,
@@ -11,14 +10,13 @@ import {
   useDeleteClinicalCaseConvex,
   useUploadClinicalPhotoConvex,
   useDeleteClinicalPhotoConvex,
+  useUpdateClinicalCaseConvex,
+  useSaveRoundCustomerInfoConvex,
 } from '@/lib/clinical-photos-hooks';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { retry, OptimisticUpdate, showErrorToast } from '@/lib/utils/error-handling';
 import { validateField, isCaseDataComplete } from '@/lib/utils/validation';
 import { useConcurrentModificationDetection } from '@/hooks/useConcurrentModificationDetection';
-// toConvexId 제거 - string ID를 직접 사용
 
 interface UseCustomerCaseHandlersParams {
   user: any;
@@ -55,7 +53,6 @@ export function useCustomerCaseHandlers({
   profileId,
 }: UseCustomerCaseHandlersParams) {
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   // Convex mutations
   const createCase = useCreateClinicalCaseConvex();
@@ -63,10 +60,8 @@ export function useCustomerCaseHandlers({
   const deleteCase = useDeleteClinicalCaseConvex();
   const uploadPhoto = useUploadClinicalPhotoConvex();
   const deletePhoto = useDeleteClinicalPhotoConvex();
-
-  // 추가 mutation (나중에 구현 필요)
-  const updateCaseFields = useMutation(api.clinical.updateClinicalCase);
-  const saveRoundInfo = useMutation(api.clinical.saveRoundCustomerInfo);
+  const updateCaseFields = useUpdateClinicalCaseConvex();
+  const saveRoundInfo = useSaveRoundCustomerInfoConvex();
 
   // 로그아웃 함수
   const handleSignOut = useCallback(async () => {
@@ -123,7 +118,7 @@ export function useCustomerCaseHandlers({
         // Convex에 상태 업데이트
         markSaving(caseId);
         try {
-          await updateCaseFields({
+          await updateCaseFields.mutateAsync({
             caseId: caseId as Id<'clinical_cases'>,
             updates: {
               consent_status: consentReceived ? 'consented' : 'no_consent',
@@ -308,7 +303,7 @@ export function useCustomerCaseHandlers({
             // 재시도 로직과 함께 Convex에 업데이트
             await retry(
               async () =>
-                updateCaseFields({
+                updateCaseFields.mutateAsync({
                   caseId: caseId as Id<'clinical_cases'>,
                   updates: {
                     name: field === 'name' ? value : undefined,
@@ -418,7 +413,7 @@ export function useCustomerCaseHandlers({
               };
 
               // saveRoundInfo mutation 사용하여 라운드별 정보 저장
-              await saveRoundInfo({
+              await saveRoundInfo.mutateAsync({
                 caseId: caseId as Id<'clinical_cases'>,
                 roundNumber: roundNumber,
                 info: {
@@ -506,7 +501,7 @@ export function useCustomerCaseHandlers({
             ...filteredCheckboxes,
           };
 
-          await updateCaseFields({
+          await updateCaseFields.mutateAsync({
             caseId: caseId as Id<'clinical_cases'>,
             updates: {
               metadata: updatedMetadata,

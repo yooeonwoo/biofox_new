@@ -7,7 +7,13 @@ export type CaseStatus = 'active' | 'completed' | 'archived';
 // 표준 타입을 직접 사용
 import type { ClinicalCase as BaseClinicalCase } from '@/types/clinical';
 
-export type ClinicalCase = BaseClinicalCase;
+export interface ClinicalCase extends BaseClinicalCase {
+  id: string;
+  createdAt: string;
+  is_personal: boolean;
+  photo_count: number;
+  total_sessions: number;
+}
 
 // CaseCard 컴포넌트에서 사용할 공통 props 타입 정의
 export interface CaseCardProps {

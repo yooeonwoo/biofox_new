@@ -17,7 +17,6 @@ export const CaseCard: React.FC<CaseCardProps> = ({
   showNewBadge = false,
   onUpdate,
   onDelete,
-  profileId,
 }) => {
   return (
     <Card
@@ -31,7 +30,6 @@ export const CaseCard: React.FC<CaseCardProps> = ({
         <PhotoSection
           caseId={caseData.id}
           isCompleted={caseData.status === 'completed' || caseData.status === 'archived'}
-          profileId={profileId}
         />
 
         {/* 고객 정보 입력 섹션 */}

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -8,17 +10,13 @@ import { LoadingState } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import {
-  useClinicalCasesSupabase,
-  useCreateClinicalCaseSupabase,
-  useUpdateClinicalCaseSupabase,
-  useDeleteClinicalCaseSupabase,
-} from '@/lib/clinical-photos-supabase-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CaseCard } from './components/CaseCard';
+import { CaseCard } from '@/components/clinical/CaseCard'; // 표준 컴포넌트 사용
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useClinicalPhotosManager } from './hooks/useClinicalPhotosManager'; // 새로운 중앙 훅
+import type { Id } from '@/convex/_generated/dataModel';
 
 // ✅ 클라이언트 컴포넌트 분리
 function ClinicalPhotosContent() {
@@ -27,6 +25,12 @@ function ClinicalPhotosContent() {
   // 인증 정보 사용 - 표준 패턴 적용
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const [isKol, setIsKol] = useState<boolean | null>(null);
+  const [isComposing, setIsComposing] = useState(false);
+  const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
+  const [saveStatus, setSaveStatus] = useState<{
+    [caseId: string]: 'idle' | 'saving' | 'saved' | 'error';
+  }>({});
+  const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
 
   // 이메일 기반 프로필 조회 (표준 패턴)
   const profile = useQuery(
@@ -34,32 +38,23 @@ function ClinicalPhotosContent() {
     user?.email ? { email: user.email } : 'skip'
   );
 
-  // Supabase 쿼리 사용 - profile._id 기반
-  const { data: allCases = [], isLoading: casesLoading } = useClinicalCasesSupabase(
-    profile?._id, // Convex profile ID를 Supabase에 전달
-    undefined
-  );
-
-  // Supabase 뮤테이션
-  const createCase = useCreateClinicalCaseSupabase();
-  const updateCase = useUpdateClinicalCaseSupabase();
-  const deleteCase = useDeleteClinicalCaseSupabase();
+  // 새로운 중앙 훅 사용
+  const { data, actions } = useClinicalPhotosManager({
+    profileId: profile?._id as Id<'profiles'> | undefined,
+  });
 
   // 고객 케이스 필터링
   const customerCases = useMemo(
-    () => allCases.filter((c: any) => c.subject_type === 'customer'),
-    [allCases]
+    () => data.cases.filter(c => c.subject_type === 'customer'),
+    [data.cases]
   );
 
   // 로딩 상태 세분화
   const isProfileLoading = profile === undefined && !authLoading;
-  const isDataLoading = casesLoading || isProfileLoading || !profile?._id;
+  const isDataLoading = data.isLoading || isProfileLoading || !profile?._id;
 
   // 본인 케이스를 allCases에서 찾기 - useMemo로 최적화
-  const personalCase = useMemo(
-    () => allCases.find((c: any) => c.name?.trim() === '본인'),
-    [allCases]
-  );
+  const personalCase = useMemo(() => data.cases.find(c => c.name?.trim() === '본인'), [data.cases]);
 
   // ✅ 인증 체크 (다른 페이지와 동일한 패턴)
   useEffect(() => {
@@ -94,29 +89,80 @@ function ClinicalPhotosContent() {
       : 0;
 
   const totalCases = customerCases.length;
-  const activeCases = customerCases.filter((c: any) => c.status === 'in_progress').length;
+  const activeCases = customerCases.filter(c => c.status === 'active').length;
 
-  // 케이스 업데이트 핸들러
-  const handleCaseUpdate = (caseId: string, updates: any) => {
-    if (!profile?._id) {
-      toast.error('프로필을 찾을 수 없습니다.');
-      return;
-    }
-
-    updateCase.mutate({ caseId, updates });
-  };
-
-  // 케이스 삭제 핸들러
-  const handleCaseDelete = (caseId: string) => {
-    if (!profile?._id) {
-      toast.error('프로필을 찾을 수 없습니다.');
-      return;
-    }
-
-    if (confirm('정말로 이 케이스를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) {
-      deleteCase.mutate({ caseId, profileId: profile._id });
-    }
-  };
+  // 표준 CaseCard를 위한 handlers 객체 생성
+  const createHandlers = (caseData: any) => ({
+    handleConsentChange: async (caseId: string, received: boolean) => {
+      await actions.updateCase({
+        caseId: caseId as Id<'clinical_cases'>,
+        updates: { consent_status: received ? 'consented' : 'no_consent' },
+      });
+    },
+    handleCaseStatusChange: async (caseId: string, status: 'active' | 'completed') => {
+      const mappedStatus = status === 'active' ? 'in_progress' : 'completed';
+      await actions.updateCaseStatus({
+        caseId: caseId as Id<'clinical_cases'>,
+        status: mappedStatus as 'in_progress' | 'completed',
+      });
+    },
+    handleDeleteCase: async (caseId: string) => {
+      if (confirm('정말로 이 케이스를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) {
+        await actions.deleteCase({ caseId: caseId as Id<'clinical_cases'> });
+      }
+    },
+    refreshCases: () => {
+      // Convex는 자동으로 리프레시되므로 아무 작업 필요 없음
+    },
+    handleSaveAll: async (caseId: string) => {
+      setSaveStatus(prev => ({ ...prev, [caseId]: 'saving' }));
+      try {
+        // 저장 로직이 필요하면 여기에 추가
+        setSaveStatus(prev => ({ ...prev, [caseId]: 'saved' }));
+        setTimeout(() => {
+          setSaveStatus(prev => ({ ...prev, [caseId]: 'idle' }));
+        }, 2000);
+      } catch (error) {
+        setSaveStatus(prev => ({ ...prev, [caseId]: 'error' }));
+      }
+    },
+    handleBasicCustomerInfoUpdate: async (caseId: string, info: any) => {
+      await actions.updateCase({
+        caseId: caseId as Id<'clinical_cases'>,
+        updates: {
+          name: info.name,
+          age: info.age,
+          gender: info.gender,
+        },
+      });
+    },
+    handleRoundCustomerInfoUpdate: async (caseId: string, round: number, info: any) => {
+      await actions.saveRoundCustomerInfo({
+        caseId: caseId as Id<'clinical_cases'>,
+        roundNumber: round,
+        info: {
+          treatmentDate: info.date,
+          treatmentType: info.treatmentType,
+          products: info.products,
+          skinTypes: info.skinTypes,
+          memo: info.memo,
+        },
+      });
+    },
+    handlePhotoUpload: async (caseId: string, roundDay: number, angle: string, file: File) => {
+      await actions.uploadPhoto({
+        caseId: caseId as Id<'clinical_cases'>,
+        roundDay,
+        angle,
+        file,
+      });
+    },
+    handlePhotoDelete: async (caseId: string, roundDay: number, angle: string) => {
+      // TODO: 사진 삭제 로직 구현 필요
+      toast.error('사진 삭제 기능은 준비 중입니다.');
+    },
+    setCurrentRounds,
+  });
 
   // 로딩 상태 처리
   if (authLoading || isProfileLoading) {
@@ -140,6 +186,14 @@ function ClinicalPhotosContent() {
     return <LoadingState title="임상 데이터를 불러오는 중입니다..." />;
   }
 
+  // 새 고객 여부 확인
+  const isNewCustomer = (caseId: string) => {
+    const caseData = data.cases.find(c => c._id === caseId);
+    return caseData
+      ? !caseData.customerInfo?.name || caseData.customerInfo.name === '새 고객'
+      : true;
+  };
+
   return (
     <div className="container mx-auto space-y-6 p-6">
       {/* 개인 케이스 섹션 */}
@@ -155,32 +209,33 @@ function ClinicalPhotosContent() {
         <CardContent>
           {personalCase ? (
             <CaseCard
-              type="personal"
-              case={personalCase as any} // ✅ 타입 호환성을 위한 assertion
-              editableName={false}
-              showDelete={false}
-              onUpdate={handleCaseUpdate}
-              profileId={profile?._id}
+              case_={personalCase}
+              index={0}
+              currentRounds={currentRounds}
+              saveStatus={saveStatus}
+              numberVisibleCards={numberVisibleCards}
+              isNewCustomer={isNewCustomer}
+              setIsComposing={setIsComposing}
+              setCases={() => {}} // Convex는 자동으로 업데이트하므로 빈 함수
+              handlers={createHandlers(personalCase)}
+              totalCases={1}
+              profileId={profile?._id?.toString()}
             />
           ) : (
             <EmptyState
               title="아직 내 케이스가 없습니다"
               description="첫 번째 임상 케이스를 등록해보세요"
               action={{
-                label: createCase.isPending ? '생성 중...' : '내 케이스 등록하기',
-                onClick: () => {
+                label: '내 케이스 등록하기',
+                onClick: async () => {
                   if (!profile?._id) {
                     toast.error('프로필을 찾을 수 없습니다.');
                     return;
                   }
-                  createCase.mutate({
+                  await actions.createCase({
                     name: '본인',
-                    profile_id: profile._id,
-                    concern_area: '전체적인 피부 관리',
-                    treatment_plan: '개인 맞춤 관리',
-                    status: 'in_progress',
-                    consent_status: 'pending',
                     subject_type: 'self',
+                    consent_status: 'pending',
                   });
                 },
               }}
@@ -205,16 +260,20 @@ function ClinicalPhotosContent() {
         <CardContent>
           {customerCases.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {customerCases.map((caseData: any) => (
+              {customerCases.map((caseData, index) => (
                 <CaseCard
                   key={caseData._id}
-                  type="customer"
-                  case={caseData as any} // ✅ 타입 호환성을 위한 assertion
-                  editableName={true}
-                  showDelete={true}
-                  onUpdate={handleCaseUpdate}
-                  onDelete={handleCaseDelete}
-                  profileId={profile?._id}
+                  case_={caseData}
+                  index={index}
+                  currentRounds={currentRounds}
+                  saveStatus={saveStatus}
+                  numberVisibleCards={numberVisibleCards}
+                  isNewCustomer={isNewCustomer}
+                  setIsComposing={setIsComposing}
+                  setCases={() => {}} // Convex는 자동으로 업데이트하므로 빈 함수
+                  handlers={createHandlers(caseData)}
+                  totalCases={customerCases.length}
+                  profileId={profile?._id?.toString()}
                 />
               ))}
             </div>

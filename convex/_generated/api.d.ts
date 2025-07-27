@@ -13,6 +13,7 @@ import type * as auth from '../auth.js';
 import type * as authHelpers from '../authHelpers.js';
 import type * as auth_old from '../auth_old.js';
 import type * as clinical from '../clinical.js';
+import type * as clinicalPhotos from '../clinicalPhotos.js';
 import type * as commissions from '../commissions.js';
 import type * as customers from '../customers.js';
 import type * as devHelpers from '../devHelpers.js';
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   authHelpers: typeof authHelpers;
   auth_old: typeof auth_old;
   clinical: typeof clinical;
+  clinicalPhotos: typeof clinicalPhotos;
   commissions: typeof commissions;
   customers: typeof customers;
   devHelpers: typeof devHelpers;

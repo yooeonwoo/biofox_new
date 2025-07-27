@@ -1,39 +1,63 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import PhotoRoundCarousel from '@/app/kol-new/clinical-photos/components/PhotoRoundCarousel';
+import {
+  useClinicalPhotosConvex,
+  useUploadClinicalPhotoConvex,
+  useDeleteClinicalPhotoConvex,
+} from '@/lib/clinical-photos-hooks';
 import type { PhotoSlot } from '@/types/clinical';
-import { usePhotoManagement } from '@/app/kol-new/clinical-photos/hooks/usePhotoManagement';
 import { LoadingSpinner } from '@/components/ui/loading';
-import { useClinicalPhotos } from '@/hooks/useClinicalCases';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface PhotoSectionProps {
   caseId: string;
   isCompleted?: boolean;
-  profileId?: string;
 }
 
-export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted, profileId }) => {
-  const { data: photos = [], isLoading: loading } = useClinicalPhotos(caseId);
-  const { handlePhotoUpload, handlePhotoDelete } = usePhotoManagement(profileId);
+export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted }) => {
+  // 사용자 정보 및 프로필 가져오기
+  const { user: authUser } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
 
-  if (loading) {
+  // Convex 훅을 사용하여 실시간 데이터 로드
+  const { data: photos, isLoading } = useClinicalPhotosConvex(caseId);
+  const uploadPhoto = useUploadClinicalPhotoConvex();
+  const deletePhoto = useDeleteClinicalPhotoConvex();
+
+  if (isLoading) {
     return <LoadingSpinner className="py-8" />;
   }
 
   return (
     <PhotoRoundCarousel
       caseId={caseId}
-      photos={photos}
+      photos={photos || []}
       isCompleted={isCompleted}
       onPhotoUpload={async (round, angle, file) => {
-        await handlePhotoUpload(caseId, round, angle as 'front' | 'left' | 'right', file);
-        // React Query의 캐시 무효화가 자동으로 처리됨
+        await uploadPhoto.mutateAsync({
+          caseId,
+          roundNumber: round,
+          angle,
+          file,
+          profileId: profile?._id, // profileId 추가
+        });
+        // Convex는 실시간 동기화로 자동 업데이트
       }}
-      onPhotoDelete={async photoId => {
-        await handlePhotoDelete(String(photoId));
-        // React Query의 캐시 무효화가 자동으로 처리됨
+      onPhotoDelete={async (round, angle) => {
+        // 해당 사진 ID 찾기
+        const photo = photos?.find(p => p.roundDay === round && p.angle === angle);
+        if (photo?.photoId) {
+          await deletePhoto.mutateAsync(photo.photoId);
+        }
+        // Convex는 실시간 동기화로 자동 업데이트
       }}
       onPhotosRefresh={() => {
-        // React Query의 자동 무효화로 인해 별도 refetch 불필요
+        // Convex는 실시간 동기화로 별도 새로고침 불필요
       }}
     />
   );

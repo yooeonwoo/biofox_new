@@ -1,149 +1,170 @@
 'use client';
 
-import React from 'react';
-import { usePersonalPageState } from '@/hooks/usePersonalPageState';
-import { usePersonalCaseHandlers } from '@/hooks/usePersonalCaseHandlers';
-import { useSerialQueue } from '@/hooks/useSerialQueue';
+import React, { useState, useRef } from 'react';
 import { PageHeader } from '@/components/clinical/PageHeader';
 import { LoadingScreen } from '@/components/clinical/LoadingScreen';
 import { EmptyStateCard } from '@/components/clinical/EmptyStateCard';
-import { PersonalCaseList } from '@/components/clinical/PersonalCaseList';
+import { CaseCard } from '@/components/clinical/CaseCard';
 import { CaseInfoMessage } from '@/components/clinical/CaseInfoMessage';
 import { LOADING_MESSAGES, EMPTY_STATE, INFO_MESSAGES, BUTTON_TEXTS } from '@/constants/ui';
 import { useCurrentProfile } from '@/hooks/useCurrentProfile';
+import { useClinicalPhotosManager } from '../../hooks/useClinicalPhotosManager';
 import { toast } from 'sonner';
+import type { Id } from '@/convex/_generated/dataModel';
 
 export default function PersonalPage() {
   // 인증 정보 가져오기
   const { profile, profileId } = useCurrentProfile();
 
-  // Personal용 상태 관리 훅
-  const pageState = usePersonalPageState({ initialRound: 1 });
-
-  // 큐 관리
-  const { enqueue } = useSerialQueue();
-
-  // 디바운스 업데이트 함수
-  const debouncedUpdate = (key: string, updateFn: () => void, delay = 300) => {
-    setTimeout(updateFn, delay);
-  };
-
-  // 상태 관리 함수들
-  const markSaving = (caseId: string) => {
-    pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'saving' }));
-  };
-
-  const markSaved = (caseId: string) => {
-    pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'saved' }));
-  };
-
-  const markError = (caseId: string) => {
-    pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'error' }));
-  };
-
-  // Personal용 핸들러 훅
-  const handlers = usePersonalCaseHandlers({
-    user: pageState.user,
-    cases: pageState.cases,
-    setCases: pageState.setCases,
-    currentRound: pageState.currentRound,
-    setCurrentRound: pageState.setCurrentRound,
-    isComposing: pageState.isComposing,
-    debouncedUpdate,
-    saveStatus: pageState.saveStatus,
-    markSaving,
-    markSaved,
-    markError,
-    enqueue: async (caseId: string, task: () => Promise<void>) => {
-      await enqueue(caseId, task);
-    },
-    hasUnsavedPersonalCase: pageState.hasUnsavedPersonalCase,
-    setHasUnsavedPersonalCase: pageState.setHasUnsavedPersonalCase,
-    profileId: profileId, // 프로필 ID 추가
+  // 중앙 데이터 관리 훅 사용
+  const { data, actions } = useClinicalPhotosManager({
+    profileId: profileId as Id<'profiles'> | undefined,
   });
 
-  // 로딩 상태
-  if (pageState.isLoading || !profile) {
-    return (
-      <LoadingScreen
-        title={LOADING_MESSAGES.personal.title}
-        description={LOADING_MESSAGES.personal.description}
-      />
-    );
+  // 로컬 상태
+  const [currentRound, setCurrentRound] = useState(1);
+  const [saveStatus, setSaveStatus] = useState<{
+    [caseId: string]: 'idle' | 'saving' | 'saved' | 'error';
+  }>({});
+  const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
+  const [isComposing, setIsComposing] = useState(false);
+  const mainContentRef = useRef<HTMLElement>(null);
+
+  // 본인 케이스만 필터링
+  const personalCase = data.cases.find(c => c.name?.trim() === '본인');
+  const personal = personalCase ? [personalCase] : [];
+
+  // 본인 케이스 생성 핸들러
+  const handleCreatePersonalCase = async () => {
+    try {
+      await actions.createCase({
+        name: '본인',
+        subject_type: 'self',
+        consent_status: 'pending',
+      });
+      toast.success('본인 케이스가 생성되었습니다');
+    } catch (error) {
+      toast.error('케이스 생성 실패');
+    }
+  };
+
+  // 표준 CaseCard를 위한 handlers 객체 생성
+  const createHandlers = (caseData: any) => ({
+    handleConsentChange: async (caseId: string, received: boolean) => {
+      await actions.updateCase({
+        caseId: caseId as Id<'clinical_cases'>,
+        updates: { consent_status: received ? 'consented' : 'no_consent' },
+      });
+    },
+    handleCaseStatusChange: async (caseId: string, status: 'active' | 'completed') => {
+      const mappedStatus = status === 'active' ? 'in_progress' : 'completed';
+      await actions.updateCaseStatus({
+        caseId: caseId as Id<'clinical_cases'>,
+        status: mappedStatus as 'in_progress' | 'completed',
+      });
+    },
+    handleDeleteCase: async (caseId: string) => {
+      toast.error('본인 케이스는 삭제할 수 없습니다');
+    },
+    refreshCases: () => {
+      // Convex는 자동으로 리프레시되므로 아무 작업 필요 없음
+    },
+    handleSaveAll: async (caseId: string) => {
+      setSaveStatus(prev => ({ ...prev, [caseId]: 'saving' }));
+      try {
+        // 자동 저장이므로 실제 저장 작업은 없음
+        setSaveStatus(prev => ({ ...prev, [caseId]: 'saved' }));
+        setTimeout(() => {
+          setSaveStatus(prev => ({ ...prev, [caseId]: 'idle' }));
+        }, 2000);
+      } catch (error) {
+        setSaveStatus(prev => ({ ...prev, [caseId]: 'error' }));
+      }
+    },
+    handleBasicCustomerInfoUpdate: async (caseId: string, info: any) => {
+      await actions.updateCase({
+        caseId: caseId as Id<'clinical_cases'>,
+        updates: {
+          name: info.name,
+          age: info.age,
+          gender: info.gender,
+        },
+      });
+    },
+    handleRoundCustomerInfoUpdate: async (caseId: string, round: number, info: any) => {
+      await actions.saveRoundCustomerInfo({
+        caseId: caseId as Id<'clinical_cases'>,
+        roundNumber: round,
+        info: {
+          treatmentDate: info.date,
+          treatmentType: info.treatmentType,
+          products: info.products,
+          skinTypes: info.skinTypes,
+          memo: info.memo,
+        },
+      });
+    },
+    handlePhotoUpload: async (caseId: string, roundDay: number, angle: string, file: File) => {
+      await actions.uploadPhoto({
+        caseId: caseId as Id<'clinical_cases'>,
+        roundDay,
+        angle,
+        file,
+      });
+    },
+    handlePhotoDelete: async (caseId: string, roundDay: number, angle: string) => {
+      // TODO: 사진 삭제 로직 구현 필요
+      toast.error('사진 삭제 기능은 준비 중입니다.');
+    },
+    setCurrentRounds: (fn: any) =>
+      setCurrentRound(fn((prev: any) => ({ ...prev, [caseData._id]: currentRound }))[caseData._id]),
+  });
+
+  // 로딩 중인 경우
+  if (!profile || data.isLoading) {
+    return <LoadingScreen title={LOADING_MESSAGES.personal.title} />;
   }
 
   return (
     <div>
-      {/* 헤더를 main 밖으로 이동하여 전체 너비 활용 */}
       <PageHeader
-        onAddCustomer={handlers.handleAddPersonalCase}
-        hasUnsavedNewCustomer={pageState.hasUnsavedPersonalCase}
-        title="임상관리 (본인)"
+        title="임상 관리 (본인)"
         backPath="/kol-new/clinical-photos"
-        showAddButton={true}
+        showAddButton={false}
       />
 
-      {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
-      <main ref={pageState.mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
-        {/* 메인 컨텐츠 - Legacy 반응형 패딩과 간격 적용 */}
-        <div className="space-y-4 p-3 xs:space-y-5 xs:p-4 md:px-0 md:py-6">
-          {/* 케이스가 없을 때 */}
-          {pageState.cases.length === 0 && (
+      <main ref={mainContentRef} className="mx-auto w-full px-3 sm:max-w-2xl sm:px-6">
+        <CaseInfoMessage message={INFO_MESSAGES.personalCaseLimit} />
+
+        {personal.length === 0 ? (
+          <div className="mt-8">
             <EmptyStateCard
               title={EMPTY_STATE.noPersonalCases.title}
               description={EMPTY_STATE.noPersonalCases.description}
               buttonText={BUTTON_TEXTS.addPersonalCase}
-              onButtonClick={handlers.handleAddPersonalCase}
+              onButtonClick={handleCreatePersonalCase}
             />
-          )}
-
-          {/* 케이스 목록 */}
-          {pageState.cases.length > 0 && (
-            <PersonalCaseList
-              cases={pageState.cases}
-              currentRound={pageState.currentRound}
-              saveStatus={pageState.saveStatus}
-              numberVisibleCards={pageState.numberVisibleCards}
-              isNewPersonalCase={handlers.isNewPersonalCase}
-              setIsComposing={pageState.setIsComposing}
-              setCases={pageState.setCases}
-              profileId={profileId}
-              handlers={{
-                handleConsentChange: handlers.handleConsentChange,
-                handleCaseStatusChange: handlers.handleCaseStatusChange,
-                handleDeleteCase: (caseId: string) => {
-                  // Personal 케이스 삭제는 새 케이스만 가능
-                  if (handlers.isNewPersonalCase(caseId)) {
-                    pageState.setCases(prev => prev.filter(c => c.id !== caseId));
-                    pageState.setHasUnsavedPersonalCase(false);
-                  }
-                },
-                refreshCases: () => {
-                  // Convex는 실시간 동기화를 제공하므로 별도의 새로고침 불필요
-                  toast.info('데이터가 실시간으로 동기화됩니다.');
-                },
-                handleSaveAll: async (caseId: string) => {
-                  console.log('Personal 케이스 저장:', caseId);
-                  toast.success('모든 변경사항이 자동으로 저장되었습니다.');
-                },
-                handleBasicCustomerInfoUpdate: handlers.handleBasicPersonalInfoUpdate,
-                handleRoundCustomerInfoUpdate: handlers.handleRoundPersonalInfoUpdate,
-                updateCaseCheckboxes: () => {
-                  // Personal에서는 체크박스 업데이트 미구현
-                  console.log('Personal 체크박스 업데이트');
-                },
-                handlePhotoUpload: handlers.handlePhotoUpload,
-                handlePhotoDelete: handlers.handlePhotoDelete,
-              }}
-            />
-          )}
-
-          {/* 케이스가 이미 있는 경우 메시지 */}
-          {pageState.cases.length > 0 &&
-            pageState.cases.some(c => handlers.isNewPersonalCase(c.id)) && (
-              <CaseInfoMessage message={INFO_MESSAGES.personalCaseLimit} type="info" />
-            )}
-        </div>
+          </div>
+        ) : (
+          <div className="mt-6">
+            {personal.map((caseData, index) => (
+              <CaseCard
+                key={caseData._id}
+                case_={caseData}
+                index={index}
+                currentRounds={{ [caseData._id as string]: currentRound }}
+                saveStatus={saveStatus}
+                numberVisibleCards={numberVisibleCards}
+                isNewCustomer={() => false}
+                setIsComposing={setIsComposing}
+                setCases={() => {}} // Convex는 자동으로 업데이트
+                handlers={createHandlers(caseData)}
+                totalCases={1}
+                profileId={profileId}
+              />
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

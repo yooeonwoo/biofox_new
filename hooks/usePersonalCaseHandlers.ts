@@ -3,16 +3,15 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 import type { ClinicalCase, CustomerInfo, RoundCustomerInfo } from '@/types/clinical';
 import {
   useUpdateClinicalCaseStatusConvex,
   useUploadClinicalPhotoConvex,
   useDeleteClinicalPhotoConvex,
   useCreateClinicalCaseConvex,
+  useUpdateClinicalCaseConvex,
+  useSaveRoundCustomerInfoConvex,
 } from '@/lib/clinical-photos-hooks';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 
 interface UsePersonalCaseHandlersParams {
@@ -56,7 +55,6 @@ export function usePersonalCaseHandlers({
   profileId,
 }: UsePersonalCaseHandlersParams) {
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   // Convex mutations
   const createCase = useCreateClinicalCaseConvex();
@@ -79,10 +77,10 @@ export function usePersonalCaseHandlers({
 
   // Convex mutations
   const updateCaseStatus = useUpdateClinicalCaseStatusConvex();
-  const updateCase = useMutation(api.clinical.updateClinicalCase);
+  const updateCase = useUpdateClinicalCaseConvex();
   const uploadPhoto = useUploadClinicalPhotoConvex();
   const deletePhoto = useDeleteClinicalPhotoConvex();
-  const saveRoundInfo = useMutation(api.clinical.saveRoundCustomerInfo);
+  const saveRoundInfo = useSaveRoundCustomerInfoConvex();
 
   // 개인 케이스 상태 변경 핸들러
   const handleCaseStatusChange = useCallback(
@@ -115,7 +113,7 @@ export function usePersonalCaseHandlers({
       try {
         // 새 개인 케이스가 아닌 경우에만 실제 API 호출
         if (!isNewPersonalCase(caseId)) {
-          await updateCase({
+          await updateCase.mutateAsync({
             caseId: caseId as Id<'clinical_cases'>,
             updates: {
               consent_status: consentReceived ? 'consented' : 'no_consent',
@@ -343,7 +341,7 @@ export function usePersonalCaseHandlers({
         if (!isNewPersonalCase(caseId)) {
           // 나이, 성별이 있으면 round_customer_info에 저장
           if (personalInfo.age !== undefined || personalInfo.gender !== undefined) {
-            await saveRoundInfo({
+            await saveRoundInfo.mutateAsync({
               caseId: caseId as Id<'clinical_cases'>,
               roundNumber: currentRound,
               info: {
@@ -434,7 +432,7 @@ export function usePersonalCaseHandlers({
           await enqueue(caseId, async () => {
             // 메모가 있으면 케이스 업데이트
             if (roundInfo.memo !== undefined) {
-              await updateCase({
+              await updateCase.mutateAsync({
                 caseId: caseId as Id<'clinical_cases'>,
                 updates: {
                   treatment_plan: roundInfo.memo,
@@ -455,7 +453,7 @@ export function usePersonalCaseHandlers({
             if (roundInfo.skinTypes !== undefined) roundData.skinTypes = roundInfo.skinTypes;
             if (roundInfo.memo !== undefined) roundData.memo = roundInfo.memo;
 
-            await saveRoundInfo({
+            await saveRoundInfo.mutateAsync({
               caseId: caseId as Id<'clinical_cases'>,
               roundNumber: roundDay,
               info: roundData,
@@ -528,9 +526,11 @@ export function usePersonalCaseHandlers({
       });
 
       // 생성된 케이스를 상태에 반영
-      setCases([createdCase]);
-      setCurrentRound(1);
-      setHasUnsavedPersonalCase(false); // 실제로 생성되었으므로 false
+      if (createdCase) {
+        setCases([createdCase]);
+        setCurrentRound(1);
+        setHasUnsavedPersonalCase(false); // 실제로 생성되었으므로 false
+      }
 
       console.log('새 개인 케이스가 추가되었습니다.');
       toast.success('새 개인 케이스가 추가되었습니다.');

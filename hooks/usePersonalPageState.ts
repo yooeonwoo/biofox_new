@@ -190,7 +190,7 @@ export const usePersonalPageState = ({ initialRound = 1 }: UsePersonalPageStateP
     isLoading: casesLoading,
     error: casesError,
   } = useClinicalCasesConvex(
-    profile?._id, // profileId 전달
+    profile?._id as Id<'profiles'> | undefined, // profileId 타입 캐스팅
     undefined // status
   );
 

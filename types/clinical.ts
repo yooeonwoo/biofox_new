@@ -74,25 +74,46 @@ export interface PhotoSlot {
 // 케이스 데이터 타입
 export interface ClinicalCase {
   id: string;
+  _id?: string; // Convex ID 추가
+  name?: string; // Convex 케이스에서 사용하는 name 필드 추가
   customerName: string;
   status: CaseStatus;
   createdAt: string;
+  created_at?: number; // Convex timestamp
+  updated_at?: number; // Convex timestamp
   consentReceived: boolean;
+  consent_status?: 'no_consent' | 'consented' | 'pending'; // Convex consent 상태
   consentImageUrl?: string;
   photos: PhotoSlot[];
   customerInfo: CustomerInfo;
   roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo };
+
+  // Convex 스키마 필드들
+  shop_id?: string;
+  case_title?: string;
+  caseTitle?: string; // camelCase 버전 추가
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  marketing_consent?: boolean;
+  consent_date?: number;
+  subject_type?: 'self' | 'customer';
+  treatment_item?: string;
+  concern_area?: string;
+  concernArea?: string; // camelCase 버전 추가
+  treatment_plan?: string;
+  treatmentPlan?: string; // camelCase 버전 추가
+  notes?: string;
+  tags?: string[];
+  photo_count?: number;
+  latest_session?: number;
+  start_date?: number;
+
   // 메타데이터 속성 추가 (일부 컴포넌트에서 필요)
   metadata?: {
     rounded?: boolean;
     tags?: string[];
     [key: string]: any; // 확장 가능한 메타데이터
   };
-
-  // Convex 스키마와 일치하는 추가 필드들
-  treatmentPlan?: string; // 치료 계획
-  concernArea?: string; // 관심 부위
-  caseTitle?: string; // 케이스 제목
 
   // 제품 사용 체크박스
   cureBooster?: boolean;
@@ -107,6 +128,8 @@ export interface ClinicalCase {
   skinTrouble?: boolean;
   skinWrinkle?: boolean;
   skinEtc?: boolean;
+  is_personal?: boolean;
+  total_sessions?: number;
 }
 
 // UI용 Clinical Case 타입 (Convex 데이터 구조)

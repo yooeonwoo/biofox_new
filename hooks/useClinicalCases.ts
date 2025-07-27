@@ -1,13 +1,13 @@
-// ✅ Step 3.1.3: Convex 의존성 제거하고 Supabase 훅으로 교체
+// ✅ Convex 훅 사용
 import {
-  useClinicalCasesSupabase,
-  useClinicalCaseSupabase,
-  useClinicalPhotosSupabase,
-  useCreateClinicalCaseSupabase,
-  useUpdateClinicalCaseSupabase,
-  useUpdateClinicalCaseStatusSupabase,
-  useDeleteClinicalCaseSupabase,
-} from '@/lib/clinical-photos-supabase-hooks';
+  useClinicalCasesConvex,
+  useClinicalCaseConvex,
+  useClinicalPhotosConvex,
+  useCreateClinicalCaseConvex,
+  useUpdateClinicalCaseConvex,
+  useUpdateClinicalCaseStatusConvex,
+  useDeleteClinicalCaseConvex,
+} from '@/lib/clinical-photos-hooks';
 import { toast } from 'sonner';
 import { useCallback } from 'react';
 
@@ -16,9 +16,9 @@ import { useCallback } from 'react';
  * React Query 기반 상태 관리 및 캐시 최적화 지원
  */
 
-// 케이스 목록 조회 훅 (Supabase 버전)
+// 케이스 목록 조회 훅 (Convex 버전)
 export function useClinicalCases(status?: 'in_progress' | 'completed' | 'paused' | 'cancelled') {
-  const result = useClinicalCasesSupabase(undefined, status ? { status } : undefined);
+  const result = useClinicalCasesConvex(undefined, status);
 
   return {
     data: result.data || [],
@@ -30,9 +30,9 @@ export function useClinicalCases(status?: 'in_progress' | 'completed' | 'paused'
   };
 }
 
-// 특정 케이스 조회 훅 (Supabase 버전)
+// 특정 케이스 조회 훅 (Convex 버전)
 export function useClinicalCase(caseId: string | null) {
-  const result = useClinicalCaseSupabase(caseId || undefined);
+  const result = useClinicalCaseConvex(caseId || undefined);
 
   return {
     data: result.data || null,
@@ -43,9 +43,9 @@ export function useClinicalCase(caseId: string | null) {
   };
 }
 
-// 케이스 사진 목록 조회 훅 (Supabase 버전)
+// 케이스 사진 목록 조회 훅 (Convex 버전)
 export function useClinicalPhotos(caseId: string | null, sessionNumber: number = 1) {
-  const result = useClinicalPhotosSupabase(caseId);
+  const result = useClinicalPhotosConvex(caseId);
 
   // 세션별 필터링 (클라이언트 사이드)
   const filteredData =
@@ -60,9 +60,9 @@ export function useClinicalPhotos(caseId: string | null, sessionNumber: number =
   };
 }
 
-// 케이스 생성 훅 (Supabase 버전)
+// 케이스 생성 훅 (Convex 버전)
 export function useCreateClinicalCase() {
-  const mutation = useCreateClinicalCaseSupabase();
+  const mutation = useCreateClinicalCaseConvex();
 
   const createCase = useCallback(
     async (caseData: any, profileId: string) => {
@@ -88,9 +88,9 @@ export function useCreateClinicalCase() {
   };
 }
 
-// 케이스 업데이트 훅 (Supabase 버전)
+// 케이스 업데이트 훅 (Convex 버전)
 export function useUpdateClinicalCase() {
-  const mutation = useUpdateClinicalCaseSupabase();
+  const mutation = useUpdateClinicalCaseConvex();
 
   const updateCase = useCallback(
     async ({ caseId, updates }: { caseId: string; updates: any }) => {
@@ -113,9 +113,9 @@ export function useUpdateClinicalCase() {
   };
 }
 
-// 케이스 상태 업데이트 훅 (Supabase 버전)
+// 케이스 상태 업데이트 훅 (Convex 버전)
 export function useUpdateClinicalCaseStatus() {
-  const mutation = useUpdateClinicalCaseStatusSupabase();
+  const mutation = useUpdateClinicalCaseStatusConvex();
 
   const updateStatus = useCallback(
     async ({
@@ -146,9 +146,9 @@ export function useUpdateClinicalCaseStatus() {
   };
 }
 
-// 케이스 삭제 훅 (Supabase 버전)
+// 케이스 삭제 훅 (Convex 버전)
 export function useDeleteClinicalCase() {
-  const mutation = useDeleteClinicalCaseSupabase();
+  const mutation = useDeleteClinicalCaseConvex();
 
   const deleteCase = useCallback(
     async (caseId: string, profileId?: string) => {

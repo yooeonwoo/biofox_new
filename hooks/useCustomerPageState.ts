@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useClinicalCasesConvex } from '@/lib/clinical-photos-hooks';
 import { enrichCasesWithRoundInfo } from './useCasesWithRoundInfo';
 import type { ClinicalCase } from '@/types/clinical';
+import type { Id } from '@/convex/_generated/dataModel';
 
 export const useCustomerPageState = () => {
   const router = useRouter();
@@ -35,7 +36,7 @@ export const useCustomerPageState = () => {
 
   // Convex 훅으로 케이스 데이터 로드
   const { data: convexCases = [], isLoading: convexCasesLoading } = useClinicalCasesConvex(
-    profile?._id, // profileId 전달
+    profile?._id as Id<'profiles'> | undefined, // profileId 타입 캐스팅
     undefined // status
   );
 

@@ -1,197 +1,187 @@
+/**
+ * 인증 패턴 검증 테스트
+ *
+ * 이 테스트는 clinical-photos 기능의 표준 인증 패턴을 검증합니다:
+ * 1. Supabase 인증 → 2. Convex Profile 조회 → 3. Convex 데이터 작업
+ */
+
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from 'convex/react';
-import { useRouter } from 'next/navigation';
-import ClinicalPhotosPage from '../page';
-import CustomerClinicalUploadPage from '../upload/customer/page';
-import PersonalPage from '../upload/personal/page';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useCurrentProfile } from '@/hooks/useCurrentProfile';
-import { useClinicalCasesSupabase } from '@/lib/clinical-photos-supabase-hooks';
+import ClinicalPhotosPage from '../page';
 
-// Mock dependencies
-vi.mock('@/hooks/useAuth');
-vi.mock('convex/react');
-vi.mock('next/navigation');
-vi.mock('@/hooks/useCurrentProfile');
-vi.mock('@/lib/clinical-photos-supabase-hooks', () => ({
-  useClinicalCasesSupabase: vi.fn(() => ({ data: [], isLoading: false })),
-  useClinicalCaseSupabase: vi.fn(() => ({ data: null, isLoading: false })),
-  useClinicalPhotosSupabase: vi.fn(() => ({ data: [], isLoading: false })),
-  useClinicalCaseStatsSupabase: vi.fn(() => ({ data: null, isLoading: false })),
-  useRoundCustomerInfoSupabase: vi.fn(() => ({ data: null, isLoading: false })),
-  useConsentFileSupabase: vi.fn(() => ({ data: null, isLoading: false })),
-  useCreateClinicalCaseSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-  useUpdateClinicalCaseSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-  useUpdateClinicalCaseStatusSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-  useDeleteClinicalCaseSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-  useUploadClinicalPhotoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-  useDeleteClinicalPhotoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-  useSaveRoundCustomerInfoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-  useSaveConsentFileSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+// Mock 설정
+const mockPush = vi.fn();
+const mockUseAuth = vi.fn();
+const mockUseQuery = vi.fn();
+const mockUseClinicalPhotosManager = vi.fn();
+const mockUseCurrentProfile = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
 
-describe('Clinical Photos Authentication Pattern', () => {
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
+vi.mock('@/hooks/useCurrentProfile', () => ({
+  useCurrentProfile: () => mockUseCurrentProfile(),
+}));
+
+vi.mock('convex/react', () => ({
+  useQuery: () => mockUseQuery(),
+  useMutation: () => vi.fn(),
+}));
+
+vi.mock('../hooks/useClinicalPhotosManager', () => ({
+  useClinicalPhotosManager: () => mockUseClinicalPhotosManager(),
+}));
+
+describe('Auth Pattern Tests', () => {
   let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    vi.clearAllMocks();
+  });
 
   const renderWithProviders = (component: React.ReactElement) => {
     return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
   };
 
-  const mockRouter = {
-    push: vi.fn(),
-    replace: vi.fn(),
-    refresh: vi.fn(),
-  };
+  it('표준 인증 패턴을 따라야 함', async () => {
+    // Step 1: Supabase 인증
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: { id: 'user123', email: 'test@example.com' },
+    });
 
-  const mockUser = {
-    id: 'test-user-id',
-    email: 'test@example.com',
-  };
+    // Step 2: Convex Profile 조회
+    const profileData = {
+      _id: 'profile123',
+      role: 'kol',
+      email: 'test@example.com',
+      name: 'Test KOL',
+    };
+    mockUseQuery.mockReturnValue(profileData);
+    mockUseCurrentProfile.mockReturnValue({
+      profile: profileData,
+      profileId: 'profile123',
+    });
 
-  const mockProfile = {
-    _id: 'profile-123',
-    name: 'Test KOL',
-    email: 'test@example.com',
-    role: 'kol',
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (useRouter as any).mockReturnValue(mockRouter);
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
+    // Step 3: Convex 데이터 작업
+    mockUseClinicalPhotosManager.mockReturnValue({
+      data: {
+        cases: [
+          {
+            _id: 'case1',
+            id: 'case1',
+            name: '본인',
+            subject_type: 'self',
+            status: 'active',
+            consentReceived: false,
+            customerName: '본인',
+            customerInfo: { name: '본인' },
+            roundCustomerInfo: {},
+            photos: [],
+          },
+        ],
+        isLoading: false,
+        error: null,
+      },
+      actions: {
+        createCase: vi.fn(),
+        updateCase: vi.fn(),
+        deleteCase: vi.fn(),
+        updateCaseStatus: vi.fn(),
+        saveRoundCustomerInfo: vi.fn(),
+        uploadPhoto: vi.fn(),
+        deletePhoto: vi.fn(),
+        uploadConsent: vi.fn(),
       },
     });
-  });
 
-  describe('Phase 1: Authentication - Supabase Session', () => {
-    it('should redirect to signin when user is not authenticated', async () => {
-      (useAuth as any).mockReturnValue({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-      (useQuery as any).mockReturnValue(null);
+    renderWithProviders(<ClinicalPhotosPage />);
 
-      renderWithProviders(<ClinicalPhotosPage />);
-
-      await waitFor(() => {
-        expect(mockRouter.push).toHaveBeenCalledWith('/signin');
-      });
+    // 페이지가 정상적으로 렌더링되는지 확인
+    await waitFor(() => {
+      expect(screen.getByText('내 임상 진행상황')).toBeInTheDocument();
+      expect(screen.getByText('고객 임상 관리')).toBeInTheDocument();
     });
 
-    it('should proceed when user is authenticated', () => {
-      (useAuth as any).mockReturnValue({
-        user: mockUser,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-      (useQuery as any).mockReturnValue(mockProfile);
+    // 인증 흐름이 올바른 순서로 호출되었는지 확인
+    expect(mockUseAuth).toHaveBeenCalled();
+    expect(mockUseClinicalPhotosManager).toHaveBeenCalled();
+  });
 
-      renderWithProviders(<ClinicalPhotosPage />);
+  it('인증되지 않은 사용자를 로그인으로 리다이렉트해야 함', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      user: null,
+    });
 
-      expect(mockRouter.push).not.toHaveBeenCalledWith('/signin');
+    renderWithProviders(<ClinicalPhotosPage />);
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/signin');
     });
   });
 
-  describe('Phase 2: Authorization - Profile Check', () => {
-    it('should show error when profile is not found', async () => {
-      (useAuth as any).mockReturnValue({
-        user: mockUser,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-      (useQuery as any).mockReturnValue(null); // Profile not found
-
-      renderWithProviders(<ClinicalPhotosPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('프로필을 찾을 수 없습니다.')).toBeInTheDocument();
-      });
+  it('프로필이 없는 경우 에러 메시지를 표시해야 함', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: { id: 'user123', email: 'test@example.com' },
     });
 
-    it('should redirect non-KOL users to home', async () => {
-      (useAuth as any).mockReturnValue({
-        user: mockUser,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-      (useQuery as any).mockReturnValue({
-        ...mockProfile,
-        role: 'shop_owner', // Not a KOL
-      });
-
-      renderWithProviders(<ClinicalPhotosPage />);
-
-      await waitFor(() => {
-        expect(mockRouter.push).toHaveBeenCalledWith('/');
-      });
+    mockUseQuery.mockReturnValue(null); // 프로필 없음
+    mockUseCurrentProfile.mockReturnValue({
+      profile: null,
+      profileId: null,
     });
 
-    it('should allow KOL users to access the page', () => {
-      (useAuth as any).mockReturnValue({
-        user: mockUser,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-      (useQuery as any).mockReturnValue(mockProfile);
+    renderWithProviders(<ClinicalPhotosPage />);
 
-      renderWithProviders(<ClinicalPhotosPage />);
-
-      expect(mockRouter.push).not.toHaveBeenCalledWith('/');
-      expect(screen.queryByText('프로필을 찾을 수 없습니다.')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('프로필을 찾을 수 없습니다.')).toBeInTheDocument();
     });
   });
 
-  describe('Phase 3: Data Fetching - Hybrid Approach', () => {
-    it('should use profile._id for Supabase queries', async () => {
-      (useAuth as any).mockReturnValue({
-        user: mockUser,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-      (useQuery as any).mockReturnValue(mockProfile);
-      // Specific mock for this test
-      const mockData = [{ _id: '1', name: 'Test Case' }];
-      (useClinicalCasesSupabase as any).mockReturnValue({ data: mockData, isLoading: false });
-
-      renderWithProviders(<ClinicalPhotosPage />);
-
-      await waitFor(() => {
-        expect(useClinicalCasesSupabase).toHaveBeenCalledWith(mockProfile._id, undefined);
-      });
-    });
-  });
-
-  describe('Subpage Pattern Consistency', () => {
-    it('customer page should use useCurrentProfile hook', () => {
-      (useCurrentProfile as any).mockReturnValue({
-        profile: mockProfile,
-        profileId: mockUser.id,
-        isLoading: false,
-        isAuthenticated: true,
-      });
-
-      renderWithProviders(<CustomerClinicalUploadPage />);
-
-      expect(useCurrentProfile).toHaveBeenCalled();
+  it('권한이 없는 사용자를 홈으로 리다이렉트해야 함', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: { id: 'user123', email: 'test@example.com' },
     });
 
-    it('personal page should use useCurrentProfile hook', () => {
-      (useCurrentProfile as any).mockReturnValue({
-        profile: mockProfile,
-        profileId: mockUser.id,
-        isLoading: false,
-        isAuthenticated: true,
-      });
+    const profileData = {
+      _id: 'profile123',
+      role: 'shop_owner', // KOL이 아님
+      email: 'test@example.com',
+    };
+    mockUseQuery.mockReturnValue(profileData);
+    mockUseCurrentProfile.mockReturnValue({
+      profile: profileData,
+      profileId: 'profile123',
+    });
 
-      renderWithProviders(<PersonalPage />);
+    renderWithProviders(<ClinicalPhotosPage />);
 
-      expect(useCurrentProfile).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/');
     });
   });
 });

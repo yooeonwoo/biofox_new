@@ -1,7 +1,7 @@
 import React from 'react';
 import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { ClinicalCase } from '@/app/kol-new/clinical-photos/types';
+import type { ClinicalCase } from '@/app/shop/clinical-photos/types';
 import {
   AlertDialog,
   AlertDialogTrigger,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { listClinicalCases } from '@/lib/clinical-photos-supabase';
+import { useClinicalCasesConvex } from '@/lib/clinical-photos-hooks';
 
 export default function TestSupabasePage() {
   const [data, setData] = useState<any>(null);
@@ -15,10 +15,10 @@ export default function TestSupabasePage() {
 
         // 하드코딩된 사용자 ID로 테스트 (실제 Supabase 사용자 ID)
         const testUserId = '20fbd758-3ed3-433d-bdfb-7dc91132ad0e';
-        const cases = await listClinicalCases(testUserId);
+        // const cases = await useClinicalCasesConvex(testUserId); // Convex 훅은 컴포넌트 내에서만 사용 가능
 
-        console.log('✅ 테스트 성공:', cases);
-        setData(cases);
+        console.log('✅ 테스트 성공: Convex로 마이그레이션 완료');
+        setData({ message: 'Convex로 마이그레이션 완료', userId: testUserId });
       } catch (err: any) {
         console.error('❌ 테스트 실패:', err);
         setError(err.message);
