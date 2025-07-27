@@ -229,12 +229,11 @@ export const useCustomerPageState = () => {
         clearTimeout(initialAnimationTimer);
       };
     }
-  }, [cases.length, isUserInteracting]);
+  }, [isUserInteracting]); // cases.length 의존성 제거하여 무한 루프 방지
 
   // cases 상태를 ref에 동기화
-  useEffect(() => {
-    casesRef.current = cases;
-  }, [cases]);
+  // ref 업데이트는 부수 효과이므로 useEffect 없이 직접 할당
+  casesRef.current = cases;
 
   // 컴포넌트 언마운트 시 디바운스 타이머 정리
   useEffect(() => {

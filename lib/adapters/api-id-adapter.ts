@@ -138,7 +138,7 @@ export class ApiRequestInterceptor {
         console.log('[API Adapter] Request 변환 시작:', { data, metadata });
       }
 
-      let transformed = data;
+      let transformed: any = data;
 
       // 기본 ID 필드 변환 (number → string)
       if (metadata.idFields.length > 0) {
@@ -168,7 +168,7 @@ export class ApiRequestInterceptor {
         console.log('[API Adapter] Request 변환 완료:', transformed);
       }
 
-      return transformed;
+      return transformed as T;
     } catch (error) {
       console.error('[API Adapter] Request 변환 실패:', error);
 
@@ -217,7 +217,7 @@ export class ApiResponseInterceptor {
         console.log('[API Adapter] Response 변환 시작:', { data, metadata });
       }
 
-      let transformed = data;
+      let transformed: any = data;
 
       // Convex _id를 id로 매핑
       if ('_id' in transformed && !('id' in transformed)) {
@@ -253,7 +253,7 @@ export class ApiResponseInterceptor {
         console.log('[API Adapter] Response 변환 완료:', transformed);
       }
 
-      return transformed;
+      return transformed as T;
     } catch (error) {
       console.error('[API Adapter] Response 변환 실패:', error);
 
@@ -310,7 +310,7 @@ export class ConvexApiWrapper {
 
       // Convex 쿼리 실행
       const convexClient = this.manager.getConvexClient();
-      const result = await convexClient.query(api[queryName] as any, transformedInput);
+      const result = await convexClient.query((api as any)[queryName], transformedInput);
 
       // 응답 데이터 변환
       const transformedResult = this.responseInterceptor.transformResponse(result, {
@@ -342,7 +342,7 @@ export class ConvexApiWrapper {
 
       // Convex 뮤테이션 실행
       const convexClient = this.manager.getConvexClient();
-      const result = await convexClient.mutation(api[mutationName] as any, transformedInput);
+      const result = await convexClient.mutation((api as any)[mutationName], transformedInput);
 
       // 응답 데이터 변환
       const transformedResult = this.responseInterceptor.transformResponse(result, {

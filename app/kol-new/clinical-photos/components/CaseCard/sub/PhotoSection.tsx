@@ -39,11 +39,11 @@ export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted 
       photos={photos}
       isCompleted={isCompleted}
       onPhotoUpload={async (round, angle, file) => {
-        await handlePhotoUpload(caseId, round, angle as any, file);
+        await handlePhotoUpload(String(caseId), round, angle as 'front' | 'left' | 'right', file);
         await loadPhotos();
       }}
-      onPhotoDelete={async (round, angle) => {
-        await handlePhotoDelete(caseId, round, angle as any);
+      onPhotoDelete={async photoId => {
+        await handlePhotoDelete(photoId);
         await loadPhotos();
       }}
       onPhotosRefresh={loadPhotos}

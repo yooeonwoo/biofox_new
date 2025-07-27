@@ -141,9 +141,13 @@ export const bulkUserAction = mutation({
       v.literal('reject'),
       v.literal('activate'),
       v.literal('deactivate'),
-      v.literal('delete')
+      v.literal('delete'),
+      v.literal('change_role')
     ),
     reason: v.optional(v.string()),
+    role: v.optional(
+      v.union(v.literal('admin'), v.literal('kol'), v.literal('ol'), v.literal('shop_owner'))
+    ),
   },
   handler: async (ctx, args) => {
     // 인증 확인
@@ -202,6 +206,12 @@ export const bulkUserAction = mutation({
               deleted_by: currentUser._id,
               delete_reason: args.reason,
             };
+            break;
+          case 'change_role':
+            if (!args.role) {
+              throw new Error('역할이 지정되지 않았습니다.');
+            }
+            updateData.role = args.role;
             break;
         }
 

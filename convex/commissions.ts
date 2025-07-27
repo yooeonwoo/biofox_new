@@ -732,3 +732,84 @@ export const getCommissionsForExport = query({
     }
   },
 });
+
+/**
+ * 수수료 상태 일괄 업데이트
+ * POST /api/commissions/bulk-update 대체
+ */
+export const updateCommissionStatus = mutation({
+  args: {
+    commissionIds: v.array(v.id('commission_calculations')),
+    status: v.union(
+      v.literal('calculated'),
+      v.literal('reviewed'),
+      v.literal('approved'),
+      v.literal('paid'),
+      v.literal('cancelled')
+    ),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // 관리자 권한 확인
+      const currentUser = await requireAdmin(ctx);
+
+      // 각 수수료 계산 업데이트
+      const results = await Promise.all(
+        args.commissionIds.map(async commissionId => {
+          const commission = await ctx.db.get(commissionId);
+          if (!commission) {
+            console.error(`수수료 계산을 찾을 수 없습니다: ${commissionId}`);
+            return { id: commissionId, success: false };
+          }
+
+          // 상태 업데이트
+          await ctx.db.patch(commissionId, {
+            status: args.status,
+            updated_by: currentUser._id,
+            updated_at: Date.now(),
+          });
+
+          // 감사 로그 생성
+          await createAuditLog(ctx, {
+            tableName: 'commission_calculations',
+            recordId: commissionId,
+            action: 'UPDATE',
+            userId: currentUser._id,
+            userRole: currentUser.role,
+            oldValues: { status: commission.status },
+            newValues: { status: args.status },
+            changedFields: ['status'],
+            metadata: {
+              action_type: 'bulk_status_update',
+            },
+          });
+
+          // 지급 완료 시 알림 생성
+          if (args.status === 'paid') {
+            await createNotification(ctx, {
+              userId: commission.kol_id,
+              type: 'commission_paid',
+              title: '수수료 지급 완료',
+              message: `${new Date(commission.calculation_month).toISOString().substring(0, 7)} 수수료가 지급되었습니다.`,
+              relatedType: 'commission_calculation',
+              relatedId: commissionId,
+              priority: 'normal',
+            });
+          }
+
+          return { id: commissionId, success: true };
+        })
+      );
+
+      const successCount = results.filter(r => r.success).length;
+
+      return {
+        success: true,
+        message: `${successCount}건의 수수료 상태가 업데이트되었습니다.`,
+        results,
+      };
+    } catch (error) {
+      throw formatError(error);
+    }
+  },
+});

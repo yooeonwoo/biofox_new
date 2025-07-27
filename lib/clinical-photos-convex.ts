@@ -149,6 +149,9 @@ export function useCreateClinicalCase() {
         const result = await convex.mutation(api.clinical.createClinicalCase, convexArgs);
 
         toast.success('케이스가 생성되었습니다.');
+        if (!result) {
+          throw new Error('케이스 생성 결과를 받지 못했습니다.');
+        }
         return convexToUICase(result);
       } catch (error: any) {
         console.error('Case creation error:', error);

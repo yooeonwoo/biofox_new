@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  Plus, Trash2, RefreshCw, Search 
-} from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Table,
@@ -60,7 +58,7 @@ export function EditableUserTable({
   onAddUser,
   onDeleteUser,
   loading,
-  error
+  error,
 }: EditableUserTableProps) {
   const { toast } = useToast();
   const [filters, setFilters] = useState<FilterState>({
@@ -69,23 +67,23 @@ export function EditableUserTable({
   });
 
   // 필터링된 사용자 목록
-  const filteredUsers = users.filter((user) => {
-    const searchMatch = 
-      user.email.toLowerCase().includes(filters.search.toLowerCase()) || 
+  const filteredUsers = users.filter(user => {
+    const searchMatch =
+      user.email.toLowerCase().includes(filters.search.toLowerCase()) ||
       (user.name && user.name.toLowerCase().includes(filters.search.toLowerCase())) ||
       (user.kolName && user.kolName.toLowerCase().includes(filters.search.toLowerCase())) ||
       (user.shopName && user.shopName.toLowerCase().includes(filters.search.toLowerCase()));
-      
+
     const roleMatch = !filters.role || user.role === filters.role;
-    
+
     return searchMatch && roleMatch;
   });
 
   // 필드 업데이트 함수
   const updateField = async (
-    userId: string, 
-    field: string, 
-    value: string, 
+    userId: string,
+    field: string,
+    value: string,
     table: 'users' | 'kols'
   ) => {
     try {
@@ -112,7 +110,6 @@ export function EditableUserTable({
 
       // 데이터 새로고침
       onRefresh();
-      
     } catch (error) {
       console.error('필드 업데이트 실패:', error);
       toast({
@@ -139,8 +136,8 @@ export function EditableUserTable({
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-60">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex h-60 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-blue-500"></div>
         <span className="ml-3">사용자 정보를 불러오는 중...</span>
       </div>
     );
@@ -148,8 +145,8 @@ export function EditableUserTable({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-60 text-center">
-        <span className="text-red-500 text-lg font-medium">{error}</span>
+      <div className="flex h-60 flex-col items-center justify-center text-center">
+        <span className="text-lg font-medium text-red-500">{error}</span>
         <Button variant="outline" className="mt-4" onClick={onRefresh}>
           다시 시도
         </Button>
@@ -160,13 +157,15 @@ export function EditableUserTable({
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">사용자 관리</h1>
-          <p className="text-muted-foreground">테이블에서 직접 편집 가능합니다. 셀을 클릭하여 수정하세요.</p>
+          <p className="text-muted-foreground">
+            테이블에서 직접 편집 가능합니다. 셀을 클릭하여 수정하세요.
+          </p>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3">
+
+        <div className="flex flex-col gap-3 sm:flex-row">
           <Button onClick={onAddUser}>
             <Plus className="mr-2 h-4 w-4" />
             사용자 추가
@@ -177,35 +176,32 @@ export function EditableUserTable({
           </Button>
         </div>
       </div>
-      
+
       {/* 필터링 영역 */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="이메일 또는 이름으로 검색"
             className="pl-9"
             value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            onChange={e => setFilters({ ...filters, search: e.target.value })}
           />
         </div>
-        <Select
-          value={filters.role}
-          onValueChange={(role) => setFilters({ ...filters, role })}
-        >
+        <Select value={filters.role} onValueChange={role => setFilters({ ...filters, role })}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="역할별 필터링" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-2 border-gray-300 shadow-lg">
+          <SelectContent className="border-2 border-gray-300 bg-white shadow-lg">
             <SelectItem value="">전체 역할</SelectItem>
             <SelectItem value="admin">본사관리자</SelectItem>
             <SelectItem value="kol">KOL</SelectItem>
           </SelectContent>
         </Select>
       </div>
-      
+
       {/* 사용자 테이블 */}
-      <div className="border rounded-md">
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -222,12 +218,12 @@ export function EditableUserTable({
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center h-32">
+                <TableCell colSpan={8} className="h-32 text-center">
                   <div className="flex flex-col items-center justify-center">
                     <p className="mb-2 text-muted-foreground">사용자가 없습니다.</p>
                     {filters.search || filters.role ? (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => setFilters({ search: '', role: '' })}
                       >
@@ -238,25 +234,25 @@ export function EditableUserTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map((user) => (
+              filteredUsers.map(user => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
                     <EditableCell
                       value={user.email}
                       type="email"
-                      onSave={(value) => updateField(user.id, 'email', value, 'users')}
+                      onSave={value => updateField(user.id, 'email', value, 'users')}
                       placeholder="이메일 주소"
                     />
                   </TableCell>
                   <TableCell>
                     <EditableCell
-                      value={user.name || user.kolName}
-                      onSave={(value) => {
+                      value={user.name || user.kolName || null}
+                      onSave={value => {
                         // KOL인 경우 kols 테이블의 name도 업데이트
                         if (user.role === 'kol') {
                           return Promise.all([
                             updateField(user.id, 'name', value, 'users'),
-                            updateField(user.id, 'name', value, 'kols')
+                            updateField(user.id, 'name', value, 'kols'),
                           ]).then(() => {});
                         } else {
                           return updateField(user.id, 'name', value, 'users');
@@ -267,35 +263,35 @@ export function EditableUserTable({
                   </TableCell>
                   <TableCell>
                     <EditableCell
-                      value={user.shopName}
-                      onSave={(value) => updateField(user.id, 'shop_name', value, 'kols')}
+                      value={user.shopName || null}
+                      onSave={value => updateField(user.id, 'shop_name', value, 'kols')}
                       placeholder="샵명"
                       disabled={user.role !== 'kol'}
                     />
                   </TableCell>
                   <TableCell>
                     <EditableCell
-                      value={user.region}
-                      onSave={(value) => updateField(user.id, 'region', value, 'kols')}
+                      value={user.region || null}
+                      onSave={value => updateField(user.id, 'region', value, 'kols')}
                       placeholder="지역"
                       disabled={user.role !== 'kol'}
                     />
                   </TableCell>
                   <TableCell>
                     <EditableCell
-                      value={user.role}
+                      value={user.role || null}
                       type="select"
                       options={roleOptions}
-                      onSave={(value) => updateField(user.id, 'role', value, 'users')}
+                      onSave={value => updateField(user.id, 'role', value, 'users')}
                     />
                   </TableCell>
                   <TableCell>
                     {user.role === 'kol' ? (
                       <EditableCell
-                        value={user.kolStatus}
+                        value={user.kolStatus || null}
                         type="select"
                         options={statusOptions}
-                        onSave={(value) => updateField(user.id, 'status', value, 'kols')}
+                        onSave={value => updateField(user.id, 'status', value, 'kols')}
                       />
                     ) : (
                       <span className="text-gray-500">-</span>

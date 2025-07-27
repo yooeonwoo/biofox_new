@@ -28,8 +28,9 @@ export const SkinTypeSection: React.FC<SkinTypeSectionProps> = ({ caseItem, onUp
     <div className="space-y-2">
       <h3 className="text-sm font-medium text-gray-700">고객 피부 타입</h3>
       <div className="grid grid-cols-2 gap-2">
-        {SYSTEM_OPTIONS.skinTypes.map((opt) => {
+        {SYSTEM_OPTIONS.skinTypes.map(opt => {
           const field = SKIN_FIELD_MAP[opt.value];
+          if (!field) return null;
           const checked = caseItem[field] as boolean | undefined;
           return (
             <label key={opt.value} className="flex items-center space-x-2 text-sm">
@@ -45,4 +46,4 @@ export const SkinTypeSection: React.FC<SkinTypeSectionProps> = ({ caseItem, onUp
       </div>
     </div>
   );
-}; 
+};

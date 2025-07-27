@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { api } from '@convex/_generated/api';
+import { api } from '@/convex/_generated/api';
 import { fetchQuery, fetchMutation } from 'convex/nextjs';
 
 export async function requireAuth() {

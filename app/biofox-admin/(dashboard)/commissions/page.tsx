@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -57,7 +58,6 @@ export default function CommissionManagementPage() {
 
   const summaryQuery = useQuery(api.commissions.getCommissionSummary, {
     month: filters.month,
-    kol_id: filters.kol_id as any,
   });
 
   // 복합 쿼리 상태 관리
@@ -75,13 +75,13 @@ export default function CommissionManagementPage() {
   ]);
 
   // Mutations with optimistic updates
-  const calculateCommissions = useMutation(
-    api.commissions.calculateMonthlyCommissions
+  const calculateCommissions = useMutation(api.commissions.calculateMonthlyCommissions);
+  const updateCommissionStatusBulk = useMutation(
+    api.commissions.updateCommissionStatus
   ).withOptimisticUpdate((localStore, args) => {
     // Show loading state in summary during calculation
     const existingSummary = localStore.getQuery(api.commissions.getCommissionSummary, {
       month: filters.month,
-      kol_id: filters.kol_id as any,
     });
 
     if (existingSummary !== undefined) {
@@ -93,7 +93,6 @@ export default function CommissionManagementPage() {
         api.commissions.getCommissionSummary,
         {
           month: filters.month,
-          kol_id: filters.kol_id as any,
         },
         optimisticSummary
       );
@@ -103,34 +102,30 @@ export default function CommissionManagementPage() {
   const updateCommissionStatus = useMutation(
     api.commissions.updateCommissionCalculation
   ).withOptimisticUpdate((localStore, args) => {
-    const { orderIds, status } = args;
-    const existingCommissions = localStore.getQuery(api.commissions.listCommissions, {
+    const { commissionId, status } = args;
+    const existingCommissions = localStore.getQuery(api.commissions.getCommissionCalculations, {
       paginationOpts,
       month: filters.month,
       kol_id: filters.kol_id as any,
       status: filters.status as any,
-      sortBy: 'created_at',
-      sortOrder: 'desc',
     });
 
     if (existingCommissions !== undefined) {
       const updatedCommissions = {
         ...existingCommissions,
         page: existingCommissions.page?.map((commission: any) =>
-          orderIds.includes(commission.order_id)
+          commission._id === commissionId
             ? { ...commission, status, updated_at: Date.now() }
             : commission
         ),
       };
       localStore.setQuery(
-        api.commissions.listCommissions,
+        api.commissions.getCommissionCalculations,
         {
           paginationOpts,
           month: filters.month,
           kol_id: filters.kol_id as any,
           status: filters.status as any,
-          sortBy: 'created_at',
-          sortOrder: 'desc',
         },
         updatedCommissions
       );
@@ -174,7 +169,10 @@ export default function CommissionManagementPage() {
 
   const handleStatusUpdate = async (orderIds: string[], status: any) => {
     try {
-      await updateCommissionStatus({ orderIds, status });
+      await updateCommissionStatusBulk({
+        commissionIds: orderIds as Id<'commission_calculations'>[],
+        status,
+      });
       setSelectedIds([]);
       toast({
         title: '성공',
@@ -279,7 +277,7 @@ export default function CommissionManagementPage() {
                 loading={commissionsQuery.isLoading}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
-                onViewDetail={commission => {
+                onView={commission => {
                   setSelectedCommission(commission);
                   setDetailModalOpen(true);
                 }}
@@ -318,7 +316,7 @@ export default function CommissionManagementPage() {
       {/* Modals */}
       {detailModalOpen && selectedCommission && (
         <CommissionDetailModal
-          commission={selectedCommission}
+          commissionId={selectedCommission?._id || selectedCommission?.id}
           open={detailModalOpen}
           onClose={() => {
             setDetailModalOpen(false);

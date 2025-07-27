@@ -253,7 +253,7 @@ export const numberIdToConvexId = (numberId: number): Id<'clinical_cases'> => {
  */
 export const convexIdToNumberId = (convexId: Id<'clinical_cases'>): number => {
   const match = convexId.match(/clinical_cases_(\d+)/);
-  return match ? parseInt(match[1], 10) : 0;
+  return match && match[1] ? parseInt(match[1], 10) : 0;
 };
 
 /**

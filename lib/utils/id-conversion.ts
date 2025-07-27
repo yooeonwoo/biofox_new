@@ -144,13 +144,16 @@ export const convertNestedIdsToString = <T extends Record<string, any>>(
   let result = convertIdsToString(obj, idFields);
 
   Object.entries(nestedFields).forEach(([parentField, childIdFields]) => {
-    if (parentField in result && result[parentField]) {
-      if (Array.isArray(result[parentField])) {
-        result[parentField] = (result[parentField] as any[]).map(item =>
+    if (parentField in result && (result as any)[parentField]) {
+      if (Array.isArray((result as any)[parentField])) {
+        (result as any)[parentField] = ((result as any)[parentField] as any[]).map(item =>
           convertIdsToString(item, childIdFields as string[])
         );
-      } else if (typeof result[parentField] === 'object') {
-        result[parentField] = convertIdsToString(result[parentField], childIdFields as string[]);
+      } else if (typeof (result as any)[parentField] === 'object') {
+        (result as any)[parentField] = convertIdsToString(
+          (result as any)[parentField],
+          childIdFields as string[]
+        );
       }
     }
   });

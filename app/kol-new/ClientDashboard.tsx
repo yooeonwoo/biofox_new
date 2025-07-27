@@ -390,25 +390,13 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* 매출 차트 */}
           <div className="order-2 lg:order-1">
-            <SalesChart
-              data={
-                dashboardStats?.sales
-                  ? [
-                      {
-                        month: '이번 달',
-                        sales: dashboardStats.sales.currentMonth,
-                        growth: dashboardStats.sales.growth,
-                      },
-                    ]
-                  : []
-              }
-            />
+            <SalesChart />
           </div>
 
           {/* 전문점 순위 테이블 */}
           <div className="order-1 lg:order-2">
             <StoreRankingTable
-              stores={[
+              shops={[
                 {
                   name: dashboardStats?.kol?.shopName || '내 매장',
                   sales: dashboardStats?.sales?.currentMonth || 0,
@@ -472,7 +460,7 @@ export default function ClientDashboard({ initialData }: ClientDashboardProps) {
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="w-[300px] sm:w-[400px]">
           <DialogTitle className="sr-only">모바일 메뉴</DialogTitle>
-          <KolMobileMenu />
+          <KolMobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
         </SheetContent>
       </Sheet>
     </>

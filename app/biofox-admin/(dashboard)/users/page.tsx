@@ -115,6 +115,7 @@ export default function UsersPage() {
   const users =
     usersQuery.items?.map((user: any) => ({
       ...user,
+      id: user._id,
       stats: {
         total_sales_this_month: 0,
         total_commission_this_month: 0,
@@ -209,6 +210,7 @@ export default function UsersPage() {
         userIds: selectedUsers as any[],
         action: bulkAction,
         reason: bulkActionData.reason,
+        role: bulkActionData.role,
       });
 
       if (result.success) {
@@ -261,7 +263,7 @@ export default function UsersPage() {
   };
 
   const handleSelectAll = (isSelected: boolean) => {
-    setSelectedUsers(isSelected ? users.map(user => user.id) : []);
+    setSelectedUsers(isSelected ? users.map((user: any) => user.id) : []);
   };
 
   // Modal handlers
@@ -329,11 +331,6 @@ export default function UsersPage() {
             count={selectedUsers.length}
             onClick={() => handleBulkActionClick('reject')}
           />
-          <BulkActionButton
-            action="change_role"
-            count={selectedUsers.length}
-            onClick={() => handleBulkActionClick('change_role')}
-          />
         </div>
       )}
 
@@ -361,9 +358,9 @@ export default function UsersPage() {
                 selectedUsers={selectedUsers}
                 onSelectionChange={(userIds: string[]) => setSelectedUsers(userIds)}
                 onViewUser={handleUserClick}
-                onEditUser={async (userId: string, updates: any) => {
+                onEditUser={async (user: User) => {
                   try {
-                    await updateUser({ userId, updates });
+                    await updateUser({ userId: user.id as any, updates: user });
                     toast({
                       title: '성공',
                       description: '사용자 정보가 업데이트되었습니다.',
@@ -372,6 +369,51 @@ export default function UsersPage() {
                     toast({
                       title: '실패',
                       description: '사용자 정보 업데이트에 실패했습니다.',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+                onDeleteUser={async (user: User) => {
+                  try {
+                    await bulkUserAction({ userIds: [user.id] as any[], action: 'delete' });
+                    toast({
+                      title: '성공',
+                      description: '사용자가 삭제되었습니다.',
+                    });
+                  } catch (error) {
+                    toast({
+                      title: '실패',
+                      description: '사용자 삭제에 실패했습니다.',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+                onApproveUser={async (user: User) => {
+                  try {
+                    await approveUser({ userId: user.id as any });
+                    toast({
+                      title: '성공',
+                      description: '사용자가 승인되었습니다.',
+                    });
+                  } catch (error) {
+                    toast({
+                      title: '실패',
+                      description: '사용자 승인에 실패했습니다.',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+                onRejectUser={async (user: User) => {
+                  try {
+                    await rejectUser({ userId: user.id as any, reason: '관리자 거절' });
+                    toast({
+                      title: '성공',
+                      description: '사용자가 거절되었습니다.',
+                    });
+                  } catch (error) {
+                    toast({
+                      title: '실패',
+                      description: '사용자 거절에 실패했습니다.',
                       variant: 'destructive',
                     });
                   }
