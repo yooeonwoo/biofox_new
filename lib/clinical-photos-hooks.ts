@@ -247,10 +247,15 @@ export function useDeleteClinicalPhotoConvex() {
 /**
  * 케이스의 라운드별 고객 정보 조회 훅
  */
-export function useRoundCustomerInfoConvex(caseId: string | null) {
+export function useRoundCustomerInfoConvex(caseId: string | null, profileId?: string) {
   const roundInfo = useQuery(
     api.clinical.getRoundCustomerInfo,
-    caseId ? { caseId: caseId as Id<'clinical_cases'> } : 'skip'
+    caseId
+      ? {
+          caseId: caseId as Id<'clinical_cases'>,
+          profileId: profileId as Id<'profiles'> | undefined,
+        }
+      : 'skip'
   );
 
   return {

@@ -117,6 +117,7 @@ export function usePersonalCaseHandlers({
               consent_status: consentReceived ? 'consented' : 'no_consent',
               consent_date: consentReceived ? Date.now() : undefined,
             },
+            profileId: profileId as Id<'profiles'> | undefined,
           });
         }
 
@@ -345,6 +346,7 @@ export function usePersonalCaseHandlers({
                 age: personalInfo.age,
                 gender: personalInfo.gender,
               },
+              profileId: profileId as Id<'profiles'> | undefined,
             });
           }
         }
@@ -433,6 +435,7 @@ export function usePersonalCaseHandlers({
                 updates: {
                   treatment_plan: roundInfo.memo,
                 },
+                profileId: profileId as Id<'profiles'> | undefined,
               });
             }
 
@@ -452,6 +455,7 @@ export function usePersonalCaseHandlers({
               caseId: caseId as Id<'clinical_cases'>,
               roundNumber: roundDay,
               info: roundData,
+              profileId: profileId as Id<'profiles'> | undefined,
             });
           });
         }
