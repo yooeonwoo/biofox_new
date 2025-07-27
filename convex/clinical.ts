@@ -48,8 +48,23 @@ export const listClinicalCases = query({
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
+      // 사용자 인증 확인 (프로필이 없을 경우 null 반환하도록 수정)
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        // 인증되지 않은 사용자는 빈 결과를 반환
+        return { page: [], isDone: true, continueCursor: null };
+      }
+
+      const currentUser = await ctx.db
+        .query('profiles')
+        .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', identity.subject))
+        .unique();
+
+      if (!currentUser) {
+        // 프로필이 없는 사용자는 빈 결과를 반환
+        console.warn('User profile not found for identity:', identity.subject);
+        return { page: [], isDone: true, continueCursor: null };
+      }
 
       // 기본 쿼리 - 본인의 케이스만 조회
       let query = ctx.db
