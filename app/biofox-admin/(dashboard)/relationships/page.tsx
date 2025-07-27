@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +38,23 @@ interface RelationshipData {
 }
 
 export default function RelationshipsPage() {
+  const router = useRouter();
+  const { user: authUser, isLoading: authLoading } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
   const { toast } = useToast();
+
+  // 인증 확인
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      router.push('/signin');
+    } else if (profile && profile.role !== 'admin') {
+      router.push('/unauthorized');
+    }
+  }, [authUser, authLoading, profile, router]);
+
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showFormModal, setShowFormModal] = useState(false);
@@ -135,6 +155,24 @@ export default function RelationshipsPage() {
   const isParentRole = selectedNode && (selectedNode.role === 'kol' || selectedNode.role === 'ol');
   // 선택된 노드가 SHOP인지 확인
   const isShopRole = selectedNode && selectedNode.role === 'shop_owner';
+
+  // 로딩 상태
+  if (authLoading || !profile) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">로딩 중...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">
+              에스테틱 소속 관리 페이지를 준비하고 있습니다.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

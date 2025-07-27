@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Id } from '@/convex/_generated/dataModel';
 
 interface CustomerData {
   customerName: string;
@@ -23,8 +24,9 @@ interface CustomerData {
 interface CustomerAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CustomerData) => void;
+  onSubmit: (data: CustomerData, profileId: Id<'profiles'>) => void;
   isLoading?: boolean;
+  profileId: Id<'profiles'>;
 }
 
 const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
@@ -32,6 +34,7 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
   onClose,
   onSubmit,
   isLoading = false,
+  profileId,
 }) => {
   const [formData, setFormData] = useState<CustomerData>({
     customerName: '',
@@ -134,7 +137,7 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
 
     if (!validateForm()) return;
 
-    onSubmit(formData);
+    onSubmit(formData, profileId);
     resetForm();
   };
 
@@ -231,6 +234,14 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
                 <div
                   className="cursor-pointer rounded-lg border-2 border-dashed border-green-300 p-6 text-center transition-colors hover:bg-green-100"
                   onClick={() => consentFileInput?.click()}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="동의서 이미지 업로드"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      consentFileInput?.click();
+                    }
+                  }}
                 >
                   <div className="space-y-2">
                     <div className="text-green-600">
@@ -261,7 +272,7 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
                 type="file"
                 accept="image/*"
                 className="hidden"
-                aria-label="동의서 이미지 업로드"
+                aria-hidden="true"
                 onChange={handleConsentFileUpload}
               />
             </div>

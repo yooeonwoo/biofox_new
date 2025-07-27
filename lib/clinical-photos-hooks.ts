@@ -166,11 +166,13 @@ export function useUploadClinicalPhotoConvex() {
     roundNumber,
     angle,
     file,
+    profileId, // profileId 추가
   }: {
     caseId: string;
     roundNumber: number;
     angle: string;
     file: File;
+    profileId?: Id<'profiles'>; // profileId 추가
   }) => {
     try {
       // Step 1: 업로드 URL 생성
@@ -195,6 +197,7 @@ export function useUploadClinicalPhotoConvex() {
         session_number: roundNumber,
         photo_type: angle as 'front' | 'left_side' | 'right_side',
         file_size: file.size,
+        profileId, // profileId 전달
       });
 
       toast.success('사진이 업로드되었습니다.');

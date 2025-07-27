@@ -9,11 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import {
   useClinicalCasesConvex,
-  useEnsurePersonalCaseConvex,
   useCustomerCasesConvex,
+  useCreateClinicalCaseConvex,
 } from '@/lib/clinical-photos-hooks';
 import { useAuth } from '@/hooks/useAuth';
-import type { ClinicalCase } from '@/lib/clinical-photos-convex';
+import type { ClinicalCase } from '@/types/clinical';
 
 interface KolInfo {
   id: number;
@@ -105,13 +105,46 @@ const SkinTypes: React.FC<SkinTypesProps> = ({
 export default function ClinicalPhotosPage() {
   // 실제 인증 정보 사용
   const { isAuthenticated, isLoading: authLoading, profile, role } = useAuth();
-
   const [isKol, setIsKol] = useState<boolean | null>(null);
 
   // Convex 훅 사용
-  const { data: allCases = [], isLoading: casesLoading } = useClinicalCasesConvex();
-  const { personalCase, ensurePersonalCaseExists } = useEnsurePersonalCaseConvex();
+  const { data: allCases = [], isLoading: casesLoading } = useClinicalCasesConvex(
+    undefined,
+    profile?._id
+  );
+  const createCase = useCreateClinicalCaseConvex();
   const { data: customerCases = [] } = useCustomerCasesConvex();
+  const [personalCase, setPersonalCase] = useState<ClinicalCase | undefined>(undefined);
+
+  // 본인 케이스 확인 및 생성 로직
+  useEffect(() => {
+    if (casesLoading || !profile?._id) return;
+
+    const existingPersonalCase = allCases.find(c => c.customerName?.trim() === '본인');
+    if (existingPersonalCase) {
+      setPersonalCase(existingPersonalCase);
+    } else {
+      // 본인 케이스가 없으면 생성
+      const createNewPersonalCase = async () => {
+        try {
+          const newCase = await createCase.mutateAsync(
+            {
+              customerName: '본인',
+              caseName: '본인 임상 케이스',
+              concernArea: '본인 케어',
+              treatmentPlan: '개인 관리 계획',
+              consentReceived: false,
+            },
+            profile._id
+          );
+          setPersonalCase(newCase);
+        } catch (error) {
+          console.error('Failed to create personal case:', error);
+        }
+      };
+      createNewPersonalCase();
+    }
+  }, [allCases, casesLoading, createCase, profile?._id]);
 
   // 사용자 역할 확인
   useEffect(() => {

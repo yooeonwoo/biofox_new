@@ -198,6 +198,7 @@ export function usePersonalCaseHandlers({
               roundNumber: roundDay,
               angle,
               file,
+              profileId, // profileId 전달
             });
             console.log('Upload result:', result);
 

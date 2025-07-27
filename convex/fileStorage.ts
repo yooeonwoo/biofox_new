@@ -1,6 +1,7 @@
 import { mutation, query, action } from './_generated/server';
 import { v } from 'convex/values';
 import { Id } from './_generated/dataModel';
+import { getCurrentUser } from './utils';
 
 // 🔗 업로드 URL 생성 Mutations
 
@@ -45,22 +46,12 @@ export const saveClinicalPhoto = mutation({
     photo_type: v.union(v.literal('front'), v.literal('left_side'), v.literal('right_side')),
     file_size: v.optional(v.number()),
     metadata: v.optional(v.any()),
+    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
   },
   handler: async (ctx, args) => {
-    // 사용자 인증 확인
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('Unauthorized: Must be logged in');
-    }
-
-    // 현재 사용자 프로필 조회
-    const userProfile = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', identity.subject as Id<'users'>))
-      .first();
-
-    if (!userProfile) {
-      throw new Error('User profile not found');
+    const user = await getCurrentUser(ctx);
+    if (!user) {
+      throw new Error('User not authenticated');
     }
 
     // 기존 같은 세션/타입의 사진이 있는지 확인
@@ -76,18 +67,14 @@ export const saveClinicalPhoto = mutation({
 
     // 기존 사진이 있으면 삭제
     if (existingPhoto) {
-      // Storage에서 이전 파일 삭제
       try {
         await ctx.storage.delete(existingPhoto.file_path as Id<'_storage'>);
       } catch (error) {
         console.warn('Failed to delete old file from storage:', error);
       }
-
-      // DB에서 기존 레코드 삭제
       await ctx.db.delete(existingPhoto._id);
     }
 
-    // 새 사진 메타데이터 저장
     const photoId = await ctx.db.insert('clinical_photos', {
       clinical_case_id: args.clinical_case_id,
       session_number: args.session_number,
@@ -97,7 +84,7 @@ export const saveClinicalPhoto = mutation({
       metadata: args.metadata,
       upload_date: Date.now(),
       created_at: Date.now(),
-      uploaded_by: userProfile._id,
+      uploaded_by: user._id,
     });
 
     return photoId;

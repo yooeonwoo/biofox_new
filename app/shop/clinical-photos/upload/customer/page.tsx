@@ -2,6 +2,11 @@
 
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Camera } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCustomerCaseHandlers } from '@/hooks/useCustomerCaseHandlers';
 import { useCustomerPageState } from '@/hooks/useCustomerPageState';
@@ -13,6 +18,20 @@ import type { RoundCustomerInfo } from '@/types/clinical';
 // 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 
 export default function CustomerClinicalUploadPage() {
+  const router = useRouter();
+  const { user: authUser, isLoading: authLoading } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
+
+  // 인증 확인
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      router.push('/signin');
+    }
+  }, [authUser, authLoading, router]);
+
   // 모든 상태와 사이드 이펙트를 커스텀 훅으로 분리
   const {
     // States (only used ones)
@@ -66,7 +85,7 @@ export default function CustomerClinicalUploadPage() {
   });
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!user || isLoading) {
+  if (authLoading || !profile || !user || isLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -74,7 +93,9 @@ export default function CustomerClinicalUploadPage() {
             <CardTitle className="text-center">로딩 중...</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center text-muted-foreground">업로드 페이지를 준비하는 중입니다.</p>
+            <p className="text-center text-muted-foreground">
+              고객 임상사진 페이지를 준비하는 중입니다.
+            </p>
           </CardContent>
         </Card>
       </div>

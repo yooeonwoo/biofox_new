@@ -1,6 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { usePersonalPageState } from '@/hooks/usePersonalPageState';
 import { usePersonalCaseHandlers } from '@/hooks/usePersonalCaseHandlers';
 import { useSerialQueue } from '@/hooks/useSerialQueue';
@@ -10,28 +15,43 @@ import { EmptyStateCard } from '@/components/clinical/EmptyStateCard';
 import { PersonalCaseList } from '@/components/clinical/PersonalCaseList';
 import { CaseInfoMessage } from '@/components/clinical/CaseInfoMessage';
 import { LOADING_MESSAGES, EMPTY_STATE, INFO_MESSAGES, BUTTON_TEXTS } from '@/constants/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function PersonalPage() {
+  const router = useRouter();
+  const { user: authUser, isLoading: authLoading } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
+
+  // 인증 확인
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      router.push('/signin');
+    }
+  }, [authUser, authLoading, router]);
+
   // Personal용 상태 관리 훅
   const pageState = usePersonalPageState({ initialRound: 1 });
-  
+
   // 큐 관리
   const { enqueue } = useSerialQueue();
-  
+
   // 디바운스 업데이트 함수
   const debouncedUpdate = (key: string, updateFn: () => void, delay = 300) => {
     setTimeout(updateFn, delay);
   };
-  
+
   // 상태 관리 함수들
   const markSaving = (caseId: string) => {
     pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'saving' }));
   };
-  
+
   const markSaved = (caseId: string) => {
     pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'saved' }));
   };
-  
+
   const markError = (caseId: string) => {
     pageState.setSaveStatus(prev => ({ ...prev, [caseId]: 'error' }));
   };
@@ -57,12 +77,20 @@ export default function PersonalPage() {
   });
 
   // 로딩 상태
-  if (pageState.isLoading) {
+  if (authLoading || !profile || pageState.isLoading) {
     return (
-      <LoadingScreen 
-        title={LOADING_MESSAGES.personal.title}
-        description={LOADING_MESSAGES.personal.description}
-      />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">로딩 중...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground">
+              개인 임상사진 페이지를 준비하는 중입니다.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -73,11 +101,11 @@ export default function PersonalPage() {
         onAddCustomer={handlers.handleAddPersonalCase}
         hasUnsavedNewCustomer={pageState.hasUnsavedPersonalCase}
       />
-      
+
       {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
       <main ref={pageState.mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
         {/* 메인 컨텐츠 - Legacy 반응형 패딩과 간격 적용 */}
-        <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
+        <div className="space-y-4 p-3 xs:space-y-5 xs:p-4 md:px-0 md:py-6">
           {/* 케이스가 없을 때 */}
           {pageState.cases.length === 0 && (
             <EmptyStateCard
@@ -126,12 +154,10 @@ export default function PersonalPage() {
           )}
 
           {/* 케이스가 이미 있는 경우 메시지 */}
-          {pageState.cases.length > 0 && pageState.cases.some(c => handlers.isNewPersonalCase(c.id)) && (
-            <CaseInfoMessage 
-              message={INFO_MESSAGES.personalCaseLimit}
-              type="info"
-            />
-          )}
+          {pageState.cases.length > 0 &&
+            pageState.cases.some(c => handlers.isNewPersonalCase(c.id)) && (
+              <CaseInfoMessage message={INFO_MESSAGES.personalCaseLimit} type="info" />
+            )}
         </div>
       </main>
     </div>
