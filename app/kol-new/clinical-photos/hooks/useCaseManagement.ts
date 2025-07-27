@@ -6,8 +6,7 @@
 import { useMemo } from 'react';
 import {
   useClinicalCases,
-  useEnsurePersonalCase,
-  useCustomerCases,
+  useCreateClinicalCase,
   type ClinicalCase,
 } from '@/lib/clinical-photos-convex';
 
@@ -16,31 +15,33 @@ import {
  * @param type 'personal' | 'customer'
  */
 export const useCaseManagement = (type: 'personal' | 'customer') => {
-  // Convex 훅들 사용
+  // Convex 훅들 사용 - 조건부 호출 방지를 위해 항상 같은 훅 사용
   const {
     data: allCases = [],
     isLoading: allCasesLoading,
     refetch: refetchAll,
   } = useClinicalCases();
-  const {
-    personalCase,
-    isLoading: personalLoading,
-    ensurePersonalCaseExists,
-  } = useEnsurePersonalCase();
-  const {
-    data: customerCases = [],
-    isLoading: customerLoading,
-    refetch: refetchCustomers,
-  } = useCustomerCases();
+  const createCase = useCreateClinicalCase();
 
   const result = useMemo(() => {
     if (type === 'personal') {
       // 개인 케이스 (배열 형태로 반환)
-      const personalCases = personalCase ? [personalCase] : [];
+      const personalCase = allCases.find(c => c.customerName?.trim() === '본인');
+      const ensurePersonalCaseExists = async () => {
+        if (personalCase) return personalCase;
+
+        return await createCase.mutateAsync({
+          customerName: '본인',
+          caseName: '본인 임상 케이스',
+          concernArea: '본인 케어',
+          treatmentPlan: '개인 관리 계획',
+          consentReceived: false,
+        });
+      };
 
       return {
-        cases: personalCases,
-        loading: personalLoading,
+        cases: personalCase ? [personalCase] : [],
+        loading: allCasesLoading || createCase.isPending,
         refresh: async () => {
           await refetchAll();
         },
@@ -53,11 +54,13 @@ export const useCaseManagement = (type: 'personal' | 'customer') => {
       };
     } else {
       // 고객 케이스들
+      const customerCases = allCases.filter(c => c.customerName?.trim() !== '본인');
+
       return {
         cases: customerCases,
-        loading: customerLoading,
+        loading: allCasesLoading,
         refresh: async () => {
-          await refetchCustomers();
+          await refetchAll();
         },
         setCases: (newCases: ClinicalCase[] | ((prev: ClinicalCase[]) => ClinicalCase[])) => {
           // 실제 데이터는 Convex에서 관리되므로 이 함수는 더 이상 필요하지 않음
@@ -65,16 +68,7 @@ export const useCaseManagement = (type: 'personal' | 'customer') => {
         },
       };
     }
-  }, [
-    type,
-    personalCase,
-    personalLoading,
-    customerCases,
-    customerLoading,
-    refetchAll,
-    refetchCustomers,
-    ensurePersonalCaseExists,
-  ]);
+  }, [type, allCases, allCasesLoading, refetchAll, createCase]);
 
   return result;
 };

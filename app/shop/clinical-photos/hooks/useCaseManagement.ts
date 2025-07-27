@@ -5,26 +5,40 @@
 
 import { useMemo } from 'react';
 import type { ClinicalCase } from '@/lib/clinical-photos-convex';
-import { useEnsurePersonalCase, useCustomerCases } from '@/lib/clinical-photos-convex';
+import { useClinicalCases } from '@/lib/clinical-photos-convex';
+import { useCreateClinicalCase } from '@/lib/clinical-photos-convex';
 
 /**
  * 케이스 데이터를 실시간으로 관리하는 Convex 기반 훅 (Shop 버전)
  * @param type 'personal' | 'customer'
  */
 export const useCaseManagement = (type: 'personal' | 'customer') => {
-  // 🚀 Convex 실시간 훅 사용
-  const personalCaseHook = useEnsurePersonalCase();
-  const customerCasesHook = useCustomerCases();
+  // 🚀 Convex 실시간 훅 사용 - 조건부 호출 방지를 위해 항상 같은 훅 사용
+  const { data: allCases = [], isLoading } = useClinicalCases();
+  const createCase = useCreateClinicalCase();
 
   const result = useMemo(() => {
     if (type === 'personal') {
+      const personalCase = allCases.find(c => c.customerName?.trim() === '본인');
+      const ensurePersonalCaseExists = async () => {
+        if (personalCase) return personalCase;
+
+        return await createCase.mutateAsync({
+          customerName: '본인',
+          caseName: '본인 임상 케이스',
+          concernArea: '본인 케어',
+          treatmentPlan: '개인 관리 계획',
+          consentReceived: false,
+        });
+      };
+
       return {
-        cases: personalCaseHook.personalCase ? [personalCaseHook.personalCase] : [],
-        loading: personalCaseHook.isLoading || personalCaseHook.isCreating,
+        cases: personalCase ? [personalCase] : [],
+        loading: isLoading || createCase.isPending,
         refresh: async () => {
           // Convex는 자동으로 실시간 업데이트되므로 별도 refresh 불필요
-          if (!personalCaseHook.personalCase) {
-            await personalCaseHook.ensurePersonalCaseExists();
+          if (!personalCase) {
+            await ensurePersonalCaseExists();
           }
         },
         setCases: () => {
@@ -34,9 +48,11 @@ export const useCaseManagement = (type: 'personal' | 'customer') => {
         },
       };
     } else {
+      const customerCases = allCases.filter(c => c.customerName?.trim() !== '본인');
+
       return {
-        cases: customerCasesHook.data || [],
-        loading: customerCasesHook.isLoading,
+        cases: customerCases,
+        loading: isLoading,
         refresh: async () => {
           // Convex는 자동으로 실시간 업데이트되므로 별도 refresh 불필요
           console.info('Convex는 실시간 업데이트되므로 수동 새로고침이 불필요합니다.');
@@ -48,7 +64,7 @@ export const useCaseManagement = (type: 'personal' | 'customer') => {
         },
       };
     }
-  }, [type, personalCaseHook, customerCasesHook]);
+  }, [type, allCases, isLoading, createCase]);
 
   return result;
 };
