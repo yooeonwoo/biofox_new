@@ -53,6 +53,9 @@ export default function CustomerHeader({
     }
   };
 
+  // 필수 필드가 채워졌는지 확인
+  const isRequiredFieldsFilled = basicInfo.phone?.trim() && basicInfo.region?.trim();
+
   const formatLastSaved = (date: Date | null) => {
     if (!date) return null;
     return date.toLocaleTimeString('ko-KR', {
@@ -159,6 +162,14 @@ export default function CustomerHeader({
 
       <hr className="my-3" />
 
+      {/* 새 고객인 경우 안내 메시지 */}
+      {isNew && !isRequiredFieldsFilled && (
+        <div className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
+          <p className="font-medium">필수 정보를 입력해주세요</p>
+          <p className="mt-1 text-[10px]">전화번호와 지역은 필수 입력 항목입니다.</p>
+        </div>
+      )}
+
       {/* Form rows */}
       <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
         <div className="flex items-center gap-2">
@@ -170,19 +181,25 @@ export default function CustomerHeader({
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="min-w-[30px]">번호:</span>
+          <span className="min-w-[30px]">
+            번호:<span className="text-red-500">*</span>
+          </span>
           <Input
-            className="h-7 flex-1"
+            className={cn('h-7 flex-1', isNew && !basicInfo.phone?.trim() && 'border-red-300')}
             value={basicInfo.phone || ''}
             onChange={e => setField('phone', e.target.value)}
+            placeholder={isNew ? '필수' : ''}
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="min-w-[30px]">지역:</span>
+          <span className="min-w-[30px]">
+            지역:<span className="text-red-500">*</span>
+          </span>
           <Input
-            className="h-7 flex-1"
+            className={cn('h-7 flex-1', isNew && !basicInfo.region?.trim() && 'border-red-300')}
             value={basicInfo.region || ''}
             onChange={e => setField('region', e.target.value)}
+            placeholder={isNew ? '필수' : ''}
           />
         </div>
         <div className="flex items-center gap-2">

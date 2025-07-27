@@ -94,7 +94,7 @@ export default function CustomerList({ kolId }: Props) {
       });
 
       if (customerId) {
-        toast.success('새 고객이 추가되었습니다.');
+        toast.success('새 고객이 추가되었습니다. 필수 정보를 입력해주세요.');
         // 고객 목록은 Convex query에 의해 자동으로 업데이트됨
       }
     } catch (error) {

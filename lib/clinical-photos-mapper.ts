@@ -301,8 +301,11 @@ export const uiToConvexCreateArgs = (uiData: Partial<UIClinicalCase>) => {
     metadata.skinEtc = true;
   }
 
+  // '본인' 케이스인지 확인하여 subject_type 동적 설정
+  const subjectType = (uiData.customerName || '').trim() === '본인' ? 'self' : 'customer';
+
   return {
-    subject_type: 'customer' as const,
+    subject_type: subjectType as 'self' | 'customer',
     name: uiData.customerName || '',
     case_title: uiData.caseName,
     concern_area: uiData.concernArea,

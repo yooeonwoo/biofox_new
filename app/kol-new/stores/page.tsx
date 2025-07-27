@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -15,6 +15,8 @@ import {
   Minus,
   CrownIcon,
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useKolStoresData } from '@/hooks/useKolStoresData';
 
 // UI 컴포넌트
 import { Button } from '@/components/ui/button';
@@ -54,28 +56,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-// 타입 정의
-interface ShopData {
-  id: string; // Convex ID는 string 타입
-  ownerName: string;
-  shop_name: string;
-  region: string;
-  status: string;
-  createdAt: string;
-  is_self_shop?: boolean;
-  relationship_type?: 'owner' | 'manager';
-  owner_kol_id?: string | null; // Convex ID는 string 타입
-  sales: {
-    total: number;
-    product: number;
-    device: number;
-    hasOrdered: boolean;
-    avg_monthly?: number;
-    accumulated?: number;
-    commission?: number;
-  };
-}
+import type { ShopData } from '@/hooks/useKolStoresData';
 
 // 숫자를 만 단위로 포맷팅하는 유틸리티 함수
 const formatToManUnit = (value: number): string => {
@@ -100,32 +81,25 @@ const formatToManUnit = (value: number): string => {
 };
 
 export default function StoresPage() {
-  // 임시 사용자 정보 (로컬 개발용)
-  const tempUser = {
-    isLoaded: true,
-    isSignedIn: true,
-    role: 'kol',
-    publicMetadata: { role: 'kol' },
-  };
+  const { profile, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const kolId = profile?._id;
 
-  const [isKol, setIsKol] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [shopsData, setShopsData] = useState<ShopData[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [kolInfo, setKolInfo] = useState<{ name: string; shopName: string } | null>(null);
-  // 전문점 통계 정보를 저장할 상태 추가
-  const [shopStats, setShopStats] = useState<{ totalShopsCount: number; activeShopsCount: number }>(
-    {
-      totalShopsCount: 0,
-      activeShopsCount: 0,
-    }
-  );
+  // Convex를 사용한 매장 데이터 로드
+  const { shops: shopsDataFromHook, isLoading: isStoresLoading, error } = useKolStoresData(kolId);
+  const shopsData = shopsDataFromHook?.list || [];
+  const shopStats = shopsDataFromHook?.meta || { totalShopsCount: 0, activeShopsCount: 0 };
 
-  // 선택된 상점의 상세 정보를 저장할 상태 추가
+  // 선택된 상점의 상세 정보를 저장할 상태
   const [selectedShop, setSelectedShop] = useState<ShopData | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isLoadingShopDetail, setIsLoadingShopDetail] = useState(false);
+
+  // KOL 정보
+  const kolInfo = profile
+    ? {
+        name: profile.name || 'KOL 사용자',
+        shopName: profile.shop_name || '',
+      }
+    : null;
 
   // 전문점 정렬 및 필터링 로직
   const filteredShops = useMemo(() => {
@@ -161,186 +135,16 @@ export default function StoresPage() {
     }));
   }, [filteredShops]);
 
-  // 사용자 역할 확인
+  // 인증 리다이렉트
   useEffect(() => {
-    if (tempUser.isLoaded && tempUser.isSignedIn) {
-      const userRole = (tempUser.publicMetadata?.role as string) || 'kol';
-      setIsKol(userRole === 'kol');
+    if (!isAuthLoading && !isAuthenticated) {
+      redirect('/');
     }
-  }, []);
+  }, [isAuthLoading, isAuthenticated]);
 
-  // 데이터 로드
-  useEffect(() => {
-    if (tempUser.isLoaded && tempUser.isSignedIn && isKol) {
-      const fetchData = async () => {
-        try {
-          setLoading(true);
+  // 로딩 상태
+  const loading = isAuthLoading || isStoresLoading;
 
-          // 대시보드 및 전문점 데이터를 병렬로 로드
-          const [dashboardResult, shopsResult] = await Promise.all([
-            fetch('/api/kol-new/dashboard').then(async r => {
-              if (!r.ok) throw new Error('대시보드 데이터를 불러오는데 실패했습니다.');
-              return r.json();
-            }),
-            fetch('/api/kol-new/shops').then(async r => {
-              if (!r.ok) throw new Error('전문점 데이터를 불러오는데 실패했습니다.');
-              return r.json();
-            }),
-          ]);
-
-          // KOL 정보가 있는지 확인
-          if (dashboardResult && dashboardResult.kol) {
-            setKolInfo({
-              name: dashboardResult.kol.name || 'KOL 사용자',
-              shopName: dashboardResult.kol.shopName || '',
-            });
-          } else {
-            setKolInfo({
-              name: 'KOL 사용자',
-              shopName: '',
-            });
-          }
-
-          // 전문점 데이터 로드
-          // API 응답 구조 확인 및 로그
-          // 필요시 디버깅용 로그, 운영 시 주석 처리
-          // console.log('API 응답 구조:', {
-          //   hasShops: Boolean(shopsResult.shops),
-          //   shopsCount: shopsResult.shops?.length || 0,
-          //   hasMeta: Boolean(shopsResult.meta),
-          //   meta: shopsResult.meta
-          // });
-
-          // 변경된 API 구조 처리 (shops와 meta 객체)
-          if (shopsResult.shops && Array.isArray(shopsResult.shops)) {
-            const formattedShops = shopsResult.shops.map((shop: any) => ({
-              ...shop,
-              shop_name: shop.shop_name || shop.ownerName,
-              sales: {
-                ...shop.sales,
-                total: shop.sales.total,
-                product: shop.sales.product,
-                device: shop.sales.device,
-                commission: shop.sales.commission,
-              },
-            }));
-
-            setShopsData(formattedShops);
-
-            // 메타 데이터가 있으면 사용 (새 API 구조)
-            if (shopsResult.meta) {
-              // console.log('메타 데이터 상세:', {
-              //   totalShopsCount: shopsResult.meta.totalShopsCount,
-              //   activeShopsCount: shopsResult.meta.activeShopsCount,
-              //   activeShopsFormatted: typeof shopsResult.meta.activeShopsCount
-              // });
-
-              // 활성 전문점 상태 체크
-              const activeShopsFromAPI = formattedShops.filter(
-                (shop: ShopData) => shop.status === 'active' // 수정: 매출 여부는 고려하지 않음
-              );
-              // console.log('활성 전문점 직접 계산:', activeShopsFromAPI.length);
-              // console.log('활성 전문점 목록:', activeShopsFromAPI.map((shop: ShopData) => ({
-              //   name: shop.shop_name,
-              //   hasOrdered: shop.sales.hasOrdered,
-              //   total: shop.sales.total,
-              //   status: shop.status
-              // })));
-
-              setShopStats({
-                totalShopsCount: shopsResult.meta.totalShopsCount || 0,
-                activeShopsCount: shopsResult.meta.activeShopsCount || 0,
-              });
-
-              // 상태 업데이트 후 확인
-              // setTimeout(() => {
-              //   console.log('설정된 상태 값:', shopStats);
-              // }, 0);
-            } else {
-              // 메타 데이터가 없으면 직접 계산 (구 API 구조 호환성 유지)
-              // console.log('메타 데이터 없음, 직접 계산');
-              setShopStats({
-                totalShopsCount: formattedShops.length,
-                activeShopsCount: formattedShops.filter((shop: ShopData) => shop.sales.hasOrdered)
-                  .length,
-              });
-            }
-          } else if (Array.isArray(shopsResult)) {
-            // 이전 API 구조도 지원 (호환성 유지)
-            // console.log('이전 API 구조 사용');
-            const formattedShops = shopsResult.map((shop: any) => ({
-              ...shop,
-              shop_name: shop.shop_name || shop.ownerName,
-              sales: {
-                ...shop.sales,
-                total: shop.sales.total,
-                product: shop.sales.product,
-                device: shop.sales.device,
-                commission: shop.sales.commission,
-              },
-            }));
-
-            setShopsData(formattedShops);
-
-            // 이전 API 구조에서는 직접 계산
-            setShopStats({
-              totalShopsCount: formattedShops.length,
-              activeShopsCount: formattedShops.filter((shop: ShopData) => shop.sales.hasOrdered)
-                .length,
-            });
-          } else {
-            // console.log('API 응답에 샵 데이터 없음');
-            setShopsData([]);
-            setShopStats({
-              totalShopsCount: 0,
-              activeShopsCount: 0,
-            });
-          }
-
-          setLoading(false);
-        } catch (err: unknown) {
-          console.error('데이터 로드 에러:', err);
-          setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
-          setLoading(false);
-        }
-      };
-      fetchData();
-    }
-  }, [tempUser.isLoaded, tempUser.isSignedIn, isKol]);
-
-  // 로그아웃 함수
-  const handleSignOut = async () => {
-    try {
-      // 임시 로그아웃 처리
-      console.log('로그아웃 처리');
-      window.location.href = '/';
-    } catch (error) {
-      console.error('로그아웃 중 오류가 발생했습니다:', error);
-    }
-  };
-
-  // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!tempUser.isLoaded || isKol === null) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">로딩 중...</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center text-muted-foreground">사용자 정보를 확인하는 중입니다.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // KOL이 아닌 경우 홈으로 리다이렉트
-  if (!isKol) {
-    return redirect('/');
-  }
-
-  // 데이터 로딩 중인 경우
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
@@ -365,7 +169,9 @@ export default function StoresPage() {
             <CardTitle className="text-center text-destructive">에러 발생</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center text-muted-foreground">{error}</p>
+            <p className="text-center text-muted-foreground">
+              {error instanceof Error ? error.message : '데이터를 불러오는데 실패했습니다.'}
+            </p>
           </CardContent>
           <CardFooter className="flex justify-center">
             <Button onClick={() => window.location.reload()}>다시 시도</Button>
@@ -390,7 +196,7 @@ export default function StoresPage() {
   };
 
   // 상점 행 클릭 핸들러
-  const handleShopClick = async (shop: ShopData) => {
+  const handleShopClick = (shop: ShopData) => {
     setSelectedShop(shop);
     setIsDetailModalOpen(true);
   };
