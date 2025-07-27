@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import type { CaseCardProps } from '@/app/kol-new/clinical-photos/types';
 import { CaseHeader } from './sub/CaseHeader';
 import { CustomerInfoSection } from './sub/CustomerInfoSection';
@@ -20,18 +17,22 @@ export const CaseCard: React.FC<CaseCardProps> = ({
   showNewBadge = false,
   onUpdate,
   onDelete,
+  profileId,
 }) => {
   return (
-    <Card variant={type === 'personal' ? 'glass-light' : 'default'} className="w-full max-w-2xl mx-auto mb-6">
-      <CaseHeader
-        caseItem={caseData}
-        showDelete={showDelete}
-        onDelete={onDelete}
-      />
+    <Card
+      variant={type === 'personal' ? 'glass-light' : 'default'}
+      className="mx-auto mb-6 w-full max-w-2xl"
+    >
+      <CaseHeader caseItem={caseData} showDelete={showDelete} onDelete={onDelete} />
 
       <CardContent className="space-y-4">
         {/* 사진 / 회차 업로드 */}
-        <PhotoSection caseId={caseData.id} isCompleted={caseData.status === 'completed' || caseData.status === 'archived'} />
+        <PhotoSection
+          caseId={caseData.id}
+          isCompleted={caseData.status === 'completed' || caseData.status === 'archived'}
+          profileId={profileId}
+        />
 
         {/* 고객 정보 입력 섹션 */}
         <CustomerInfoSection
@@ -39,12 +40,12 @@ export const CaseCard: React.FC<CaseCardProps> = ({
           editableName={editableName}
           onUpdate={(updates: Partial<typeof caseData>) => onUpdate(caseData.id, updates)}
         />
-        <ProductSection caseItem={caseData} onUpdate={(updates) => onUpdate(caseData.id, updates)} />
-        <SkinTypeSection caseItem={caseData} onUpdate={(updates) => onUpdate(caseData.id, updates)} />
-        <MemoSection caseItem={caseData} onUpdate={(updates) => onUpdate(caseData.id, updates)} />
+        <ProductSection caseItem={caseData} onUpdate={updates => onUpdate(caseData.id, updates)} />
+        <SkinTypeSection caseItem={caseData} onUpdate={updates => onUpdate(caseData.id, updates)} />
+        <MemoSection caseItem={caseData} onUpdate={updates => onUpdate(caseData.id, updates)} />
       </CardContent>
     </Card>
   );
 };
 
-export default CaseCard; 
+export default CaseCard;

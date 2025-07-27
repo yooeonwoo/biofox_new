@@ -8,7 +8,7 @@ import {
  * 사진 업로드 / 삭제 로직을 공통화한 훅 - Convex 기반 구현
  * 기존 더미 함수들을 실제 Convex 뮤테이션으로 교체
  */
-export const usePhotoManagement = () => {
+export const usePhotoManagement = (profileId?: string) => {
   const uploadPhoto = useUploadClinicalPhoto();
   const deletePhoto = useDeleteClinicalPhoto();
 
@@ -24,6 +24,7 @@ export const usePhotoManagement = () => {
         roundNumber: roundDay,
         angle,
         file,
+        profileId,
       });
       return result;
     } catch (error) {

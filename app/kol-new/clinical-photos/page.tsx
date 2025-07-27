@@ -113,7 +113,7 @@ export default function ClinicalPhotosPage() {
     profile?._id
   );
   const createCase = useCreateClinicalCaseConvex();
-  const { data: customerCases = [] } = useCustomerCasesConvex();
+  const { data: customerCases = [] } = useCustomerCasesConvex(profile?._id);
   const [personalCase, setPersonalCase] = useState<ClinicalCase | undefined>(undefined);
   const [isCreatingPersonalCase, setIsCreatingPersonalCase] = useState(false);
 

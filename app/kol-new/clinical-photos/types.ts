@@ -23,6 +23,8 @@ export interface CaseCardProps {
   showNewBadge?: boolean;
   /** 케이스 업데이트 콜백 */
   onUpdate: (caseId: string, updates: Partial<ClinicalCase>) => void;
+  /** 프로필 ID */
+  profileId?: string;
   /** 케이스 삭제 콜백 */
   onDelete?: (caseId: string) => void;
 }

@@ -8,11 +8,12 @@ import { useClinicalPhotos } from '@/lib/clinical-photos-convex';
 interface PhotoSectionProps {
   caseId: string;
   isCompleted?: boolean;
+  profileId?: string;
 }
 
-export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted }) => {
+export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted, profileId }) => {
   const { data: photos = [], isLoading: loading, refetch: loadPhotos } = useClinicalPhotos(caseId);
-  const { handlePhotoUpload, handlePhotoDelete } = usePhotoManagement();
+  const { handlePhotoUpload, handlePhotoDelete } = usePhotoManagement(profileId);
 
   if (loading) {
     return <LoadingSpinner className="py-8" />;

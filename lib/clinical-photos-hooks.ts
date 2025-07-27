@@ -297,8 +297,8 @@ export function useRoundCustomerInfoConvex(caseId: string | null, profileId?: st
 /**
  * 편의 함수: 고객 케이스 목록 (본인 제외)
  */
-export function useCustomerCasesConvex() {
-  const { data: allCases, ...rest } = useClinicalCasesConvex();
+export function useCustomerCasesConvex(profileId?: Id<'profiles'>) {
+  const { data: allCases, ...rest } = useClinicalCasesConvex(undefined, profileId);
 
   const customerCases = allCases?.filter(c => c.customerName?.trim() !== '본인') || [];
 
