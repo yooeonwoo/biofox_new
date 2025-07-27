@@ -7,6 +7,9 @@ import {
 } from '@/lib/clinical-photos-hooks';
 import type { PhotoSlot } from '@/types/clinical';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface PhotoSectionProps {
   caseId: string;
@@ -14,6 +17,13 @@ interface PhotoSectionProps {
 }
 
 export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted }) => {
+  // 사용자 정보 및 프로필 가져오기
+  const { user: authUser } = useAuth();
+  const profile = useQuery(
+    api.profiles.getProfileByEmail,
+    authUser?.email ? { email: authUser.email } : 'skip'
+  );
+
   // Convex 훅을 사용하여 실시간 데이터 로드
   const { data: photos, isLoading } = useClinicalPhotosConvex(caseId);
   const uploadPhoto = useUploadClinicalPhotoConvex();
@@ -34,6 +44,7 @@ export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted 
           roundNumber: round,
           angle,
           file,
+          profileId: profile?._id, // profileId 추가
         });
         // Convex는 실시간 동기화로 자동 업데이트
       }}

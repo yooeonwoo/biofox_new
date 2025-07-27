@@ -226,15 +226,23 @@ export const getClinicalCase = query({
 export const createClinicalCase = mutation({
   args: {
     profileId: v.id('profiles'), // 프로필 ID를 직접 전달받음
-    subject_type: v.union(v.literal('self'), v.literal('customer')),
-    name: v.string(),
-    case_title: v.optional(v.string()), // 추가
-    concern_area: v.optional(v.string()), // 추가
-    treatment_plan: v.optional(v.string()), // 추가
+    subject_type: v.optional(v.union(v.literal('self'), v.literal('customer'))),
+    name: v.optional(v.string()),
+    // useCustomerCaseHandlers에서 사용하는 필드들 추가
+    customerName: v.optional(v.string()), // 호환성을 위해 추가
+    caseName: v.optional(v.string()), // 호환성을 위해 추가
+    case_title: v.optional(v.string()),
+    concernArea: v.optional(v.string()), // camelCase 버전 추가
+    concern_area: v.optional(v.string()),
+    treatmentPlan: v.optional(v.string()), // camelCase 버전 추가
+    treatment_plan: v.optional(v.string()),
+    consentReceived: v.optional(v.boolean()), // boolean 버전 추가
     gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
     age: v.optional(v.number()),
     treatment_item: v.optional(v.string()),
-    consent_status: v.union(v.literal('no_consent'), v.literal('consented'), v.literal('pending')),
+    consent_status: v.optional(
+      v.union(v.literal('no_consent'), v.literal('consented'), v.literal('pending'))
+    ),
     consent_date: v.optional(v.number()),
     marketing_consent: v.optional(v.boolean()),
     notes: v.optional(v.string()),
@@ -253,9 +261,12 @@ export const createClinicalCase = mutation({
       }
       console.log('[createClinicalCase] 프로필 확인 완료:', profile.name);
 
+      // 이름 설정 - customerName 또는 name 사용
+      const finalName = args.customerName || args.name || '새 고객';
+
       // 입력 데이터 검증
-      if (!args.name || args.name.trim().length < 2) {
-        throw new ApiError(ERROR_CODES.VALIDATION_ERROR, 'Name must be at least 2 characters long');
+      if (finalName.trim().length < 1) {
+        throw new ApiError(ERROR_CODES.VALIDATION_ERROR, 'Name must be at least 1 character long');
       }
 
       if (args.age !== undefined && (args.age < 0 || args.age > 150)) {
@@ -264,23 +275,31 @@ export const createClinicalCase = mutation({
 
       const now = Date.now();
 
+      // consent_status 결정 - consentReceived가 있으면 그것을 사용
+      let consentStatus: 'no_consent' | 'consented' | 'pending' = 'no_consent';
+      if (args.consentReceived !== undefined) {
+        consentStatus = args.consentReceived ? 'consented' : 'no_consent';
+      } else if (args.consent_status) {
+        consentStatus = args.consent_status;
+      }
+
       // 임상 케이스 생성
       console.log('[createClinicalCase] 케이스 데이터 생성 중...');
       const caseId = await ctx.db.insert('clinical_cases', {
         shop_id: args.profileId, // KOL의 프로필 ID를 그대로 사용
-        subject_type: args.subject_type,
-        name: args.name.trim(),
-        case_title: args.case_title,
-        concern_area: args.concern_area,
-        treatment_plan: args.treatment_plan,
+        subject_type: args.subject_type || 'customer',
+        name: finalName.trim(),
+        case_title: args.caseName || args.case_title || finalName + ' 케이스',
+        concern_area: args.concernArea || args.concern_area || '',
+        treatment_plan: args.treatmentPlan || args.treatment_plan || '',
         gender: args.gender,
         age: args.age,
         status: 'in_progress',
         treatment_item: args.treatment_item,
         start_date: now,
         total_sessions: 0,
-        consent_status: args.consent_status,
-        consent_date: args.consent_status === 'consented' ? now : undefined,
+        consent_status: consentStatus,
+        consent_date: consentStatus === 'consented' ? now : undefined,
         marketing_consent: args.marketing_consent || false,
         notes: args.notes,
         tags: args.tags || [],
@@ -304,9 +323,9 @@ export const createClinicalCase = mutation({
         userRole: profile.role,
         oldValues: null,
         newValues: {
-          name: args.name,
-          subject_type: args.subject_type,
-          consent_status: args.consent_status,
+          name: finalName,
+          subject_type: args.subject_type || 'customer',
+          consent_status: consentStatus,
         },
         changedFields: ['name', 'subject_type', 'consent_status'],
         metadata: {
@@ -317,13 +336,13 @@ export const createClinicalCase = mutation({
       console.log('[createClinicalCase] 감사 로그 생성 완료');
 
       // 관리자에게 알림 생성 (동의한 케이스의 경우)
-      if (args.consent_status === 'consented') {
+      if (consentStatus === 'consented') {
         console.log('[createClinicalCase] 알림 생성 중...');
         await createNotification(ctx, {
           userId: args.profileId, // 향후 관리자 ID로 변경 필요
           type: 'clinical_progress',
           title: '새로운 임상 케이스 생성',
-          message: `${profile.name}님이 새로운 임상 케이스를 생성했습니다: ${args.name}`,
+          message: `${profile.name}님이 새로운 임상 케이스를 생성했습니다: ${finalName}`,
           relatedType: 'clinical_case',
           relatedId: caseId,
           priority: 'normal',

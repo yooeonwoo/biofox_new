@@ -56,7 +56,12 @@ export const saveClinicalPhoto = mutation({
     } else {
       const user = await getCurrentUser(ctx);
       if (!user) {
-        throw new Error('User not authenticated');
+        // 인증 정보가 없으면 더 명확한 에러 메시지
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+          throw new Error('Authentication required. Please log in.');
+        }
+        throw new Error('User profile not found. Please complete your profile setup.');
       }
       userId = user._id;
     }
@@ -117,22 +122,17 @@ export const saveConsentFile = mutation({
     if (args.profileId) {
       userId = args.profileId;
     } else {
-      // 사용자 인증 확인
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) {
-        throw new Error('Unauthorized: Must be logged in');
+      // getCurrentUser 함수 사용하여 일관성 유지
+      const user = await getCurrentUser(ctx);
+      if (!user) {
+        // 인증 정보가 없으면 더 명확한 에러 메시지
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+          throw new Error('Authentication required. Please log in.');
+        }
+        throw new Error('User profile not found. Please complete your profile setup.');
       }
-
-      // 현재 사용자 프로필 조회
-      const userProfile = await ctx.db
-        .query('profiles')
-        .withIndex('by_userId', q => q.eq('userId', identity.subject as Id<'users'>))
-        .first();
-
-      if (!userProfile) {
-        throw new Error('User profile not found');
-      }
-      userId = userProfile._id;
+      userId = user._id;
     }
 
     // 기존 동의서 파일이 있는지 확인

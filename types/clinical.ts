@@ -82,19 +82,6 @@ export interface ClinicalCase {
     tags?: string[];
     [key: string]: any; // 확장 가능한 메타데이터
   };
-  // 본래 API와 일치하는 boolean 필드 추가
-  // 플레이어 제품 관련 필드
-  cureBooster?: boolean;
-  cureMask?: boolean;
-  premiumMask?: boolean;
-  allInOneSerum?: boolean;
-  // 고객 피부 타입 관련 필드
-  skinRedSensitive?: boolean;
-  skinPigment?: boolean;
-  skinPore?: boolean;
-  skinTrouble?: boolean;
-  skinWrinkle?: boolean;
-  skinEtc?: boolean;
 
   // Convex 스키마와 일치하는 추가 필드들
   treatmentPlan?: string; // 치료 계획
@@ -120,16 +107,6 @@ export interface UIClinicalCase {
   createdAt?: string;
   consentReceived?: boolean;
   consentImageUrl?: string;
-  cureBooster?: boolean;
-  cureMask?: boolean;
-  premiumMask?: boolean;
-  allInOneSerum?: boolean;
-  skinRedSensitive?: boolean;
-  skinPigment?: boolean;
-  skinPore?: boolean;
-  skinTrouble?: boolean;
-  skinWrinkle?: boolean;
-  skinEtc?: boolean;
   customerName?: string;
   treatmentPlan?: string;
 }

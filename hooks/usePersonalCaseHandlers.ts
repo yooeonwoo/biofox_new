@@ -515,7 +515,11 @@ export function usePersonalCaseHandlers({
 
       const newCaseData = {
         customerName: '본인',
-        type: 'personal' as const,
+        subject_type: 'self' as const,
+        caseName: '본인 케이스',
+        concernArea: '개인 관리',
+        treatmentPlan: '개인 케어 플랜',
+        consentReceived: false,
       };
 
       const createdCase = await createCase.mutate(newCaseData, profileId as Id<'profiles'>);
@@ -524,43 +528,10 @@ export function usePersonalCaseHandlers({
         throw new Error('케이스 생성에 실패했습니다.');
       }
 
-      const newPersonalCase: ClinicalCase = {
-        id: createdCase.id,
-        customerName: '본인',
-        status: 'active',
-        createdAt: new Date().toISOString().split('T')[0] || '',
-        consentReceived: false,
-        photos: [],
-        customerInfo: {
-          name: '본인',
-          products: [],
-          skinTypes: [],
-          memo: '',
-        },
-        roundCustomerInfo: {
-          1: {
-            treatmentType: '',
-            products: [],
-            skinTypes: [],
-            memo: '',
-            date: new Date().toISOString().split('T')[0],
-          },
-        },
-        cureBooster: false,
-        cureMask: false,
-        premiumMask: false,
-        allInOneSerum: false,
-        skinRedSensitive: false,
-        skinPigment: false,
-        skinPore: false,
-        skinTrouble: false,
-        skinWrinkle: false,
-        skinEtc: false,
-      };
-
-      setCases([newPersonalCase]);
+      // 생성된 케이스를 상태에 반영
+      setCases([createdCase]);
       setCurrentRound(1);
-      setHasUnsavedPersonalCase(true);
+      setHasUnsavedPersonalCase(false); // 실제로 생성되었으므로 false
 
       console.log('새 개인 케이스가 추가되었습니다.');
       toast.success('새 개인 케이스가 추가되었습니다.');

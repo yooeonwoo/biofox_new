@@ -20,7 +20,7 @@ interface PhotoRoundCarouselProps {
   caseId: string;
   photos: PhotoSlot[];
   profileId?: string;
-  onPhotoUpload: (roundDay: number, angle: string, file: File) => Promise<void>;
+  onPhotoUpload: (roundDay: number, angle: string, file: File, profileId?: string) => Promise<void>;
   onPhotoDelete?: (roundDay: number, angle: string) => Promise<void>;
   isCompleted?: boolean;
   onRoundChange?: (roundDay: number) => void;
@@ -142,7 +142,8 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
 
       setUploading(true);
       try {
-        await onPhotoUpload(uploadTarget.roundDay, uploadTarget.angle, file);
+        // profileId를 포함하여 onPhotoUpload 호출
+        await onPhotoUpload(uploadTarget.roundDay, uploadTarget.angle, file, profileId);
         toast.success('사진이 업로드되었습니다.');
         onPhotosRefresh?.();
       } catch (error) {

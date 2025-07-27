@@ -164,6 +164,7 @@ export function useCustomerCaseHandlers({
             roundNumber: roundDay,
             angle,
             file,
+            profileId, // profileId 추가
           });
 
           // 로컬 상태 업데이트
@@ -412,20 +413,18 @@ export function useCustomerCaseHandlers({
                 [field]: value,
               };
 
-              // 메타데이터 구성
-              const updatedMetadata = {
-                ...currentCase.metadata,
-                roundCustomerInfo: {
-                  ...currentCase.metadata?.roundCustomerInfo,
-                  [roundNumber]: updatedRoundInfo,
-                },
-              };
-
-              // Convex에 업데이트
-              await updateCaseFields({
+              // saveRoundInfo mutation 사용하여 라운드별 정보 저장
+              await saveRoundInfo({
                 caseId: caseId as Id<'clinical_cases'>,
-                updates: {
-                  metadata: updatedMetadata,
+                roundNumber: roundNumber,
+                info: {
+                  age: currentCase.customerInfo.age,
+                  gender: currentCase.customerInfo.gender,
+                  treatmentType: updatedRoundInfo.treatmentType,
+                  treatmentDate: updatedRoundInfo.date,
+                  products: updatedRoundInfo.products || [],
+                  skinTypes: updatedRoundInfo.skinTypes || [],
+                  memo: updatedRoundInfo.memo || '',
                 },
                 profileId: profileId as Id<'profiles'> | undefined,
               });
@@ -534,7 +533,7 @@ export function useCustomerCaseHandlers({
   // 케이스 새로고침 핸들러
   const refreshCases = useCallback(async () => {
     // Convex는 실시간 동기화를 제공하므로 특별한 새로고침 로직이 필요 없음
-    console.log('Cases are automatically synced with Convex');
+    toast.info('데이터가 실시간으로 동기화됩니다.');
   }, []);
 
   // 새 고객 추가 핸들러 - 개선된 에러 처리와 재시도
@@ -581,17 +580,6 @@ export function useCustomerCaseHandlers({
           date: new Date().toISOString().split('T')[0],
         },
       },
-      // 기본 체크박스 값들
-      cureBooster: false,
-      cureMask: false,
-      premiumMask: false,
-      allInOneSerum: false,
-      skinRedSensitive: false,
-      skinPigment: false,
-      skinPore: false,
-      skinTrouble: false,
-      skinWrinkle: false,
-      skinEtc: false,
     };
 
     // 낙관적 업데이트 적용
@@ -615,17 +603,6 @@ export function useCustomerCaseHandlers({
               treatmentPlan: '',
               consentReceived: false,
               metadata: {
-                // 기본 체크박스 값들
-                cureBooster: false,
-                cureMask: false,
-                premiumMask: false,
-                allInOneSerum: false,
-                skinRedSensitive: false,
-                skinPigment: false,
-                skinPore: false,
-                skinTrouble: false,
-                skinWrinkle: false,
-                skinEtc: false,
                 // 기본 고객 정보
                 customerInfo: {
                   name: '새 고객', // 빈 문자열 대신 기본값 설정

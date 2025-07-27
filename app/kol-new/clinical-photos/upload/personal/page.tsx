@@ -10,17 +10,12 @@ import { EmptyStateCard } from '@/components/clinical/EmptyStateCard';
 import { PersonalCaseList } from '@/components/clinical/PersonalCaseList';
 import { CaseInfoMessage } from '@/components/clinical/CaseInfoMessage';
 import { LOADING_MESSAGES, EMPTY_STATE, INFO_MESSAGES, BUTTON_TEXTS } from '@/constants/ui';
-import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { useCurrentProfile } from '@/hooks/useCurrentProfile';
+import { toast } from 'sonner';
 
 export default function PersonalPage() {
-  // 인증 정보 가져오기 - customer-manager 패턴 따라가기
-  const { user: authUser } = useAuth();
-  const profile = useQuery(
-    api.profiles.getProfileByEmail,
-    authUser?.email ? { email: authUser.email } : 'skip'
-  );
+  // 인증 정보 가져오기
+  const { profile, profileId } = useCurrentProfile();
 
   // Personal용 상태 관리 훅
   const pageState = usePersonalPageState({ initialRound: 1 });
@@ -64,7 +59,7 @@ export default function PersonalPage() {
     },
     hasUnsavedPersonalCase: pageState.hasUnsavedPersonalCase,
     setHasUnsavedPersonalCase: pageState.setHasUnsavedPersonalCase,
-    profileId: profile?._id, // 프로필 ID 추가
+    profileId: profileId, // 프로필 ID 추가
   });
 
   // 로딩 상태
@@ -112,7 +107,7 @@ export default function PersonalPage() {
               isNewPersonalCase={handlers.isNewPersonalCase}
               setIsComposing={pageState.setIsComposing}
               setCases={pageState.setCases}
-              profileId={profile?._id}
+              profileId={profileId}
               handlers={{
                 handleConsentChange: handlers.handleConsentChange,
                 handleCaseStatusChange: handlers.handleCaseStatusChange,
@@ -124,11 +119,12 @@ export default function PersonalPage() {
                   }
                 },
                 refreshCases: () => {
-                  // Personal 케이스 새로고침
-                  window.location.reload();
+                  // Convex는 실시간 동기화를 제공하므로 별도의 새로고침 불필요
+                  toast.info('데이터가 실시간으로 동기화됩니다.');
                 },
                 handleSaveAll: async (caseId: string) => {
                   console.log('Personal 케이스 저장:', caseId);
+                  toast.success('모든 변경사항이 자동으로 저장되었습니다.');
                 },
                 handleBasicCustomerInfoUpdate: handlers.handleBasicPersonalInfoUpdate,
                 handleRoundCustomerInfoUpdate: handlers.handleRoundPersonalInfoUpdate,
@@ -136,6 +132,8 @@ export default function PersonalPage() {
                   // Personal에서는 체크박스 업데이트 미구현
                   console.log('Personal 체크박스 업데이트');
                 },
+                handlePhotoUpload: handlers.handlePhotoUpload,
+                handlePhotoDelete: handlers.handlePhotoDelete,
               }}
             />
           )}

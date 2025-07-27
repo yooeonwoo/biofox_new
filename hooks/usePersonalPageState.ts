@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useClinicalCasesConvex } from '@/lib/clinical-photos-hooks';
+import { useClinicalCasesConvex, useCreateClinicalCaseConvex } from '@/lib/clinical-photos-hooks';
 import { useAuth } from '@/hooks/useAuth';
 import { enrichCasesWithRoundInfo } from './useCasesWithRoundInfo';
 import { safeParseStringArray } from '@/types/clinical';
 import type { ClinicalCase, PhotoSlot, RoundCustomerInfo } from '@/types/clinical';
+import { Id } from '@/convex/_generated/dataModel';
 
 export interface UsePersonalPageStateProps {
   initialRound?: number;
@@ -189,9 +190,12 @@ export const usePersonalPageState = ({ initialRound = 1 }: UsePersonalPageStateP
     isLoading: casesLoading,
     error: casesError,
   } = useClinicalCasesConvex(
-    undefined, // status
-    profile?._id // profileId 전달
+    profile?._id, // profileId 전달
+    undefined // status
   );
+
+  // 케이스 생성 mutation
+  const createCase = useCreateClinicalCaseConvex();
 
   // 2. 개인 케이스만 필터링
   const personalCase = useMemo(() => {
@@ -201,67 +205,34 @@ export const usePersonalPageState = ({ initialRound = 1 }: UsePersonalPageStateP
 
   // 본인 케이스 필터링 및 데이터 동기화
   useEffect(() => {
-    if (personalCase) {
-      if (!user || casesLoading) return;
-
-      try {
-        // 본인 케이스만 필터링
-        const personalCases =
-          allCases?.filter(case_ => case_.customerName?.trim().toLowerCase() === '본인') || [];
-
-        console.log('본인 케이스 로드:', {
-          totalCases: allCases?.length || 0,
-          personalCases: personalCases.length,
-          personalCase: personalCase?.id,
-        });
-
-        // Convex에서 받은 데이터는 이미 UI 타입으로 변환되어 있음
-        setCases(personalCases);
-
-        // Personal은 단일 케이스이므로 currentRound 설정
-        if (personalCases.length > 0) {
-          setCurrentRound(initialRound);
-        }
-      } catch (error) {
-        console.error('Failed to process personal cases:', error);
-        setCases([]);
-      }
-    }
-  }, [user, allCases, personalCase, casesLoading, initialRound]);
-
-  // 개인 케이스가 없으면 자동 생성
-  useEffect(() => {
     if (!user || casesLoading) return;
 
-    const autoCreatePersonalCase = async () => {
-      if (!personalCase && allCases && allCases.length === 0) {
-        console.log('개인 케이스가 없어 자동 생성 시도');
-        try {
-          // useEnsurePersonalCaseConvex 훅을 사용하여 개인 케이스 생성
-          // 이 부분은 이제 useAuth 훅에서 직접 처리되므로 제거
-          // 대신 profile 객체를 사용하여 개인 케이스 생성 로직을 재구성
-          if (profile?._id) {
-            // 이 부분은 실제 개인 케이스 생성 로직을 포함해야 합니다.
-            // 예: 현재 사용자의 프로필 ID를 사용하여 개인 케이스를 생성하는 함수를 호출
-            // 이 함수는 현재 파일에 포함되지 않으므로, 이 부분은 주석 처리하거나 별도의 훅으로 분리해야 합니다.
-            // 임시로 주석 처리하여 원래 코드의 의도를 유지
-            console.log('개인 케이스가 없어 자동 생성 시도 (useAuth 훅에서 처리)');
-            // 실제 개인 케이스 생성 로직:
-            // const newPersonalCase = await createPersonalCaseConvex(profile._id);
-            // setCases(prev => [newPersonalCase, ...prev]);
-            // setCurrentRound(initialRound);
-            // setHasUnsavedPersonalCase(true);
-          } else {
-            console.error('프로필 ID가 없어 개인 케이스를 생성할 수 없습니다.');
-          }
-        } catch (error) {
-          console.error('개인 케이스 생성 실패:', error);
-        }
-      }
-    };
+    try {
+      // 본인 케이스만 필터링
+      const personalCases =
+        allCases?.filter(case_ => case_.customerName?.trim().toLowerCase() === '본인') || [];
 
-    autoCreatePersonalCase();
-  }, [user, personalCase, casesLoading, profile?._id]); // allCases 제거하여 무한 루프 방지
+      console.log('본인 케이스 로드:', {
+        totalCases: allCases?.length || 0,
+        personalCases: personalCases.length,
+        personalCase: personalCase?.id,
+      });
+
+      // Convex에서 받은 데이터는 이미 UI 타입으로 변환되어 있음
+      setCases(personalCases);
+
+      // Personal은 단일 케이스이므로 currentRound 설정
+      if (personalCases.length > 0) {
+        setCurrentRound(initialRound);
+      }
+    } catch (error) {
+      console.error('Failed to process personal cases:', error);
+      setCases([]);
+    }
+  }, [user, casesLoading, personalCase?.id, initialRound, allCases?.length]);
+
+  // 개인 케이스 자동 생성 로직 제거
+  // 사용자가 명시적으로 "업로드하기" 버튼을 클릭했을 때만 생성하도록 변경
 
   // 에러 처리
   useEffect(() => {
@@ -322,7 +293,8 @@ export const usePersonalPageState = ({ initialRound = 1 }: UsePersonalPageStateP
 
       const initialAnimationTimer = setTimeout(() => {
         if (!isUserInteracting) {
-          setNumberVisibleCards(new Set(cases.map(c => c.id)));
+          const currentCaseIds = casesRef.current.map(c => c.id);
+          setNumberVisibleCards(new Set(currentCaseIds));
 
           setTimeout(() => {
             setNumberVisibleCards(new Set());
@@ -336,7 +308,7 @@ export const usePersonalPageState = ({ initialRound = 1 }: UsePersonalPageStateP
         clearTimeout(initialAnimationTimer);
       };
     }
-  }, [isUserInteracting]); // cases.length 의존성 제거하여 무한 루프 방지
+  }, [isUserInteracting, cases.length > 0]); // cases.length > 0으로 변경하여 boolean으로 처리
 
   // cases 상태를 ref에 동기화 - useEffect 없이 직접 할당
   casesRef.current = cases;

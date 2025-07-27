@@ -35,8 +35,8 @@ export const useCustomerPageState = () => {
 
   // Convex 훅으로 케이스 데이터 로드
   const { data: convexCases = [], isLoading: convexCasesLoading } = useClinicalCasesConvex(
-    undefined, // status
-    profile?._id // profileId 전달
+    profile?._id, // profileId 전달
+    undefined // status
   );
 
   // 고객 케이스만 필터링 (본인 제외) 및 라운드 정보 통합

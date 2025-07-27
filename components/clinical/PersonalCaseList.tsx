@@ -13,6 +13,13 @@ interface PersonalHandlers {
   handleBasicCustomerInfoUpdate: (caseId: string, info: any) => void;
   handleRoundCustomerInfoUpdate: (caseId: string, roundDay: number, info: any) => void;
   updateCaseCheckboxes: () => void;
+  handlePhotoUpload?: (
+    caseId: string,
+    roundDay: number,
+    angle: string,
+    file: File
+  ) => Promise<void>;
+  handlePhotoDelete?: (caseId: string, roundDay: number, angle: string) => Promise<void>;
 }
 
 interface PersonalCaseListProps {
@@ -59,6 +66,8 @@ export const PersonalCaseList: React.FC<PersonalCaseListProps> = ({
           handleBasicCustomerInfoUpdate: handlers.handleBasicCustomerInfoUpdate,
           handleRoundCustomerInfoUpdate: handlers.handleRoundCustomerInfoUpdate,
           updateCaseCheckboxes: handlers.updateCaseCheckboxes,
+          handlePhotoUpload: handlers.handlePhotoUpload,
+          handlePhotoDelete: handlers.handlePhotoDelete,
         };
 
         return (

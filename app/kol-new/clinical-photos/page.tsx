@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Check } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,130 +25,25 @@ interface KolInfo {
   region?: string;
 }
 
-// 체크 아이템 컴포넌트
-interface CheckItemProps {
-  label: string;
-  checked?: boolean;
-}
-
-const CheckItem: React.FC<CheckItemProps> = ({ label, checked }) => {
-  return (
-    <div
-      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ${checked ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
-    >
-      {checked && <Check size={12} className="text-blue-600" />}
-      <span>{label}</span>
-    </div>
-  );
-};
-
-// 플레이어 제품 체크박스 컴포넌트
-interface PlayerProductsProps {
-  cureBooster?: boolean;
-  cureMask?: boolean;
-  premiumMask?: boolean;
-  allInOneSerum?: boolean;
-}
-
-const PlayerProducts: React.FC<PlayerProductsProps> = ({
-  cureBooster,
-  cureMask,
-  premiumMask,
-  allInOneSerum,
-}) => {
-  return (
-    <div className="mt-2">
-      <div className="mb-1 text-xs font-medium text-gray-500">플레이어 제품</div>
-      <div className="flex flex-wrap gap-1">
-        <CheckItem label="큐어 부스터" checked={cureBooster} />
-        <CheckItem label="큐어 마스크" checked={cureMask} />
-        <CheckItem label="프리미엄 마스크" checked={premiumMask} />
-        <CheckItem label="올인원 세럼" checked={allInOneSerum} />
-      </div>
-    </div>
-  );
-};
-
-// 고객 피부타입 체크박스 컴포넌트
-interface SkinTypesProps {
-  skinRedSensitive?: boolean;
-  skinPigment?: boolean;
-  skinPore?: boolean;
-  skinTrouble?: boolean;
-  skinWrinkle?: boolean;
-  skinEtc?: boolean;
-}
-
-const SkinTypes: React.FC<SkinTypesProps> = ({
-  skinRedSensitive,
-  skinPigment,
-  skinPore,
-  skinTrouble,
-  skinWrinkle,
-  skinEtc,
-}) => {
-  return (
-    <div className="mt-2">
-      <div className="mb-1 text-xs font-medium text-gray-500">고객 피부타입</div>
-      <div className="flex flex-wrap gap-1">
-        <CheckItem label="붉고 예민함" checked={skinRedSensitive} />
-        <CheckItem label="색소/피멘" checked={skinPigment} />
-        <CheckItem label="모공 늘어짐" checked={skinPore} />
-        <CheckItem label="트러블/여드름" checked={skinTrouble} />
-        <CheckItem label="주름/탄력" checked={skinWrinkle} />
-        <CheckItem label="기타" checked={skinEtc} />
-      </div>
-    </div>
-  );
-};
-
 export default function ClinicalPhotosPage() {
+  const router = useRouter();
+
   // 실제 인증 정보 사용
   const { isAuthenticated, isLoading: authLoading, profile, role } = useAuth();
   const [isKol, setIsKol] = useState<boolean | null>(null);
 
-  // Convex 훅 사용
+  // Convex 훅 사용 - profile이 없으면 빈 결과 반환
   const { data: allCases = [], isLoading: casesLoading } = useClinicalCasesConvex(
-    undefined,
-    profile?._id
+    profile?._id,
+    undefined
   );
   const createCase = useCreateClinicalCaseConvex();
   const { data: customerCases = [] } = useCustomerCasesConvex(profile?._id);
-  const [personalCase, setPersonalCase] = useState<ClinicalCase | undefined>(undefined);
-  const [isCreatingPersonalCase, setIsCreatingPersonalCase] = useState(false);
 
-  // 본인 케이스 확인 및 생성 로직
-  useEffect(() => {
-    if (casesLoading || !profile?._id || isCreatingPersonalCase) return;
-
-    const existingPersonalCase = allCases.find(c => c.customerName?.trim() === '본인');
-    if (existingPersonalCase) {
-      setPersonalCase(existingPersonalCase);
-    } else if (!personalCase) {
-      // 본인 케이스가 없고 아직 생성하지 않았으면 생성
-      const createNewPersonalCase = async () => {
-        setIsCreatingPersonalCase(true);
-        try {
-          const newCase = await createCase.mutateAsync(
-            {
-              customerName: '본인',
-              caseName: '본인 임상 케이스',
-              concernArea: '본인 케어',
-              treatmentPlan: '개인 관리 계획',
-              consentReceived: false,
-            },
-            profile._id
-          );
-          setPersonalCase(newCase);
-        } catch (error) {
-          console.error('Failed to create personal case:', error);
-        } finally {
-          setIsCreatingPersonalCase(false);
-        }
-      };
-      createNewPersonalCase();
-    }
-  }, [allCases, casesLoading, profile?._id, personalCase, isCreatingPersonalCase]);
+  // profile이 없을 때를 위한 early return 처리
+  const isProfileLoading = authLoading || !profile;
+  // 본인 케이스를 allCases에서 직접 찾기 (별도 state 사용하지 않음)
+  const personalCase = allCases.find(c => c.customerName?.trim() === '본인');
 
   // 사용자 역할 확인
   useEffect(() => {
@@ -178,11 +73,18 @@ export default function ClinicalPhotosPage() {
   // 인증되지 않은 경우 로그인 페이지로 리다이렉트
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      redirect('/signin');
+      router.push('/signin');
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, router]);
 
-  if (authLoading || isKol === null) {
+  // KOL이 아닌 경우 홈으로 리다이렉트
+  useEffect(() => {
+    if (!authLoading && isKol === false) {
+      router.push('/');
+    }
+  }, [authLoading, isKol, router]);
+
+  if (isProfileLoading || isKol === null || casesLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">
@@ -197,10 +99,6 @@ export default function ClinicalPhotosPage() {
         </Card>
       </div>
     );
-  }
-
-  if (!isKol) {
-    return redirect('/');
   }
 
   return (
@@ -237,7 +135,7 @@ export default function ClinicalPhotosPage() {
               <Button asChild size="sm" className="w-full">
                 <Link href="/kol-new/clinical-photos/upload/personal">
                   <Plus className="mr-2 h-4 w-4" />
-                  업로드하기
+                  {personalCase ? '업로드하기' : '케이스 생성하기'}
                 </Link>
               </Button>
             </div>

@@ -6,6 +6,14 @@ export default defineSchema({
   // Convex Auth 시스템 테이블 (기존 호환성 유지)
   ...authTables,
 
+  // authRefreshTokens 테이블 확장 (parentRefreshTokenId, firstUsedTime 필드 추가)
+  authRefreshTokens: defineTable({
+    expirationTime: v.float64(),
+    sessionId: v.id('authSessions'),
+    parentRefreshTokenId: v.optional(v.string()), // 추가 필드
+    firstUsedTime: v.optional(v.float64()), // 추가 필드
+  }),
+
   // 💼 사용자 프로필 - Convex Auth + Supabase Auth 하이브리드
   profiles: defineTable({
     userId: v.optional(v.id('users')), // Convex Auth users 테이블 참조 (기존 데이터)
@@ -366,36 +374,34 @@ export default defineSchema({
     custom_fields: v.optional(v.any()),
     photo_count: v.optional(v.number()),
     latest_session: v.optional(v.number()),
-    // 제품/피부타입 메타데이터 (태그로도 저장하지만 빠른 조회를 위해)
+    // 메타데이터 - 라운드별 정보 및 추가 필드
     metadata: v.optional(
       v.object({
-        // 기존 체크박스들
-        cureBooster: v.optional(v.boolean()),
-        cureMask: v.optional(v.boolean()),
-        premiumMask: v.optional(v.boolean()),
-        allInOneSerum: v.optional(v.boolean()),
-        skinRedSensitive: v.optional(v.boolean()),
-        skinPigment: v.optional(v.boolean()),
-        skinPore: v.optional(v.boolean()),
-        skinTrouble: v.optional(v.boolean()),
-        skinWrinkle: v.optional(v.boolean()),
-        skinEtc: v.optional(v.boolean()),
-
-        // 고객 정보
-        customerInfo: v.optional(
-          v.object({
-            name: v.optional(v.string()),
-            age: v.optional(v.number()),
-            gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
-            treatmentType: v.optional(v.string()),
-            products: v.optional(v.array(v.string())),
-            skinTypes: v.optional(v.array(v.string())),
-            memo: v.optional(v.string()),
-          })
+        // 라운드별 정보 (rounds로 통합)
+        rounds: v.optional(
+          v.record(
+            v.string(), // round number as string (예: "1", "2", "3")
+            v.object({
+              treatmentType: v.optional(v.string()),
+              treatmentDate: v.optional(v.string()),
+              products: v.array(v.string()),
+              skinTypes: v.array(v.string()),
+              memo: v.optional(v.string()),
+              // 나이와 성별은 라운드별로 변경될 수 있음
+              age: v.optional(v.number()),
+              gender: v.optional(
+                v.union(v.literal('male'), v.literal('female'), v.literal('other'))
+              ),
+            })
+          )
         ),
 
-        // 회차별 고객 정보
-        roundCustomerInfo: v.optional(v.any()), // 동적 키를 위해 any 사용
+        // 기타 커스텀 필드 (향후 확장용)
+        customFields: v.optional(v.any()),
+
+        // 이전 버전 호환성을 위한 필드들 (deprecated - 제거 예정)
+        roundInfo: v.optional(v.any()), // saveRoundCustomerInfo에서 사용
+        roundCustomerInfo: v.optional(v.any()), // 프론트엔드에서 사용
       })
     ),
     created_at: v.number(),

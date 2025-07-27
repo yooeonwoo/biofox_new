@@ -82,6 +82,7 @@ export default function CustomerClinicalUploadPage() {
     markSaved,
     markError,
     enqueue,
+    profileId: profile?._id, // profileId 추가
   });
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
@@ -165,6 +166,7 @@ export default function CustomerClinicalUploadPage() {
                       setCases={setCases}
                       handlers={handlers}
                       totalCases={cases.length}
+                      profileId={profile?._id}
                     />
                   );
                 })

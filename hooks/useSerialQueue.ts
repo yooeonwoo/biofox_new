@@ -26,7 +26,7 @@ export function useSerialQueue() {
   // 큐 처리 함수
   const processQueue = useCallback(async () => {
     const queue = queueRef.current;
-    
+
     if (queue.isProcessing || queue.items.length === 0) {
       return;
     }
@@ -54,44 +54,51 @@ export function useSerialQueue() {
   }, []);
 
   // 작업을 큐에 추가
-  const enqueue = useCallback((id: string, task: () => Promise<void>, options?: {
-    abortController?: AbortController;
-    priority?: 'high' | 'normal'; // 높은 우선순위 작업은 큐 앞쪽에 추가
-  }) => {
-    const queue = queueRef.current;
-    
-    // 동일한 ID의 기존 작업이 있으면 취소
-    const existingIndex = queue.items.findIndex(item => item.id === id);
-    if (existingIndex > -1) {
-      const existingItem = queue.items[existingIndex];
-      if (existingItem) {
-        existingItem.abortController?.abort();
+  const enqueue = useCallback(
+    (
+      id: string,
+      task: () => Promise<void>,
+      options?: {
+        abortController?: AbortController;
+        priority?: 'high' | 'normal'; // 높은 우선순위 작업은 큐 앞쪽에 추가
       }
-      queue.items.splice(existingIndex, 1);
-    }
+    ) => {
+      const queue = queueRef.current;
 
-    const queueItem: QueueItem = {
-      id,
-      task,
-      abortController: options?.abortController,
-    };
+      // 동일한 ID의 기존 작업이 있으면 취소
+      const existingIndex = queue.items.findIndex(item => item.id === id);
+      if (existingIndex > -1) {
+        const existingItem = queue.items[existingIndex];
+        if (existingItem) {
+          existingItem.abortController?.abort();
+        }
+        queue.items.splice(existingIndex, 1);
+      }
 
-    // 우선순위에 따라 큐 위치 결정
-    if (options?.priority === 'high') {
-      queue.items.unshift(queueItem);
-    } else {
-      queue.items.push(queueItem);
-    }
+      const queueItem: QueueItem = {
+        id,
+        task,
+        abortController: options?.abortController,
+      };
 
-    // 큐 처리 시작
-    processQueue();
-  }, [processQueue]);
+      // 우선순위에 따라 큐 위치 결정
+      if (options?.priority === 'high') {
+        queue.items.unshift(queueItem);
+      } else {
+        queue.items.push(queueItem);
+      }
+
+      // 큐 처리 시작
+      processQueue();
+    },
+    [processQueue]
+  );
 
   // 특정 작업 취소
   const cancel = useCallback((id: string) => {
     const queue = queueRef.current;
     const index = queue.items.findIndex(item => item.id === id);
-    
+
     if (index > -1) {
       const item = queue.items[index];
       if (item) {
@@ -133,59 +140,152 @@ export function useSerialQueue() {
  * 여러 케이스의 업데이트를 독립적으로 처리합니다.
  */
 export function useCaseSerialQueues() {
-  const queuesRef = useRef<Map<string, ReturnType<typeof useSerialQueue>>>(new Map());
+  // 큐 상태를 직접 관리하여 React Hook 규칙 위반 방지
+  const queuesRef = useRef<Map<string, QueueState>>(new Map());
+  const processQueueRef = useRef<Map<string, () => Promise<void>>>(new Map());
 
-  // 특정 케이스의 큐 가져오기 또는 생성
-  const getQueueForCase = useCallback((caseId: string) => {
-    if (!queuesRef.current.has(caseId)) {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      queuesRef.current.set(caseId, useSerialQueue());
-    }
-    return queuesRef.current.get(caseId)!;
+  // 큐 처리 함수 생성
+  const createProcessQueueForCase = useCallback((caseId: string) => {
+    const processQueue = async () => {
+      const queue = queuesRef.current.get(caseId);
+      if (!queue || queue.isProcessing || queue.items.length === 0) {
+        return;
+      }
+
+      queue.isProcessing = true;
+
+      while (queue.items.length > 0) {
+        const item = queue.items.shift();
+        if (!item) continue;
+
+        try {
+          if (item.abortController?.signal.aborted) {
+            continue;
+          }
+          await item.task();
+        } catch (error) {
+          console.error(`Queue task ${item.id} failed:`, error);
+        }
+      }
+
+      queue.isProcessing = false;
+    };
+
+    return processQueue;
   }, []);
 
+  // 특정 케이스의 큐 가져오기 또는 생성
+  const getQueueForCase = useCallback(
+    (caseId: string) => {
+      if (!queuesRef.current.has(caseId)) {
+        queuesRef.current.set(caseId, {
+          items: [],
+          isProcessing: false,
+        });
+        processQueueRef.current.set(caseId, createProcessQueueForCase(caseId));
+      }
+      return {
+        queue: queuesRef.current.get(caseId)!,
+        processQueue: processQueueRef.current.get(caseId)!,
+      };
+    },
+    [createProcessQueueForCase]
+  );
+
   // 특정 케이스에 작업 추가
-  const enqueueForCase = useCallback((
-    caseId: string,
-    taskId: string,
-    task: () => Promise<void>,
-    options?: {
-      abortController?: AbortController;
-      priority?: 'high' | 'normal';
-    }
-  ) => {
-    const queue = getQueueForCase(caseId);
-    queue.enqueue(taskId, task, options);
-  }, [getQueueForCase]);
+  const enqueueForCase = useCallback(
+    (
+      caseId: string,
+      taskId: string,
+      task: () => Promise<void>,
+      options?: {
+        abortController?: AbortController;
+        priority?: 'high' | 'normal';
+      }
+    ) => {
+      const { queue, processQueue } = getQueueForCase(caseId);
+
+      // 동일한 ID의 기존 작업이 있으면 취소
+      const existingIndex = queue.items.findIndex(item => item.id === taskId);
+      if (existingIndex > -1) {
+        const existingItem = queue.items[existingIndex];
+        if (existingItem) {
+          existingItem.abortController?.abort();
+        }
+        queue.items.splice(existingIndex, 1);
+      }
+
+      const queueItem: QueueItem = {
+        id: taskId,
+        task,
+        abortController: options?.abortController,
+      };
+
+      // 우선순위에 따라 큐 위치 결정
+      if (options?.priority === 'high') {
+        queue.items.unshift(queueItem);
+      } else {
+        queue.items.push(queueItem);
+      }
+
+      // 큐 처리 시작
+      processQueue();
+    },
+    [getQueueForCase]
+  );
 
   // 특정 케이스의 작업 취소
   const cancelForCase = useCallback((caseId: string, taskId: string) => {
     const queue = queuesRef.current.get(caseId);
-    queue?.cancel(taskId);
+    if (!queue) return;
+
+    const index = queue.items.findIndex(item => item.id === taskId);
+    if (index > -1) {
+      const item = queue.items[index];
+      if (item) {
+        item.abortController?.abort();
+      }
+      queue.items.splice(index, 1);
+    }
   }, []);
 
   // 특정 케이스의 모든 작업 취소
   const cancelAllForCase = useCallback((caseId: string) => {
     const queue = queuesRef.current.get(caseId);
-    queue?.cancelAll();
+    if (!queue) return;
+
+    queue.items.forEach(item => {
+      item.abortController?.abort();
+    });
+    queue.items.length = 0;
   }, []);
 
   // 모든 케이스의 모든 작업 취소
   const cancelAllCases = useCallback(() => {
     queuesRef.current.forEach(queue => {
-      queue.cancelAll();
+      queue.items.forEach(item => {
+        item.abortController?.abort();
+      });
+      queue.items.length = 0;
     });
     queuesRef.current.clear();
+    processQueueRef.current.clear();
   }, []);
 
   // 케이스별 큐 상태 조회
   const getQueueInfoForCase = useCallback((caseId: string) => {
     const queue = queuesRef.current.get(caseId);
-    return queue?.getQueueInfo() || {
-      isProcessing: false,
-      queueLength: 0,
-      hasItems: false,
-    };
+    return queue
+      ? {
+          isProcessing: queue.isProcessing,
+          queueLength: queue.items.length,
+          hasItems: queue.items.length > 0,
+        }
+      : {
+          isProcessing: false,
+          queueLength: 0,
+          hasItems: false,
+        };
   }, []);
 
   return {
@@ -202,38 +302,44 @@ export function useSerialQueueWithDebounce(defaultDelay = 500) {
   const queue = useSerialQueue();
   const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  const enqueueWithDebounce = useCallback((
-    id: string,
-    task: () => Promise<void>,
-    delay = defaultDelay,
-    options?: {
-      abortController?: AbortController;
-      priority?: 'high' | 'normal';
-    }
-  ) => {
-    // 기존 디바운스 타이머 취소
-    const existingTimeout = timeoutsRef.current.get(id);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
+  const enqueueWithDebounce = useCallback(
+    (
+      id: string,
+      task: () => Promise<void>,
+      delay = defaultDelay,
+      options?: {
+        abortController?: AbortController;
+        priority?: 'high' | 'normal';
+      }
+    ) => {
+      // 기존 디바운스 타이머 취소
+      const existingTimeout = timeoutsRef.current.get(id);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
 
-    // 새 디바운스 타이머 설정
-    const timeout = setTimeout(() => {
-      queue.enqueue(id, task, options);
-      timeoutsRef.current.delete(id);
-    }, delay);
+      // 새 디바운스 타이머 설정
+      const timeout = setTimeout(() => {
+        queue.enqueue(id, task, options);
+        timeoutsRef.current.delete(id);
+      }, delay);
 
-    timeoutsRef.current.set(id, timeout);
-  }, [queue, defaultDelay]);
+      timeoutsRef.current.set(id, timeout);
+    },
+    [queue, defaultDelay]
+  );
 
-  const cancelDebounce = useCallback((id: string) => {
-    const timeout = timeoutsRef.current.get(id);
-    if (timeout) {
-      clearTimeout(timeout);
-      timeoutsRef.current.delete(id);
-    }
-    queue.cancel(id);
-  }, [queue]);
+  const cancelDebounce = useCallback(
+    (id: string) => {
+      const timeout = timeoutsRef.current.get(id);
+      if (timeout) {
+        clearTimeout(timeout);
+        timeoutsRef.current.delete(id);
+      }
+      queue.cancel(id);
+    },
+    [queue]
+  );
 
   const cancelAllDebounce = useCallback(() => {
     timeoutsRef.current.forEach(timeout => clearTimeout(timeout));
@@ -248,4 +354,4 @@ export function useSerialQueueWithDebounce(defaultDelay = 500) {
     cancelAll: cancelAllDebounce,
     getQueueInfo: queue.getQueueInfo,
   };
-} 
+}

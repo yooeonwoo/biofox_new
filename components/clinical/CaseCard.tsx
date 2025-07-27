@@ -31,6 +31,12 @@ import CaseStatusTabs from '@/app/kol-new/clinical-photos/components/CaseStatusT
 import { SYSTEM_OPTIONS } from '@/types/clinical';
 import type { ClinicalCase } from '@/types/clinical';
 import { SaveStatusIndicator } from '@/components/clinical/SaveStatusIndicator';
+import {
+  useUploadClinicalPhotoConvex,
+  useDeleteClinicalPhotoConvex,
+} from '@/lib/clinical-photos-hooks';
+import { toast } from 'sonner';
+import { Id } from '@/convex/_generated/dataModel';
 
 interface CaseCardProps {
   case_: ClinicalCase;
@@ -49,7 +55,14 @@ interface CaseCardProps {
     handleSaveAll: (caseId: string) => void;
     handleBasicCustomerInfoUpdate: (caseId: string, info: any) => void;
     handleRoundCustomerInfoUpdate: (caseId: string, round: number, info: any) => void;
-    updateCaseCheckboxes: (caseId: string, updates: any) => void;
+    handlePhotoUpload?: (
+      caseId: string,
+      roundDay: number,
+      angle: string,
+      file: File
+    ) => Promise<void>;
+    handlePhotoDelete?: (caseId: string, roundDay: number, angle: string) => Promise<void>;
+    setCurrentRounds?: React.Dispatch<React.SetStateAction<{ [caseId: string]: number }>>;
   };
   totalCases: number;
   profileId?: string;
@@ -76,10 +89,13 @@ export const CaseCard: React.FC<CaseCardProps> = ({
     handleSaveAll,
     handleBasicCustomerInfoUpdate,
     handleRoundCustomerInfoUpdate,
-    updateCaseCheckboxes,
   } = handlers;
 
   const [localIsComposing, setLocalIsComposing] = React.useState(false);
+
+  // Convex hooks for photo upload/delete
+  const uploadPhoto = useUploadClinicalPhotoConvex();
+  const deletePhoto = useDeleteClinicalPhotoConvex();
 
   return (
     <motion.div
@@ -292,20 +308,38 @@ export const CaseCard: React.FC<CaseCardProps> = ({
               caseId={case_.id}
               photos={case_.photos}
               profileId={profileId}
-              onPhotoUpload={async (roundDay: number, angle: string, file: File) => {
-                // TODO: PhotoUpload 로직 구현 필요
-                console.log('Photo upload:', { roundDay, angle, file });
+              onPhotoUpload={async (
+                roundDay: number,
+                angle: string,
+                file: File,
+                profileId?: string
+              ) => {
+                // 사진 업로드는 handlers에 위임 (있다면)
+                if (handlers.handlePhotoUpload) {
+                  await handlers.handlePhotoUpload(case_.id, roundDay, angle, file);
+                } else {
+                  console.warn('Photo upload handler not provided');
+                }
                 refreshCases();
               }}
               onPhotoDelete={async (roundDay: number, angle: string) => {
-                // TODO: PhotoDelete 로직 구현 필요
-                console.log('Photo delete:', { roundDay, angle });
+                // 사진 삭제는 handlers에 위임 (있다면)
+                if (handlers.handlePhotoDelete) {
+                  await handlers.handlePhotoDelete(case_.id, roundDay, angle);
+                } else {
+                  console.warn('Photo delete handler not provided');
+                }
                 refreshCases();
               }}
               isCompleted={case_.status === 'completed'}
               onRoundChange={(roundDay: number) => {
-                // TODO: currentRounds 업데이트 로직 구현 필요
-                console.log('Round change:', roundDay);
+                // currentRounds 상태 업데이트
+                if (handlers.setCurrentRounds) {
+                  handlers.setCurrentRounds((prev: any) => ({
+                    ...prev,
+                    [case_.id]: roundDay,
+                  }));
+                }
               }}
               onPhotosRefresh={() => refreshCases()}
             />
@@ -568,15 +602,6 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                             await handleRoundCustomerInfoUpdate(case_.id, currentRound, {
                               products: updatedProducts,
                             });
-                            // boolean 필드 동기화 - 홈케어 제품
-                            const booleanUpdates = {
-                              cureBooster: updatedProducts.includes('cure_booster'),
-                              cureMask: updatedProducts.includes('cure_mask'),
-                              premiumMask: updatedProducts.includes('premium_mask'),
-                              allInOneSerum: updatedProducts.includes('all_in_one_serum'),
-                            };
-
-                            await updateCaseCheckboxes(case_.id, booleanUpdates);
                           } catch (error) {
                             console.error('제품 선택 저장 실패:', error);
                             // 실패 시 상태 되돌리기
@@ -680,17 +705,6 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                             await handleRoundCustomerInfoUpdate(case_.id, currentRound, {
                               skinTypes: updatedSkinTypes,
                             });
-                            // boolean 필드 동기화 - 피부타입
-                            const booleanUpdates = {
-                              skinRedSensitive: updatedSkinTypes.includes('red_sensitive'),
-                              skinPigment: updatedSkinTypes.includes('pigment'),
-                              skinPore: updatedSkinTypes.includes('pore'),
-                              skinTrouble: updatedSkinTypes.includes('acne_trouble'),
-                              skinWrinkle: updatedSkinTypes.includes('wrinkle'),
-                              skinEtc: updatedSkinTypes.includes('other'),
-                            };
-
-                            await updateCaseCheckboxes(case_.id, booleanUpdates);
                           } catch (error) {
                             console.error('피부타입 선택 저장 실패:', error);
                             // 실패 시 상태 되돌리기

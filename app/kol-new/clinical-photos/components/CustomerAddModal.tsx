@@ -14,6 +14,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Id } from '@/convex/_generated/dataModel';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { toast } from 'sonner';
 
 interface CustomerData {
   customerName: string;
@@ -43,8 +46,21 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
   });
 
   const [consentFileInput, setConsentFileInput] = useState<HTMLInputElement | null>(null);
+  const [uploadingConsent, setUploadingConsent] = useState(false);
 
   const [errors, setErrors] = useState<Partial<CustomerData>>({});
+
+  // Convex mutations
+  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
+  const saveFileMetadata = useMutation(api.fileStorage.saveFileMetadata);
+
+  // Convex query for consent image URL
+  const consentImageUrl = useQuery(
+    api.fileStorage.getFileUrl,
+    formData.consentImageUrl && formData.consentImageUrl.startsWith('khtt')
+      ? { storageId: formData.consentImageUrl as Id<'_storage'> }
+      : 'skip'
+  );
 
   // 폼 데이터 초기화
   const resetForm = () => {
@@ -89,17 +105,58 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
   };
 
   // 동의서 파일 업로드 핸들러
-  const handleConsentFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleConsentFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      // TODO: 실제 파일 업로드 로직 구현
-      const mockUrl = URL.createObjectURL(file);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+
+    setUploadingConsent(true);
+    try {
+      // 1. 업로드 URL 생성
+      const postUrl = await generateUploadUrl();
+
+      // 2. 파일 업로드
+      const result = await fetch(postUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+
+      if (!result.ok) {
+        throw new Error('파일 업로드에 실패했습니다.');
+      }
+
+      const { storageId } = await result.json();
+
+      // 3. 파일 메타데이터 저장
+      await saveFileMetadata({
+        storageId,
+        bucket_name: 'consent-images',
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+        metadata: {
+          uploadedAt: new Date().toISOString(),
+          purpose: 'consent',
+        },
+      });
+
+      // 4. URL을 storageId로 저장 (나중에 표시할 때 getFileUrl로 조회)
       setFormData(prev => ({
         ...prev,
-        consentImageUrl: mockUrl,
+        consentImageUrl: storageId,
       }));
-    } else {
-      alert('이미지 파일만 업로드 가능합니다.');
+
+      toast.success('동의서가 업로드되었습니다.');
+    } catch (error) {
+      console.error('동의서 업로드 오류:', error);
+      toast.error('동의서 업로드에 실패했습니다.');
+    } finally {
+      setUploadingConsent(false);
     }
   };
 
@@ -206,11 +263,17 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
               {formData.consentImageUrl ? (
                 <div className="space-y-3">
                   <div className="relative">
-                    <img
-                      src={formData.consentImageUrl}
-                      alt="동의서"
-                      className="h-32 w-full rounded-lg border object-cover"
-                    />
+                    {consentImageUrl ? (
+                      <img
+                        src={consentImageUrl}
+                        alt="동의서"
+                        className="h-32 w-full rounded-lg border object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-32 w-full items-center justify-center rounded-lg border bg-gray-50">
+                        <span className="text-sm text-gray-500">로딩 중...</span>
+                      </div>
+                    )}
                     <Button
                       type="button"
                       variant="destructive"
@@ -226,14 +289,17 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => consentFileInput?.click()}
+                    disabled={uploadingConsent}
                   >
-                    수정
+                    {uploadingConsent ? '업로드 중...' : '수정'}
                   </Button>
                 </div>
               ) : (
                 <div
-                  className="cursor-pointer rounded-lg border-2 border-dashed border-green-300 p-6 text-center transition-colors hover:bg-green-100"
-                  onClick={() => consentFileInput?.click()}
+                  className={`cursor-pointer rounded-lg border-2 border-dashed border-green-300 p-6 text-center transition-colors hover:bg-green-100 ${
+                    uploadingConsent ? 'pointer-events-none opacity-50' : ''
+                  }`}
+                  onClick={() => !uploadingConsent && consentFileInput?.click()}
                   role="button"
                   tabIndex={0}
                   aria-label="동의서 이미지 업로드"
@@ -260,8 +326,12 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
                       </svg>
                     </div>
                     <div className="text-sm text-gray-600">
-                      <p className="font-medium">동의서 이미지를 업로드하세요</p>
-                      <p className="text-xs">클릭하여 파일 선택</p>
+                      <p className="font-medium">
+                        {uploadingConsent ? '업로드 중...' : '동의서 이미지를 업로드하세요'}
+                      </p>
+                      <p className="text-xs">
+                        {uploadingConsent ? '잠시만 기다려주세요' : '클릭하여 파일 선택'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -292,9 +362,9 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
             <Button
               type="submit"
               className="flex-1"
-              disabled={isLoading || !formData.customerName.trim()}
+              disabled={isLoading || !formData.customerName.trim() || uploadingConsent}
             >
-              {isLoading ? '추가 중...' : '고객 추가'}
+              {isLoading ? '추가 중...' : uploadingConsent ? '업로드 중...' : '고객 추가'}
             </Button>
           </div>
         </form>

@@ -12,7 +12,7 @@ import { convexToUICase, uiToConvexCreateArgs } from './clinical-photos-mapper';
 /**
  * 케이스 목록 조회 훅 (실시간 동기화)
  */
-export function useClinicalCasesConvex(status?: string, profileId?: Id<'profiles'>) {
+export function useClinicalCasesConvex(profileId: Id<'profiles'> | undefined, status?: string) {
   const cases = useQuery(api.clinical.listClinicalCases, {
     profileId: profileId, // 프로필 ID 전달
     paginationOpts: { numItems: 100, cursor: null },
@@ -50,15 +50,21 @@ export function useCreateClinicalCaseConvex() {
 
   const createCase = async (caseData: any, profileId: Id<'profiles'>) => {
     try {
+      if (!profileId) {
+        throw new Error('프로필 ID가 필요합니다.');
+      }
+
       const convexArgs = uiToConvexCreateArgs(caseData);
       const result = await createMutation({
         ...convexArgs,
         profileId, // 프로필 ID 추가
       });
-      toast.success('케이스가 생성되었습니다.');
+
       if (!result) {
         throw new Error('케이스 생성 결과를 받지 못했습니다.');
       }
+
+      toast.success('케이스가 생성되었습니다.');
       return convexToUICase(result);
     } catch (error: any) {
       console.error('Case creation error:', error);
@@ -176,7 +182,7 @@ export function useUploadClinicalPhotoConvex() {
     roundNumber: number;
     angle: string;
     file: File;
-    profileId?: Id<'profiles'>; // profileId 추가
+    profileId?: Id<'profiles'>; // profileId는 optional (사진에는 필수 아님)
   }) => {
     try {
       // Step 1: 업로드 URL 생성
@@ -297,8 +303,8 @@ export function useRoundCustomerInfoConvex(caseId: string | null, profileId?: st
 /**
  * 편의 함수: 고객 케이스 목록 (본인 제외)
  */
-export function useCustomerCasesConvex(profileId?: Id<'profiles'>) {
-  const { data: allCases, ...rest } = useClinicalCasesConvex(undefined, profileId);
+export function useCustomerCasesConvex(profileId: Id<'profiles'> | undefined) {
+  const { data: allCases, ...rest } = useClinicalCasesConvex(profileId, undefined);
 
   const customerCases = allCases?.filter(c => c.customerName?.trim() !== '본인') || [];
 
