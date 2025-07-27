@@ -369,18 +369,33 @@ export default defineSchema({
     // 제품/피부타입 메타데이터 (태그로도 저장하지만 빠른 조회를 위해)
     metadata: v.optional(
       v.object({
-        // 제품 선택
+        // 기존 체크박스들
         cureBooster: v.optional(v.boolean()),
         cureMask: v.optional(v.boolean()),
         premiumMask: v.optional(v.boolean()),
         allInOneSerum: v.optional(v.boolean()),
-        // 피부타입
         skinRedSensitive: v.optional(v.boolean()),
         skinPigment: v.optional(v.boolean()),
         skinPore: v.optional(v.boolean()),
         skinTrouble: v.optional(v.boolean()),
         skinWrinkle: v.optional(v.boolean()),
         skinEtc: v.optional(v.boolean()),
+
+        // 고객 정보
+        customerInfo: v.optional(
+          v.object({
+            name: v.optional(v.string()),
+            age: v.optional(v.number()),
+            gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
+            treatmentType: v.optional(v.string()),
+            products: v.optional(v.array(v.string())),
+            skinTypes: v.optional(v.array(v.string())),
+            memo: v.optional(v.string()),
+          })
+        ),
+
+        // 회차별 고객 정보
+        roundCustomerInfo: v.optional(v.any()), // 동적 키를 위해 any 사용
       })
     ),
     created_at: v.number(),

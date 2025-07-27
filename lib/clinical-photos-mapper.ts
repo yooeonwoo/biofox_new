@@ -80,6 +80,16 @@ export interface ConvexClinicalCase {
     skinTrouble?: boolean;
     skinWrinkle?: boolean;
     skinEtc?: boolean;
+    customerInfo?: {
+      name?: string;
+      age?: number;
+      gender?: 'male' | 'female' | 'other';
+      treatmentType?: string;
+      products?: string[];
+      skinTypes?: string[];
+      memo?: string;
+    };
+    roundCustomerInfo?: any; // 동적 키를 위해 any 사용
   };
   custom_fields?: any;
   photo_count?: number;
@@ -187,17 +197,21 @@ export const convexToUICase = (convexCase: ConvexClinicalCase): ClinicalCase => 
 
     // 고객 정보
     customerInfo: {
-      name: convexCase.name,
-      age: convexCase.age,
-      gender: convexCase.gender,
-      treatmentType: convexCase.treatment_plan || convexCase.treatment_item || '',
-      products: extractProducts(),
-      skinTypes: extractSkinTypes(),
-      memo: convexCase.notes || '',
+      name: convexCase.metadata?.customerInfo?.name || convexCase.name,
+      age: convexCase.metadata?.customerInfo?.age ?? convexCase.age,
+      gender: convexCase.metadata?.customerInfo?.gender || convexCase.gender,
+      treatmentType:
+        convexCase.metadata?.customerInfo?.treatmentType ||
+        convexCase.treatment_plan ||
+        convexCase.treatment_item ||
+        '',
+      products: convexCase.metadata?.customerInfo?.products || extractProducts(),
+      skinTypes: convexCase.metadata?.customerInfo?.skinTypes || extractSkinTypes(),
+      memo: convexCase.metadata?.customerInfo?.memo || convexCase.notes || '',
     },
 
     // 회차별 정보 초기화
-    roundCustomerInfo: {},
+    roundCustomerInfo: convexCase.metadata?.roundCustomerInfo || {},
 
     // 메타데이터
     metadata: {

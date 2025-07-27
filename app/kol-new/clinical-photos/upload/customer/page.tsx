@@ -1,14 +1,14 @@
 'use client';
 
-
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { Camera } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Camera } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCustomerCaseHandlers } from '@/hooks/useCustomerCaseHandlers';
 import { useCustomerPageState } from '@/hooks/useCustomerPageState';
 import { PageHeader } from '@/components/clinical/PageHeader';
 import { CaseCard } from '@/components/clinical/CaseCard';
 import { createSaveStatusUtils, createEnqueueUtil, createDebounceUtil } from '@/utils/customer';
+import type { RoundCustomerInfo } from '@/types/clinical';
 
 // 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 
@@ -22,8 +22,6 @@ export default function CustomerClinicalUploadPage() {
     setCases,
     currentRounds,
     setCurrentRounds,
-    hasUnsavedNewCustomer,
-    setHasUnsavedNewCustomer,
     numberVisibleCards,
     isComposing,
     setIsComposing,
@@ -31,12 +29,9 @@ export default function CustomerClinicalUploadPage() {
     setInputDebounceTimers,
     saveStatus,
     setSaveStatus,
-    
+
     // Refs (only used ones)
     mainContentRef,
-    
-    // Helper functions
-    isNewCustomer,
   } = useCustomerPageState();
 
   // 유틸 함수들 생성
@@ -68,8 +63,6 @@ export default function CustomerClinicalUploadPage() {
     markSaved,
     markError,
     enqueue,
-    hasUnsavedNewCustomer,
-    setHasUnsavedNewCustomer,
   });
 
   // 로딩 중이거나 사용자 정보 확인 중인 경우
@@ -93,30 +86,48 @@ export default function CustomerClinicalUploadPage() {
       {/* 헤더를 main 밖으로 이동하여 전체 너비 활용 */}
       <PageHeader
         onAddCustomer={handleAddCustomer}
-        hasUnsavedNewCustomer={hasUnsavedNewCustomer}
         title="임상 관리 (고객)"
         backPath="/kol-new/clinical-photos"
         showAddButton={true}
       />
-      
+
       {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
       <main ref={mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
         {/* 기존 케이스들 */}
         <LayoutGroup>
           {/* 메인 컨텐츠 - Legacy 반응형 패딩과 간격 적용 */}
-          <div className="space-y-4 xs:space-y-5 p-3 xs:p-4 md:px-0 md:py-6">
+          <div className="space-y-4 p-3 xs:space-y-5 xs:p-4 md:px-0 md:py-6">
             <AnimatePresence mode="popLayout">
               {cases.length > 0 ? (
                 cases.map((case_, index) => {
-                  // 핸들러 객체 생성
+                  // 핸들러 객체 생성 (CaseCard 시그니처에 맞게 래핑)
                   const handlers = {
                     handleConsentChange,
                     handleCaseStatusChange,
                     handleDeleteCase,
                     refreshCases,
                     handleSaveAll,
-                    handleBasicCustomerInfoUpdate,
-                    handleRoundCustomerInfoUpdate,
+                    handleBasicCustomerInfoUpdate: (caseId: string, info: any) => {
+                      // CaseCard가 객체로 전달하므로 각 필드별로 호출
+                      if (info.name !== undefined)
+                        handleBasicCustomerInfoUpdate(caseId, 'name', info.name);
+                      if (info.age !== undefined)
+                        handleBasicCustomerInfoUpdate(caseId, 'age', info.age);
+                      if (info.gender !== undefined)
+                        handleBasicCustomerInfoUpdate(caseId, 'gender', info.gender);
+                    },
+                    handleRoundCustomerInfoUpdate: (caseId: string, round: number, info: any) => {
+                      // CaseCard가 객체로 전달하므로 각 필드별로 호출
+                      Object.keys(info).forEach(field => {
+                        handleRoundCustomerInfoUpdate(
+                          caseId,
+                          round,
+                          field as keyof RoundCustomerInfo,
+                          info[field],
+                          currentRounds
+                        );
+                      });
+                    },
                     updateCaseCheckboxes,
                   };
 
@@ -128,7 +139,7 @@ export default function CustomerClinicalUploadPage() {
                       currentRounds={currentRounds}
                       saveStatus={saveStatus}
                       numberVisibleCards={numberVisibleCards}
-                      isNewCustomer={isNewCustomer}
+                      isNewCustomer={() => false}
                       setIsComposing={setIsComposing}
                       setCases={setCases}
                       handlers={handlers}
@@ -144,9 +155,13 @@ export default function CustomerClinicalUploadPage() {
                 >
                   <Card>
                     <CardContent className="py-12 text-center">
-                      <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">등록된 고객 케이스가 없습니다</h3>
-                      <p className="text-gray-500 mb-4">위 버튼을 사용해서 첫 번째 고객 케이스를 등록해보세요</p>
+                      <Camera className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                      <h3 className="mb-2 text-lg font-medium text-gray-900">
+                        등록된 고객 케이스가 없습니다
+                      </h3>
+                      <p className="mb-4 text-gray-500">
+                        위 버튼을 사용해서 첫 번째 고객 케이스를 등록해보세요
+                      </p>
                     </CardContent>
                   </Card>
                 </motion.div>

@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import type { ClinicalCase, CustomerInfo, RoundCustomerInfo } from '@/types/clinical';
+import type { ClinicalCase, CustomerInfo, RoundCustomerInfo, PhotoSlot } from '@/types/clinical';
 import {
   useCreateClinicalCaseConvex,
   useUpdateClinicalCaseStatusConvex,
@@ -15,6 +15,9 @@ import {
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
+import { retry, OptimisticUpdate, showErrorToast } from '@/lib/utils/error-handling';
+import { validateField, isCaseDataComplete } from '@/lib/utils/validation';
+import { useConcurrentModificationDetection } from '@/hooks/useConcurrentModificationDetection';
 // toConvexId 제거 - string ID를 직접 사용
 
 interface UseCustomerCaseHandlersParams {
@@ -30,8 +33,6 @@ interface UseCustomerCaseHandlersParams {
   markSaved: (caseId: string) => void;
   markError: (caseId: string) => void;
   enqueue: (caseId: string, task: () => Promise<void>) => Promise<void>;
-  hasUnsavedNewCustomer: boolean;
-  setHasUnsavedNewCustomer: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 /**
@@ -50,8 +51,6 @@ export function useCustomerCaseHandlers({
   markSaved,
   markError,
   enqueue,
-  hasUnsavedNewCustomer,
-  setHasUnsavedNewCustomer,
 }: UseCustomerCaseHandlersParams) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -67,9 +66,6 @@ export function useCustomerCaseHandlers({
   const updateCaseFields = useMutation(api.clinical.updateClinicalCase);
   const saveRoundInfo = useMutation(api.clinical.saveRoundCustomerInfo);
 
-  // 새 고객 여부 확인 함수
-  const isNewCustomer = useCallback((caseId: string) => caseId.startsWith('new-customer-'), []);
-
   // 로그아웃 함수
   const handleSignOut = useCallback(async () => {
     try {
@@ -84,11 +80,9 @@ export function useCustomerCaseHandlers({
   const handleCaseStatusChange = useCallback(
     async (caseId: string, status: 'active' | 'completed') => {
       try {
-        // 새 고객이 아닌 경우에만 실제 API 호출
-        if (!isNewCustomer(caseId)) {
-          const convexStatus = status === 'active' ? 'in_progress' : 'completed';
-          await updateCaseStatus.mutateAsync({ caseId, status: convexStatus });
-        }
+        // Convex에 상태 업데이트
+        const convexStatus = status === 'active' ? 'in_progress' : 'completed';
+        await updateCaseStatus.mutateAsync({ caseId, status: convexStatus });
 
         // 로컬 상태 업데이트
         setCases(prev => prev.map(case_ => (case_.id === caseId ? { ...case_, status } : case_)));
@@ -99,18 +93,15 @@ export function useCustomerCaseHandlers({
         toast.error('케이스 상태 변경에 실패했습니다. 다시 시도해주세요.');
       }
     },
-    [setCases, isNewCustomer, updateCaseStatus]
+    [setCases, updateCaseStatus]
   );
 
   // 동의서 상태 변경 핸들러
   const handleConsentChange = useCallback(
     async (caseId: string, consentReceived: boolean) => {
       try {
-        // 새 고객이 아닌 경우에만 실제 API 호출
-        if (!isNewCustomer(caseId)) {
-          // TODO: Convex mutation으로 동의서 상태 업데이트
-          console.log('Consent update not implemented yet');
-        }
+        // TODO: Convex mutation으로 동의서 상태 업데이트
+        console.log('Consent update not implemented yet');
 
         // 로컬 상태 업데이트
         setCases(prev =>
@@ -132,304 +123,361 @@ export function useCustomerCaseHandlers({
         toast.error('동의서 상태 변경에 실패했습니다. 다시 시도해주세요.');
       }
     },
-    [setCases, isNewCustomer]
+    [setCases]
   );
 
   // 사진 업로드 핸들러
   const handlePhotoUpload = useCallback(
-    async (caseId: string, roundDay: number, angle: string, file?: File): Promise<void> => {
-      console.log('Photo upload:', { caseId, roundDay, angle });
-
+    async (caseId: string, roundDay: number, angle: string, file: File) => {
       if (file) {
         try {
-          let imageUrl: string;
+          // Convex에 사진 업로드
+          const uploadedPhoto = await uploadPhoto.mutateAsync({
+            caseId,
+            roundNumber: roundDay,
+            angle,
+            file,
+          });
 
-          // 새 고객인 경우 임시 처리
-          if (isNewCustomer(caseId)) {
-            imageUrl = URL.createObjectURL(file);
+          // 로컬 상태 업데이트
+          setCases(prev =>
+            prev.map(case_ => {
+              if (case_.id === caseId) {
+                // 기존 사진 찾기
+                const existingPhotoIndex = case_.photos.findIndex(
+                  p => p.roundDay === roundDay && p.angle === angle
+                );
 
-            // 해당 케이스의 사진 업데이트 (새 고객)
+                const updatedPhotos = [...case_.photos];
+                const newPhoto: PhotoSlot = {
+                  id: `${caseId}-${roundDay}-${angle}`,
+                  roundDay,
+                  angle: angle as 'front' | 'left' | 'right',
+                  imageUrl: URL.createObjectURL(file), // 임시 URL 사용
+                  uploaded: true,
+                  photoId: uploadedPhoto as unknown as string,
+                };
+
+                if (existingPhotoIndex >= 0) {
+                  updatedPhotos[existingPhotoIndex] = newPhoto;
+                } else {
+                  updatedPhotos.push(newPhoto);
+                }
+
+                return { ...case_, photos: updatedPhotos };
+              }
+              return case_;
+            })
+          );
+
+          console.log(`사진이 업로드되었습니다: Round ${roundDay}, ${angle}`);
+          toast.success('사진이 업로드되었습니다.');
+        } catch (error) {
+          console.error('사진 업로드 실패:', error);
+          toast.error('사진 업로드에 실패했습니다. 다시 시도해주세요.');
+        }
+      }
+    },
+    [setCases, uploadPhoto]
+  );
+
+  // 사진 삭제 핸들러
+  const handlePhotoDelete = useCallback(
+    async (caseId: string, roundDay: number, angle: string) => {
+      try {
+        // 사진 ID 찾기
+        const targetCase = cases.find(c => c.id === caseId);
+        const targetPhoto = targetCase?.photos.find(
+          p => p.roundDay === roundDay && p.angle === angle
+        );
+
+        if (targetPhoto?.photoId) {
+          // Convex에서 사진 삭제
+          await deletePhoto.mutateAsync(targetPhoto.photoId);
+        }
+
+        // 로컬 상태에서 사진 제거
+        setCases(prev =>
+          prev.map(case_ => {
+            if (case_.id === caseId) {
+              const updatedPhotos = case_.photos.filter(
+                p => !(p.roundDay === roundDay && p.angle === angle)
+              );
+              return { ...case_, photos: updatedPhotos };
+            }
+            return case_;
+          })
+        );
+
+        console.log(`사진이 삭제되었습니다: Round ${roundDay}, ${angle}`);
+        toast.success('사진이 삭제되었습니다.');
+      } catch (error) {
+        console.error('사진 삭제 실패:', error);
+        toast.error('사진 삭제에 실패했습니다. 다시 시도해주세요.');
+      }
+    },
+    [cases, setCases, deletePhoto]
+  );
+
+  // 기본 고객 정보 업데이트 핸들러 - 개선된 검증과 에러 처리
+  const handleBasicCustomerInfoUpdate = useCallback(
+    (caseId: string, field: keyof CustomerInfo, value: any) => {
+      // 입력값 검증
+      const validationError = validateField(field === 'name' ? 'customerName' : field, value);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      // 이전 값 저장 (롤백용)
+      const previousCase = cases.find(c => c.id === caseId);
+      if (!previousCase) return;
+
+      const previousValue = previousCase.customerInfo[field];
+      const previousCustomerName = previousCase.customerName;
+
+      // 즉시 로컬 상태 업데이트 (낙관적 업데이트)
+      setCases(prev =>
+        prev.map(case_ => {
+          if (case_.id === caseId) {
+            const updatedCase = {
+              ...case_,
+              customerInfo: { ...case_.customerInfo, [field]: value },
+              customerName: field === 'name' ? value : case_.customerName,
+            };
+            return updatedCase;
+          }
+          return case_;
+        })
+      );
+
+      // 디바운싱으로 Convex에 저장
+      debouncedUpdate(`customer-info-${caseId}-${field}`, async () => {
+        if (!isComposing) {
+          markSaving(caseId);
+          try {
+            // 현재 케이스 데이터 가져오기
+            const currentCase = cases.find(c => c.id === caseId);
+            if (!currentCase) {
+              throw new Error('Case not found');
+            }
+
+            // 메타데이터 구성
+            const updatedMetadata = {
+              ...currentCase.metadata,
+              customerInfo: {
+                ...currentCase.metadata?.customerInfo,
+                [field]: value,
+              },
+            };
+
+            // 재시도 로직과 함께 Convex에 업데이트
+            await retry(
+              async () =>
+                updateCaseFields({
+                  caseId: caseId as Id<'clinical_cases'>,
+                  updates: {
+                    name: field === 'name' ? value : undefined,
+                    gender: field === 'gender' ? value : undefined,
+                    age: field === 'age' ? value : undefined,
+                    metadata: updatedMetadata,
+                  },
+                }),
+              {
+                maxAttempts: 2,
+                delay: 500,
+              }
+            );
+            markSaved(caseId);
+          } catch (error) {
+            markError(caseId);
+
+            // 실패 시 롤백
             setCases(prev =>
               prev.map(case_ => {
                 if (case_.id === caseId) {
-                  // 기존 사진 찾기
-                  const existingPhotoIndex = case_.photos.findIndex(
-                    p => p.roundDay === roundDay && p.angle === angle
-                  );
-
-                  const newPhoto = {
-                    id: `${caseId}-${roundDay}-${angle}`,
-                    roundDay: roundDay,
-                    angle: angle as 'front' | 'left' | 'right',
-                    imageUrl: imageUrl,
-                    uploaded: true,
-                  };
-
-                  let updatedPhotos;
-                  if (existingPhotoIndex >= 0) {
-                    // 기존 사진 교체
-                    updatedPhotos = [...case_.photos];
-                    updatedPhotos[existingPhotoIndex] = newPhoto;
-                  } else {
-                    // 새 사진 추가
-                    updatedPhotos = [...case_.photos, newPhoto];
-                  }
-
                   return {
                     ...case_,
-                    photos: updatedPhotos,
+                    customerInfo: { ...case_.customerInfo, [field]: previousValue },
+                    customerName: field === 'name' ? previousCustomerName : case_.customerName,
                   };
                 }
                 return case_;
               })
             );
-          } else {
-            // 실제 케이스의 경우 Convex 스토리지에 업로드
-            const result = await uploadPhoto.mutateAsync({
-              caseId,
-              roundNumber: roundDay,
-              angle,
-              file,
-            });
 
-            // 업로드 성공 후 로컬 상태 업데이트
-            // Convex 실시간 동기화로 자동 업데이트되므로 별도 처리 불필요
-            console.log('Photo uploaded successfully:', result);
+            showErrorToast(error, '고객 정보 저장에 실패했습니다.');
           }
-
-          console.log('사진이 성공적으로 업로드되었습니다.');
-          toast.success('사진이 성공적으로 업로드되었습니다.');
-        } catch (error) {
-          console.error('사진 업로드 실패:', error);
-          const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-          toast.error(`사진 업로드 실패: ${errorMessage}`);
-          throw error;
         }
-      }
+      });
     },
-    [setCases, isNewCustomer, uploadPhoto]
+    [
+      setCases,
+      cases,
+      markSaving,
+      markSaved,
+      markError,
+      isComposing,
+      debouncedUpdate,
+      updateCaseFields,
+    ]
   );
 
-  // 사진 삭제 핸들러
-  const handlePhotoDelete = useCallback(
-    async (caseId: string, roundDay: number, angle: string): Promise<void> => {
-      try {
-        // 새 고객이 아닌 경우에만 실제 삭제 API 호출
-        if (!isNewCustomer(caseId)) {
-          // 사진 ID 찾기
-          const targetCase = cases.find(c => c.id === caseId);
-          const photo = targetCase?.photos.find(p => p.roundDay === roundDay && p.angle === angle);
-
-          if (photo?.photoId) {
-            await deletePhoto.mutateAsync(photo.photoId);
-          }
-        } else {
-          // 새 고객의 경우 로컬 상태만 업데이트
-          setCases(prev =>
-            prev.map(case_ => {
-              if (case_.id === caseId) {
-                const updatedPhotos = case_.photos.filter(
-                  p => !(p.roundDay === roundDay && p.angle === angle)
-                );
-                return {
-                  ...case_,
-                  photos: updatedPhotos,
-                };
-              }
-              return case_;
-            })
-          );
-        }
-
-        console.log('사진이 성공적으로 삭제되었습니다.');
-        toast.success('사진이 성공적으로 삭제되었습니다.');
-      } catch (error) {
-        console.error('사진 삭제 실패:', error);
-        toast.error('사진 삭제에 실패했습니다. 다시 시도해주세요.');
-        throw error;
-      }
-    },
-    [cases, setCases, isNewCustomer, deletePhoto]
-  );
-
-  // 기본 고객정보 업데이트 핸들러 (이름, 나이, 성별) - IME 처리 개선
-  const handleBasicCustomerInfoUpdate = useCallback(
-    async (
-      caseId: string,
-      customerInfo: Partial<Pick<CustomerInfo, 'name' | 'age' | 'gender'>>
-    ) => {
-      markSaving(caseId);
-      try {
-        // IME 입력 중이면 로컬 상태만 업데이트
-        if (isComposing && customerInfo.name !== undefined) {
-          setCases(prev =>
-            prev.map(case_ =>
-              case_.id === caseId
-                ? ({
-                    ...case_,
-                    customerName: customerInfo.name || case_.customerName,
-                    customerInfo: { ...case_.customerInfo, ...customerInfo },
-                  } as ClinicalCase)
-                : case_
-            )
-          );
-          return;
-        }
-
-        // 새 고객이 아닌 경우에만 실제 API 호출
-        if (!isNewCustomer(caseId)) {
-          // TODO: Convex mutation으로 업데이트
-          console.log('Customer info update not implemented yet');
-        }
-
-        // 로컬 상태 업데이트
-        setCases(prev =>
-          prev.map(case_ =>
-            case_.id === caseId
-              ? ({
-                  ...case_,
-                  customerName: customerInfo.name || case_.customerName,
-                  customerInfo: { ...case_.customerInfo, ...customerInfo },
-                  roundCustomerInfo: {
-                    ...case_.roundCustomerInfo,
-                    [currentRounds[caseId] || 1]: {
-                      ...(case_.roundCustomerInfo?.[currentRounds[caseId] || 1] || {}),
-                      age:
-                        customerInfo.age !== undefined
-                          ? customerInfo.age
-                          : case_.roundCustomerInfo?.[currentRounds[caseId] || 1]?.age,
-                      gender:
-                        customerInfo.gender !== undefined
-                          ? customerInfo.gender
-                          : case_.roundCustomerInfo?.[currentRounds[caseId] || 1]?.gender,
-                    },
-                  },
-                } as ClinicalCase)
-              : case_
-          )
-        );
-
-        markSaved(caseId);
-        console.log('기본 고객 정보가 업데이트되었습니다.');
-      } catch (error) {
-        console.error('기본 고객 정보 업데이트 실패:', error);
-        markError(caseId);
-        // 조용히 실패 처리 (사용자 경험 방해하지 않도록)
-      }
-    },
-    [setCases, currentRounds, markSaving, markSaved, markError, isComposing, isNewCustomer]
-  );
-
-  // 회차별 고객정보 업데이트 핸들러 (시술유형, 제품, 피부타입, 메모) - IME 처리 개선
+  // 회차별 고객 정보 업데이트 핸들러
   const handleRoundCustomerInfoUpdate = useCallback(
-    async (caseId: string, roundDay: number, roundInfo: Partial<RoundCustomerInfo>) => {
-      markSaving(caseId);
-      try {
-        // IME 입력 중이면 로컬 상태만 업데이트
-        if (isComposing && roundInfo.memo !== undefined) {
-          setCases(prev =>
-            prev.map(case_ =>
-              case_.id === caseId
-                ? ({
-                    ...case_,
-                    roundCustomerInfo: {
-                      ...case_.roundCustomerInfo,
-                      [roundDay]: {
-                        treatmentType: '',
-                        memo: '',
-                        date: '',
-                        products: [],
-                        skinTypes: [],
-                        ...(case_.roundCustomerInfo?.[roundDay] || {}),
-                        ...roundInfo,
-                      },
-                    },
-                  } as ClinicalCase)
-                : case_
-            )
-          );
-          markSaved(caseId);
-          return;
-        }
-
-        // 새 고객이 아닌 경우에만 실제 API 호출
-        if (!isNewCustomer(caseId)) {
-          // TODO: Convex mutation으로 업데이트
-          console.log('Round info update not implemented yet');
-        }
-
+    (
+      caseId: string,
+      roundNumber: number,
+      field: keyof RoundCustomerInfo,
+      value: any,
+      currentRounds: { [key: string]: number }
+    ) => {
+      enqueue(caseId, async () => {
         // 로컬 상태 업데이트
         setCases(prev =>
-          prev.map(case_ =>
-            case_.id === caseId
-              ? {
-                  ...case_,
-                  roundCustomerInfo: {
-                    ...case_.roundCustomerInfo,
-                    [roundDay]: {
-                      treatmentType: '',
-                      memo: '',
-                      date: '',
-                      products: [],
-                      skinTypes: [],
-                      ...(case_.roundCustomerInfo?.[roundDay] || {}),
-                      ...roundInfo,
-                    },
-                  },
-                }
-              : case_
-          )
+          prev.map(case_ => {
+            if (case_.id === caseId) {
+              const currentRoundInfo = case_.roundCustomerInfo[roundNumber] || {
+                products: [],
+                skinTypes: [],
+                memo: '',
+                date: new Date().toISOString().split('T')[0],
+              };
+
+              const updatedRoundInfo = {
+                ...case_.roundCustomerInfo,
+                [roundNumber]: {
+                  ...currentRoundInfo,
+                  [field]: value,
+                } as RoundCustomerInfo,
+              };
+              return { ...case_, roundCustomerInfo: updatedRoundInfo };
+            }
+            return case_;
+          })
         );
 
-        markSaved(caseId);
-        console.log('회차별 고객 정보가 업데이트되었습니다.');
-      } catch (error) {
-        console.error('회차별 고객 정보 업데이트 실패:', error);
-        markError(caseId);
-        // 조용히 실패 처리 (사용자 경험 방해하지 않도록)
-      }
+        // 디바운싱으로 Convex에 저장
+        debouncedUpdate(`round-info-${caseId}-${roundNumber}-${field}`, async () => {
+          if (!isComposing) {
+            markSaving(caseId);
+            try {
+              // 현재 케이스 데이터 가져오기
+              const currentCase = cases.find(c => c.id === caseId);
+              if (!currentCase) {
+                throw new Error('Case not found');
+              }
+
+              // 회차별 정보 구성
+              const currentRoundInfo = currentCase.roundCustomerInfo[roundNumber] || {
+                products: [],
+                skinTypes: [],
+                memo: '',
+                date: new Date().toISOString().split('T')[0],
+              };
+
+              const updatedRoundInfo = {
+                ...currentRoundInfo,
+                [field]: value,
+              };
+
+              // 메타데이터 구성
+              const updatedMetadata = {
+                ...currentCase.metadata,
+                roundCustomerInfo: {
+                  ...currentCase.metadata?.roundCustomerInfo,
+                  [roundNumber]: updatedRoundInfo,
+                },
+              };
+
+              // Convex에 업데이트
+              await updateCaseFields({
+                caseId: caseId as Id<'clinical_cases'>,
+                updates: {
+                  metadata: updatedMetadata,
+                },
+              });
+              markSaved(caseId);
+            } catch (error) {
+              markError(caseId);
+              console.error('회차 정보 업데이트 실패:', error);
+              toast.error('회차 정보 저장에 실패했습니다.');
+            }
+          }
+        });
+      });
     },
-    [setCases, enqueue, markSaving, markSaved, markError, isComposing, isNewCustomer]
+    [
+      setCases,
+      cases,
+      enqueue,
+      markSaving,
+      markSaved,
+      markError,
+      isComposing,
+      debouncedUpdate,
+      updateCaseFields,
+    ]
   );
 
   // 체크박스 업데이트 핸들러
   const updateCaseCheckboxes = useCallback(
-    async (
-      caseId: string,
-      updates: Partial<{
-        cureBooster: boolean;
-        cureMask: boolean;
-        premiumMask: boolean;
-        allInOneSerum: boolean;
-        skinRedSensitive: boolean;
-        skinPigment: boolean;
-        skinPore: boolean;
-        skinTrouble: boolean;
-        skinWrinkle: boolean;
-        skinEtc: boolean;
-      }>
-    ) => {
-      try {
-        // 새 고객이 아닌 경우에만 실제 API 호출
-        if (!isNewCustomer(caseId)) {
+    (caseId: string, checkboxes: Partial<ClinicalCase>) => {
+      // 로컬 상태 업데이트
+      setCases(prev =>
+        prev.map(case_ => (case_.id === caseId ? { ...case_, ...checkboxes } : case_))
+      );
+
+      // Convex에 저장
+      debouncedUpdate(`checkboxes-${caseId}`, async () => {
+        try {
+          // 현재 케이스 데이터 가져오기
+          const currentCase = cases.find(c => c.id === caseId);
+          if (!currentCase) {
+            throw new Error('Case not found');
+          }
+
+          // 체크박스 필드만 추출
+          const checkboxFields = {
+            cureBooster: checkboxes.cureBooster,
+            cureMask: checkboxes.cureMask,
+            premiumMask: checkboxes.premiumMask,
+            allInOneSerum: checkboxes.allInOneSerum,
+            skinRedSensitive: checkboxes.skinRedSensitive,
+            skinPigment: checkboxes.skinPigment,
+            skinPore: checkboxes.skinPore,
+            skinTrouble: checkboxes.skinTrouble,
+            skinWrinkle: checkboxes.skinWrinkle,
+            skinEtc: checkboxes.skinEtc,
+          };
+
+          // undefined 값 제거
+          const filteredCheckboxes = Object.entries(checkboxFields).reduce((acc, [key, value]) => {
+            if (value !== undefined) {
+              acc[key] = value;
+            }
+            return acc;
+          }, {} as any);
+
+          // 메타데이터 구성
+          const updatedMetadata = {
+            ...currentCase.metadata,
+            ...filteredCheckboxes,
+          };
+
           await updateCaseFields({
             caseId: caseId as Id<'clinical_cases'>,
-            updates: updates as any,
+            updates: {
+              metadata: updatedMetadata,
+            },
           });
+        } catch (error) {
+          console.error('체크박스 업데이트 실패:', error);
+          toast.error('체크박스 저장에 실패했습니다.');
         }
-
-        // 로컬 상태 업데이트
-        setCases(prev =>
-          prev.map(case_ => (case_.id === caseId ? { ...case_, ...updates } : case_))
-        );
-
-        console.log('체크박스 상태가 업데이트되었습니다.');
-      } catch (error) {
-        console.error('체크박스 업데이트 실패:', error);
-        // 조용히 실패 처리
-      }
+      });
     },
-    [setCases, isNewCustomer, updateCaseFields]
+    [setCases, cases, updateCaseFields, debouncedUpdate]
   );
 
   // 현재 회차 변경 핸들러
@@ -446,23 +494,21 @@ export function useCustomerCaseHandlers({
     console.log('Cases are automatically synced with Convex');
   }, []);
 
-  // 새 고객 추가 핸들러
-  const handleAddCustomer = useCallback(() => {
-    // 이미 임시저장된 새 고객이 있는지 확인
-    const hasNewCustomer = cases.some(case_ => isNewCustomer(case_.id));
-    if (hasNewCustomer) {
-      toast.error('이미 등록 중인 새 고객이 있습니다. 먼저 저장하거나 취소해주세요.');
+  // 새 고객 추가 핸들러 - 개선된 에러 처리와 재시도
+  const handleAddCustomer = useCallback(async () => {
+    if (!user) {
+      toast.error('로그인이 필요합니다.');
       return;
     }
 
-    const newCustomerId = `new-customer-${Date.now()}`;
-    const newCase: ClinicalCase = {
-      id: newCustomerId,
+    // 낙관적 업데이트 준비
+    const tempId = `temp-${Date.now()}`;
+    const tempCase: ClinicalCase = {
+      id: tempId,
       customerName: '',
       status: 'active',
-      createdAt: new Date().toISOString().split('T')[0] || '',
+      createdAt: new Date().toISOString(),
       consentReceived: false,
-      consentImageUrl: undefined,
       photos: [],
       customerInfo: {
         name: '',
@@ -479,8 +525,9 @@ export function useCustomerCaseHandlers({
           skinTypes: [],
           memo: '',
           date: new Date().toISOString().split('T')[0],
-        } as RoundCustomerInfo,
+        },
       },
+      // 기본 체크박스 값들
       cureBooster: false,
       cureMask: false,
       premiumMask: false,
@@ -493,162 +540,132 @@ export function useCustomerCaseHandlers({
       skinEtc: false,
     };
 
-    setCases(prev => [newCase, ...prev]);
-    setCurrentRounds(prev => ({ ...prev, [newCustomerId]: 1 }));
-    setHasUnsavedNewCustomer(true);
-  }, [cases, setCases, setCurrentRounds, setHasUnsavedNewCustomer, isNewCustomer]);
+    // 낙관적 업데이트 적용
+    setCases(prev => [tempCase, ...prev]);
+    setCurrentRounds(prev => ({ ...prev, [tempId]: 1 }));
 
-  // 새 고객 저장 핸들러
-  const handleSaveNewCustomer = useCallback(
-    async (caseId: string) => {
-      const newCustomerCase = cases.find(c => c.id === caseId);
-      if (!newCustomerCase || !isNewCustomer(caseId)) return;
-
-      // 필수 정보 검증
-      if (!newCustomerCase.customerInfo.name?.trim()) {
-        toast.error('고객 이름을 입력해주세요.');
-        return;
-      }
-
-      try {
-        markSaving(caseId);
-
-        // 1. 새 케이스 생성
-        const createdCase = await createCase.mutateAsync({
-          customerName: newCustomerCase.customerInfo.name,
-          caseName: `${newCustomerCase.customerInfo.name} 임상 케이스`,
-          concernArea: newCustomerCase.roundCustomerInfo[1]?.treatmentType || '',
-          treatmentPlan: newCustomerCase.roundCustomerInfo[1]?.memo || '',
-          consentReceived: newCustomerCase.consentReceived,
-          // 체크박스 데이터는 metadata로 저장
-          metadata: {
-            cureBooster: newCustomerCase.cureBooster,
-            cureMask: newCustomerCase.cureMask,
-            premiumMask: newCustomerCase.premiumMask,
-            allInOneSerum: newCustomerCase.allInOneSerum,
-            skinRedSensitive: newCustomerCase.skinRedSensitive,
-            skinPigment: newCustomerCase.skinPigment,
-            skinPore: newCustomerCase.skinPore,
-            skinTrouble: newCustomerCase.skinTrouble,
-            skinWrinkle: newCustomerCase.skinWrinkle,
-            skinEtc: newCustomerCase.skinEtc,
+    try {
+      // 재시도 로직과 함께 Convex에 케이스 생성
+      const newCase = await retry(
+        async () =>
+          createCase.mutateAsync({
+            customerName: '',
+            caseName: '새 고객 케이스',
+            concernArea: '',
+            treatmentPlan: '',
+            consentReceived: false,
+            metadata: {
+              // 기본 체크박스 값들
+              cureBooster: false,
+              cureMask: false,
+              premiumMask: false,
+              allInOneSerum: false,
+              skinRedSensitive: false,
+              skinPigment: false,
+              skinPore: false,
+              skinTrouble: false,
+              skinWrinkle: false,
+              skinEtc: false,
+              // 기본 고객 정보
+              customerInfo: {
+                name: '',
+                age: undefined,
+                gender: undefined,
+                products: [],
+                skinTypes: [],
+                memo: '',
+              },
+              roundCustomerInfo: {
+                1: {
+                  treatmentType: '',
+                  products: [],
+                  skinTypes: [],
+                  memo: '',
+                  date: new Date().toISOString().split('T')[0],
+                },
+              },
+            },
+          }),
+        {
+          maxAttempts: 3,
+          onRetry: attempt => {
+            toast.loading(`새 고객 추가 중... (재시도 ${attempt}/3)`);
           },
-        });
-
-        const newCaseId = createdCase.id.toString();
-
-        // 2. 회차별 고객 정보 저장
-        // TODO: 라운드 정보 저장 mutation 구현 필요
-
-        // 3. 로컬 상태 업데이트 (새 고객 → 실제 케이스로 변환)
-        setCases(prev =>
-          prev.map(case_ =>
-            case_.id === caseId
-              ? {
-                  ...case_,
-                  id: newCaseId,
-                  createdAt: createdCase.createdAt,
-                }
-              : case_
-          )
-        );
-
-        // 4. 현재 회차 정보 업데이트
-        setCurrentRounds(prev => {
-          const newRounds = { ...prev };
-          delete newRounds[caseId];
-          newRounds[newCaseId] = 1;
-          return newRounds;
-        });
-
-        // 5. 임시저장 상태 해제
-        setHasUnsavedNewCustomer(false);
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('unsavedNewCustomer');
         }
+      );
 
-        markSaved(newCaseId);
-        toast.success('새 고객이 성공적으로 저장되었습니다.');
-        console.log('새 고객 저장 완료:', newCaseId);
-      } catch (error) {
-        console.error('새 고객 저장 실패:', error);
-        markError(caseId);
-        toast.error('고객 저장에 실패했습니다. 다시 시도해주세요.');
-      }
-    },
-    [
-      cases,
-      setCases,
-      setCurrentRounds,
-      setHasUnsavedNewCustomer,
-      markSaving,
-      markSaved,
-      markError,
-      isNewCustomer,
-      createCase,
-    ]
-  );
+      // 성공 시 임시 ID를 실제 ID로 교체
+      setCases(prev => prev.map(c => (c.id === tempId ? { ...c, id: newCase.id } : c)));
+      setCurrentRounds(prev => {
+        const newRounds = { ...prev };
+        delete newRounds[tempId];
+        newRounds[newCase.id] = 1;
+        return newRounds;
+      });
 
-  // 케이스 삭제 핸들러
+      toast.success('새 고객이 추가되었습니다.');
+    } catch (error) {
+      // 실패 시 낙관적 업데이트 롤백
+      setCases(prev => prev.filter(c => c.id !== tempId));
+      setCurrentRounds(prev => {
+        const newRounds = { ...prev };
+        delete newRounds[tempId];
+        return newRounds;
+      });
+
+      showErrorToast(error, '새 고객 추가에 실패했습니다.');
+    }
+  }, [user, createCase, setCases, setCurrentRounds]);
+
+  // 케이스 삭제 핸들러 - 개선된 낙관적 업데이트와 에러 처리
   const handleDeleteCase = useCallback(
     async (caseId: string) => {
-      if (isNewCustomer(caseId)) {
-        handleDeleteNewCustomer(caseId);
-        return;
-      }
+      // 삭제할 케이스 백업 (롤백용)
+      const caseToDelete = cases.find(c => c.id === caseId);
+      const currentRound = currentRounds[caseId];
 
-      try {
-        await deleteCase.mutateAsync(caseId);
+      if (!caseToDelete) return;
 
-        // 로컬 상태에서 케이스 제거
-        setCases(prev => prev.filter(case_ => case_.id !== caseId));
-
-        // 현재 회차 정보도 제거
-        setCurrentRounds(prev => {
-          const newRounds = { ...prev };
-          delete newRounds[caseId];
-          return newRounds;
-        });
-
-        console.log('케이스가 성공적으로 삭제되었습니다.');
-        toast.success('케이스가 성공적으로 삭제되었습니다.');
-      } catch (error) {
-        console.error('케이스 삭제 실패:', error);
-        toast.error('케이스 삭제에 실패했습니다. 다시 시도해주세요.');
-      }
-    },
-    [setCases, setCurrentRounds, isNewCustomer, deleteCase]
-  );
-
-  // 새 고객 삭제 핸들러
-  const handleDeleteNewCustomer = useCallback(
-    (caseId: string) => {
+      // 낙관적 업데이트 - 즉시 UI에서 제거
       setCases(prev => prev.filter(case_ => case_.id !== caseId));
       setCurrentRounds(prev => {
         const newRounds = { ...prev };
         delete newRounds[caseId];
         return newRounds;
       });
-      setHasUnsavedNewCustomer(false);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('unsavedNewCustomer');
+
+      try {
+        // 재시도 로직과 함께 Convex에서 삭제
+        await retry(async () => deleteCase.mutateAsync(caseId), {
+          maxAttempts: 2,
+          delay: 500,
+          onRetry: attempt => {
+            toast.loading(`케이스 삭제 중... (재시도 ${attempt}/2)`);
+          },
+        });
+
+        toast.success('케이스가 삭제되었습니다.');
+      } catch (error) {
+        // 실패 시 롤백
+        setCases(prev =>
+          [...prev, caseToDelete].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        );
+        if (currentRound !== undefined) {
+          setCurrentRounds(prev => ({ ...prev, [caseId]: currentRound }));
+        }
+
+        showErrorToast(error, '케이스 삭제에 실패했습니다.');
       }
     },
-    [setCases, setCurrentRounds, setHasUnsavedNewCustomer]
+    [deleteCase, setCases, setCurrentRounds, cases, currentRounds]
   );
 
-  // 전체 저장 핸들러
-  const handleSaveAll = useCallback(
-    async (caseId: string) => {
-      if (isNewCustomer(caseId)) {
-        await handleSaveNewCustomer(caseId);
-      } else {
-        console.log('기존 케이스는 실시간으로 저장됩니다.');
-        toast.success('데이터가 저장되었습니다.');
-      }
-    },
-    [handleSaveNewCustomer, isNewCustomer]
-  );
+  // 전체 저장 핸들러 - 단순화 (실시간 저장이므로 확인 메시지만)
+  const handleSaveAll = useCallback(async (caseId: string) => {
+    toast.success('모든 변경사항이 자동으로 저장되었습니다.');
+  }, []);
 
   return {
     handleSignOut,
@@ -662,10 +679,7 @@ export function useCustomerCaseHandlers({
     handleCurrentRoundChange,
     refreshCases,
     handleAddCustomer,
-    handleSaveNewCustomer,
     handleDeleteCase,
-    handleDeleteNewCustomer,
-    isNewCustomer,
     handleSaveAll,
   };
 }

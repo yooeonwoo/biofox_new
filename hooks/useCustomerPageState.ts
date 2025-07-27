@@ -14,7 +14,6 @@ export const useCustomerPageState = () => {
   /** 1) 기존 useState 들 - 그대로 이식 */
   const [user, setUser] = useState<any>(null);
   const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
-  const [hasUnsavedNewCustomer, setHasUnsavedNewCustomer] = useState(false);
   const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
   const [isComposing, setIsComposing] = useState(false);
   const [inputDebounceTimers, setInputDebounceTimers] = useState<{ [key: string]: NodeJS.Timeout }>(
@@ -25,13 +24,13 @@ export const useCustomerPageState = () => {
     [caseId: string]: 'idle' | 'saving' | 'saved' | 'error';
   }>({});
 
+  // 로컬 케이스 상태 추가 (Convex 데이터와 동기화)
+  const [localCases, setLocalCases] = useState<ClinicalCase[]>([]);
+
   /** Refs - 그대로 이식 */
   const userActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mainContentRef = useRef<HTMLDivElement>(null);
   const casesRef = useRef<ClinicalCase[]>([]);
-
-  /** Helper functions */
-  const isNewCustomer = (caseId: string) => caseId.startsWith('new-customer-');
 
   // Convex 훅으로 케이스 데이터 로드
   const { data: convexCases = [], isLoading: convexCasesLoading } = useClinicalCasesConvex();
@@ -44,6 +43,11 @@ export const useCustomerPageState = () => {
     );
     return enrichCasesWithRoundInfo(customerCases);
   }, [convexCases]);
+
+  // Convex 데이터가 변경되면 로컬 상태 업데이트
+  useEffect(() => {
+    setLocalCases(cases);
+  }, [cases]);
 
   // 사용자 인증 확인 - 실제 인증 정보 사용
   useEffect(() => {
@@ -136,32 +140,14 @@ export const useCustomerPageState = () => {
     };
   }, []);
 
-  // 임시저장된 새 고객 데이터 로드
-  useEffect(() => {
-    if (typeof window !== 'undefined' && user) {
-      const savedNewCustomer = localStorage.getItem('unsavedNewCustomer');
-      if (savedNewCustomer) {
-        try {
-          const parsedCase = JSON.parse(savedNewCustomer);
-          // localStorage에서 로드한 새 고객을 cases에 추가
-          setHasUnsavedNewCustomer(true);
-          setCurrentRounds(prev => ({ ...prev, [parsedCase.id]: 1 }));
-        } catch (error) {
-          console.error('Failed to parse saved new customer:', error);
-          localStorage.removeItem('unsavedNewCustomer');
-        }
-      }
-    }
-  }, [user]);
-
   // 케이스별 현재 라운드 초기화
   useEffect(() => {
     const initialRounds: { [caseId: string]: number } = {};
-    cases.forEach(case_ => {
+    localCases.forEach(case_ => {
       initialRounds[case_.id] = 1;
     });
     setCurrentRounds(prev => ({ ...prev, ...initialRounds }));
-  }, [cases]);
+  }, [localCases]);
 
   // 스크롤 기반 숫자 애니메이션
   useEffect(() => {
@@ -210,12 +196,15 @@ export const useCustomerPageState = () => {
 
   // 초기 애니메이션 테스트
   useEffect(() => {
-    if (cases.length > 0 && !isUserInteracting) {
-      console.log(' 초기 애니메이션 테스트 시작', { casesLength: cases.length, isUserInteracting });
+    if (localCases.length > 0 && !isUserInteracting) {
+      console.log(' 초기 애니메이션 테스트 시작', {
+        casesLength: localCases.length,
+        isUserInteracting,
+      });
 
       const initialAnimationTimer = setTimeout(() => {
         if (!isUserInteracting) {
-          setNumberVisibleCards(new Set(cases.map(c => c.id)));
+          setNumberVisibleCards(new Set(localCases.map(c => c.id)));
 
           setTimeout(() => {
             setNumberVisibleCards(new Set());
@@ -233,7 +222,7 @@ export const useCustomerPageState = () => {
 
   // cases 상태를 ref에 동기화
   // ref 업데이트는 부수 효과이므로 useEffect 없이 직접 할당
-  casesRef.current = cases;
+  casesRef.current = localCases;
 
   // 컴포넌트 언마운트 시 디바운스 타이머 정리
   useEffect(() => {
@@ -244,27 +233,6 @@ export const useCustomerPageState = () => {
     };
   }, [inputDebounceTimers]);
 
-  // localStorage에서 새 고객 데이터를 관리하는 메서드
-  const getUnsavedNewCustomer = () => {
-    if (typeof window === 'undefined') return null;
-    const saved = localStorage.getItem('unsavedNewCustomer');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (error) {
-        console.error('Failed to parse saved new customer:', error);
-        return null;
-      }
-    }
-    return null;
-  };
-
-  // 통합된 cases (Convex 데이터 + localStorage 새 고객)
-  const allCases = [
-    ...(hasUnsavedNewCustomer && getUnsavedNewCustomer() ? [getUnsavedNewCustomer()] : []),
-    ...cases,
-  ];
-
   /** 3) 상태 setter / 헬퍼 반환 */
   return {
     // States
@@ -272,12 +240,10 @@ export const useCustomerPageState = () => {
     setUser,
     isLoading: authLoading || convexCasesLoading,
     setIsLoading: () => {}, // deprecated
-    cases: allCases,
-    setCases: () => {}, // Convex 데이터는 읽기 전용
+    cases: localCases,
+    setCases: setLocalCases, // 실제 setState 함수 반환
     currentRounds,
     setCurrentRounds,
-    hasUnsavedNewCustomer,
-    setHasUnsavedNewCustomer,
     numberVisibleCards,
     setNumberVisibleCards,
     isComposing,
@@ -293,8 +259,5 @@ export const useCustomerPageState = () => {
     userActivityTimeoutRef,
     mainContentRef,
     casesRef,
-
-    // Helper functions
-    isNewCustomer,
   };
 };
