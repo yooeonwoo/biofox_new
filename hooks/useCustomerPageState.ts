@@ -31,6 +31,7 @@ export const useCustomerPageState = () => {
   const userActivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mainContentRef = useRef<HTMLDivElement>(null);
   const casesRef = useRef<ClinicalCase[]>([]);
+  const prevCasesRef = useRef<ClinicalCase[]>([]); // 이전 cases 추적용
 
   // Convex 훅으로 케이스 데이터 로드
   const { data: convexCases = [], isLoading: convexCasesLoading } = useClinicalCasesConvex(
@@ -47,9 +48,16 @@ export const useCustomerPageState = () => {
     return enrichCasesWithRoundInfo(customerCases);
   }, [convexCases]);
 
-  // Convex 데이터가 변경되면 로컬 상태 업데이트
+  // Convex 데이터가 변경되면 로컬 상태 업데이트 - 실제 변경이 있을 때만
   useEffect(() => {
-    setLocalCases(cases);
+    // 이전 cases와 현재 cases의 ID 비교
+    const prevIds = prevCasesRef.current.map(c => c.id).join(',');
+    const currentIds = cases.map(c => c.id).join(',');
+
+    if (prevIds !== currentIds || prevCasesRef.current.length !== cases.length) {
+      setLocalCases(cases);
+      prevCasesRef.current = cases;
+    }
   }, [cases]);
 
   // 사용자 인증 확인 - 실제 인증 정보 사용

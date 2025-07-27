@@ -8,6 +8,7 @@ import { api } from '@/convex/_generated/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ShopCustomerCard from './components/ShopCustomerCard';
 import { PageHeader } from '@/components/clinical/PageHeader';
+import { ShopCustomerData } from './lib/types';
 
 export default function ShopCustomerManagerPage() {
   const router = useRouter();
@@ -43,12 +44,14 @@ export default function ShopCustomerManagerPage() {
   }
 
   // 실제 프로필 데이터 사용
-  const shopData = {
+  // profile이 존재하면 created_at도 필수 필드이므로 반드시 존재
+  const contractDate = new Date(profile.created_at!).toISOString().split('T')[0] as string;
+
+  // profile은 이미 null 체크를 통과했고, schema에서 name은 필수 필드
+  const shopData: ShopCustomerData = {
     name: profile.shop_name || profile.name || '전문점',
-    contractDate: profile.created_at
-      ? new Date(profile.created_at).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0],
-    manager: profile.name || authUser.email,
+    contractDate: contractDate,
+    manager: profile.name || '담당자',
   };
 
   return (

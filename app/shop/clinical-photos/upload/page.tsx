@@ -97,7 +97,7 @@ export default function ClinicalPhotosUploadPage() {
               name: profile.name || '전문점',
               shopName: profile.shop_name || '바이오폭스 전문점',
               email: authUser?.email || 'shop@example.com',
-              phone: profile.phone || '010-0000-0000',
+              phone: '010-0000-0000', // profile에 phone 필드가 없으므로 기본값 사용
             },
           });
 

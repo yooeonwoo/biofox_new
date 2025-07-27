@@ -112,7 +112,7 @@ export function useClinicalCase(caseId: string | null) {
 /**
  * 케이스 생성 훅
  */
-export function useCreateClinicalCase() {
+export function useCreateClinicalCase(profileId?: Id<'profiles'>) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -137,7 +137,14 @@ export function useCreateClinicalCase() {
       skinEtc?: boolean;
     }) => {
       try {
-        const convexArgs = uiToConvexCreateArgs(caseData);
+        if (!profileId) {
+          throw new Error('프로필 ID가 필요합니다.');
+        }
+
+        const convexArgs = {
+          ...uiToConvexCreateArgs(caseData),
+          profileId: profileId,
+        };
         const result = await convex.mutation(api.clinical.createClinicalCase, convexArgs);
 
         toast.success('케이스가 생성되었습니다.');
@@ -363,9 +370,9 @@ function transformPhotoSlot(convexPhoto: any): PhotoSlot {
 /**
  * 편의 함수: 개인 케이스 확인/생성
  */
-export function useEnsurePersonalCase() {
+export function useEnsurePersonalCase(profileId?: Id<'profiles'>) {
   const { data: cases, isLoading } = useClinicalCases();
-  const createCase = useCreateClinicalCase();
+  const createCase = useCreateClinicalCase(profileId);
 
   const personalCase = cases?.find(c => c.customerName?.trim() === '본인');
 
