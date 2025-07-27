@@ -9,6 +9,7 @@ import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { toast } from 'sonner';
 import { ConvexHttpClient } from 'convex/browser';
+import { convexToUICase, uiToConvexCreateArgs, toConvexId } from './clinical-photos-mapper';
 
 // Convex HTTP 클라이언트 초기화
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -78,7 +79,7 @@ export function useClinicalCases(status?: string) {
           status: status as any,
         });
 
-        return result.page.map(transformClinicalCase);
+        return result.page.map(convexToUICase);
       } catch (error) {
         console.error('Clinical cases fetch error:', error);
         toast.error('케이스 목록을 불러오는데 실패했습니다.');
@@ -104,7 +105,7 @@ export function useClinicalCase(caseId: string | null) {
           caseId: caseId as Id<'clinical_cases'>,
         });
 
-        return result ? transformClinicalCase(result) : null;
+        return result ? convexToUICase(result) : null;
       } catch (error) {
         console.error('Clinical case fetch error:', error);
         toast.error('케이스 정보를 불러오는데 실패했습니다.');
@@ -144,29 +145,11 @@ export function useCreateClinicalCase() {
       skinEtc?: boolean;
     }) => {
       try {
-        const result = await convex.mutation(api.clinical.createClinicalCase, {
-          subject_type: 'customer', // 기본값
-          name: caseData.customerName,
-          consent_status: caseData.consentReceived ? 'consented' : 'no_consent',
-          treatment_item: caseData.treatmentPlan,
-          notes: `케이스명: ${caseData.caseName}\n관심 부위: ${caseData.concernArea}\n치료 계획: ${caseData.treatmentPlan}`,
-          // 제품 선택 (tags로 저장)
-          tags: [
-            ...(caseData.cureBooster ? ['cure_booster'] : []),
-            ...(caseData.cureMask ? ['cure_mask'] : []),
-            ...(caseData.premiumMask ? ['premium_mask'] : []),
-            ...(caseData.allInOneSerum ? ['all_in_one_serum'] : []),
-            ...(caseData.skinRedSensitive ? ['skin_red_sensitive'] : []),
-            ...(caseData.skinPigment ? ['skin_pigment'] : []),
-            ...(caseData.skinPore ? ['skin_pore'] : []),
-            ...(caseData.skinTrouble ? ['skin_trouble'] : []),
-            ...(caseData.skinWrinkle ? ['skin_wrinkle'] : []),
-            ...(caseData.skinEtc ? ['skin_etc'] : []),
-          ],
-        });
+        const convexArgs = uiToConvexCreateArgs(caseData);
+        const result = await convex.mutation(api.clinical.createClinicalCase, convexArgs);
 
         toast.success('케이스가 생성되었습니다.');
-        return transformClinicalCase(result);
+        return convexToUICase(result);
       } catch (error: any) {
         console.error('Case creation error:', error);
         toast.error(`케이스 생성에 실패했습니다: ${error.message}`);
@@ -367,40 +350,6 @@ export function useDeleteClinicalPhoto() {
 // =================================
 // 🔧 유틸리티 함수들
 // =================================
-
-/**
- * Convex Clinical Case 데이터를 UI 형식으로 변환
- */
-function transformClinicalCase(convexCase: any): ClinicalCase {
-  return {
-    id: convexCase._id,
-    kolId: convexCase.kol_id || convexCase.created_by,
-    customerId: convexCase.customer_id,
-    customerName: convexCase.customer_name || convexCase.subject_name,
-    caseName: convexCase.case_name || convexCase.case_title,
-    concernArea: convexCase.concern_area,
-    treatmentPlan: convexCase.treatment_plan,
-    consentReceived: convexCase.consent_received || false,
-    consentDate: convexCase.consent_date,
-    status: convexCase.status || 'active',
-    createdAt: new Date(convexCase._creationTime).toISOString(),
-    updatedAt: new Date(convexCase.updated_at || convexCase._creationTime).toISOString(),
-    totalPhotos: convexCase.total_photos || 0,
-    consentImageUrl: convexCase.consent_image_url,
-
-    // 메타데이터에서 제품/피부타입 정보 추출
-    cureBooster: convexCase.metadata?.cureBooster || false,
-    cureMask: convexCase.metadata?.cureMask || false,
-    premiumMask: convexCase.metadata?.premiumMask || false,
-    allInOneSerum: convexCase.metadata?.allInOneSerum || false,
-    skinRedSensitive: convexCase.metadata?.skinRedSensitive || false,
-    skinPigment: convexCase.metadata?.skinPigment || false,
-    skinPore: convexCase.metadata?.skinPore || false,
-    skinTrouble: convexCase.metadata?.skinTrouble || false,
-    skinWrinkle: convexCase.metadata?.skinWrinkle || false,
-    skinEtc: convexCase.metadata?.skinEtc || false,
-  };
-}
 
 /**
  * Convex Clinical Photo 데이터를 PhotoSlot 형식으로 변환

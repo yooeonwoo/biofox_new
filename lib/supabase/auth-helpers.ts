@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { api } from '@convex/_generated/api';
-import { fetchQuery } from 'convex/nextjs';
+import { fetchQuery, fetchMutation } from 'convex/nextjs';
 
 export async function requireAuth() {
   const supabase = await createClient();
@@ -19,12 +19,37 @@ export async function requireAuth() {
 export async function requireProfile() {
   const user = await requireAuth();
 
-  const profile = await fetchQuery(api.supabaseAuth.getProfileBySupabaseId, {
+  let profile = await fetchQuery(api.supabaseAuth.getProfileBySupabaseId, {
     supabaseUserId: user.id,
   });
 
   if (!profile) {
-    redirect('/onboarding');
+    // 프로필이 없으면 자동으로 동기화 시도
+    try {
+      await fetchMutation(api.supabaseAuth.syncSupabaseProfile, {
+        supabaseUserId: user.id,
+        email: user.email!,
+        metadata: {
+          name: user.user_metadata?.name || user.user_metadata?.full_name,
+          phone: user.user_metadata?.phone,
+          role: user.user_metadata?.role,
+          shop_name: user.user_metadata?.shop_name,
+          region: user.user_metadata?.region,
+        },
+      });
+
+      // 동기화 후 다시 조회
+      profile = await fetchQuery(api.supabaseAuth.getProfileBySupabaseId, {
+        supabaseUserId: user.id,
+      });
+    } catch (error) {
+      console.error('Failed to sync profile:', error);
+    }
+
+    // 여전히 프로필이 없으면 온보딩으로
+    if (!profile) {
+      redirect('/onboarding');
+    }
   }
 
   return { user, profile };

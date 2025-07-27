@@ -209,6 +209,9 @@ export const createClinicalCase = mutation({
   args: {
     subject_type: v.union(v.literal('self'), v.literal('customer')),
     name: v.string(),
+    case_title: v.optional(v.string()), // 추가
+    concern_area: v.optional(v.string()), // 추가
+    treatment_plan: v.optional(v.string()), // 추가
     gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
     age: v.optional(v.number()),
     treatment_item: v.optional(v.string()),
@@ -216,6 +219,7 @@ export const createClinicalCase = mutation({
     marketing_consent: v.optional(v.boolean()),
     notes: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    metadata: v.optional(v.any()), // 추가
   },
   handler: async (ctx, args) => {
     try {
@@ -241,6 +245,9 @@ export const createClinicalCase = mutation({
         shop_id: currentUser._id,
         subject_type: args.subject_type,
         name: args.name.trim(),
+        case_title: args.case_title,
+        concern_area: args.concern_area,
+        treatment_plan: args.treatment_plan,
         gender: args.gender,
         age: args.age,
         status: 'in_progress',
@@ -252,6 +259,7 @@ export const createClinicalCase = mutation({
         marketing_consent: args.marketing_consent || false,
         notes: args.notes,
         tags: args.tags || [],
+        metadata: args.metadata,
         custom_fields: {},
         photo_count: 0,
         latest_session: 0,
@@ -467,6 +475,211 @@ export const deleteClinicalCase = mutation({
       return { success: true };
     } catch (error) {
       throw formatError(error);
+    }
+  },
+});
+
+/**
+ * 임상 케이스 필드 업데이트
+ */
+export const updateClinicalCase = mutation({
+  args: {
+    caseId: v.id('clinical_cases'),
+    updates: v.object({
+      name: v.optional(v.string()),
+      case_title: v.optional(v.string()),
+      concern_area: v.optional(v.string()),
+      treatment_plan: v.optional(v.string()),
+      gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
+      age: v.optional(v.number()),
+      consent_status: v.optional(
+        v.union(v.literal('no_consent'), v.literal('consented'), v.literal('pending'))
+      ),
+      consent_date: v.optional(v.number()),
+      marketing_consent: v.optional(v.boolean()),
+      notes: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      metadata: v.optional(v.any()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // 사용자 인증 확인
+      const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
+
+      // 케이스 존재 및 권한 확인
+      const existingCase = await ctx.db.get(args.caseId);
+      if (!existingCase) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, 'Clinical case not found');
+      }
+
+      if (existingCase.shop_id !== currentUser._id && currentUser.role !== 'admin') {
+        throw new ApiError(ERROR_CODES.INSUFFICIENT_PERMISSIONS, 'Access denied');
+      }
+
+      const now = Date.now();
+
+      // 업데이트 수행
+      await ctx.db.patch(args.caseId, {
+        ...args.updates,
+        updated_at: now,
+      });
+
+      // 감사 로그 생성
+      await createAuditLog(ctx, {
+        tableName: 'clinical_cases',
+        recordId: args.caseId,
+        action: 'UPDATE',
+        userId: currentUser._id,
+        userRole: currentUser.role,
+        oldValues: existingCase,
+        newValues: args.updates,
+        changedFields: Object.keys(args.updates),
+        metadata: {
+          operation: 'clinical_case_updated',
+          timestamp: now,
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      throw formatError(error);
+    }
+  },
+});
+
+/**
+ * 라운드별 고객 정보 저장
+ */
+export const saveRoundCustomerInfo = mutation({
+  args: {
+    caseId: v.id('clinical_cases'),
+    roundNumber: v.number(),
+    info: v.object({
+      age: v.optional(v.number()),
+      gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
+      treatmentType: v.optional(v.string()),
+      treatmentDate: v.optional(v.string()),
+      products: v.optional(v.array(v.string())),
+      skinTypes: v.optional(v.array(v.string())),
+      memo: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // 사용자 인증 확인
+      const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
+
+      // 케이스 존재 및 권한 확인
+      const existingCase = await ctx.db.get(args.caseId);
+      if (!existingCase) {
+        throw new ApiError(ERROR_CODES.NOT_FOUND, 'Clinical case not found');
+      }
+
+      if (existingCase.shop_id !== currentUser._id && currentUser.role !== 'admin') {
+        throw new ApiError(ERROR_CODES.INSUFFICIENT_PERMISSIONS, 'Access denied');
+      }
+
+      // 메타데이터에 라운드 정보 저장
+      const currentMetadata = (existingCase.metadata as any) || {};
+      const updatedMetadata = {
+        ...currentMetadata,
+        roundInfo: {
+          ...(currentMetadata.roundInfo || {}),
+          [args.roundNumber]: args.info,
+        },
+      };
+
+      const now = Date.now();
+
+      // 케이스 업데이트
+      await ctx.db.patch(args.caseId, {
+        metadata: updatedMetadata,
+        updated_at: now,
+      });
+
+      return { success: true };
+    } catch (error) {
+      throw formatError(error);
+    }
+  },
+});
+
+/**
+ * 임상 케이스의 라운드별 고객 정보 조회
+ */
+export const getRoundCustomerInfo = query({
+  args: {
+    caseId: v.id('clinical_cases'),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // 사용자 인증 확인
+      const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        return [];
+      }
+
+      // 케이스 권한 확인
+      const clinicalCase = await ctx.db.get(args.caseId);
+      if (!clinicalCase) {
+        return [];
+      }
+
+      if (clinicalCase.shop_id !== currentUser._id && currentUser.role !== 'admin') {
+        return [];
+      }
+
+      // 메타데이터에서 라운드 정보 추출
+      const metadata = (clinicalCase.metadata as any) || {};
+      const roundInfoFromMetadata = metadata.roundInfo || {};
+      const roundInfo = [];
+
+      // 저장된 라운드 정보가 있으면 사용
+      if (Object.keys(roundInfoFromMetadata).length > 0) {
+        for (const [roundNumber, info] of Object.entries(roundInfoFromMetadata)) {
+          const roundData = info as any;
+          roundInfo.push({
+            round_number: parseInt(roundNumber),
+            age: roundData.age || clinicalCase.age,
+            gender: roundData.gender || clinicalCase.gender,
+            treatment_type: roundData.treatmentType || clinicalCase.treatment_item || '',
+            products: roundData.products || [],
+            skin_types: roundData.skinTypes || [],
+            memo: roundData.memo || '',
+            treatment_date:
+              roundData.treatmentDate ||
+              (clinicalCase.start_date
+                ? new Date(clinicalCase.start_date).toISOString().split('T')[0]
+                : ''),
+          });
+        }
+      } else {
+        // 라운드 정보가 없으면 기본 정보로 1라운드 생성
+        roundInfo.push({
+          round_number: 1,
+          age: clinicalCase.age,
+          gender: clinicalCase.gender,
+          treatment_type: clinicalCase.treatment_item || '',
+          products: [], // metadata에서 제품 정보 추출 가능
+          skin_types: [], // metadata에서 피부타입 정보 추출 가능
+          memo: clinicalCase.treatment_plan || '',
+          treatment_date: clinicalCase.start_date
+            ? new Date(clinicalCase.start_date).toISOString().split('T')[0]
+            : '',
+        });
+      }
+
+      return roundInfo;
+    } catch (error) {
+      console.error('Failed to get round customer info:', error);
+      return [];
     }
   },
 });

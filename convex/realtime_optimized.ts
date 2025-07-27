@@ -294,13 +294,20 @@ export const getCachedKolDashboardStats = query({
   },
   handler: async (ctx, args) => {
     try {
-      // 현재 사용자 조회 (kolId가 없으면 현재 사용자 사용)
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
+
+      // kolId가 제공되지 않으면 현재 사용자의 ID를 사용
       const targetKolId = args.kolId || currentUser._id;
 
-      // KOL 권한 확인 (본인이거나 관리자만)
+      // 권한 확인: 관리자가 아니면서 다른 KOL의 정보를 보려고 할 때 에러 발생
       if (targetKolId !== currentUser._id && currentUser.role !== 'admin') {
-        throw new ApiError(ERROR_CODES.INSUFFICIENT_PERMISSIONS, '접근 권한이 없습니다.');
+        throw new ApiError(
+          ERROR_CODES.FORBIDDEN,
+          "You do not have permission to access this KOL's dashboard."
+        );
       }
 
       // 🚀 최적화: 현재 월과 지난 달의 데이터만 정확히 조회

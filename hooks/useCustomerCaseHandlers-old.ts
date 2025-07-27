@@ -5,16 +5,6 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ClinicalCase, CustomerInfo, RoundCustomerInfo } from '@/types/clinical';
-import {
-  useCreateClinicalCaseConvex,
-  useUpdateClinicalCaseStatusConvex,
-  useDeleteClinicalCaseConvex,
-  useUploadClinicalPhotoConvex,
-  useDeleteClinicalPhotoConvex,
-} from '@/lib/clinical-photos-hooks';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { toConvexId } from '@/lib/clinical-photos-mapper';
 
 interface UseCustomerCaseHandlersParams {
   user: any;
@@ -34,7 +24,7 @@ interface UseCustomerCaseHandlersParams {
 }
 
 /**
- * Customer 페이지 전용 핸들러 집합 - Convex 버전
+ * Customer 페이지 전용 핸들러 집합
  */
 export function useCustomerCaseHandlers({
   user,
@@ -55,24 +45,16 @@ export function useCustomerCaseHandlers({
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  // Convex mutations
-  const createCase = useCreateClinicalCaseConvex();
-  const updateCaseStatus = useUpdateClinicalCaseStatusConvex();
-  const deleteCase = useDeleteClinicalCaseConvex();
-  const uploadPhoto = useUploadClinicalPhotoConvex();
-  const deletePhoto = useDeleteClinicalPhotoConvex();
-
-  // 추가 mutation (나중에 구현 필요)
-  const updateCaseFields = useMutation(api.clinical.updateClinicalCase);
-  const saveRoundInfo = useMutation(api.clinical.saveRoundCustomerInfo);
-
   // 새 고객 여부 확인 함수
   const isNewCustomer = useCallback((caseId: string) => caseId.startsWith('new-customer-'), []);
 
   // 로그아웃 함수
   const handleSignOut = useCallback(async () => {
     try {
-      // TODO: Supabase 로그아웃 호출
+      // 개발환경에서는 localStorage 클리어
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('dev-user');
+      }
       router.push('/signin');
     } catch (error) {
       console.error('로그아웃 중 오류가 발생했습니다:', error);
@@ -85,8 +67,8 @@ export function useCustomerCaseHandlers({
       try {
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
-          const convexStatus = status === 'active' ? 'in_progress' : 'completed';
-          await updateCaseStatus.mutateAsync({ caseId, status: convexStatus });
+          // TODO: Implement updateCase with Convex
+          console.log('updateCase not implemented yet');
         }
 
         // 로컬 상태 업데이트
@@ -98,7 +80,7 @@ export function useCustomerCaseHandlers({
         toast.error('케이스 상태 변경에 실패했습니다. 다시 시도해주세요.');
       }
     },
-    [setCases, isNewCustomer, updateCaseStatus]
+    [setCases, isNewCustomer]
   );
 
   // 동의서 상태 변경 핸들러
@@ -107,8 +89,8 @@ export function useCustomerCaseHandlers({
       try {
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
-          // TODO: Convex mutation으로 동의서 상태 업데이트
-          console.log('Consent update not implemented yet');
+          // TODO: Implement updateCase with Convex
+          console.log('updateCase not implemented yet');
         }
 
         // 로컬 상태 업데이트
@@ -183,17 +165,60 @@ export function useCustomerCaseHandlers({
               })
             );
           } else {
-            // 실제 케이스의 경우 Convex 스토리지에 업로드
-            const result = await uploadPhoto.mutateAsync({
-              caseId,
-              roundNumber: roundDay,
-              angle,
-              file,
-            });
+            // 실제 케이스의 경우 Supabase에 업로드
+            const { uploadPhoto, fetchPhotos } = await import('@/lib/clinical-photos');
+            imageUrl = await uploadPhoto(parseInt(caseId), roundDay, angle, file);
+            console.log('Received imageUrl from upload:', imageUrl);
 
-            // 업로드 성공 후 로컬 상태 업데이트
-            // Convex 실시간 동기화로 자동 업데이트되므로 별도 처리 불필요
-            console.log('Photo uploaded successfully:', result);
+            // 업로드 성공 후 해당 케이스의 사진 목록을 데이터베이스에서 다시 불러오기
+            try {
+              const updatedPhotos = await fetchPhotos(parseInt(caseId));
+              const photoSlots = updatedPhotos.map(p => ({
+                id: p.id,
+                roundDay: p.roundDay,
+                angle: p.angle as 'front' | 'left' | 'right',
+                imageUrl: p.imageUrl,
+                uploaded: true,
+              }));
+
+              // 해당 케이스의 사진만 업데이트
+              setCases(prev =>
+                prev.map(case_ => (case_.id === caseId ? { ...case_, photos: photoSlots } : case_))
+              );
+
+              console.log('사진 목록을 데이터베이스에서 새로고침했습니다.');
+            } catch (refreshError) {
+              console.error('사진 목록 새로고침 실패:', refreshError);
+              // 새로고침 실패 시 기존 방식으로 로컬 업데이트
+              setCases(prev =>
+                prev.map(case_ => {
+                  if (case_.id === caseId) {
+                    const existingPhotoIndex = case_.photos.findIndex(
+                      p => p.roundDay === roundDay && p.angle === angle
+                    );
+
+                    const newPhoto = {
+                      id: `${caseId}-${roundDay}-${angle}`,
+                      roundDay: roundDay,
+                      angle: angle as 'front' | 'left' | 'right',
+                      imageUrl: imageUrl,
+                      uploaded: true,
+                    };
+
+                    let updatedPhotos;
+                    if (existingPhotoIndex >= 0) {
+                      updatedPhotos = [...case_.photos];
+                      updatedPhotos[existingPhotoIndex] = newPhoto;
+                    } else {
+                      updatedPhotos = [...case_.photos, newPhoto];
+                    }
+
+                    return { ...case_, photos: updatedPhotos };
+                  }
+                  return case_;
+                })
+              );
+            }
           }
 
           console.log('사진이 성공적으로 업로드되었습니다.');
@@ -202,11 +227,20 @@ export function useCustomerCaseHandlers({
           console.error('사진 업로드 실패:', error);
           const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
           toast.error(`사진 업로드 실패: ${errorMessage}`);
+
+          // 상세 오류 정보 로깅
+          if (error instanceof Error) {
+            console.error('Error details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            });
+          }
           throw error;
         }
       }
     },
-    [setCases, isNewCustomer, uploadPhoto]
+    [setCases, isNewCustomer]
   );
 
   // 사진 삭제 핸들러
@@ -215,12 +249,40 @@ export function useCustomerCaseHandlers({
       try {
         // 새 고객이 아닌 경우에만 실제 삭제 API 호출
         if (!isNewCustomer(caseId)) {
-          // 사진 ID 찾기
-          const targetCase = cases.find(c => c.id === caseId);
-          const photo = targetCase?.photos.find(p => p.roundDay === roundDay && p.angle === angle);
+          const { deletePhoto, fetchPhotos } = await import('@/lib/clinical-photos');
+          await deletePhoto(parseInt(caseId), roundDay, angle);
 
-          if (photo?.photoId) {
-            await deletePhoto.mutateAsync(photo.photoId);
+          // 삭제 성공 후 해당 케이스의 사진 목록을 데이터베이스에서 다시 불러오기
+          try {
+            const updatedPhotos = await fetchPhotos(parseInt(caseId));
+            const photoSlots = updatedPhotos.map(p => ({
+              id: p.id,
+              roundDay: p.roundDay,
+              angle: p.angle as 'front' | 'left' | 'right',
+              imageUrl: p.imageUrl,
+              uploaded: true,
+            }));
+
+            // 해당 케이스의 사진만 업데이트
+            setCases(prev =>
+              prev.map(case_ => (case_.id === caseId ? { ...case_, photos: photoSlots } : case_))
+            );
+
+            console.log('사진 목록을 데이터베이스에서 새로고침했습니다.');
+          } catch (refreshError) {
+            console.error('사진 목록 새로고침 실패:', refreshError);
+            // 새로고침 실패 시 기존 방식으로 로컬 업데이트
+            setCases(prev =>
+              prev.map(case_ => {
+                if (case_.id === caseId) {
+                  const updatedPhotos = case_.photos.filter(
+                    p => !(p.roundDay === roundDay && p.angle === angle)
+                  );
+                  return { ...case_, photos: updatedPhotos };
+                }
+                return case_;
+              })
+            );
           }
         } else {
           // 새 고객의 경우 로컬 상태만 업데이트
@@ -248,7 +310,7 @@ export function useCustomerCaseHandlers({
         throw error;
       }
     },
-    [cases, setCases, isNewCustomer, deletePhoto]
+    [setCases, isNewCustomer]
   );
 
   // 기본 고객정보 업데이트 핸들러 (이름, 나이, 성별) - IME 처리 개선
@@ -277,8 +339,25 @@ export function useCustomerCaseHandlers({
 
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
-          // TODO: Convex mutation으로 업데이트
-          console.log('Customer info update not implemented yet');
+          const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
+          const updateData: any = {};
+
+          if (customerInfo.name) {
+            updateData.customerName = customerInfo.name;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            await updateCase(parseInt(caseId), updateData);
+          }
+
+          // 나이, 성별이 있으면 round_customer_info에 저장
+          if (customerInfo.age !== undefined || customerInfo.gender !== undefined) {
+            const currentRound = currentRounds[caseId] || 1;
+            await saveRoundCustomerInfo(parseInt(caseId), currentRound, {
+              age: customerInfo.age,
+              gender: customerInfo.gender,
+            });
+          }
         }
 
         // 로컬 상태 업데이트
@@ -351,8 +430,25 @@ export function useCustomerCaseHandlers({
 
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
-          // TODO: Convex mutation으로 업데이트
-          console.log('Round info update not implemented yet');
+          await enqueue(caseId, async () => {
+            const { updateCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
+            const updateData: any = {};
+            if (roundInfo.memo !== undefined) {
+              updateData.treatmentPlan = roundInfo.memo;
+            }
+            if (Object.keys(updateData).length > 0) {
+              await updateCase(parseInt(caseId), updateData);
+            }
+            await saveRoundCustomerInfo(parseInt(caseId), roundDay, {
+              age: roundInfo.age,
+              gender: roundInfo.gender,
+              treatmentType: roundInfo.treatmentType,
+              treatmentDate: roundInfo.date,
+              products: roundInfo.products,
+              skinTypes: roundInfo.skinTypes,
+              memo: roundInfo.memo,
+            });
+          });
         }
 
         // 로컬 상태 업데이트
@@ -407,8 +503,8 @@ export function useCustomerCaseHandlers({
       try {
         // 새 고객이 아닌 경우에만 실제 API 호출
         if (!isNewCustomer(caseId)) {
-          // TODO: Convex mutation으로 업데이트
-          console.log('Checkbox update not implemented yet');
+          const { updateCase } = await import('@/lib/clinical-photos');
+          await updateCase(parseInt(caseId), updates);
         }
 
         // 로컬 상태 업데이트
@@ -435,9 +531,73 @@ export function useCustomerCaseHandlers({
 
   // 케이스 새로고침 핸들러
   const refreshCases = useCallback(async () => {
-    // Convex는 실시간 동기화를 제공하므로 특별한 새로고침 로직이 필요 없음
-    console.log('Cases are automatically synced with Convex');
-  }, []);
+    if (!user) return;
+
+    try {
+      // fetchCases API를 사용해서 실제 데이터 가져오기
+      const { fetchCases } = await import('@/lib/clinical-photos');
+      const allCasesData = await fetchCases();
+
+      // 고객 케이스만 필터링 (본인 케이스 제외)
+      const casesData = allCasesData.filter(
+        case_ =>
+          case_.customerName?.trim().toLowerCase() !== '본인' &&
+          !case_.customerName?.includes('본인')
+      );
+
+      console.log('전체 케이스:', allCasesData.length, '고객 케이스:', casesData.length);
+
+      // 새 고객 케이스 보존
+      const newCustomerCase = cases.find(c => isNewCustomer(c.id));
+
+      // API 응답 데이터를 컴포넌트 형식에 맞게 변환
+      const { safeParseStringArray } = await import('@/types/clinical');
+      const transformedCases: ClinicalCase[] = await Promise.all(
+        casesData.map(async case_ => {
+          // 간략화된 변환 로직
+          return {
+            id: case_.id.toString(),
+            customerName: case_.customerName,
+            status:
+              case_.status === 'archived' || (case_.status as any) === 'cancelled'
+                ? 'active'
+                : (case_.status as 'active' | 'completed'),
+            createdAt: case_.createdAt.split('T')[0],
+            consentReceived: case_.consentReceived,
+            consentImageUrl: case_.consentImageUrl,
+            photos: [],
+            customerInfo: {
+              name: case_.customerName,
+              age: undefined,
+              gender: undefined,
+              products: [],
+              skinTypes: [],
+              memo: case_.treatmentPlan || '',
+            },
+            roundCustomerInfo: {},
+            cureBooster: case_.cureBooster || false,
+            cureMask: case_.cureMask || false,
+            premiumMask: case_.premiumMask || false,
+            allInOneSerum: case_.allInOneSerum || false,
+            skinRedSensitive: case_.skinRedSensitive || false,
+            skinPigment: case_.skinPigment || false,
+            skinPore: case_.skinPore || false,
+            skinTrouble: case_.skinTrouble || false,
+            skinWrinkle: case_.skinWrinkle || false,
+            skinEtc: case_.skinEtc || false,
+          };
+        })
+      );
+
+      // 새 고객이 있으면 맨 앞에 추가
+      const finalCases = newCustomerCase
+        ? [newCustomerCase, ...transformedCases]
+        : transformedCases;
+      setCases(finalCases);
+    } catch (error) {
+      console.error('케이스 새로고침 실패:', error);
+    }
+  }, [user, cases, setCases, isNewCustomer]);
 
   // 새 고객 추가 핸들러
   const handleAddCustomer = useCallback(() => {
@@ -506,32 +666,41 @@ export function useCustomerCaseHandlers({
       try {
         markSaving(caseId);
 
+        const { createCase, saveRoundCustomerInfo } = await import('@/lib/clinical-photos');
+
         // 1. 새 케이스 생성
-        const createdCase = await createCase.mutateAsync({
+        const createdCase = await createCase({
           customerName: newCustomerCase.customerInfo.name,
-          caseName: `${newCustomerCase.customerInfo.name} 임상 케이스`,
-          concernArea: newCustomerCase.roundCustomerInfo[1]?.treatmentType || '',
-          treatmentPlan: newCustomerCase.roundCustomerInfo[1]?.memo || '',
           consentReceived: newCustomerCase.consentReceived,
-          // 체크박스 데이터는 metadata로 저장
-          metadata: {
-            cureBooster: newCustomerCase.cureBooster,
-            cureMask: newCustomerCase.cureMask,
-            premiumMask: newCustomerCase.premiumMask,
-            allInOneSerum: newCustomerCase.allInOneSerum,
-            skinRedSensitive: newCustomerCase.skinRedSensitive,
-            skinPigment: newCustomerCase.skinPigment,
-            skinPore: newCustomerCase.skinPore,
-            skinTrouble: newCustomerCase.skinTrouble,
-            skinWrinkle: newCustomerCase.skinWrinkle,
-            skinEtc: newCustomerCase.skinEtc,
-          },
+          status: newCustomerCase.status,
+          treatmentPlan: newCustomerCase.roundCustomerInfo[1]?.memo || '',
+          cureBooster: newCustomerCase.cureBooster,
+          cureMask: newCustomerCase.cureMask,
+          premiumMask: newCustomerCase.premiumMask,
+          allInOneSerum: newCustomerCase.allInOneSerum,
+          skinRedSensitive: newCustomerCase.skinRedSensitive,
+          skinPigment: newCustomerCase.skinPigment,
+          skinPore: newCustomerCase.skinPore,
+          skinTrouble: newCustomerCase.skinTrouble,
+          skinWrinkle: newCustomerCase.skinWrinkle,
+          skinEtc: newCustomerCase.skinEtc,
         });
 
         const newCaseId = createdCase.id.toString();
 
         // 2. 회차별 고객 정보 저장
-        // TODO: 라운드 정보 저장 mutation 구현 필요
+        const roundInfo = newCustomerCase.roundCustomerInfo[1];
+        if (roundInfo) {
+          await saveRoundCustomerInfo(createdCase.id, 1, {
+            age: newCustomerCase.customerInfo.age,
+            gender: newCustomerCase.customerInfo.gender,
+            treatmentType: roundInfo.treatmentType,
+            treatmentDate: roundInfo.date,
+            products: roundInfo.products,
+            skinTypes: roundInfo.skinTypes,
+            memo: roundInfo.memo,
+          });
+        }
 
         // 3. 로컬 상태 업데이트 (새 고객 → 실제 케이스로 변환)
         setCases(prev =>
@@ -540,7 +709,7 @@ export function useCustomerCaseHandlers({
               ? {
                   ...case_,
                   id: newCaseId,
-                  createdAt: createdCase.createdAt,
+                  createdAt: createdCase.createdAt.split('T')[0],
                 }
               : case_
           )
@@ -578,7 +747,6 @@ export function useCustomerCaseHandlers({
       markSaved,
       markError,
       isNewCustomer,
-      createCase,
     ]
   );
 
@@ -591,7 +759,8 @@ export function useCustomerCaseHandlers({
       }
 
       try {
-        await deleteCase.mutateAsync(caseId);
+        const { deleteCase } = await import('@/lib/clinical-photos');
+        await deleteCase(parseInt(caseId));
 
         // 로컬 상태에서 케이스 제거
         setCases(prev => prev.filter(case_ => case_.id !== caseId));
@@ -610,7 +779,7 @@ export function useCustomerCaseHandlers({
         toast.error('케이스 삭제에 실패했습니다. 다시 시도해주세요.');
       }
     },
-    [setCases, setCurrentRounds, isNewCustomer, deleteCase]
+    [setCases, setCurrentRounds, isNewCustomer]
   );
 
   // 새 고객 삭제 핸들러

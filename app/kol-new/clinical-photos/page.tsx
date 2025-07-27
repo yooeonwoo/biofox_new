@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  useClinicalCases,
-  useEnsurePersonalCase,
-  useCustomerCases,
-  ClinicalCase,
-} from '@/lib/clinical-photos-convex';
+  useClinicalCasesConvex,
+  useEnsurePersonalCaseConvex,
+  useCustomerCasesConvex,
+} from '@/lib/clinical-photos-hooks';
+import { useAuth } from '@/hooks/useAuth';
+import type { ClinicalCase } from '@/lib/clinical-photos-convex';
 
 interface KolInfo {
   id: number;
@@ -102,30 +103,23 @@ const SkinTypes: React.FC<SkinTypesProps> = ({
 };
 
 export default function ClinicalPhotosPage() {
-  // 임시 사용자 정보 (로컬 개발용)
-  const tempUser = {
-    isLoaded: true,
-    isSignedIn: true,
-    role: 'kol',
-    publicMetadata: { role: 'kol' },
-  };
+  // 실제 인증 정보 사용
+  const { isAuthenticated, isLoading: authLoading, profile, role } = useAuth();
 
   const [isKol, setIsKol] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
 
   // Convex 훅 사용
-  const { data: allCases = [], isLoading: casesLoading } = useClinicalCases();
-  const { personalCase, ensurePersonalCaseExists } = useEnsurePersonalCase();
-  const { data: customerCases = [] } = useCustomerCases();
+  const { data: allCases = [], isLoading: casesLoading } = useClinicalCasesConvex();
+  const { personalCase, ensurePersonalCaseExists } = useEnsurePersonalCaseConvex();
+  const { data: customerCases = [] } = useCustomerCasesConvex();
 
   // 사용자 역할 확인
   useEffect(() => {
-    if (tempUser.isLoaded && tempUser.isSignedIn) {
-      const userRole = (tempUser.publicMetadata?.role as string) || 'kol';
-      setIsKol(userRole === 'kol' || userRole === 'test');
-      setLoading(false);
+    if (!authLoading && isAuthenticated && profile) {
+      const userRole = profile.role || role;
+      setIsKol(userRole === 'kol' || userRole === 'admin' || userRole === 'test');
     }
-  }, []);
+  }, [authLoading, isAuthenticated, profile, role]);
 
   // 개인 케이스 배열 형태로 변환 (기존 로직 호환성)
   const personalCases = personalCase ? [personalCase] : [];
@@ -144,7 +138,14 @@ export default function ClinicalPhotosPage() {
         )
       : 0;
 
-  if (!tempUser.isLoaded || isKol === null || loading) {
+  // 인증되지 않은 경우 로그인 페이지로 리다이렉트
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      redirect('/signin');
+    }
+  }, [authLoading, isAuthenticated]);
+
+  if (authLoading || isKol === null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
         <Card className="w-full max-w-md">

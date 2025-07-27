@@ -1,9 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useClinicalCasesConvex } from '@/lib/clinical-photos-hooks';
-import { useCasesWithRoundInfo } from './useCasesWithRoundInfo';
-import type { ClinicalCase } from '@/types/clinical';
+import { safeParseStringArray } from '@/types/clinical';
+import type { ClinicalCase, PhotoSlot, RoundCustomerInfo } from '@/types/clinical';
+import {
+  useClinicalCasesConvex,
+  useClinicalPhotosConvex,
+  useRoundCustomerInfoConvex,
+} from '@/lib/clinical-photos-hooks';
+import { api } from '@/convex/_generated/api';
+import { useQuery } from 'convex/react';
 
 export const useCustomerPageState = () => {
   const router = useRouter();
@@ -13,6 +19,8 @@ export const useCustomerPageState = () => {
 
   /** 1) 기존 useState 들 - 그대로 이식 */
   const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [cases, setCases] = useState<ClinicalCase[]>([]);
   const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
   const [hasUnsavedNewCustomer, setHasUnsavedNewCustomer] = useState(false);
   const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
@@ -33,17 +41,7 @@ export const useCustomerPageState = () => {
   /** Helper functions */
   const isNewCustomer = (caseId: string) => caseId.startsWith('new-customer-');
 
-  // Convex 훅으로 케이스 데이터 로드
-  const { data: convexCases = [], isLoading: convexCasesLoading } = useClinicalCasesConvex();
-
-  // 고객 케이스만 필터링 (본인 제외)
-  const customerCases = convexCases.filter(
-    case_ =>
-      case_.customerName?.trim().toLowerCase() !== '본인' && !case_.customerName?.includes('본인')
-  );
-
-  // 라운드 정보와 통합된 케이스 데이터
-  const cases = useCasesWithRoundInfo(customerCases);
+  /** 2) 기존 useEffect 들 - 그대로 이식 */
 
   // 사용자 인증 확인 - 실제 인증 정보 사용
   useEffect(() => {
@@ -57,6 +55,7 @@ export const useCustomerPageState = () => {
           role: profile.role,
           kolId: profile._id,
         });
+        setIsLoading(false);
       } else if (!authUser) {
         // 인증되지 않은 경우 로그인 페이지로
         router.push('/signin');
@@ -143,9 +142,15 @@ export const useCustomerPageState = () => {
       if (savedNewCustomer) {
         try {
           const parsedCase = JSON.parse(savedNewCustomer);
-          // localStorage에서 로드한 새 고객을 cases에 추가
-          setHasUnsavedNewCustomer(true);
+          setCases(prev => {
+            const hasExistingNewCustomer = prev.some(case_ => isNewCustomer(case_.id));
+            if (hasExistingNewCustomer) {
+              return prev;
+            }
+            return [parsedCase, ...prev];
+          });
           setCurrentRounds(prev => ({ ...prev, [parsedCase.id]: 1 }));
+          setHasUnsavedNewCustomer(true);
         } catch (error) {
           console.error('Failed to parse saved new customer:', error);
           localStorage.removeItem('unsavedNewCustomer');
@@ -154,14 +159,140 @@ export const useCustomerPageState = () => {
     }
   }, [user]);
 
-  // 케이스별 현재 라운드 초기화
+  // 새 고객 데이터 변경 시 localStorage에 저장
   useEffect(() => {
-    const initialRounds: { [caseId: string]: number } = {};
-    cases.forEach(case_ => {
-      initialRounds[case_.id] = 1;
-    });
-    setCurrentRounds(prev => ({ ...prev, ...initialRounds }));
-  }, [cases]);
+    if (typeof window !== 'undefined') {
+      if (hasUnsavedNewCustomer) {
+        const newCustomerCase = cases.find(case_ => isNewCustomer(case_.id));
+        if (newCustomerCase) {
+          localStorage.setItem('unsavedNewCustomer', JSON.stringify(newCustomerCase));
+        } else {
+          localStorage.removeItem('unsavedNewCustomer');
+        }
+      } else {
+        localStorage.removeItem('unsavedNewCustomer');
+      }
+    }
+  }, [cases, hasUnsavedNewCustomer]);
+
+  // Convex 훅으로 케이스 데이터 로드
+  const { data: convexCases = [], isLoading: convexCasesLoading } = useClinicalCasesConvex();
+
+  // 실제 케이스 데이터 변환 및 로드
+  useEffect(() => {
+    const loadCases = async () => {
+      if (!user || convexCasesLoading) return;
+
+      try {
+        // Convex에서 가져온 케이스 데이터 필터링
+        const allCasesData = convexCases;
+        const casesData = allCasesData.filter(
+          case_ =>
+            case_.customerName?.trim().toLowerCase() !== '본인' &&
+            !case_.customerName?.includes('본인')
+        );
+
+        console.log('전체 케이스:', allCasesData.length, '고객 케이스:', casesData.length);
+
+        const transformedCases: ClinicalCase[] = await Promise.all(
+          casesData.map(async case_ => {
+            const productTypes = [];
+            if (case_.cureBooster) productTypes.push('cure_booster');
+            if (case_.cureMask) productTypes.push('cure_mask');
+            if (case_.premiumMask) productTypes.push('premium_mask');
+            if (case_.allInOneSerum) productTypes.push('all_in_one_serum');
+
+            const skinTypeData = [];
+            if (case_.skinRedSensitive) skinTypeData.push('red_sensitive');
+            if (case_.skinPigment) skinTypeData.push('pigment');
+            if (case_.skinPore) skinTypeData.push('pore');
+            if (case_.skinTrouble) skinTypeData.push('acne_trouble');
+            if (case_.skinWrinkle) skinTypeData.push('wrinkle');
+            if (case_.skinEtc) skinTypeData.push('other');
+
+            // Convex 데이터는 이미 UI 형식으로 변환되어 있음
+            const photos: PhotoSlot[] = case_.photos || [];
+
+            const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+            // 라운드 정보는 나중에 별도로 구현 필요
+            // 현재는 케이스의 기본 정보를 1라운드에 매핑
+
+            if (!roundCustomerInfo[1]) {
+              roundCustomerInfo[1] = {
+                age: undefined,
+                gender: undefined,
+                treatmentType: '',
+                products: productTypes,
+                skinTypes: skinTypeData,
+                memo: case_.treatmentPlan || '',
+                date: case_.createdAt.split('T')[0],
+              };
+            } else {
+              if (
+                (!roundCustomerInfo[1].products || roundCustomerInfo[1].products.length === 0) &&
+                productTypes.length > 0
+              ) {
+                roundCustomerInfo[1].products = productTypes;
+              }
+              if (
+                (!roundCustomerInfo[1].skinTypes || roundCustomerInfo[1].skinTypes.length === 0) &&
+                skinTypeData.length > 0
+              ) {
+                roundCustomerInfo[1].skinTypes = skinTypeData;
+              }
+            }
+
+            return {
+              id: case_.id.toString(),
+              customerName: case_.customerName,
+              status:
+                case_.status === 'archived' || (case_.status as any) === 'cancelled'
+                  ? 'active'
+                  : (case_.status as 'active' | 'completed'),
+              createdAt: case_.createdAt
+                ? case_.createdAt.split('T')[0]
+                : new Date().toISOString().split('T')[0],
+              consentReceived: case_.consentReceived,
+              consentImageUrl: case_.consentImageUrl,
+              photos: photos,
+              customerInfo: {
+                name: case_.customerName,
+                age: roundCustomerInfo[1]?.age,
+                gender: roundCustomerInfo[1]?.gender,
+                products: productTypes,
+                skinTypes: skinTypeData,
+                memo: case_.treatmentPlan || '',
+              },
+              roundCustomerInfo: roundCustomerInfo,
+              cureBooster: case_.cureBooster || false,
+              cureMask: case_.cureMask || false,
+              premiumMask: case_.premiumMask || false,
+              allInOneSerum: case_.allInOneSerum || false,
+              skinRedSensitive: case_.skinRedSensitive || false,
+              skinPigment: case_.skinPigment || false,
+              skinPore: case_.skinPore || false,
+              skinTrouble: case_.skinTrouble || false,
+              skinWrinkle: case_.skinWrinkle || false,
+              skinEtc: case_.skinEtc || false,
+            } as ClinicalCase;
+          })
+        );
+
+        setCases(transformedCases as ClinicalCase[]);
+
+        const initialRounds: { [caseId: string]: number } = {};
+        transformedCases.forEach(case_ => {
+          initialRounds[case_.id] = 1;
+        });
+        setCurrentRounds(initialRounds);
+      } catch (error) {
+        console.error('Failed to load cases:', error);
+        setCases([]);
+      }
+    };
+
+    loadCases();
+  }, [user]);
 
   // 스크롤 기반 숫자 애니메이션
   useEffect(() => {
@@ -245,36 +376,15 @@ export const useCustomerPageState = () => {
     };
   }, [inputDebounceTimers]);
 
-  // localStorage에서 새 고객 데이터를 관리하는 메서드
-  const getUnsavedNewCustomer = () => {
-    if (typeof window === 'undefined') return null;
-    const saved = localStorage.getItem('unsavedNewCustomer');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (error) {
-        console.error('Failed to parse saved new customer:', error);
-        return null;
-      }
-    }
-    return null;
-  };
-
-  // 통합된 cases (Convex 데이터 + localStorage 새 고객)
-  const allCases = [
-    ...(hasUnsavedNewCustomer && getUnsavedNewCustomer() ? [getUnsavedNewCustomer()] : []),
-    ...cases,
-  ];
-
   /** 3) 상태 setter / 헬퍼 반환 */
   return {
     // States
     user,
     setUser,
-    isLoading: authLoading || convexCasesLoading,
-    setIsLoading: () => {}, // deprecated
-    cases: allCases,
-    setCases: () => {}, // Convex 데이터는 읽기 전용
+    isLoading,
+    setIsLoading,
+    cases,
+    setCases,
     currentRounds,
     setCurrentRounds,
     hasUnsavedNewCustomer,

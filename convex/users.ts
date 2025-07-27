@@ -391,11 +391,10 @@ export const getUsersByRole = query({
       const limit = Math.min(args.limit || 100, 500); // 최대 500개로 제한
       const status = args.status || 'approved';
 
-      // 쿼리 실행
+      // 쿼리 실행 (복합 인덱스 사용으로 수정)
       let query = ctx.db
         .query('profiles')
-        .withIndex('by_role', q => q.eq('role', args.role))
-        .filter(q => q.eq(q.field('status'), status));
+        .withIndex('by_role_status', q => q.eq('role', args.role).eq('status', status));
 
       const users = await query.take(limit);
 

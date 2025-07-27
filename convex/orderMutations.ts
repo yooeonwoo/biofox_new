@@ -53,10 +53,13 @@ export const createOrder = mutation({
   },
   handler: async (ctx, args) => {
     try {
-      // 현재 사용자 조회
+      // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
 
-      // 권한 확인 (관리자이거나 본인 매장의 주문인 경우)
+      // 권한 확인 (관리자 또는 본인 매장 주문)
       if (currentUser.role !== 'admin' && currentUser._id !== args.shopId) {
         throw new ApiError(
           ERROR_CODES.FORBIDDEN,
@@ -199,94 +202,88 @@ export const updateOrder = mutation({
     recalculateCommission: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    // 인증 확인
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('인증되지 않은 사용자입니다.');
-    }
+    try {
+      // 사용자 인증 확인
+      const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
 
-    // 현재 사용자 조회
-    const currentUser = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', q => q.eq('userId', identity.subject as any))
-      .first();
+      // 주문 조회
+      const order = await ctx.db.get(args.orderId);
+      if (!order) {
+        throw new Error('주문을 찾을 수 없습니다.');
+      }
 
-    if (!currentUser) {
-      throw new Error('사용자 정보를 찾을 수 없습니다.');
-    }
+      // 권한 확인 (관리자 또는 본인 매장 주문)
+      if (currentUser.role !== 'admin' && currentUser._id !== order.shop_id) {
+        throw new ApiError(ERROR_CODES.FORBIDDEN, '해당 주문을 수정할 권한이 없습니다.', 403);
+      }
 
-    // 주문 조회
-    const order = await ctx.db.get(args.orderId);
-    if (!order) {
-      throw new Error('주문을 찾을 수 없습니다.');
-    }
+      // 업데이트 데이터 준비
+      const updateData: any = {
+        ...args.updates,
+        updated_at: Date.now(),
+      };
 
-    // 권한 확인 (관리자이거나 본인 매장의 주문인 경우)
-    if (currentUser.role !== 'admin' && currentUser._id !== order.shop_id) {
-      throw new Error('해당 주문을 수정할 권한이 없습니다.');
-    }
+      // 수수료 재계산이 요청된 경우
+      if (args.recalculateCommission || args.updates.totalAmount || args.updates.commissionRate) {
+        const newTotalAmount = args.updates.totalAmount || order.total_amount;
+        const newCommissionRate = args.updates.commissionRate || order.commission_rate || 0;
+        updateData.commission_amount = newTotalAmount * newCommissionRate;
+        updateData.commission_status = 'calculated';
+      }
 
-    // 업데이트 데이터 준비
-    const updateData: any = {
-      ...args.updates,
-      updated_at: Date.now(),
-    };
+      // 주문 상태가 완료로 변경되는 경우
+      if (args.updates.orderStatus === 'completed' && order.order_status !== 'completed') {
+        updateData.commission_status = 'calculated';
 
-    // 수수료 재계산이 요청된 경우
-    if (args.recalculateCommission || args.updates.totalAmount || args.updates.commissionRate) {
-      const newTotalAmount = args.updates.totalAmount || order.total_amount;
-      const newCommissionRate = args.updates.commissionRate || order.commission_rate || 0;
-      updateData.commission_amount = newTotalAmount * newCommissionRate;
-      updateData.commission_status = 'calculated';
-    }
+        // 완료 알림 생성
+        await ctx.db.insert('notifications', {
+          user_id: order.shop_id,
+          type: 'status_changed',
+          title: '주문이 완료되었습니다',
+          message: `주문번호 ${order.order_number}이 완료되었습니다.`,
+          related_type: 'order',
+          related_id: args.orderId,
+          is_read: false,
+          priority: 'normal',
+          created_at: Date.now(),
+        });
+      }
 
-    // 주문 상태가 완료로 변경되는 경우
-    if (args.updates.orderStatus === 'completed' && order.order_status !== 'completed') {
-      updateData.commission_status = 'calculated';
+      // 주문 업데이트
+      await ctx.db.patch(args.orderId, updateData);
 
-      // 완료 알림 생성
-      await ctx.db.insert('notifications', {
-        user_id: order.shop_id,
-        type: 'status_changed',
-        title: '주문이 완료되었습니다',
-        message: `주문번호 ${order.order_number}이 완료되었습니다.`,
-        related_type: 'order',
-        related_id: args.orderId,
-        is_read: false,
-        priority: 'normal',
+      // 감사 로그 생성
+      await ctx.db.insert('audit_logs', {
+        table_name: 'orders',
+        record_id: args.orderId,
+        action: 'UPDATE',
+        user_id: currentUser._id,
+        user_role: currentUser.role,
+        old_values: {
+          order_status: order.order_status,
+          total_amount: order.total_amount,
+          commission_rate: order.commission_rate,
+        },
+        new_values: args.updates,
+        changed_fields: Object.keys(args.updates),
+        metadata: {
+          action_type: 'order_update',
+          recalculated_commission: args.recalculateCommission,
+        },
         created_at: Date.now(),
       });
+
+      return {
+        success: true,
+        orderId: args.orderId,
+        message: '주문이 업데이트되었습니다.',
+      };
+    } catch (error) {
+      throw formatError(error);
     }
-
-    // 주문 업데이트
-    await ctx.db.patch(args.orderId, updateData);
-
-    // 감사 로그 생성
-    await ctx.db.insert('audit_logs', {
-      table_name: 'orders',
-      record_id: args.orderId,
-      action: 'UPDATE',
-      user_id: currentUser._id,
-      user_role: currentUser.role,
-      old_values: {
-        order_status: order.order_status,
-        total_amount: order.total_amount,
-        commission_rate: order.commission_rate,
-      },
-      new_values: args.updates,
-      changed_fields: Object.keys(args.updates),
-      metadata: {
-        action_type: 'order_update',
-        recalculated_commission: args.recalculateCommission,
-      },
-      created_at: Date.now(),
-    });
-
-    return {
-      success: true,
-      orderId: args.orderId,
-      message: '주문이 업데이트되었습니다.',
-    };
   },
 });
 

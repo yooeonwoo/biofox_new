@@ -65,16 +65,19 @@ export const ERROR_CODES = {
 export async function getCurrentUser(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    throw new ApiError(ERROR_CODES.UNAUTHORIZED, '인증되지 않은 사용자입니다.', 401);
+    return null; // 인증 정보가 없으면 null 반환
   }
 
+  // Supabase UUID를 사용하여 프로필 조회
   const user = await ctx.db
     .query('profiles')
-    .withIndex('by_userId', q => q.eq('userId', identity.subject as any))
-    .first();
+    .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', identity.subject))
+    .unique();
 
   if (!user) {
-    throw new ApiError(ERROR_CODES.NOT_FOUND, '사용자 정보를 찾을 수 없습니다.', 404);
+    // 프로필이 없어도 에러를 던지지 않고 null 반환
+    console.warn(`Profile not found for supabaseUserId: ${identity.subject}`);
+    return null;
   }
 
   return user;
@@ -86,7 +89,7 @@ export async function getCurrentUser(ctx: QueryCtx | MutationCtx) {
 export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
   const user = await getCurrentUser(ctx);
 
-  if (user.role !== 'admin') {
+  if (!user || user.role !== 'admin') {
     throw new ApiError(ERROR_CODES.FORBIDDEN, '관리자 권한이 필요합니다.', 403);
   }
 
@@ -102,7 +105,7 @@ export async function requireRole(
 ) {
   const user = await getCurrentUser(ctx);
 
-  if (!allowedRoles.includes(user.role)) {
+  if (!user || !allowedRoles.includes(user.role)) {
     throw new ApiError(
       ERROR_CODES.FORBIDDEN,
       `이 작업은 ${allowedRoles.join(', ')} 권한이 필요합니다.`,

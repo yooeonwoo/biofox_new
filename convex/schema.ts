@@ -341,6 +341,11 @@ export default defineSchema({
     shop_id: v.id('profiles'),
     subject_type: v.union(v.literal('self'), v.literal('customer')),
     name: v.string(),
+    // 추가 필드 - UI와 호환성을 위해
+    case_title: v.optional(v.string()), // 케이스명
+    concern_area: v.optional(v.string()), // 관심 부위
+    treatment_plan: v.optional(v.string()), // 치료 계획
+    // 기존 필드들
     gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
     age: v.optional(v.number()),
     status: v.union(
@@ -361,6 +366,23 @@ export default defineSchema({
     custom_fields: v.optional(v.any()),
     photo_count: v.optional(v.number()),
     latest_session: v.optional(v.number()),
+    // 제품/피부타입 메타데이터 (태그로도 저장하지만 빠른 조회를 위해)
+    metadata: v.optional(
+      v.object({
+        // 제품 선택
+        cureBooster: v.optional(v.boolean()),
+        cureMask: v.optional(v.boolean()),
+        premiumMask: v.optional(v.boolean()),
+        allInOneSerum: v.optional(v.boolean()),
+        // 피부타입
+        skinRedSensitive: v.optional(v.boolean()),
+        skinPigment: v.optional(v.boolean()),
+        skinPore: v.optional(v.boolean()),
+        skinTrouble: v.optional(v.boolean()),
+        skinWrinkle: v.optional(v.boolean()),
+        skinEtc: v.optional(v.boolean()),
+      })
+    ),
     created_at: v.number(),
     updated_at: v.number(),
     created_by: v.optional(v.id('profiles')),

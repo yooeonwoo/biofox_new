@@ -45,8 +45,11 @@ export const getUserNotifications = query({
   },
   handler: async (ctx, args) => {
     try {
-      // 현재 사용자 조회
+      // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        return { page: [], isDone: true, continueCursor: null };
+      }
 
       // 알림 조회 쿼리 구성
       let notificationsQuery = ctx.db
@@ -142,8 +145,11 @@ export const getUnreadNotificationCount = query({
   args: {},
   handler: async ctx => {
     try {
-      // 현재 사용자 조회
+      // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        return 0; // 알림 없음
+      }
 
       // 읽지 않은 알림 개수 조회
       const unreadNotifications = await ctx.db
@@ -171,8 +177,11 @@ export const markNotificationAsRead = mutation({
   },
   handler: async (ctx, args) => {
     try {
-      // 현재 사용자 조회
+      // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
 
       // 알림 조회
       const notification = await ctx.db.get(args.notificationId);
@@ -210,8 +219,11 @@ export const markAllNotificationsAsRead = mutation({
   args: {},
   handler: async ctx => {
     try {
-      // 현재 사용자 조회
+      // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        return { success: false, message: 'User not authenticated' };
+      }
 
       // 읽지 않은 알림들 조회
       const unreadNotifications = await ctx.db
@@ -265,8 +277,11 @@ export const deleteNotification = mutation({
   },
   handler: async (ctx, args) => {
     try {
-      // 현재 사용자 조회
+      // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
 
       // 알림 조회
       const notification = await ctx.db.get(args.notificationId);
