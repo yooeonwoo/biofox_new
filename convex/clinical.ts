@@ -73,30 +73,55 @@ export const listClinicalCases = query({
       // 페이지네이션 적용
       const result = await query.paginate(args.paginationOpts);
 
-      // 각 케이스에 대한 추가 정보 수집
-      const casesWithDetails = await Promise.all(
-        result.page.map(async clinicalCase => {
-          // 사진 수 계산
-          const photos = await ctx.db
-            .query('clinical_photos')
-            .withIndex('by_case', q => q.eq('clinical_case_id', clinicalCase._id))
-            .collect();
+      // N+1 문제를 해결하기 위한 최적화
+      const caseIds = result.page.map(c => c._id);
 
-          // 동의서 파일 확인
-          const consentFile = await ctx.db
-            .query('consent_files')
-            .withIndex('by_case', q => q.eq('clinical_case_id', clinicalCase._id))
-            .first();
+      // 관련된 모든 사진과 동의서 파일을 한 번의 쿼리로 가져오기
+      const allPhotos =
+        caseIds.length > 0
+          ? await ctx.db
+              .query('clinical_photos')
+              .withIndex('by_case')
+              .filter(q => q.or(...caseIds.map(id => q.eq(q.field('clinical_case_id'), id))))
+              .collect()
+          : [];
 
-          return {
-            ...clinicalCase,
-            photo_count: photos.length,
-            has_consent_file: !!consentFile,
-            photos: photos.length, // 기존 API 호환성
-            consent_file: consentFile ? { id: consentFile._id } : null, // 기존 API 호환성
-          };
-        })
-      );
+      const allConsentFiles =
+        caseIds.length > 0
+          ? await ctx.db
+              .query('consent_files')
+              .withIndex('by_case')
+              .filter(q => q.or(...caseIds.map(id => q.eq(q.field('clinical_case_id'), id))))
+              .collect()
+          : [];
+
+      // 메모리에서 데이터 그룹화
+      const photosByCase = new Map<Id<'clinical_cases'>, any[]>();
+      allPhotos.forEach(p => {
+        if (!photosByCase.has(p.clinical_case_id)) {
+          photosByCase.set(p.clinical_case_id, []);
+        }
+        photosByCase.get(p.clinical_case_id)!.push(p);
+      });
+
+      const consentFileByCase = new Map<Id<'clinical_cases'>, any>();
+      allConsentFiles.forEach(f => {
+        consentFileByCase.set(f.clinical_case_id, f);
+      });
+
+      // 각 케이스에 대한 추가 정보 조합
+      const casesWithDetails = result.page.map(clinicalCase => {
+        const photos = photosByCase.get(clinicalCase._id) || [];
+        const consentFile = consentFileByCase.get(clinicalCase._id);
+
+        return {
+          ...clinicalCase,
+          photo_count: photos.length,
+          has_consent_file: !!consentFile,
+          photos: photos.length, // 기존 API 호환성
+          consent_file: consentFile ? { id: consentFile._id } : null, // 기존 API 호환성
+        };
+      });
 
       return {
         page: casesWithDetails,
