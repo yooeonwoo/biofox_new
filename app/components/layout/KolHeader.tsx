@@ -24,6 +24,7 @@ import {
   ChevronDown,
   X,
   Check,
+  Menu, // Menu 아이콘 import
 } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery } from 'convex/react';
@@ -45,7 +46,11 @@ interface Notification {
   relatedId?: any;
 }
 
-export default function KolHeader() {
+interface KolHeaderProps {
+  onMenuClick: () => void;
+}
+
+export default function KolHeader({ onMenuClick }: KolHeaderProps) {
   const { user: currentUser, profile, isLoading } = useAuth();
   const [notificationOpen, setNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -145,10 +150,17 @@ export default function KolHeader() {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 lg:px-8">
-      {/* Logo and Title */}
-      <div className="flex items-center">
-        <Link href="/kol-new" className="flex items-center space-x-3">
+    <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 md:px-6">
+      {/* Left Side - Logo and Mobile Menu Button */}
+      <div className="flex items-center gap-2">
+        {/* Mobile Menu Button */}
+        <Button variant="ghost" size="icon" className="md:hidden" onClick={onMenuClick}>
+          <Menu className="h-6 w-6" />
+          <span className="sr-only">메뉴 열기</span>
+        </Button>
+
+        {/* Logo */}
+        <Link href="/kol-new" className="hidden items-center space-x-3 sm:flex">
           <div className="text-xl font-bold text-blue-600">BIOFOX KOL</div>
         </Link>
       </div>
