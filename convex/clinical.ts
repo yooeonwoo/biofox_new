@@ -216,6 +216,7 @@ export const createClinicalCase = mutation({
     age: v.optional(v.number()),
     treatment_item: v.optional(v.string()),
     consent_status: v.union(v.literal('no_consent'), v.literal('consented'), v.literal('pending')),
+    consent_date: v.optional(v.number()),
     marketing_consent: v.optional(v.boolean()),
     notes: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
