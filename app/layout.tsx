@@ -45,7 +45,7 @@ export default function RootLayout({
             <SupabaseAuthProvider>
               {children}
               <Toaster />
-              <SonnerToaster />
+              <SonnerToaster position="top-center" duration={3000} closeButton />
             </SupabaseAuthProvider>
           </ReactQueryProvider>
         </ConvexClientProvider>

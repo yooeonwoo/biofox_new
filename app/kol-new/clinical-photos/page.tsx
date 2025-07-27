@@ -115,17 +115,19 @@ export default function ClinicalPhotosPage() {
   const createCase = useCreateClinicalCaseConvex();
   const { data: customerCases = [] } = useCustomerCasesConvex();
   const [personalCase, setPersonalCase] = useState<ClinicalCase | undefined>(undefined);
+  const [isCreatingPersonalCase, setIsCreatingPersonalCase] = useState(false);
 
   // 본인 케이스 확인 및 생성 로직
   useEffect(() => {
-    if (casesLoading || !profile?._id) return;
+    if (casesLoading || !profile?._id || isCreatingPersonalCase) return;
 
     const existingPersonalCase = allCases.find(c => c.customerName?.trim() === '본인');
     if (existingPersonalCase) {
       setPersonalCase(existingPersonalCase);
-    } else {
-      // 본인 케이스가 없으면 생성
+    } else if (!personalCase) {
+      // 본인 케이스가 없고 아직 생성하지 않았으면 생성
       const createNewPersonalCase = async () => {
+        setIsCreatingPersonalCase(true);
         try {
           const newCase = await createCase.mutateAsync(
             {
@@ -140,11 +142,13 @@ export default function ClinicalPhotosPage() {
           setPersonalCase(newCase);
         } catch (error) {
           console.error('Failed to create personal case:', error);
+        } finally {
+          setIsCreatingPersonalCase(false);
         }
       };
       createNewPersonalCase();
     }
-  }, [allCases, casesLoading, createCase, profile?._id]);
+  }, [allCases, casesLoading, profile?._id, personalCase, isCreatingPersonalCase]);
 
   // 사용자 역할 확인
   useEffect(() => {
