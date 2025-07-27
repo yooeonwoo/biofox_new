@@ -3,7 +3,7 @@ import { Inter, Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider';
-import { ConvexClientProvider } from '@/components/providers/ConvexProvider';
+import { ConvexClientProvider } from '@/components/providers/ConvexProvider'; // ✅ 임시로 다시 추가 (일부 컴포넌트가 여전히 사용)
 import { SupabaseAuthProvider } from '@/providers/supabase-auth-provider';
 import { Toaster as SonnerToaster } from 'sonner';
 
@@ -40,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`${inter.variable} ${notoSansKr.variable}`}>
+        {/* ✅ ConvexProvider를 다시 추가 - 일부 컴포넌트(CustomerAddModal 등)가 여전히 사용 */}
         <ConvexClientProvider>
           <ReactQueryProvider>
             <SupabaseAuthProvider>

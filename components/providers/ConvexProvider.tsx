@@ -2,12 +2,26 @@
 
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { ConvexAuthProvider } from '@convex-dev/auth/react';
-import { ReactNode, Suspense } from 'react';
+import { ReactNode, Suspense, useEffect, useState } from 'react';
 import { ProfileSync } from '@/components/auth/ProfileSync';
 import { Toaster } from '@/components/ui/toaster';
 
-// Convex client 생성
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL as string);
+// ✅ 안전한 Convex client 생성 (에러 처리 포함)
+function createSafeConvexClient() {
+  try {
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!convexUrl) {
+      console.warn('NEXT_PUBLIC_CONVEX_URL not found - Convex features disabled');
+      return null;
+    }
+    return new ConvexReactClient(convexUrl);
+  } catch (error) {
+    console.warn('Failed to create Convex client:', error);
+    return null;
+  }
+}
+
+const convex = createSafeConvexClient();
 
 interface ConvexClientProviderProps {
   children: ReactNode;
@@ -26,17 +40,42 @@ function LoadingFallback() {
   );
 }
 
+// ✅ Convex 없이도 작동하는 Fallback Provider
+function FallbackProvider({ children }: { children: ReactNode }) {
+  return <div>{children}</div>;
+}
+
 export function ConvexClientProvider({
   children,
   showSyncStatus = false,
 }: ConvexClientProviderProps) {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // 컴포넌트 마운트 후 준비 상태로 설정
+    setIsReady(true);
+  }, []);
+
+  if (!isReady) {
+    return <LoadingFallback />;
+  }
+
+  // ✅ Convex client가 없으면 Fallback Provider 사용
+  if (!convex) {
+    console.info('Running in Supabase-only mode');
+    return <FallbackProvider>{children}</FallbackProvider>;
+  }
+
+  // ✅ Convex client가 있으면 정상적인 Convex Provider 사용
   return (
     <ConvexProvider client={convex}>
       <ConvexAuthProvider client={convex}>
-        <Suspense fallback={<LoadingFallback />}>
-          <ProfileSync showSyncStatus={showSyncStatus}>{children}</ProfileSync>
-        </Suspense>
-        <Toaster />
+        {children}
+        {showSyncStatus && (
+          <Suspense fallback={null}>
+            <ProfileSync showSyncStatus={showSyncStatus}>{children}</ProfileSync>
+          </Suspense>
+        )}
       </ConvexAuthProvider>
     </ConvexProvider>
   );
