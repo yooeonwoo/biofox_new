@@ -12,8 +12,9 @@ import { convexToUICase, uiToConvexCreateArgs } from './clinical-photos-mapper';
 /**
  * 케이스 목록 조회 훅 (실시간 동기화)
  */
-export function useClinicalCasesConvex(status?: string) {
+export function useClinicalCasesConvex(status?: string, profileId?: Id<'profiles'>) {
   const cases = useQuery(api.clinical.listClinicalCases, {
+    profileId: profileId, // 프로필 ID 전달
     paginationOpts: { numItems: 100, cursor: null },
     status: status as any,
   });
@@ -254,32 +255,32 @@ export function useRoundCustomerInfoConvex(caseId: string | null) {
 
 /**
  * 편의 함수: 개인 케이스 확인/생성
+ * @deprecated profileId를 전달해야 하므로 직접 사용하는 것을 권장
  */
-export function useEnsurePersonalCaseConvex() {
-  const { data: cases, isLoading } = useClinicalCasesConvex();
-  const createCase = useCreateClinicalCaseConvex();
+// export function useEnsurePersonalCaseConvex() {
+//   const { data: cases, isLoading } = useClinicalCasesConvex();
+//   const createCase = useCreateClinicalCaseConvex();
 
-  const personalCase = cases?.find(c => c.customerName?.trim() === '본인');
+//   const personalCase = cases?.find(c => c.customerName?.trim() === '본인');
 
-  const ensurePersonalCaseExists = async () => {
-    if (personalCase) return personalCase;
+//   const ensurePersonalCaseExists = async () => {
+//     if (personalCase) return personalCase;
 
-    return await createCase.mutateAsync({
-      customerName: '본인',
-      caseName: '본인 임상 케이스',
-      concernArea: '본인 케어',
-      treatmentPlan: '개인 관리 계획',
-      consentReceived: false,
-    });
-  };
+//     return await createCase.mutateAsync({
+//       customerName: '본인',
+//       caseName: '본인 임상 케이스',
+//       concernArea: '본인 케어',
+//       treatmentPlan: '개인 관리 계획',
+//       consentReceived: false,
+//     });
+//   };
 
-  return {
-    personalCase,
-    isLoading,
-    ensurePersonalCaseExists,
-    isCreating: false, // Convex mutation은 별도 상태 관리 필요 없음
-  };
-}
+//   return {
+//     personalCase,
+//     ensurePersonalCaseExists,
+//     isLoading,
+//   };
+// }
 
 /**
  * 편의 함수: 고객 케이스 목록 (본인 제외)
@@ -294,3 +295,29 @@ export function useCustomerCasesConvex() {
     ...rest,
   };
 }
+
+/**
+ * 편의 함수: 케이스 통계
+ * @deprecated profileId를 전달해야 하므로 직접 사용하는 것을 권장
+ */
+// export function useClinicalCaseStatsConvex() {
+//   const { data: allCases, ...rest } = useClinicalCasesConvex();
+
+//   const stats = useMemo(() => {
+//     if (!allCases) return null;
+
+//     return {
+//       total: allCases.length,
+//       byStatus: {
+//         active: allCases.filter(c => c.status === 'active').length,
+//         completed: allCases.filter(c => c.status === 'completed').length,
+//       },
+//       byType: {
+//         personal: allCases.filter(c => c.customerName?.trim() === '본인').length,
+//         customer: allCases.filter(c => c.customerName?.trim() !== '본인').length,
+//       },
+//     };
+//   }, [allCases]);
+
+//   return { stats, ...rest };
+// }

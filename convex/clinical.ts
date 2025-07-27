@@ -22,6 +22,9 @@ import {
  */
 export const listClinicalCases = query({
   args: {
+    // 프로필 ID 추가 (임시 해결책)
+    profileId: v.optional(v.id('profiles')),
+
     // 페이지네이션
     paginationOpts: paginationOptsValidator,
 
@@ -48,17 +51,24 @@ export const listClinicalCases = query({
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인
-      const currentUser = await getCurrentUser(ctx);
-      if (!currentUser) {
-        // 인증되지 않았거나 프로필이 없는 사용자는 빈 결과를 반환
-        return { page: [], isDone: true, continueCursor: null };
+      // 사용자 인증 확인 - profileId가 있으면 그것을 사용
+      let profileId: Id<'profiles'> | null = null;
+
+      if (args.profileId) {
+        profileId = args.profileId;
+      } else {
+        const currentUser = await getCurrentUser(ctx);
+        if (!currentUser) {
+          // 인증되지 않았거나 프로필이 없는 사용자는 빈 결과를 반환
+          return { page: [], isDone: true, continueCursor: null };
+        }
+        profileId = currentUser._id;
       }
 
       // 기본 쿼리 - 본인의 케이스만 조회
       let query = ctx.db
         .query('clinical_cases')
-        .withIndex('by_shop', q => q.eq('shop_id', currentUser._id));
+        .withIndex('by_shop', q => q.eq('shop_id', profileId));
 
       // 필터 적용
       if (args.status) {
