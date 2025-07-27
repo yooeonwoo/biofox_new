@@ -13,7 +13,7 @@ import { Id } from './_generated/dataModel';
 // Convex Auth 설정 (레거시 호환성)
 // =====================================
 
-export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
+export const { auth, signIn, signOut, store } = convexAuth({
   providers: [
     Password({
       profile: params => ({

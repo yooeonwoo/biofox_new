@@ -17,12 +17,3 @@ export const devUpdateProfile = mutation({
     return { success: true };
   },
 });
-
-// 개발용: 모든 프로필 조회
-export const devGetAllProfiles = mutation({
-  args: {},
-  handler: async ctx => {
-    const profiles = await ctx.db.query('profiles').collect();
-    return profiles;
-  },
-});
