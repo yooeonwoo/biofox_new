@@ -7,19 +7,39 @@ import { useRouter } from 'next/navigation';
 import ClinicalPhotosPage from '../page';
 import CustomerClinicalUploadPage from '../upload/customer/page';
 import PersonalPage from '../upload/personal/page';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useCurrentProfile } from '@/hooks/useCurrentProfile';
+import { useClinicalCasesSupabase } from '@/lib/clinical-photos-supabase-hooks';
 
 // Mock dependencies
 vi.mock('@/hooks/useAuth');
 vi.mock('convex/react');
 vi.mock('next/navigation');
+vi.mock('@/hooks/useCurrentProfile');
 vi.mock('@/lib/clinical-photos-supabase-hooks', () => ({
   useClinicalCasesSupabase: vi.fn(() => ({ data: [], isLoading: false })),
+  useClinicalCaseSupabase: vi.fn(() => ({ data: null, isLoading: false })),
+  useClinicalPhotosSupabase: vi.fn(() => ({ data: [], isLoading: false })),
+  useClinicalCaseStatsSupabase: vi.fn(() => ({ data: null, isLoading: false })),
+  useRoundCustomerInfoSupabase: vi.fn(() => ({ data: null, isLoading: false })),
+  useConsentFileSupabase: vi.fn(() => ({ data: null, isLoading: false })),
   useCreateClinicalCaseSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
-  useUpdateClinicalCaseSupabase: vi.fn(() => ({ mutate: vi.fn() })),
-  useDeleteClinicalCaseSupabase: vi.fn(() => ({ mutate: vi.fn() })),
+  useUpdateClinicalCaseSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useUpdateClinicalCaseStatusSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useDeleteClinicalCaseSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useUploadClinicalPhotoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useDeleteClinicalPhotoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useSaveRoundCustomerInfoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useSaveConsentFileSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 
 describe('Clinical Photos Authentication Pattern', () => {
+  let queryClient: QueryClient;
+
+  const renderWithProviders = (component: React.ReactElement) => {
+    return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
+  };
+
   const mockRouter = {
     push: vi.fn(),
     replace: vi.fn(),
@@ -41,6 +61,11 @@ describe('Clinical Photos Authentication Pattern', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useRouter as any).mockReturnValue(mockRouter);
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
   });
 
   describe('Phase 1: Authentication - Supabase Session', () => {
@@ -52,7 +77,7 @@ describe('Clinical Photos Authentication Pattern', () => {
       });
       (useQuery as any).mockReturnValue(null);
 
-      render(<ClinicalPhotosPage />);
+      renderWithProviders(<ClinicalPhotosPage />);
 
       await waitFor(() => {
         expect(mockRouter.push).toHaveBeenCalledWith('/signin');
@@ -67,7 +92,7 @@ describe('Clinical Photos Authentication Pattern', () => {
       });
       (useQuery as any).mockReturnValue(mockProfile);
 
-      render(<ClinicalPhotosPage />);
+      renderWithProviders(<ClinicalPhotosPage />);
 
       expect(mockRouter.push).not.toHaveBeenCalledWith('/signin');
     });
@@ -82,7 +107,7 @@ describe('Clinical Photos Authentication Pattern', () => {
       });
       (useQuery as any).mockReturnValue(null); // Profile not found
 
-      render(<ClinicalPhotosPage />);
+      renderWithProviders(<ClinicalPhotosPage />);
 
       await waitFor(() => {
         expect(screen.getByText('프로필을 찾을 수 없습니다.')).toBeInTheDocument();
@@ -100,7 +125,7 @@ describe('Clinical Photos Authentication Pattern', () => {
         role: 'shop_owner', // Not a KOL
       });
 
-      render(<ClinicalPhotosPage />);
+      renderWithProviders(<ClinicalPhotosPage />);
 
       await waitFor(() => {
         expect(mockRouter.push).toHaveBeenCalledWith('/');
@@ -115,7 +140,7 @@ describe('Clinical Photos Authentication Pattern', () => {
       });
       (useQuery as any).mockReturnValue(mockProfile);
 
-      render(<ClinicalPhotosPage />);
+      renderWithProviders(<ClinicalPhotosPage />);
 
       expect(mockRouter.push).not.toHaveBeenCalledWith('/');
       expect(screen.queryByText('프로필을 찾을 수 없습니다.')).not.toBeInTheDocument();
@@ -124,57 +149,47 @@ describe('Clinical Photos Authentication Pattern', () => {
 
   describe('Phase 3: Data Fetching - Hybrid Approach', () => {
     it('should use profile._id for Supabase queries', async () => {
-      const mockClinicalCasesSupabase = vi.fn(() => ({ data: [], isLoading: false }));
-      vi.doMock('@/lib/clinical-photos-supabase-hooks', () => ({
-        useClinicalCasesSupabase: mockClinicalCasesSupabase,
-      }));
-
       (useAuth as any).mockReturnValue({
         user: mockUser,
         isAuthenticated: true,
         isLoading: false,
       });
       (useQuery as any).mockReturnValue(mockProfile);
+      // Specific mock for this test
+      const mockData = [{ _id: '1', name: 'Test Case' }];
+      (useClinicalCasesSupabase as any).mockReturnValue({ data: mockData, isLoading: false });
 
-      render(<ClinicalPhotosPage />);
+      renderWithProviders(<ClinicalPhotosPage />);
 
       await waitFor(() => {
-        expect(mockClinicalCasesSupabase).toHaveBeenCalledWith(mockProfile._id, undefined);
+        expect(useClinicalCasesSupabase).toHaveBeenCalledWith(mockProfile._id, undefined);
       });
     });
   });
 
   describe('Subpage Pattern Consistency', () => {
     it('customer page should use useCurrentProfile hook', () => {
-      const useCurrentProfile = vi.fn(() => ({
+      (useCurrentProfile as any).mockReturnValue({
         profile: mockProfile,
         profileId: mockUser.id,
         isLoading: false,
         isAuthenticated: true,
-      }));
+      });
 
-      vi.doMock('@/hooks/useCurrentProfile', () => ({
-        useCurrentProfile,
-      }));
-
-      render(<CustomerClinicalUploadPage />);
+      renderWithProviders(<CustomerClinicalUploadPage />);
 
       expect(useCurrentProfile).toHaveBeenCalled();
     });
 
     it('personal page should use useCurrentProfile hook', () => {
-      const useCurrentProfile = vi.fn(() => ({
+      (useCurrentProfile as any).mockReturnValue({
         profile: mockProfile,
         profileId: mockUser.id,
         isLoading: false,
         isAuthenticated: true,
-      }));
+      });
 
-      vi.doMock('@/hooks/useCurrentProfile', () => ({
-        useCurrentProfile,
-      }));
-
-      render(<PersonalPage />);
+      renderWithProviders(<PersonalPage />);
 
       expect(useCurrentProfile).toHaveBeenCalled();
     });

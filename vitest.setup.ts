@@ -4,6 +4,7 @@
  */
 
 import { vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 
 // MSW 설정 (테스트용 API 모킹)
 import { setupServer } from 'msw/node';
@@ -24,6 +25,8 @@ if (!process.env.NODE_ENV) {
 }
 
 process.env.CONVEX_URL = process.env.CONVEX_URL || 'https://test-convex-url.convex.cloud';
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
 // 전역 테스트 설정
 global.ResizeObserver = vi.fn().mockImplementation(() => ({

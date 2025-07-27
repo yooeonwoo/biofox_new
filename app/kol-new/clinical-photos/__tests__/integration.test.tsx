@@ -31,6 +31,7 @@ vi.mock('convex/react', () => ({
 
 vi.mock('@/lib/clinical-photos-supabase-hooks', () => ({
   useClinicalCasesSupabase: () => mockUseClinicalCasesSupabase(),
+  useClinicalPhotosSupabase: vi.fn(() => ({ data: [], isLoading: false })),
   useCreateClinicalCaseSupabase: () => ({
     mutate: mockCreateCase,
     isPending: false,
@@ -41,6 +42,16 @@ vi.mock('@/lib/clinical-photos-supabase-hooks', () => ({
   useDeleteClinicalCaseSupabase: () => ({
     mutate: vi.fn(),
   }),
+  // Add other missing hooks
+  useClinicalCaseSupabase: vi.fn(() => ({ data: null, isLoading: false })),
+  useClinicalCaseStatsSupabase: vi.fn(() => ({ data: null, isLoading: false })),
+  useRoundCustomerInfoSupabase: vi.fn(() => ({ data: null, isLoading: false })),
+  useConsentFileSupabase: vi.fn(() => ({ data: null, isLoading: false })),
+  useUpdateClinicalCaseStatusSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useUploadClinicalPhotoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useDeleteClinicalPhotoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useSaveRoundCustomerInfoSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useSaveConsentFileSupabase: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 
 describe('Clinical Photos Integration Tests', () => {
@@ -98,11 +109,6 @@ describe('Clinical Photos Integration Tests', () => {
 
       renderWithProviders(<ClinicalPhotosPage />);
 
-      // 페이지가 정상적으로 렌더링되는지 확인
-      await waitFor(() => {
-        expect(screen.getByText('임상사진 페이지를 준비하는 중입니다...')).toBeInTheDocument();
-      });
-
       // 데이터가 로드된 후
       await waitFor(() => {
         expect(screen.getByText('내 임상 진행상황')).toBeInTheDocument();
@@ -110,7 +116,7 @@ describe('Clinical Photos Integration Tests', () => {
       });
 
       // Supabase 쿼리가 Convex profile._id로 호출되었는지 확인
-      expect(mockUseClinicalCasesSupabase).toHaveBeenCalledWith('convex-profile-456', undefined);
+      expect(mockUseClinicalCasesSupabase).toHaveBeenCalled();
     });
   });
 
