@@ -261,7 +261,7 @@ export const usePersonalPageState = ({ initialRound = 1 }: UsePersonalPageStateP
     };
 
     autoCreatePersonalCase();
-  }, [user, personalCase, allCases, casesLoading, profile?._id]);
+  }, [user, personalCase, casesLoading, profile?._id]); // allCases 제거하여 무한 루프 방지
 
   // 에러 처리
   useEffect(() => {

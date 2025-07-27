@@ -512,7 +512,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-x-2 gap-y-2 sm:grid-cols-3 md:grid-cols-4">
-                {SYSTEM_OPTIONS.products.map(product => {
+                {(SYSTEM_OPTIONS.products || []).map(product => {
                   const currentRound = currentRounds[case_.id] || 1;
                   const currentRoundInfo = case_.roundCustomerInfo[currentRound] || {
                     treatmentType: '',
@@ -624,7 +624,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-x-2 gap-y-2 sm:grid-cols-3">
-                {SYSTEM_OPTIONS.skinTypes.map(skinType => {
+                {(SYSTEM_OPTIONS.skinTypes || []).map(skinType => {
                   const currentRound = currentRounds[case_.id] || 1;
                   const currentRoundInfo = case_.roundCustomerInfo[currentRound] || {
                     treatmentType: '',

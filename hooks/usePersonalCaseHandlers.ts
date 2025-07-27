@@ -9,6 +9,7 @@ import {
   useUpdateClinicalCaseStatusConvex,
   useUploadClinicalPhotoConvex,
   useDeleteClinicalPhotoConvex,
+  useCreateClinicalCaseConvex,
 } from '@/lib/clinical-photos-hooks';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -56,6 +57,9 @@ export function usePersonalCaseHandlers({
 }: UsePersonalCaseHandlersParams) {
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // Convex mutations
+  const createCase = useCreateClinicalCaseConvex();
 
   // 새 개인 케이스 여부 확인 함수
   const isNewPersonalCase = useCallback((caseId: string) => caseId.startsWith('new-personal-'), []);
@@ -502,48 +506,69 @@ export function usePersonalCaseHandlers({
       return;
     }
 
-    const newCaseId = `new-personal-${Date.now()}`;
-    const newPersonalCase: ClinicalCase = {
-      id: newCaseId,
-      customerName: '본인',
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0] || '',
-      consentReceived: false,
-      photos: [],
-      customerInfo: {
-        name: '본인',
-        products: [],
-        skinTypes: [],
-        memo: '',
-      },
-      roundCustomerInfo: {
-        1: {
-          treatmentType: '',
+    try {
+      // Convex에서 실제 케이스 생성
+      if (!profileId) {
+        toast.error('프로필 정보가 없습니다. 다시 로그인해주세요.');
+        return;
+      }
+
+      const newCaseData = {
+        customerName: '본인',
+        type: 'personal' as const,
+      };
+
+      const createdCase = await createCase.mutate(newCaseData, profileId as Id<'profiles'>);
+
+      if (!createdCase) {
+        throw new Error('케이스 생성에 실패했습니다.');
+      }
+
+      const newPersonalCase: ClinicalCase = {
+        id: createdCase.id,
+        customerName: '본인',
+        status: 'active',
+        createdAt: new Date().toISOString().split('T')[0] || '',
+        consentReceived: false,
+        photos: [],
+        customerInfo: {
+          name: '본인',
           products: [],
           skinTypes: [],
           memo: '',
-          date: new Date().toISOString().split('T')[0],
         },
-      },
-      cureBooster: false,
-      cureMask: false,
-      premiumMask: false,
-      allInOneSerum: false,
-      skinRedSensitive: false,
-      skinPigment: false,
-      skinPore: false,
-      skinTrouble: false,
-      skinWrinkle: false,
-      skinEtc: false,
-    };
+        roundCustomerInfo: {
+          1: {
+            treatmentType: '',
+            products: [],
+            skinTypes: [],
+            memo: '',
+            date: new Date().toISOString().split('T')[0],
+          },
+        },
+        cureBooster: false,
+        cureMask: false,
+        premiumMask: false,
+        allInOneSerum: false,
+        skinRedSensitive: false,
+        skinPigment: false,
+        skinPore: false,
+        skinTrouble: false,
+        skinWrinkle: false,
+        skinEtc: false,
+      };
 
-    setCases([newPersonalCase]);
-    setCurrentRound(1);
-    setHasUnsavedPersonalCase(true);
+      setCases([newPersonalCase]);
+      setCurrentRound(1);
+      setHasUnsavedPersonalCase(true);
 
-    console.log('새 개인 케이스가 추가되었습니다.');
-    toast.success('새 개인 케이스가 추가되었습니다.');
-  }, [cases.length, setCases, setCurrentRound, setHasUnsavedPersonalCase]);
+      console.log('새 개인 케이스가 추가되었습니다.');
+      toast.success('새 개인 케이스가 추가되었습니다.');
+    } catch (error) {
+      console.error('개인 케이스 생성 실패:', error);
+      toast.error('개인 케이스 생성에 실패했습니다.');
+    }
+  }, [cases.length, setCases, setCurrentRound, setHasUnsavedPersonalCase, profileId, createCase]);
 
   return {
     // 핸들러들
