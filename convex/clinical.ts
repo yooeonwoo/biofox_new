@@ -369,7 +369,7 @@ export const updateClinicalCaseStatus = mutation({
   handler: async (ctx, args) => {
     try {
       // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
-      let currentUser: { _id: Id<'profiles'>; role: string };
+      let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
         const profile = await ctx.db.get(args.profileId);
         if (!profile) {
@@ -455,7 +455,7 @@ export const deleteClinicalCase = mutation({
   handler: async (ctx, args) => {
     try {
       // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
-      let currentUser: { _id: Id<'profiles'>; role: string };
+      let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
         const profile = await ctx.db.get(args.profileId);
         if (!profile) {
@@ -575,7 +575,7 @@ export const updateClinicalCase = mutation({
   handler: async (ctx, args) => {
     try {
       // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
-      let currentUser: { _id: Id<'profiles'>; role: string };
+      let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
         const profile = await ctx.db.get(args.profileId);
         if (!profile) {
@@ -655,7 +655,7 @@ export const saveRoundCustomerInfo = mutation({
   handler: async (ctx, args) => {
     try {
       // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
-      let currentUser: { _id: Id<'profiles'>; role: string };
+      let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
         const profile = await ctx.db.get(args.profileId);
         if (!profile) {

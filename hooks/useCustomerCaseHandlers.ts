@@ -84,7 +84,7 @@ export function useCustomerCaseHandlers({
       try {
         // Convex에 상태 업데이트
         const convexStatus = status === 'active' ? 'in_progress' : 'completed';
-        await updateCaseStatus.mutateAsync({ caseId, status: convexStatus });
+        await updateCaseStatus.mutateAsync({ caseId, status: convexStatus, profileId });
 
         // 로컬 상태 업데이트
         setCases(prev => prev.map(case_ => (case_.id === caseId ? { ...case_, status } : case_)));
@@ -284,6 +284,7 @@ export function useCustomerCaseHandlers({
                     age: field === 'age' ? value : undefined,
                     metadata: updatedMetadata,
                   },
+                  profileId: profileId as Id<'profiles'> | undefined,
                 }),
               {
                 maxAttempts: 2,
@@ -398,6 +399,7 @@ export function useCustomerCaseHandlers({
                 updates: {
                   metadata: updatedMetadata,
                 },
+                profileId: profileId as Id<'profiles'> | undefined,
               });
               markSaved(caseId);
             } catch (error) {
@@ -472,6 +474,7 @@ export function useCustomerCaseHandlers({
             updates: {
               metadata: updatedMetadata,
             },
+            profileId: profileId as Id<'profiles'> | undefined,
           });
         } catch (error) {
           console.error('체크박스 업데이트 실패:', error);
@@ -671,7 +674,7 @@ export function useCustomerCaseHandlers({
 
       try {
         // 재시도 로직과 함께 Convex에서 삭제
-        await retry(async () => deleteCase.mutateAsync(caseId), {
+        await retry(async () => deleteCase.mutateAsync(caseId, profileId), {
           maxAttempts: 2,
           delay: 500,
           onRetry: attempt => {

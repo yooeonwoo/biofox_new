@@ -208,10 +208,11 @@ export function useDeleteClinicalCase() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (caseId: string) => {
+    mutationFn: async ({ caseId, profileId }: { caseId: string; profileId?: string }) => {
       try {
         await convex.mutation(api.clinical.deleteClinicalCase, {
           caseId: caseId as Id<'clinical_cases'>,
+          profileId: profileId as Id<'profiles'> | undefined,
         });
 
         toast.success('케이스가 삭제되었습니다.');

@@ -82,14 +82,17 @@ export function useUpdateClinicalCaseStatusConvex() {
   const updateStatus = async ({
     caseId,
     status,
+    profileId,
   }: {
     caseId: string;
     status: 'in_progress' | 'completed' | 'paused' | 'cancelled';
+    profileId?: string;
   }) => {
     try {
       await updateMutation({
         caseId: caseId as Id<'clinical_cases'>,
         status,
+        profileId: profileId as Id<'profiles'> | undefined,
       });
       toast.success('케이스 상태가 업데이트되었습니다.');
     } catch (error: any) {
@@ -111,10 +114,11 @@ export function useUpdateClinicalCaseStatusConvex() {
 export function useDeleteClinicalCaseConvex() {
   const deleteMutation = useMutation(api.clinical.deleteClinicalCase);
 
-  const deleteCase = async (caseId: string) => {
+  const deleteCase = async (caseId: string, profileId?: string) => {
     try {
       await deleteMutation({
         caseId: caseId as Id<'clinical_cases'>,
+        profileId: profileId as Id<'profiles'> | undefined,
       });
       toast.success('케이스가 삭제되었습니다.');
     } catch (error: any) {
