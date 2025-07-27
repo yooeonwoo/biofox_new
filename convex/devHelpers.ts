@@ -10,50 +10,11 @@ import { v } from 'convex/values';
 export const devUpdateProfile = mutation({
   args: {
     profileId: v.id('profiles'),
-    updates: v.object({
-      role: v.optional(
-        v.union(
-          v.literal('admin'),
-          v.literal('kol'),
-          v.literal('ol'),
-          v.literal('shop_owner'),
-          v.literal('sales')
-        )
-      ),
-      status: v.optional(
-        v.union(v.literal('pending'), v.literal('approved'), v.literal('rejected'))
-      ),
-      name: v.optional(v.string()),
-      shop_name: v.optional(v.string()),
-      region: v.optional(v.string()),
-      commission_rate: v.optional(v.number()),
-    }),
+    updates: v.any(), // 간단하게 any 타입 사용
   },
   handler: async (ctx, args) => {
-    // 개발 환경에서만 실행 (간단한 체크)
-    const now = Date.now();
-
-    const updateData: any = {
-      updated_at: now,
-    };
-
-    // 제공된 필드들만 업데이트
-    if (args.updates.role !== undefined) updateData.role = args.updates.role;
-    if (args.updates.status !== undefined) updateData.status = args.updates.status;
-    if (args.updates.name !== undefined) updateData.name = args.updates.name;
-    if (args.updates.shop_name !== undefined) updateData.shop_name = args.updates.shop_name;
-    if (args.updates.region !== undefined) updateData.region = args.updates.region;
-    if (args.updates.commission_rate !== undefined)
-      updateData.commission_rate = args.updates.commission_rate;
-
-    // status가 approved로 변경되면 approved_at 설정
-    if (args.updates.status === 'approved') {
-      updateData.approved_at = now;
-    }
-
-    await ctx.db.patch(args.profileId, updateData);
-
-    return { success: true, profileId: args.profileId };
+    await ctx.db.patch(args.profileId, args.updates);
+    return { success: true };
   },
 });
 

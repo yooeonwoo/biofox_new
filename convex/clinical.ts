@@ -48,21 +48,10 @@ export const listClinicalCases = query({
   },
   handler: async (ctx, args) => {
     try {
-      // 사용자 인증 확인 (프로필이 없을 경우 null 반환하도록 수정)
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) {
-        // 인증되지 않은 사용자는 빈 결과를 반환
-        return { page: [], isDone: true, continueCursor: null };
-      }
-
-      const currentUser = await ctx.db
-        .query('profiles')
-        .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', identity.subject))
-        .unique();
-
+      // 사용자 인증 확인
+      const currentUser = await getCurrentUser(ctx);
       if (!currentUser) {
-        // 프로필이 없는 사용자는 빈 결과를 반환
-        console.warn('User profile not found for identity:', identity.subject);
+        // 인증되지 않았거나 프로필이 없는 사용자는 빈 결과를 반환
         return { page: [], isDone: true, continueCursor: null };
       }
 
@@ -161,6 +150,9 @@ export const getClinicalCase = query({
     try {
       // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
 
       // 임상 케이스 조회
       const clinicalCase = await ctx.db.get(args.caseId);
@@ -229,6 +221,9 @@ export const createClinicalCase = mutation({
     try {
       // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
 
       // 입력 데이터 검증
       if (!args.name || args.name.trim().length < 2) {
@@ -325,6 +320,9 @@ export const updateClinicalCaseStatus = mutation({
     try {
       // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
 
       // 케이스 존재 및 권한 확인
       const existingCase = await ctx.db.get(args.caseId);
@@ -394,6 +392,9 @@ export const deleteClinicalCase = mutation({
     try {
       // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated or profile not found');
+      }
 
       // 케이스 존재 및 권한 확인
       const existingCase = await ctx.db.get(args.caseId);
@@ -479,6 +480,16 @@ export const getClinicalCaseStats = query({
     try {
       // 사용자 인증 확인
       const currentUser = await getCurrentUser(ctx);
+      if (!currentUser) {
+        // 데이터가 없는 것으로 처리
+        return {
+          total: 0,
+          byStatus: { in_progress: 0, completed: 0, paused: 0, cancelled: 0 },
+          bySubjectType: { self: 0, customer: 0 },
+          byConsentStatus: { consented: 0, no_consent: 0, pending: 0 },
+          recentCases: 0,
+        };
+      }
 
       // 사용자의 모든 케이스 조회
       const allCases = await ctx.db
