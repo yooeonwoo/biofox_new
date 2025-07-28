@@ -28,28 +28,6 @@ export const SYSTEM_OPTIONS = {
   ] as const,
 } as const;
 
-// 고객 정보 관련 타입
-export interface CustomerInfo {
-  name: string;
-  age?: number;
-  gender?: 'male' | 'female' | 'other';
-  treatmentType?: string;
-  products: string[];
-  skinTypes: string[];
-  memo?: string;
-}
-
-// 회차별 고객 정보 타입
-export interface RoundCustomerInfo {
-  age?: number;
-  gender?: 'male' | 'female' | 'other';
-  treatmentType?: string;
-  products: string[];
-  skinTypes: string[];
-  memo?: string;
-  date?: string; // 회차별 날짜
-}
-
 // ✅ 백엔드와 완전히 일치하는 케이스 상태 타입
 export type CaseStatus =
   | 'active' // 프론트엔드에서 주로 사용 (백엔드 'in_progress'와 매핑)
@@ -59,11 +37,15 @@ export type CaseStatus =
   | 'cancelled'
   | 'archived'; // 프론트엔드에서 사용
 
+// 🔧 angle 타입을 백엔드와 통일
+export type PhotoAngle = 'front' | 'left_side' | 'right_side'; // 백엔드 기준
+export type PhotoAngleSimple = 'front' | 'left' | 'right'; // 프론트엔드 편의용
+
 // 사진 슬롯 타입 (백엔드 clinical_photos 테이블과 매핑)
 export interface PhotoSlot {
   id: string;
-  roundDay: number;
-  angle: 'front' | 'left_side' | 'right_side'; // 백엔드 photo_type과 일치
+  roundDay?: number; // ✅ optional로 변경 - 실제 데이터에서 undefined일 수 있음
+  angle: PhotoAngle; // 백엔드 기준 타입 사용
   imageUrl?: string;
   url?: string | null;
   session_number?: number;
@@ -71,72 +53,108 @@ export interface PhotoSlot {
   photoId?: string;
 }
 
+// 🔧 고객 정보 타입 정의
+export interface CustomerInfo {
+  name?: string; // ✅ optional로 변경 - 실제 사용에서 항상 필요하지 않음
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  treatmentType?: string;
+  products?: string[]; // ✅ optional로 변경 - 코드에서 기본값 사용
+  skinTypes?: string[]; // ✅ optional로 변경 - 코드에서 기본값 사용
+  memo?: string;
+  date?: string; // ✅ 추가: 날짜 필드 (Input type="date"와 맞춤, optional로)
+}
+
+// 새로 정의: 회차별 info 전용 인터페이스
+export interface RoundInfo {
+  products?: string[]; // optional 배열
+  skinTypes?: string[]; // optional 배열
+  memo?: string;
+  date?: string; // treatmentDate 등
+  treatmentType?: string; // 회차별 치료 타입
+  name?: string; // 회차별 고객명 (필요시)
+  age?: number; // 회차별 나이 (필요시)
+  gender?: 'male' | 'female' | 'other'; // 회차별 성별 (필요시)
+}
+
+// RoundCustomerInfo 재정의: number 키로 제한
+export interface RoundCustomerInfo {
+  [key: number]: RoundInfo; // number 키 + RoundInfo 값
+}
+
 // ✅ Convex 백엔드와 완전 호환되는 케이스 데이터 타입
 export interface ClinicalCase {
   // 🔴 Convex 필수 필드들
   _id?: string; // Convex ID
+  id: string; // ✅ 필수 필드로 변경 - 대부분 코드에서 필수로 사용
   shop_id?: string; // Convex profiles 참조
   subject_type?: 'self' | 'customer'; // Convex 정의와 일치
   name?: string; // Convex name 필드
   status: CaseStatus; // 확장된 상태 타입
-  consent_status?: 'no_consent' | 'consented' | 'pending'; // Convex 정의와 일치
-  created_at?: number; // Convex 타임스탬프 (number)
-  updated_at?: number; // Convex 타임스탬프 (number)
+  consent_status?: 'no_consent' | 'consented' | 'pending';
 
-  // 🔵 Convex 선택적 필드들
+  // 🟡 기본 정보 필드들
   case_title?: string;
   concern_area?: string;
-  treatment_plan?: string;
+  treatment_plan?: string; // 백엔드와 일치
   gender?: 'male' | 'female' | 'other';
   age?: number;
-  treatment_item?: string;
-  start_date?: number;
-  end_date?: number;
-  total_sessions?: number;
   consent_date?: number;
   marketing_consent?: boolean;
   notes?: string;
   tags?: string[];
-  custom_fields?: any;
-  photo_count?: number;
-  latest_session?: number;
-  created_by?: string;
+  metadata?: any;
 
-  // 🟢 프론트엔드 호환성 필드들 (Convex 스키마에 추가됨)
-  customerName?: string; // name과 동일, 프론트엔드에서 주로 사용
-  consentReceived?: boolean; // consent_status 기반 boolean 변환
-  is_personal?: boolean; // subject_type === 'self' 또는 name === '본인'
-  createdAt?: string; // created_at의 ISO string 버전
-  updatedAt?: string; // updated_at의 ISO string 버전
+  // ✅ 프론트엔드 호환성 필드들 (모두 선택적)
+  customerName?: string; // name과 동일
+  caseName?: string; // case_title과 동일
+  caseTitle?: string; // ✅ 추가: lib/clinical-photos-hooks.ts:42에서 사용
+  concernArea?: string; // camelCase 버전
+  treatmentPlan?: string; // camelCase 버전 (이제 백엔드에서 지원)
+  consentReceived?: boolean; // boolean 버전
+  is_personal?: boolean; // subject_type 기반
+  createdAt?: string; // created_at의 string 버전
+  updatedAt?: string; // updated_at의 string 버전
 
-  // 🟡 제품 사용 체크박스 필드들 (Convex 스키마에 추가됨)
+  // 🟢 제품 체크박스 필드들
   cureBooster?: boolean;
   cureMask?: boolean;
   premiumMask?: boolean;
   allInOneSerum?: boolean;
 
-  // 🟡 피부 타입 체크박스 필드들 (Convex 스키마에 추가됨)
-  skinRedSensitive?: boolean;
-  skinPigment?: boolean;
-  skinPore?: boolean;
-  skinTrouble?: boolean;
-  skinWrinkle?: boolean;
-  skinEtc?: boolean;
+  // 🟢 피부타입 체크박스 필드들 (기존)
+  skinRedness?: boolean;
+  skinDryness?: boolean;
+  skinSensitivity?: boolean;
+  skinAging?: boolean;
+  skinAcne?: boolean;
 
-  // 🔵 메타데이터 (Convex 스키마 구조와 일치)
-  metadata?: {
-    rounds?: Record<string, RoundCustomerInfo>;
-    customFields?: any;
-    roundInfo?: any; // 하위 호환성
-    roundCustomerInfo?: any; // 하위 호환성
-  };
+  // 🟢 피부타입 체크박스 필드들 (추가) - hooks/useCustomerCaseHandlers.ts에서 사용
+  skinRedSensitive?: boolean; // ✅ 추가
+  skinPigment?: boolean; // ✅ 추가
+  skinPore?: boolean; // ✅ 추가
+  skinTrouble?: boolean; // ✅ 추가
+  skinWrinkle?: boolean; // ✅ 추가
+  skinEtc?: boolean; // ✅ 추가
 
-  // 🔴 하위 호환성을 위한 레거시 필드들 (점진적 제거 예정)
-  id?: string; // _id의 별칭
-  customerInfo?: CustomerInfo; // 레거시 구조
-  roundCustomerInfo?: { [roundDay: number]: RoundCustomerInfo }; // 레거시 구조
-  photos?: PhotoSlot[]; // 실제로는 별도 쿼리로 조회
-  consentImageUrl?: string; // 동의서 파일 URL (별도 테이블)
+  // 🔴 관계형 데이터 필드들
+  photos?: PhotoSlot[];
+  customerInfo?: CustomerInfo; // 고객 정보
+  roundCustomerInfo?: RoundCustomerInfo; // 회차별 고객 정보
+  roundInfo?: any; // 회차별 추가 정보
+
+  // 🔴 통계 필드들
+  photo_count?: number; // ✅ 추가: lib/clinical-photos-hooks.ts:158에서 사용
+  total_sessions?: number; // ✅ 추가: lib/clinical-photos-hooks.ts:159에서 사용
+
+  // 🟡 시간 필드들
+  created_at?: number;
+  updated_at?: number;
+
+  // 🟡 기타 필드들
+  consentImageUrl?: string;
+  rounds?: Record<string, RoundCustomerInfo>;
+  customFields?: any;
 }
 
 // UI용 Clinical Case 타입 (Convex 데이터 구조)
@@ -190,3 +208,22 @@ export function safeParseStringArray(input: unknown): string[] {
   }
   return [];
 }
+
+// 🔧 angle 변환 유틸리티 함수들
+export const convertAngleToBackend = (angle: PhotoAngleSimple): PhotoAngle => {
+  const mapping: Record<PhotoAngleSimple, PhotoAngle> = {
+    front: 'front',
+    left: 'left_side',
+    right: 'right_side',
+  };
+  return mapping[angle];
+};
+
+export const convertAngleToFrontend = (angle: PhotoAngle): PhotoAngleSimple => {
+  const mapping: Record<PhotoAngle, PhotoAngleSimple> = {
+    front: 'front',
+    left_side: 'left',
+    right_side: 'right',
+  };
+  return mapping[angle];
+};

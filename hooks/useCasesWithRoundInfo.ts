@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ClinicalCase, RoundCustomerInfo } from '@/types/clinical';
+import type { ClinicalCase, RoundCustomerInfo, RoundInfo } from '@/types/clinical';
 
 /**
  * 케이스와 라운드 정보를 통합하는 함수 (훅이 아닌 일반 함수)
@@ -10,7 +10,7 @@ export function enrichCasesWithRoundInfo(cases: ClinicalCase[]): ClinicalCase[] 
     // 라운드 정보를 메타데이터에서 안전하게 추출 (as any 제거)
     const metadata = case_.metadata || {};
     const roundInfoFromMetadata = (metadata as any).roundInfo || {};
-    const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+    const roundCustomerInfo: RoundCustomerInfo = {}; // ✅ 1단계에서 변경된 타입 사용
 
     // 저장된 라운드 정보가 있으면 사용
     if (Object.keys(roundInfoFromMetadata).length > 0) {
@@ -26,7 +26,7 @@ export function enrichCasesWithRoundInfo(cases: ClinicalCase[]): ClinicalCase[] 
             skinTypes: Array.isArray(roundData.skinTypes) ? roundData.skinTypes : [],
             memo: roundData.memo || '',
             date: roundData.treatmentDate || '',
-          };
+          } as RoundInfo; // ✅ RoundInfo 타입으로 명시
         }
       }
     }
@@ -56,7 +56,7 @@ export function enrichCasesWithRoundInfo(cases: ClinicalCase[]): ClinicalCase[] 
         skinTypes: skinTypeData.length > 0 ? skinTypeData : case_.customerInfo?.skinTypes || [],
         memo: case_.customerInfo?.memo || '',
         date: case_.createdAt ? case_.createdAt.split('T')[0] : '',
-      };
+      } as RoundInfo; // ✅ RoundInfo 타입으로 명시
     }
 
     return {

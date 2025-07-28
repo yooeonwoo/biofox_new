@@ -16,6 +16,7 @@ interface ConsentUploaderProps {
   caseId: string;
   roundId: string; // 회차별 관리 – 필수
   onUploaded?: () => void;
+  onUploadSuccess?: () => void; // ✅ 추가: CaseCard.tsx:265와 맞춤
   disabled?: boolean;
   className?: string;
   profileId?: string;

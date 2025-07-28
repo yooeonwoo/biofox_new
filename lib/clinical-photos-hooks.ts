@@ -61,7 +61,7 @@ function convertToPhotoSlot(convexPhoto: any): PhotoSlot {
   return {
     id: convexPhoto._id,
     roundDay: convexPhoto.session_number || 1,
-    angle: convexPhoto.photo_type as 'front' | 'left' | 'right',
+    angle: convexPhoto.photo_type as 'front' | 'left_side' | 'right_side', // ✅ 백엔드 호환 타입으로 변경
     imageUrl: convexPhoto.file_path,
     url: convexPhoto.file_path,
     session_number: convexPhoto.session_number,
@@ -98,14 +98,21 @@ export function useClinicalCasesConvex(
     return {
       data: convertedData,
       isLoading: false,
+      isPending: false, // ✅ React Query v5 표준
+      isError: false,
       error: null,
+      isSuccess: true, // ✅ 데이터 존재하고 에러 없으면 성공
     };
   }
 
+  const isLoading = result === undefined;
   return {
     data: [],
-    isLoading: result === undefined,
+    isLoading,
+    isPending: isLoading, // ✅ React Query v5 표준
+    isError: false,
     error: null,
+    isSuccess: !isLoading, // ✅ 로딩 완료면 성공
   };
 }
 
@@ -118,10 +125,16 @@ export function useClinicalCaseConvex(caseId?: string) {
     caseId ? { caseId: caseId as Id<'clinical_cases'> } : 'skip'
   );
 
+  const isLoading = result === undefined;
+  const hasData = result !== undefined;
+
   return {
     data: result ? convertToClinicalCase(result) : null,
-    isLoading: result === undefined,
+    isLoading,
+    isPending: isLoading, // ✅ React Query v5 표준
+    isError: false,
     error: null,
+    isSuccess: hasData, // ✅ 데이터 존재하면 성공
   };
 }
 
@@ -135,11 +148,16 @@ export function useClinicalPhotosConvex(caseId: string | null) {
   );
 
   const convertedData = result?.map(convertToPhotoSlot) || [];
+  const isLoading = result === undefined;
+  const hasData = result !== undefined;
 
   return {
     data: convertedData,
-    isLoading: result === undefined,
+    isLoading,
+    isPending: isLoading, // ✅ React Query v5 표준
+    isError: false,
     error: null,
+    isSuccess: hasData, // ✅ 데이터 존재하면 성공
   };
 }
 
@@ -162,7 +180,10 @@ export function useClinicalCaseStatsConvex(profileId?: Id<'profiles'>) {
   return {
     data: stats,
     isLoading: cases.isLoading,
+    isPending: cases.isPending, // ✅ 상위 훅에서 전달
+    isError: cases.isError,
     error: cases.error,
+    isSuccess: cases.isSuccess, // ✅ 상위 훅에서 전달
   };
 }
 
@@ -178,7 +199,10 @@ export function useRoundCustomerInfoConvex(caseId?: string) {
   return {
     data: roundInfo,
     isLoading: caseData.isLoading,
+    isPending: caseData.isPending, // ✅ 상위 훅에서 전달
+    isError: caseData.isError,
     error: caseData.error,
+    isSuccess: caseData.isSuccess, // ✅ 상위 훅에서 전달
   };
 }
 
@@ -191,10 +215,16 @@ export function useConsentFileConvex(caseId?: string) {
     caseId ? { caseId: caseId as Id<'clinical_cases'> } : 'skip'
   );
 
+  const isLoading = result === undefined;
+  const hasData = result !== undefined;
+
   return {
     data: result || null,
-    isLoading: result === undefined,
+    isLoading,
+    isPending: isLoading, // ✅ React Query v5 표준
+    isError: false,
     error: null,
+    isSuccess: hasData, // ✅ 데이터 존재하면 성공
   };
 }
 
@@ -235,6 +265,13 @@ export function useCreateClinicalCaseConvex() {
         throw error;
       }
     },
+    // ✅ React Query 표준 속성들 추가 (기본값)
+    isPending: false,
+    isLoading: false, // isPending alias
+    isError: false,
+    error: null,
+    isSuccess: false,
+    data: undefined,
   };
 }
 
@@ -269,6 +306,13 @@ export function useUpdateClinicalCaseConvex() {
         throw error;
       }
     },
+    // ✅ React Query 표준 속성들 추가 (기본값)
+    isPending: false,
+    isLoading: false, // isPending alias
+    isError: false,
+    error: null,
+    isSuccess: false,
+    data: undefined,
   };
 }
 
@@ -306,6 +350,13 @@ export function useUpdateClinicalCaseStatusConvex() {
         throw error;
       }
     },
+    // ✅ React Query 표준 속성들 추가 (기본값)
+    isPending: false,
+    isLoading: false, // isPending alias
+    isError: false,
+    error: null,
+    isSuccess: false,
+    data: undefined,
   };
 }
 
@@ -331,6 +382,13 @@ export function useDeleteClinicalCaseConvex() {
         throw error;
       }
     },
+    // ✅ React Query 표준 속성들 추가 (기본값)
+    isPending: false,
+    isLoading: false, // isPending alias
+    isError: false,
+    error: null,
+    isSuccess: false,
+    data: undefined,
   };
 }
 
@@ -399,6 +457,13 @@ export function useUploadClinicalPhotoConvex() {
         throw error;
       }
     },
+    // ✅ React Query 표준 속성들 추가 (기본값)
+    isPending: false,
+    isLoading: false, // isPending alias
+    isError: false,
+    error: null,
+    isSuccess: false,
+    data: undefined,
   };
 }
 
@@ -423,6 +488,13 @@ export function useDeleteClinicalPhotoConvex() {
         throw error;
       }
     },
+    // ✅ React Query 표준 속성들 추가 (기본값)
+    isPending: false,
+    isLoading: false, // isPending alias
+    isError: false,
+    error: null,
+    isSuccess: false,
+    data: undefined,
   };
 }
 
@@ -460,6 +532,13 @@ export function useSaveRoundCustomerInfoConvex() {
         throw error;
       }
     },
+    // ✅ React Query 표준 속성들 추가 (기본값)
+    isPending: false,
+    isLoading: false, // isPending alias
+    isError: false,
+    error: null,
+    isSuccess: false,
+    data: undefined,
   };
 }
 
@@ -514,5 +593,12 @@ export function useSaveConsentFileConvex() {
         throw error;
       }
     },
+    // ✅ React Query 표준 속성들 추가 (기본값)
+    isPending: false,
+    isLoading: false, // isPending alias
+    isError: false,
+    error: null,
+    isSuccess: false,
+    data: undefined,
   };
 }

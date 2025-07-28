@@ -3,7 +3,14 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import type { ClinicalCase, CustomerInfo, RoundCustomerInfo } from '@/types/clinical';
+import type {
+  ClinicalCase,
+  CustomerInfo,
+  RoundCustomerInfo,
+  RoundInfo,
+  PhotoAngleSimple,
+} from '@/types/clinical';
+import { convertAngleToBackend } from '@/types/clinical';
 import {
   useUpdateClinicalCaseStatusConvex,
   useUploadClinicalPhotoConvex,
@@ -163,27 +170,27 @@ export function usePersonalCaseHandlers({
             setCases(prev =>
               prev.map(case_ => {
                 if (case_.id === caseId) {
-                  // 기존 사진 찾기
-                  const existingPhotoIndex = case_.photos.findIndex(
+                  // 기존 사진 찾기 (안전 접근)
+                  const existingPhotoIndex = (case_.photos ?? []).findIndex(
                     p => p.roundDay === roundDay && p.angle === angle
                   );
 
                   const newPhoto = {
                     id: `${caseId}-${roundDay}-${angle}`,
                     roundDay: roundDay,
-                    angle: angle as 'front' | 'left' | 'right',
+                    angle: convertAngleToBackend(angle as PhotoAngleSimple), // ✅ 백엔드 기준 변환
                     imageUrl: imageUrl,
                     uploaded: true,
                   };
 
                   let updatedPhotos;
                   if (existingPhotoIndex >= 0) {
-                    // 기존 사진 교체
-                    updatedPhotos = [...case_.photos];
+                    // 기존 사진 교체 (안전 접근)
+                    updatedPhotos = [...(case_.photos ?? [])];
                     updatedPhotos[existingPhotoIndex] = newPhoto;
                   } else {
-                    // 새 사진 추가
-                    updatedPhotos = [...case_.photos, newPhoto];
+                    // 새 사진 추가 (안전 접근)
+                    updatedPhotos = [...(case_.photos ?? []), newPhoto];
                   }
 
                   return {
@@ -212,14 +219,14 @@ export function usePersonalCaseHandlers({
             setCases(prev =>
               prev.map(case_ => {
                 if (case_.id === caseId) {
-                  const existingPhotoIndex = case_.photos.findIndex(
+                  const existingPhotoIndex = (case_.photos ?? []).findIndex(
                     p => p.roundDay === roundDay && p.angle === angle
                   );
 
                   const newPhoto = {
                     id: `${caseId}-${roundDay}-${angle}`,
                     roundDay: roundDay,
-                    angle: angle as 'front' | 'left' | 'right',
+                    angle: convertAngleToBackend(angle as PhotoAngleSimple), // ✅ 백엔드 기준 변환
                     imageUrl: imageUrl,
                     uploaded: true,
                     photoId: typeof result === 'string' ? result : (result as any)?._id || '', // Convex에서 받은 ID 저장
@@ -227,10 +234,10 @@ export function usePersonalCaseHandlers({
 
                   let updatedPhotos;
                   if (existingPhotoIndex >= 0) {
-                    updatedPhotos = [...case_.photos];
+                    updatedPhotos = [...(case_.photos ?? [])];
                     updatedPhotos[existingPhotoIndex] = newPhoto;
                   } else {
-                    updatedPhotos = [...case_.photos, newPhoto];
+                    updatedPhotos = [...(case_.photos ?? []), newPhoto];
                   }
 
                   return { ...case_, photos: updatedPhotos };
@@ -270,7 +277,7 @@ export function usePersonalCaseHandlers({
         if (!isNewPersonalCase(caseId)) {
           // 사진을 찾아서 삭제
           const case_ = cases.find(c => c.id === caseId);
-          const photo = case_?.photos.find(p => p.roundDay === roundDay && p.angle === angle);
+          const photo = case_?.photos?.find(p => p.roundDay === roundDay && p.angle === angle);
 
           if (photo?.photoId) {
             await deletePhoto.mutateAsync(photo.photoId);
@@ -280,7 +287,7 @@ export function usePersonalCaseHandlers({
           setCases(prev =>
             prev.map(case_ => {
               if (case_.id === caseId) {
-                const updatedPhotos = case_.photos.filter(
+                const updatedPhotos = (case_.photos ?? []).filter(
                   p => !(p.roundDay === roundDay && p.angle === angle)
                 );
                 return { ...case_, photos: updatedPhotos };
@@ -293,7 +300,7 @@ export function usePersonalCaseHandlers({
           setCases(prev =>
             prev.map(case_ => {
               if (case_.id === caseId) {
-                const updatedPhotos = case_.photos.filter(
+                const updatedPhotos = (case_.photos ?? []).filter(
                   p => !(p.roundDay === roundDay && p.angle === angle)
                 );
                 return {
@@ -368,15 +375,15 @@ export function usePersonalCaseHandlers({
                       skinTypes: [],
                       memo: '',
                       date: '',
-                      ...case_.roundCustomerInfo[currentRound],
+                      ...((case_.roundCustomerInfo ?? {})[currentRound] ?? {}),
                       age:
                         personalInfo.age !== undefined
                           ? personalInfo.age
-                          : case_.roundCustomerInfo[currentRound]?.age,
+                          : ((case_.roundCustomerInfo ?? {})[currentRound] ?? {}).age,
                       gender:
                         personalInfo.gender !== undefined
                           ? personalInfo.gender
-                          : case_.roundCustomerInfo[currentRound]?.gender,
+                          : ((case_.roundCustomerInfo ?? {})[currentRound] ?? {}).gender,
                     },
                   },
                 }
@@ -397,7 +404,7 @@ export function usePersonalCaseHandlers({
 
   // 회차별 개인정보 업데이트 핸들러 (시술유형, 제품, 피부타입, 메모) - IME 처리 개선
   const handleRoundPersonalInfoUpdate = useCallback(
-    async (caseId: string, roundDay: number, roundInfo: Partial<RoundCustomerInfo>) => {
+    async (caseId: string, roundDay: number, roundInfo: Partial<RoundInfo>) => {
       markSaving(caseId);
       try {
         // IME 입력 중이면 로컬 상태만 업데이트
@@ -415,7 +422,7 @@ export function usePersonalCaseHandlers({
                         skinTypes: [],
                         memo: '',
                         date: '',
-                        ...case_.roundCustomerInfo[roundDay],
+                        ...((case_.roundCustomerInfo ?? {})[roundDay] ?? {}),
                         ...roundInfo,
                       },
                     },
@@ -476,7 +483,7 @@ export function usePersonalCaseHandlers({
                       skinTypes: [],
                       memo: '',
                       date: '',
-                      ...case_.roundCustomerInfo[roundDay],
+                      ...((case_.roundCustomerInfo ?? {})[roundDay] ?? {}),
                       ...roundInfo,
                     },
                   },

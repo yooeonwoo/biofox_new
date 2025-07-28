@@ -1,40 +1,30 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { PageHeader } from '@/components/clinical/PageHeader';
-import { LoadingScreen } from '@/components/clinical/LoadingScreen';
-import { EmptyStateCard } from '@/components/clinical/EmptyStateCard';
-import { CaseCard } from '@/components/clinical/CaseCard';
-import { CaseInfoMessage } from '@/components/clinical/CaseInfoMessage';
-import { LOADING_MESSAGES, EMPTY_STATE, INFO_MESSAGES, BUTTON_TEXTS } from '@/constants/ui';
-import { useCurrentProfile } from '@/hooks/useCurrentProfile';
+import React, { Suspense } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { useClinicalPhotosManager } from '../../hooks/useClinicalPhotosManager';
-import { toast } from 'sonner';
-import type { Id } from '@/convex/_generated/dataModel';
+import CaseCard from '../../components/CaseCard';
+import { Button } from '@/components/ui/button';
+import { Plus, Camera } from 'lucide-react';
+import type { ClinicalCase } from '@/types/clinical';
 
-export default function PersonalPage() {
-  // 인증 정보 가져오기
-  const { profile, profileId } = useCurrentProfile();
+function PersonalPageContent() {
+  const { user } = useAuth();
 
-  // 중앙 데이터 관리 훅 사용
+  // 사용자가 없으면 로딩 상태 표시
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // useClinicalPhotosManager에 user.id를 전달 (단순한 string ID 사용)
   const { data, actions } = useClinicalPhotosManager({
-    profileId: profileId as Id<'profiles'> | undefined,
+    profileId: user.id, // 단순하게 user.id를 string으로 사용
   });
 
-  // 로컬 상태
-  const [currentRound, setCurrentRound] = useState(1);
-  const [saveStatus, setSaveStatus] = useState<{
-    [caseId: string]: 'idle' | 'saving' | 'saved' | 'error';
-  }>({});
-  const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
-  const [isComposing, setIsComposing] = useState(false);
-  const mainContentRef = useRef<HTMLElement>(null);
-
-  // 본인 케이스만 필터링
-  const personalCase = data.cases.find(c => c.name?.trim() === '본인');
-  const personal = personalCase ? [personalCase] : [];
-
-  // 본인 케이스 생성 핸들러
   const handleCreatePersonalCase = async () => {
     try {
       await actions.createCase({
@@ -42,130 +32,103 @@ export default function PersonalPage() {
         subject_type: 'self',
         consent_status: 'pending',
       });
-      toast.success('본인 케이스가 생성되었습니다');
     } catch (error) {
-      toast.error('케이스 생성 실패');
+      console.error('본인 케이스 생성 실패:', error);
     }
   };
 
-  // 표준 CaseCard를 위한 handlers 객체 생성
   const createHandlers = (caseData: any) => ({
-    handleConsentChange: async (caseId: string, received: boolean) => {
-      await actions.updateCase({
-        caseId: caseId as Id<'clinical_cases'>,
-        updates: { consent_status: received ? 'consented' : 'no_consent' },
-      });
-    },
-    handleCaseStatusChange: async (caseId: string, status: 'active' | 'completed') => {
-      const mappedStatus = status === 'active' ? 'in_progress' : 'completed';
-      await actions.updateCaseStatus({
-        caseId: caseId as Id<'clinical_cases'>,
-        status: mappedStatus as 'in_progress' | 'completed',
-      });
-    },
-    handleDeleteCase: async (caseId: string) => {
-      toast.error('본인 케이스는 삭제할 수 없습니다');
-    },
-    refreshCases: () => {
-      // Convex는 자동으로 리프레시되므로 아무 작업 필요 없음
-    },
-    handleSaveAll: async (caseId: string) => {
-      setSaveStatus(prev => ({ ...prev, [caseId]: 'saving' }));
+    onUpdate: async (caseId: string, updates: Partial<ClinicalCase>) => {
       try {
-        // 자동 저장이므로 실제 저장 작업은 없음
-        setSaveStatus(prev => ({ ...prev, [caseId]: 'saved' }));
-        setTimeout(() => {
-          setSaveStatus(prev => ({ ...prev, [caseId]: 'idle' }));
-        }, 2000);
+        await actions.updateCase({
+          caseId: caseId as any,
+          updates: updates as any,
+        });
       } catch (error) {
-        setSaveStatus(prev => ({ ...prev, [caseId]: 'error' }));
+        console.error('케이스 업데이트 실패:', error);
       }
     },
-    handleBasicCustomerInfoUpdate: async (caseId: string, info: any) => {
-      await actions.updateCase({
-        caseId: caseId as Id<'clinical_cases'>,
-        updates: {
-          name: info.name,
-          age: info.age,
-          gender: info.gender,
-        },
-      });
+    onDelete: async (caseId: string) => {
+      try {
+        await actions.deleteCase({ caseId: caseId as any });
+      } catch (error) {
+        console.error('케이스 삭제 실패:', error);
+      }
     },
-    handleRoundCustomerInfoUpdate: async (caseId: string, round: number, info: any) => {
-      await actions.saveRoundCustomerInfo({
-        caseId: caseId as Id<'clinical_cases'>,
-        roundNumber: round,
-        info: {
-          treatmentDate: info.date,
-          treatmentType: info.treatmentType,
-          products: info.products,
-          skinTypes: info.skinTypes,
-          memo: info.memo,
-        },
-      });
-    },
-    handlePhotoUpload: async (caseId: string, roundDay: number, angle: string, file: File) => {
-      await actions.uploadPhoto({
-        caseId: caseId as Id<'clinical_cases'>,
-        roundDay,
-        angle,
-        file,
-      });
-    },
-    handlePhotoDelete: async (caseId: string, roundDay: number, angle: string) => {
-      // TODO: 사진 삭제 로직 구현 필요
-      toast.error('사진 삭제 기능은 준비 중입니다.');
-    },
-    setCurrentRounds: (fn: any) =>
-      setCurrentRound(fn((prev: any) => ({ ...prev, [caseData._id]: currentRound }))[caseData._id]),
   });
 
-  // 로딩 중인 경우
-  if (!profile || data.isLoading) {
-    return <LoadingScreen title={LOADING_MESSAGES.personal.title} />;
+  // 본인 케이스만 필터링
+  const personalCases = data.cases.filter(c => c.subject_type === 'self');
+
+  if (data.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <PageHeader
-        title="임상 관리 (본인)"
-        backPath="/kol-new/clinical-photos"
-        showAddButton={false}
-      />
+    <div className="mx-auto min-h-screen w-full max-w-4xl px-4 py-6">
+      {/* 헤더 */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">내 임상 관리</h1>
+          <p className="mt-1 text-sm text-gray-600">본인 케이스 {personalCases.length}건</p>
+        </div>
 
-      <main ref={mainContentRef} className="mx-auto w-full px-3 sm:max-w-2xl sm:px-6">
-        <CaseInfoMessage message={INFO_MESSAGES.personalCaseLimit} />
-
-        {personal.length === 0 ? (
-          <div className="mt-8">
-            <EmptyStateCard
-              title={EMPTY_STATE.noPersonalCases.title}
-              description={EMPTY_STATE.noPersonalCases.description}
-              buttonText={BUTTON_TEXTS.addPersonalCase}
-              onButtonClick={handleCreatePersonalCase}
-            />
-          </div>
-        ) : (
-          <div className="mt-6">
-            {personal.map((caseData, index) => (
-              <CaseCard
-                key={caseData._id}
-                case_={caseData}
-                index={index}
-                currentRounds={{ [caseData._id as string]: currentRound }}
-                saveStatus={saveStatus}
-                numberVisibleCards={numberVisibleCards}
-                isNewCustomer={() => false}
-                setIsComposing={setIsComposing}
-                setCases={() => {}} // Convex는 자동으로 업데이트
-                handlers={createHandlers(caseData)}
-                totalCases={1}
-                profileId={profileId}
-              />
-            ))}
-          </div>
+        {personalCases.length === 0 && (
+          <Button onClick={handleCreatePersonalCase} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />내 케이스 추가
+          </Button>
         )}
-      </main>
+      </div>
+
+      {/* 본인 케이스 섹션 */}
+      {personalCases.length === 0 ? (
+        <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+          <Camera className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+          <h3 className="mb-2 text-lg font-medium text-gray-900">아직 본인 케이스가 없습니다</h3>
+          <p className="mb-4 text-gray-600">
+            본인의 임상 케이스를 등록하여 진행상황을 관리해보세요.
+          </p>
+          <Button onClick={handleCreatePersonalCase} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />내 케이스 등록하기
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {personalCases.map(caseData => (
+            <CaseCard
+              key={caseData._id || caseData.id || Math.random().toString()}
+              type="personal"
+              case={
+                {
+                  ...caseData,
+                  id: caseData._id || caseData.id || '', // id 필드 보장
+                } as any
+              }
+              editableName={false}
+              showDelete={false}
+              {...createHandlers(caseData)}
+            />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function PersonalPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+        </div>
+      }
+    >
+      <PersonalPageContent />
+    </Suspense>
   );
 }

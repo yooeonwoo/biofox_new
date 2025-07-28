@@ -8,6 +8,7 @@ import {
   useUpdateClinicalCaseStatusConvex,
   useDeleteClinicalCaseConvex,
 } from '@/lib/clinical-photos-hooks';
+import { Id } from '@/convex/_generated/dataModel'; // ✅ Id 타입 추가
 import { toast } from 'sonner';
 import { useCallback } from 'react';
 
@@ -23,9 +24,10 @@ export function useClinicalCases(status?: 'in_progress' | 'completed' | 'paused'
   return {
     data: result.data || [],
     isLoading: result.isLoading,
-    isError: result.isError,
+    isPending: result.isLoading, // ✅ React Query v5 표준
+    isError: result.error !== null, // ✅ error 존재 여부로 판단
     error: result.error,
-    isSuccess: result.isSuccess,
+    isSuccess: result.data !== undefined && result.error === null, // ✅ 데이터 존재하고 에러 없으면 성공
     hasMore: false, // 페이지네이션은 향후 구현
   };
 }
@@ -37,9 +39,10 @@ export function useClinicalCase(caseId: string | null) {
   return {
     data: result.data || null,
     isLoading: result.isLoading,
-    isError: result.isError,
+    isPending: result.isLoading, // ✅ React Query v5 표준
+    isError: result.error !== null, // ✅ error 존재 여부로 판단
     error: result.error,
-    isSuccess: result.isSuccess,
+    isSuccess: result.data !== undefined && result.error === null, // ✅ 데이터 존재하고 에러 없으면 성공
   };
 }
 
@@ -82,9 +85,12 @@ export function useCreateClinicalCase() {
   return {
     mutate: createCase,
     mutateAsync: createCase,
-    isLoading: mutation.isPending,
-    isError: mutation.isError,
-    error: mutation.error,
+    isLoading: mutation.isLoading, // ✅ 상위 훅에서 전달
+    isPending: mutation.isPending, // ✅ React Query v5 표준
+    isError: mutation.isError, // ✅ 상위 훅에서 전달
+    isSuccess: mutation.isSuccess, // ✅ 상위 훅에서 전달
+    error: mutation.error, // ✅ 상위 훅에서 전달
+    data: mutation.data, // ✅ 상위 훅에서 전달
   };
 }
 
@@ -107,9 +113,12 @@ export function useUpdateClinicalCase() {
   return {
     mutate: updateCase,
     mutateAsync: updateCase,
-    isLoading: mutation.isPending,
-    isError: mutation.isError,
-    error: mutation.error,
+    isLoading: mutation.isLoading, // ✅ 상위 훅에서 전달
+    isPending: mutation.isPending, // ✅ React Query v5 표준
+    isError: mutation.isError, // ✅ 상위 훅에서 전달
+    isSuccess: mutation.isSuccess, // ✅ 상위 훅에서 전달
+    error: mutation.error, // ✅ 상위 훅에서 전달
+    data: mutation.data, // ✅ 상위 훅에서 전달
   };
 }
 
@@ -140,9 +149,12 @@ export function useUpdateClinicalCaseStatus() {
   return {
     mutate: updateStatus,
     mutateAsync: updateStatus,
-    isLoading: mutation.isPending,
-    isError: mutation.isError,
-    error: mutation.error,
+    isLoading: mutation.isLoading, // ✅ 상위 훅에서 전달
+    isPending: mutation.isPending, // ✅ React Query v5 표준
+    isError: mutation.isError, // ✅ 상위 훅에서 전달
+    isSuccess: mutation.isSuccess, // ✅ 상위 훅에서 전달
+    error: mutation.error, // ✅ 상위 훅에서 전달
+    data: mutation.data, // ✅ 상위 훅에서 전달
   };
 }
 
@@ -151,7 +163,8 @@ export function useDeleteClinicalCase() {
   const mutation = useDeleteClinicalCaseConvex();
 
   const deleteCase = useCallback(
-    async (caseId: string, profileId?: string) => {
+    async (caseId: string, profileId?: Id<'profiles'>) => {
+      // ✅ 타입 수정
       try {
         return await mutation.mutateAsync({ caseId, profileId });
       } catch (error) {
@@ -165,9 +178,12 @@ export function useDeleteClinicalCase() {
   return {
     mutate: deleteCase,
     mutateAsync: deleteCase,
-    isLoading: mutation.isPending,
-    isError: mutation.isError,
-    error: mutation.error,
+    isLoading: mutation.isLoading, // ✅ 상위 훅에서 전달
+    isPending: mutation.isPending, // ✅ React Query v5 표준
+    isError: mutation.isError, // ✅ 상위 훅에서 전달
+    isSuccess: mutation.isSuccess, // ✅ 상위 훅에서 전달
+    error: mutation.error, // ✅ 상위 훅에서 전달
+    data: mutation.data, // ✅ 상위 훅에서 전달
   };
 }
 
@@ -176,13 +192,14 @@ export function useDeleteClinicalCase() {
 
 // 편의 함수: 고객 케이스 목록 (본인 제외)
 export function useCustomerCases(profileId?: string) {
-  const result = useClinicalCasesSupabase(profileId);
+  const result = useClinicalCases(); // ✅ Convex 기반 함수로 변경
 
-  const customerCases = result.data?.filter(c => c.name?.trim() !== '본인') || [];
+  const customerCases = result.data?.filter((c: any) => c.name?.trim() !== '본인') || []; // ✅ 타입 명시
 
   return {
     data: customerCases,
     isLoading: result.isLoading,
+    isPending: result.isPending, // ✅ React Query v5 표준
     isError: result.isError,
     error: result.error,
     isSuccess: result.isSuccess,

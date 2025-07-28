@@ -39,7 +39,7 @@ export function useConcurrentModificationDetection(
   // 버전 비교 함수
   const compareVersions = useCallback((local: ClinicalCase, remote: any) => {
     // 간단한 타임스탬프 기반 버전 비교
-    const localTimestamp = new Date(local.createdAt).getTime();
+    const localTimestamp = new Date(local.createdAt || 0).getTime(); // ✅ undefined 안전성
     const remoteTimestamp = new Date(remote._creationTime).getTime();
 
     return {

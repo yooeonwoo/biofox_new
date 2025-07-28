@@ -4,9 +4,10 @@ import type {
   PhotoSlot as DomainPhotoSlot,
   CustomerInfo,
   RoundCustomerInfo,
+  PhotoAngleSimple,
 } from '@/types/clinical';
 // Legacy import 제거 - 직접 타입 정의 사용
-import { safeParseStringArray } from '@/types/clinical';
+import { safeParseStringArray, convertAngleToBackend } from '@/types/clinical';
 
 // API 응답 스키마 정의
 const apiPhotoSlotSchema = z.object({
@@ -52,7 +53,7 @@ const apiClinicalCaseSchema = z.object({
 const domainPhotoSlotSchema = z.object({
   id: z.string(),
   roundDay: z.number(),
-  angle: z.enum(['front', 'left', 'right']),
+  angle: z.enum(['front', 'left_side', 'right_side']), // ✅ PhotoAngle에 맞게 수정
   imageUrl: z.string().optional(),
   uploaded: z.boolean(),
 });
@@ -86,7 +87,7 @@ const domainClinicalCaseSchema = z.object({
   consentImageUrl: z.string().optional(),
   photos: z.array(domainPhotoSlotSchema),
   customerInfo: customerInfoSchema,
-  roundCustomerInfo: z.record(z.string(), roundCustomerInfoSchema),
+  roundCustomerInfo: z.record(z.coerce.number(), roundCustomerInfoSchema), // ✅ number 키로 변경
   // 플레이어 제품 관련 필드
   cureBooster: z.boolean().optional(),
   cureMask: z.boolean().optional(),
@@ -134,17 +135,17 @@ export async function toDomainCase(
   if (validatedApiCase.skinWrinkle) skinTypes.push('wrinkle');
   if (validatedApiCase.skinEtc) skinTypes.push('other');
 
-  // 사진 데이터 변환
+  // 사진 데이터 변환 (angle을 백엔드 기준으로 변환)
   const domainPhotos: DomainPhotoSlot[] = photos.map(photo => ({
     id: photo.id,
     roundDay: photo.roundDay,
-    angle: photo.angle,
+    angle: convertAngleToBackend(photo.angle as PhotoAngleSimple), // ✅ 백엔드 기준으로 변환
     imageUrl: photo.imageUrl,
     uploaded: photo.uploaded,
   }));
 
   // 회차별 고객 정보 변환
-  const roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo } = {};
+  const roundCustomerInfo: RoundCustomerInfo = {};
   roundInfos.forEach(round => {
     roundCustomerInfo[round.round_number] = {
       age: round.age,

@@ -43,7 +43,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
       const rounds: { [key: number]: PhotoSlot[] } = {};
 
       // 기존 사진들로부터 회차 파악
-      const existingRounds = new Set(photos.map(p => p.roundDay));
+      const existingRounds = new Set(photos.map(p => p.roundDay ?? 1)); // ✅ 기본값 1 적용
 
       // 최소 1회차는 항상 존재
       if (existingRounds.size === 0) {
@@ -57,18 +57,29 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
       for (let round = 1; round <= maxRoundToShow; round++) {
         rounds[round] = [
           { id: `${caseId}-${round}-front`, roundDay: round, angle: 'front', uploaded: false },
-          { id: `${caseId}-${round}-left`, roundDay: round, angle: 'left', uploaded: false },
-          { id: `${caseId}-${round}-right`, roundDay: round, angle: 'right', uploaded: false },
+          {
+            id: `${caseId}-${round}-left_side`,
+            roundDay: round,
+            angle: 'left_side',
+            uploaded: false,
+          }, // ✅ 백엔드 호환
+          {
+            id: `${caseId}-${round}-right_side`,
+            roundDay: round,
+            angle: 'right_side',
+            uploaded: false,
+          }, // ✅ 백엔드 호환
         ];
       }
 
       // 실제 사진 데이터로 업데이트
       photos.forEach(photo => {
-        const roundData = rounds[photo.roundDay];
+        const photoRoundDay = photo.roundDay ?? 1; // ✅ 기본값 1 적용
+        const roundData = rounds[photoRoundDay];
         if (roundData) {
           const slotIndex = roundData.findIndex(slot => slot.angle === photo.angle);
           if (slotIndex !== -1) {
-            roundData[slotIndex] = photo;
+            rounds[photoRoundDay]![slotIndex] = photo; // ✅ photoRoundDay 사용
           }
         }
       });
@@ -85,9 +96,9 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
       switch (angle) {
         case 'front':
           return '정면';
-        case 'left':
+        case 'left_side':
           return '좌측';
-        case 'right':
+        case 'right_side':
           return '우측';
         default:
           return angle;
@@ -202,7 +213,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
         const roundSlots = photosByRound[round];
         if (!roundSlots) continue;
 
-        const allAnglesUploaded = ['front', 'left', 'right'].every(angle => {
+        const allAnglesUploaded = ['front', 'left_side', 'right_side'].every(angle => {
           const slot = roundSlots.find(s => s.angle === angle);
           return slot && slot.uploaded;
         });
@@ -224,7 +235,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
         const roundSlots = photosByRound[round];
         if (!roundSlots) continue;
 
-        const angles = ['front', 'left', 'right'] as const;
+        const angles = ['front', 'left_side', 'right_side'] as const;
 
         for (const angle of angles) {
           const slot = roundSlots.find(s => s.angle === angle);
@@ -280,7 +291,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
           {!isCompleted && visibleSlots[3] && (
             <div style={{ width: 'calc(25% - 8px)' }} className="text-center">
               <h3 className="text-xs font-medium text-gray-400">
-                {getRoundName(visibleSlots[3].roundDay)}
+                {getRoundName(visibleSlots[3].roundDay ?? 1)} {/* ✅ 기본값 추가 */}
               </h3>
             </div>
           )}
@@ -308,7 +319,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
               <div className="grid h-full grid-cols-3 gap-1">
                 {visibleSlots.slice(0, 3).map(slot => {
                   const isNext = nextSlot?.id === slot.id;
-                  const isEmptySlot = slot.roundDay === 0; // 빈 슬롯
+                  const isEmptySlot = (slot.roundDay ?? 1) === 0; // 빈 슬롯 - 기본값 적용
 
                   return (
                     <div key={slot.id} className="h-full">
@@ -331,14 +342,14 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
                           <div className="group relative h-full w-full">
                             <img
                               src={slot.imageUrl}
-                              alt={`${getRoundName(slot.roundDay)} ${getAngleName(slot.angle)}`}
+                              alt={`${getRoundName(slot.roundDay ?? 1)} ${getAngleName(slot.angle)}`}
                               className="h-full w-full object-cover"
                             />
                             {/* 호버 시 표시되는 액션 버튼들 */}
                             <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                               <button
                                 className="rounded bg-blue-500 p-1 text-xs text-white transition-colors hover:bg-blue-600"
-                                onClick={() => handleUploadClick(slot.roundDay, slot.angle)}
+                                onClick={() => handleUploadClick(slot.roundDay ?? 1, slot.angle)}
                                 title="사진 교체"
                                 disabled={uploading}
                               >
@@ -347,7 +358,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
                               {onPhotoDelete && (
                                 <button
                                   className="rounded bg-red-500 p-1 text-xs text-white transition-colors hover:bg-red-600"
-                                  onClick={() => handleDelete(slot.roundDay, slot.angle)}
+                                  onClick={() => handleDelete(slot.roundDay ?? 1, slot.angle)}
                                   title="사진 삭제"
                                   disabled={uploading}
                                 >
@@ -359,7 +370,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
                         ) : (
                           <button
                             className="flex h-full w-full cursor-pointer flex-col items-center justify-center bg-white transition-colors hover:bg-soksok-light-blue/10 disabled:opacity-50"
-                            onClick={() => handleUploadClick(slot.roundDay, slot.angle)}
+                            onClick={() => handleUploadClick(slot.roundDay ?? 1, slot.angle)}
                             disabled={uploading}
                           >
                             {slot.angle === 'front' && (
@@ -371,7 +382,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
                                 />
                               </div>
                             )}
-                            {slot.angle === 'left' && (
+                            {slot.angle === 'left_side' && (
                               <div className="h-full w-full">
                                 <img
                                   src={leftGuideImage}
@@ -380,7 +391,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
                                 />
                               </div>
                             )}
-                            {slot.angle === 'right' && (
+                            {slot.angle === 'right_side' && (
                               <div className="h-full w-full">
                                 <img
                                   src={rightGuideImage}
@@ -406,7 +417,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = React.memo(
                     className="flex h-full w-full cursor-pointer flex-col items-center justify-center bg-soksok-light-blue/10 transition-colors hover:bg-soksok-light-blue/20 disabled:opacity-50"
                     onClick={() =>
                       visibleSlots[3] &&
-                      handleUploadClick(visibleSlots[3].roundDay, visibleSlots[3].angle)
+                      handleUploadClick(visibleSlots[3].roundDay ?? 1, visibleSlots[3].angle)
                     }
                     disabled={uploading}
                   >

@@ -3,7 +3,15 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import type { ClinicalCase, CustomerInfo, RoundCustomerInfo, PhotoSlot } from '@/types/clinical';
+import type {
+  ClinicalCase,
+  CustomerInfo,
+  RoundCustomerInfo,
+  RoundInfo,
+  PhotoSlot,
+  PhotoAngleSimple,
+} from '@/types/clinical';
+import { convertAngleToBackend } from '@/types/clinical';
 import {
   useCreateClinicalCaseConvex,
   useUpdateClinicalCaseStatusConvex,
@@ -170,16 +178,16 @@ export function useCustomerCaseHandlers({
           setCases(prev =>
             prev.map(case_ => {
               if (case_.id === caseId) {
-                // 기존 사진 찾기
-                const existingPhotoIndex = case_.photos.findIndex(
+                // 기존 사진 찾기 (안전 접근)
+                const existingPhotoIndex = (case_.photos ?? []).findIndex(
                   p => p.roundDay === roundDay && p.angle === angle
                 );
 
-                const updatedPhotos = [...case_.photos];
+                const updatedPhotos = [...(case_.photos ?? [])];
                 const newPhoto: PhotoSlot = {
                   id: `${caseId}-${roundDay}-${angle}`,
                   roundDay,
-                  angle: angle as 'front' | 'left' | 'right',
+                  angle: convertAngleToBackend(angle as PhotoAngleSimple), // ✅ 변환 함수 사용
                   imageUrl: URL.createObjectURL(file), // 임시 URL 사용
                   uploaded: true,
                   photoId: uploadedPhoto as unknown as string,
@@ -212,9 +220,9 @@ export function useCustomerCaseHandlers({
   const handlePhotoDelete = useCallback(
     async (caseId: string, roundDay: number, angle: string) => {
       try {
-        // 사진 ID 찾기
+        // 사진 ID 찾기 (안전 접근)
         const targetCase = cases.find(c => c.id === caseId);
-        const targetPhoto = targetCase?.photos.find(
+        const targetPhoto = targetCase?.photos?.find(
           p => p.roundDay === roundDay && p.angle === angle
         );
 
@@ -223,11 +231,11 @@ export function useCustomerCaseHandlers({
           await deletePhoto.mutateAsync(targetPhoto.photoId);
         }
 
-        // 로컬 상태에서 사진 제거
+        // 로컬 상태에서 사진 제거 (안전 접근)
         setCases(prev =>
           prev.map(case_ => {
             if (case_.id === caseId) {
-              const updatedPhotos = case_.photos.filter(
+              const updatedPhotos = (case_.photos ?? []).filter(
                 p => !(p.roundDay === roundDay && p.angle === angle)
               );
               return { ...case_, photos: updatedPhotos };
@@ -262,7 +270,7 @@ export function useCustomerCaseHandlers({
       const previousCase = cases.find(c => c.id === caseId);
       if (!previousCase) return;
 
-      const previousValue = previousCase.customerInfo[field];
+      const previousValue = previousCase.customerInfo?.[field];
       const previousCustomerName = previousCase.customerName;
 
       // 즉시 로컬 상태 업데이트 (낙관적 업데이트)
@@ -271,7 +279,7 @@ export function useCustomerCaseHandlers({
           if (case_.id === caseId) {
             const updatedCase = {
               ...case_,
-              customerInfo: { ...case_.customerInfo, [field]: value },
+              customerInfo: { ...(case_.customerInfo ?? {}), [field]: value },
               customerName: field === 'name' ? value : case_.customerName,
             };
             return updatedCase;
@@ -359,7 +367,7 @@ export function useCustomerCaseHandlers({
     (
       caseId: string,
       roundNumber: number,
-      field: keyof RoundCustomerInfo,
+      field: keyof RoundInfo, // ✅ RoundInfo 타입으로 변경
       value: any,
       currentRounds: { [key: string]: number }
     ) => {
@@ -368,7 +376,7 @@ export function useCustomerCaseHandlers({
         setCases(prev =>
           prev.map(case_ => {
             if (case_.id === caseId) {
-              const currentRoundInfo = case_.roundCustomerInfo[roundNumber] || {
+              const currentRoundInfo = case_.roundCustomerInfo?.[roundNumber] || {
                 products: [],
                 skinTypes: [],
                 memo: '',
@@ -376,11 +384,11 @@ export function useCustomerCaseHandlers({
               };
 
               const updatedRoundInfo = {
-                ...case_.roundCustomerInfo,
+                ...(case_.roundCustomerInfo ?? {}),
                 [roundNumber]: {
                   ...currentRoundInfo,
                   [field]: value,
-                } as RoundCustomerInfo,
+                },
               };
               return { ...case_, roundCustomerInfo: updatedRoundInfo };
             }
@@ -399,8 +407,8 @@ export function useCustomerCaseHandlers({
                 throw new Error('Case not found');
               }
 
-              // 회차별 정보 구성
-              const currentRoundInfo = currentCase.roundCustomerInfo[roundNumber] || {
+              // 회차별 정보 구성 (안전 접근)
+              const currentRoundInfo = currentCase.roundCustomerInfo?.[roundNumber] || {
                 products: [],
                 skinTypes: [],
                 memo: '',
@@ -417,8 +425,8 @@ export function useCustomerCaseHandlers({
                 caseId: caseId as Id<'clinical_cases'>,
                 roundNumber: roundNumber,
                 info: {
-                  age: currentCase.customerInfo.age,
-                  gender: currentCase.customerInfo.gender,
+                  age: currentCase.customerInfo?.age,
+                  gender: currentCase.customerInfo?.gender,
                   treatmentType: updatedRoundInfo.treatmentType,
                   treatmentDate: updatedRoundInfo.date,
                   products: updatedRoundInfo.products || [],
@@ -572,9 +580,10 @@ export function useCustomerCaseHandlers({
       },
       roundCustomerInfo: {
         1: {
+          name: '새 고객', // ✅ 기본값 추가
           treatmentType: '',
-          products: [],
-          skinTypes: [],
+          products: [], // ✅ 기본값 유지
+          skinTypes: [], // ✅ 기본값 유지
           memo: '',
           date: new Date().toISOString().split('T')[0],
         },
@@ -706,7 +715,7 @@ export function useCustomerCaseHandlers({
         // 실패 시 롤백
         setCases(prev =>
           [...prev, caseToDelete].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
           )
         );
         if (currentRound !== undefined) {

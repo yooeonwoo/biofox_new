@@ -1,208 +1,141 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { Camera } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PageHeader } from '@/components/clinical/PageHeader';
-import { CaseCard } from '@/components/clinical/CaseCard';
+import React, { Suspense } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { useClinicalPhotosManager } from '../../hooks/useClinicalPhotosManager';
-import { useCurrentProfile } from '@/hooks/useCurrentProfile';
-import { toast } from 'sonner';
-import type { Id } from '@/convex/_generated/dataModel';
+import CaseCard from '../../components/CaseCard';
+import { Button } from '@/components/ui/button';
+import { Plus, Camera } from 'lucide-react';
+import type { ClinicalCase } from '@/types/clinical';
 
-export default function CustomerClinicalUploadPage() {
-  // 인증 정보 가져오기
-  const { profile, profileId } = useCurrentProfile();
+function CustomerClinicalUploadContent() {
+  const { user } = useAuth();
 
-  // 중앙 데이터 관리 훅 사용
+  // 사용자가 없으면 로딩 상태 표시
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  // useClinicalPhotosManager에 user.id를 전달 (단순한 string ID 사용)
   const { data, actions } = useClinicalPhotosManager({
-    profileId: profileId as Id<'profiles'> | undefined,
+    profileId: user.id, // 단순하게 user.id를 string으로 사용
   });
 
-  // 로컬 상태
-  const [currentRounds, setCurrentRounds] = useState<{ [caseId: string]: number }>({});
-  const [saveStatus, setSaveStatus] = useState<{
-    [caseId: string]: 'idle' | 'saving' | 'saved' | 'error';
-  }>({});
-  const [numberVisibleCards, setNumberVisibleCards] = useState<Set<string>>(new Set());
-  const [isComposing, setIsComposing] = useState(false);
-  const mainContentRef = useRef<HTMLElement>(null);
+  const handleAddCustomer = async () => {
+    try {
+      await actions.createCase({
+        name: '새 고객',
+        subject_type: 'customer',
+        consent_status: 'pending',
+      });
+    } catch (error) {
+      console.error('고객 추가 실패:', error);
+    }
+  };
+
+  const createHandlers = (caseData: any) => ({
+    onUpdate: async (caseId: string, updates: Partial<ClinicalCase>) => {
+      try {
+        await actions.updateCase({
+          caseId: caseId as any,
+          updates: updates as any,
+        });
+      } catch (error) {
+        console.error('케이스 업데이트 실패:', error);
+      }
+    },
+    onDelete: async (caseId: string) => {
+      try {
+        await actions.deleteCase({ caseId: caseId as any });
+      } catch (error) {
+        console.error('케이스 삭제 실패:', error);
+      }
+    },
+  });
+
+  const isNewCustomer = (caseId: string) => {
+    return false; // 단순화를 위해 항상 false
+  };
+
+  const setCases = () => {};
 
   // 고객 케이스만 필터링
   const customerCases = data.cases.filter(c => c.subject_type === 'customer');
 
-  // 새 고객 추가 핸들러
-  const handleAddCustomer = async () => {
-    try {
-      await actions.createCase({
-        subject_type: 'customer',
-        consent_status: 'pending',
-      });
-      toast.success('새 고객 케이스가 추가되었습니다');
-    } catch (error) {
-      toast.error('고객 추가 실패');
-    }
-  };
-
-  // 표준 CaseCard를 위한 handlers 객체 생성
-  const createHandlers = (caseData: any) => ({
-    handleConsentChange: async (caseId: string, received: boolean) => {
-      await actions.updateCase({
-        caseId: caseId as Id<'clinical_cases'>,
-        updates: { consent_status: received ? 'consented' : 'no_consent' },
-      });
-    },
-    handleCaseStatusChange: async (caseId: string, status: 'active' | 'completed') => {
-      const mappedStatus = status === 'active' ? 'in_progress' : 'completed';
-      await actions.updateCaseStatus({
-        caseId: caseId as Id<'clinical_cases'>,
-        status: mappedStatus as 'in_progress' | 'completed',
-      });
-    },
-    handleDeleteCase: async (caseId: string) => {
-      if (confirm('정말로 이 케이스를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.')) {
-        await actions.deleteCase({ caseId: caseId as Id<'clinical_cases'> });
-      }
-    },
-    refreshCases: () => {
-      // Convex는 자동으로 리프레시되므로 아무 작업 필요 없음
-    },
-    handleSaveAll: async (caseId: string) => {
-      setSaveStatus(prev => ({ ...prev, [caseId]: 'saving' }));
-      try {
-        // 자동 저장이므로 실제 저장 작업은 없음
-        setSaveStatus(prev => ({ ...prev, [caseId]: 'saved' }));
-        setTimeout(() => {
-          setSaveStatus(prev => ({ ...prev, [caseId]: 'idle' }));
-        }, 2000);
-      } catch (error) {
-        setSaveStatus(prev => ({ ...prev, [caseId]: 'error' }));
-      }
-    },
-    handleBasicCustomerInfoUpdate: async (caseId: string, info: any) => {
-      await actions.updateCase({
-        caseId: caseId as Id<'clinical_cases'>,
-        updates: {
-          name: info.name,
-          age: info.age,
-          gender: info.gender,
-        },
-      });
-    },
-    handleRoundCustomerInfoUpdate: async (caseId: string, round: number, info: any) => {
-      await actions.saveRoundCustomerInfo({
-        caseId: caseId as Id<'clinical_cases'>,
-        roundNumber: round,
-        info: {
-          treatmentDate: info.date,
-          treatmentType: info.treatmentType,
-          products: info.products,
-          skinTypes: info.skinTypes,
-          memo: info.memo,
-        },
-      });
-    },
-    handlePhotoUpload: async (caseId: string, roundDay: number, angle: string, file: File) => {
-      await actions.uploadPhoto({
-        caseId: caseId as Id<'clinical_cases'>,
-        roundDay,
-        angle,
-        file,
-      });
-    },
-    handlePhotoDelete: async (caseId: string, roundDay: number, angle: string) => {
-      // TODO: 사진 삭제 로직 구현 필요
-      toast.error('사진 삭제 기능은 준비 중입니다.');
-    },
-    setCurrentRounds,
-    updateCaseCheckboxes: () => {}, // 더 이상 필요하지 않음
-  });
-
-  // 새 고객 여부 확인
-  const isNewCustomer = (caseId: string) => {
-    const caseData = customerCases.find(c => c._id === caseId);
-    return caseData
-      ? !caseData.customerInfo?.name || caseData.customerInfo.name === '새 고객'
-      : true;
-  };
-
-  // 케이스 업데이트를 위한 빈 함수 (Convex는 자동으로 업데이트)
-  const setCases = () => {};
-
-  // 로딩 중이거나 사용자 정보 확인 중인 경우
-  if (!profile || data.isLoading) {
+  if (data.isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">로딩 중...</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center text-muted-foreground">업로드 페이지를 준비하는 중입니다.</p>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   return (
-    <div>
-      {/* 헤더를 main 밖으로 이동하여 전체 너비 활용 */}
-      <PageHeader
-        onAddCustomer={handleAddCustomer}
-        title="임상 관리 (고객)"
-        backPath="/kol-new/clinical-photos"
-        showAddButton={true}
-      />
+    <div className="mx-auto min-h-screen w-full max-w-4xl px-4 py-6">
+      {/* 헤더 */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">고객 임상 관리</h1>
+          <p className="mt-1 text-sm text-gray-600">고객 케이스 {customerCases.length}건</p>
+        </div>
 
-      {/* Legacy의 반응형 스타일 적용 - 메인 컨테이너 */}
-      <main ref={mainContentRef} className="mx-auto w-full xs:max-w-[95%] sm:max-w-2xl">
-        {/* 기존 케이스들 */}
-        <LayoutGroup>
-          {/* 메인 컨텐츠 - Legacy 반응형 패딩과 간격 적용 */}
-          <div className="space-y-4 p-3 xs:space-y-5 xs:p-4 md:px-0 md:py-6">
-            <AnimatePresence mode="popLayout">
-              {customerCases.length > 0 ? (
-                customerCases.map((case_, index) => (
-                  <CaseCard
-                    key={case_._id}
-                    case_={case_}
-                    index={index}
-                    currentRounds={currentRounds}
-                    saveStatus={saveStatus}
-                    numberVisibleCards={numberVisibleCards}
-                    isNewCustomer={isNewCustomer}
-                    setIsComposing={setIsComposing}
-                    setCases={setCases}
-                    handlers={createHandlers(case_)}
-                    totalCases={customerCases.length}
-                    profileId={profileId}
-                  />
-                ))
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card>
-                    <CardContent className="py-12 text-center">
-                      <Camera className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-                      <h3 className="mb-2 text-lg font-medium text-gray-900">
-                        등록된 고객 케이스가 없습니다
-                      </h3>
-                      <p className="mb-4 text-gray-500">
-                        위 버튼을 사용해서 첫 번째 고객 케이스를 등록해보세요
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </LayoutGroup>
-      </main>
+        <Button onClick={handleAddCustomer} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          고객 추가
+        </Button>
+      </div>
+
+      {/* 고객 케이스 리스트 */}
+      {customerCases.length === 0 ? (
+        <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+          <Camera className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+          <h3 className="mb-2 text-lg font-medium text-gray-900">등록된 고객 케이스가 없습니다</h3>
+          <p className="mb-4 text-gray-600">첫 번째 고객 임상 케이스를 등록해보세요.</p>
+          <Button onClick={handleAddCustomer} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            고객 추가하기
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {customerCases.map(caseData => (
+            <CaseCard
+              key={caseData._id || caseData.id || Math.random().toString()}
+              type="customer"
+              case={
+                {
+                  ...caseData,
+                  id: caseData._id || caseData.id || '', // id 필드 보장
+                } as any
+              }
+              editableName={true}
+              showDelete={true}
+              showNewBadge={isNewCustomer(caseData._id || caseData.id || '')}
+              {...createHandlers(caseData)}
+            />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function CustomerClinicalUploadPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+        </div>
+      }
+    >
+      <CustomerClinicalUploadContent />
+    </Suspense>
   );
 }

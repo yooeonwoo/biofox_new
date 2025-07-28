@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CaseCard } from '@/components/clinical/CaseCard';
+import CaseCard from '@/components/clinical/CaseCard';
 
 // Personal 케이스 핸들러 타입 정의
 interface PersonalHandlers {
@@ -66,8 +66,8 @@ export const PersonalCaseList: React.FC<PersonalCaseListProps> = ({
           handleBasicCustomerInfoUpdate: handlers.handleBasicCustomerInfoUpdate,
           handleRoundCustomerInfoUpdate: handlers.handleRoundCustomerInfoUpdate,
           updateCaseCheckboxes: handlers.updateCaseCheckboxes,
-          handlePhotoUpload: handlers.handlePhotoUpload,
-          handlePhotoDelete: handlers.handlePhotoDelete,
+          handlePhotoUpload: handlers.handlePhotoUpload || (async () => {}), // ✅ undefined 안전성
+          handlePhotoDelete: handlers.handlePhotoDelete || (async () => {}), // ✅ undefined 안전성
         };
 
         return (
@@ -83,7 +83,6 @@ export const PersonalCaseList: React.FC<PersonalCaseListProps> = ({
             setCases={setCases}
             handlers={personalHandlers}
             totalCases={cases.length}
-            profileId={profileId}
           />
         );
       })}

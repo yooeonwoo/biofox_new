@@ -11,9 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCustomerCaseHandlers } from '@/hooks/useCustomerCaseHandlers';
 import { useCustomerPageState } from '@/hooks/useCustomerPageState';
 import { PageHeader } from '@/components/clinical/PageHeader';
-import { CaseCard } from '@/components/clinical/CaseCard';
+import CaseCard from '@/components/clinical/CaseCard';
 import { createSaveStatusUtils, createEnqueueUtil, createDebounceUtil } from '@/utils/customer';
-import type { RoundCustomerInfo } from '@/types/clinical';
+import type { RoundCustomerInfo, RoundInfo } from '@/types/clinical';
 
 // 중복된 타입 정의들은 /src/types/clinical.ts로 이동되었습니다.
 
@@ -69,6 +69,8 @@ export default function CustomerClinicalUploadPage() {
     handleAddCustomer,
     handleDeleteCase,
     handleSaveAll,
+    handlePhotoUpload, // ✅ 누락된 핸들러 추가
+    handlePhotoDelete, // ✅ 누락된 핸들러 추가
   } = useCustomerCaseHandlers({
     user,
     cases,
@@ -144,13 +146,15 @@ export default function CustomerClinicalUploadPage() {
                         handleRoundCustomerInfoUpdate(
                           caseId,
                           round,
-                          field as keyof RoundCustomerInfo,
+                          field as keyof RoundInfo,
                           info[field],
                           currentRounds
                         );
                       });
                     },
                     updateCaseCheckboxes,
+                    handlePhotoUpload, // ✅ 누락된 핸들러 추가
+                    handlePhotoDelete, // ✅ 누락된 핸들러 추가
                   };
 
                   return (
@@ -166,7 +170,6 @@ export default function CustomerClinicalUploadPage() {
                       setCases={setCases}
                       handlers={handlers}
                       totalCases={cases.length}
-                      profileId={profile?._id}
                     />
                   );
                 })
