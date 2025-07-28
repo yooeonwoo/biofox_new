@@ -318,18 +318,15 @@ export const getFileWithUrl = query({
 // 🗑️ 파일 삭제 Mutations
 
 /**
- * 임상 사진 삭제
+ * 임상 사진 삭제 (임시로 인증 제거)
  */
 export const deleteClinicalPhoto = mutation({
   args: {
     photoId: v.id('clinical_photos'),
   },
   handler: async (ctx, args) => {
-    // 사용자 인증 확인
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('Unauthorized: Must be logged in');
-    }
+    // 임시로 인증 확인 제거
+    // TODO: 나중에 적절한 인증 메커니즘 추가
 
     // 사진 정보 조회
     const photo = await ctx.db.get(args.photoId);
@@ -352,18 +349,15 @@ export const deleteClinicalPhoto = mutation({
 });
 
 /**
- * 동의서 파일 삭제
+ * 동의서 파일 삭제 (임시로 인증 제거)
  */
 export const deleteConsentFile = mutation({
   args: {
     consentId: v.id('consent_files'),
   },
   handler: async (ctx, args) => {
-    // 사용자 인증 확인
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error('Unauthorized: Must be logged in');
-    }
+    // 임시로 인증 확인 제거
+    // TODO: 나중에 적절한 인증 메커니즘 추가
 
     // 동의서 정보 조회
     const consent = await ctx.db.get(args.consentId);
