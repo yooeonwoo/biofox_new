@@ -11,7 +11,7 @@ import { Plus, Camera } from 'lucide-react';
 import type { ClinicalCase } from '@/types/clinical'; // 전역 타입 사용
 
 function ClinicalPhotosContent() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // 사용자가 없으면 로딩 상태 표시
   if (!user) {
@@ -22,12 +22,11 @@ function ClinicalPhotosContent() {
     );
   }
 
-  const [statusFilter, setStatusFilter] = React.useState<'active' | 'completed'>('active');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [statusFilter, setStatusFilter] = React.useState<'active' | 'completed'>('active');
 
-  // useClinicalPhotosManager에 user.id를 전달 (단순한 string ID 사용)
   const { data, actions } = useClinicalPhotosManager({
-    profileId: user.id, // 단순하게 user.id를 string으로 사용
+    profileId: profile?._id || user.id, // profile이 있으면 Convex ID 사용, 없으면 UUID 사용
   });
 
   const createHandlers = (caseData: any) => ({

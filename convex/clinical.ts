@@ -67,8 +67,8 @@ const addFrontendCompatibilityFields = (clinicalCase: any) => {
  */
 export const listClinicalCases = query({
   args: {
-    // 프로필 ID 추가 (임시 해결책)
-    profileId: v.optional(v.id('profiles')),
+    // 프로필 ID 추가 - UUID 문자열로 받음
+    profileId: v.optional(v.string()),
 
     // 페이지네이션
     paginationOpts: paginationOptsValidator,
@@ -102,7 +102,17 @@ export const listClinicalCases = query({
       let profileId: Id<'profiles'> | null = null;
 
       if (args.profileId) {
-        profileId = args.profileId;
+        // UUID로 profiles 테이블에서 실제 Convex ID 조회
+        const profile = await ctx.db
+          .query('profiles')
+          .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+          .first();
+
+        if (!profile) {
+          // 프로필을 찾을 수 없는 경우 빈 결과 반환
+          return { page: [], isDone: true, continueCursor: null };
+        }
+        profileId = profile._id;
       } else {
         const currentUser = await getCurrentUser(ctx);
         if (!currentUser) {
