@@ -551,37 +551,41 @@ export function useSaveRoundCustomerInfoConvex() {
  * 동의서 파일 저장 훅
  */
 export function useSaveConsentFileConvex() {
-  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
   const saveConsent = useMutation(api.clinicalPhotos.saveConsentFile);
 
   return {
     mutateAsync: async (fileData: { clinical_case_id: string; file: File; [key: string]: any }) => {
       try {
         // 1. 업로드 URL 생성
+        console.log('[Consent Upload Debug] Generating upload URL...');
         const uploadUrl = await generateUploadUrl();
+        console.log('[Consent Upload Debug] Upload URL:', uploadUrl);
 
-        // 2. 파일 업로드
+        // 2. 파일 업로드 (POST 메서드 사용)
+        console.log('[Consent Upload Debug] Uploading file...');
         const uploadResponse = await fetch(uploadUrl, {
-          method: 'PUT',
+          method: 'POST',
           body: fileData.file,
-          headers: {
-            'Content-Type': fileData.file.type,
-          },
         });
 
+        console.log('[Consent Upload Debug] Upload response status:', uploadResponse.status);
         if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('[Consent Upload Debug] Upload error:', errorText);
           throw new Error(`동의서 업로드 실패: ${uploadResponse.statusText}`);
         }
 
-        // 3. URL에서 storageId 추출
-        const url = new URL(uploadUrl);
-        const storageId = url.searchParams.get('storageId');
+        // 3. response body에서 storageId 추출
+        const { storageId } = await uploadResponse.json();
+        console.log('[Consent Upload Debug] Storage ID:', storageId);
 
         if (!storageId) {
-          throw new Error('Storage ID를 찾을 수 없습니다.');
+          throw new Error('Storage ID를 받지 못했습니다.');
         }
 
         // 4. 메타데이터 저장
+        console.log('[Consent Upload Debug] Saving metadata...');
         const result = await saveConsent({
           caseId: fileData.clinical_case_id as Id<'clinical_cases'>,
           storageId: storageId as Id<'_storage'>,
@@ -590,6 +594,7 @@ export function useSaveConsentFileConvex() {
           fileType: fileData.file.type,
         });
 
+        console.log('[Consent Upload Debug] Metadata saved:', result);
         toast.success('동의서가 저장되었습니다.');
         return result;
       } catch (error: any) {

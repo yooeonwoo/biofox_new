@@ -120,7 +120,7 @@ export function ConsentUploader({
               file_name: file.name,
               file_size: file.size,
               file_type: file.type,
-              profileId: profileId as Id<'profiles'> | undefined,
+              profileId: profileId, // UUID 문자열로 전달
             });
 
             console.log('Consent file metadata saved:', saveResult);

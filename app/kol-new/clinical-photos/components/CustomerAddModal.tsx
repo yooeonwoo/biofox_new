@@ -51,7 +51,7 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
   const [errors, setErrors] = useState<Partial<CustomerData>>({});
 
   // Convex mutations
-  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
   const saveFileMetadata = useMutation(api.fileStorage.saveFileMetadata);
 
   // Convex query for consent image URL
@@ -116,23 +116,30 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
 
     setUploadingConsent(true);
     try {
+      console.log('[Consent Debug] Generating upload URL...');
       // 1. 업로드 URL 생성
       const postUrl = await generateUploadUrl();
+      console.log('[Consent Debug] Upload URL:', postUrl);
 
       // 2. 파일 업로드
+      console.log('[Consent Debug] Uploading file...');
       const result = await fetch(postUrl, {
         method: 'POST',
-        headers: { 'Content-Type': file.type },
         body: file,
       });
 
+      console.log('[Consent Debug] Upload response status:', result.status);
       if (!result.ok) {
+        const errorText = await result.text();
+        console.error('[Consent Debug] Upload error:', errorText);
         throw new Error('파일 업로드에 실패했습니다.');
       }
 
       const { storageId } = await result.json();
+      console.log('[Consent Debug] Storage ID:', storageId);
 
       // 3. 파일 메타데이터 저장
+      console.log('[Consent Debug] Saving metadata...');
       await saveFileMetadata({
         storageId,
         bucket_name: 'consent-images',
