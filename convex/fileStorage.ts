@@ -264,20 +264,54 @@ export const getClinicalPhotos = query({
     // 각 사진에 URL 추가
     return await Promise.all(
       photos.map(async photo => {
-        const url = await ctx.storage.getUrl(photo.file_path as Id<'_storage'>);
-        console.log(
-          `[getClinicalPhotos] Photo ${photo._id} - storageId: ${photo.file_path}, url: ${url}`
-        );
+        console.log(`[getClinicalPhotos] Processing photo ${photo._id}`, {
+          file_path: photo.file_path,
+          file_path_type: typeof photo.file_path,
+          file_path_length: photo.file_path?.length,
+        });
 
-        // URL이 null인 경우 storage ID를 직접 반환하지 않도록 처리
-        if (!url) {
-          console.warn(`[getClinicalPhotos] Failed to get URL for photo ${photo._id}`);
+        // file_path가 string인지 확인하고, storage ID 형식이 맞는지 체크
+        if (!photo.file_path || typeof photo.file_path !== 'string') {
+          console.error(
+            `[getClinicalPhotos] Invalid file_path for photo ${photo._id}:`,
+            photo.file_path
+          );
+          return {
+            ...photo,
+            url: null,
+          };
         }
 
-        return {
-          ...photo,
-          url: url || null, // null을 명시적으로 처리
-        };
+        try {
+          const url = await ctx.storage.getUrl(photo.file_path as Id<'_storage'>);
+          console.log(
+            `[getClinicalPhotos] Photo ${photo._id} - storageId: ${photo.file_path}, url: ${url}`
+          );
+
+          if (!url) {
+            console.warn(
+              `[getClinicalPhotos] Failed to get URL for photo ${photo._id} - storage ID might be invalid or file doesn't exist`
+            );
+
+            // Storage ID가 잘못된 형식인지 확인 (일반적으로 kg로 시작)
+            if (!photo.file_path.startsWith('kg')) {
+              console.error(
+                `[getClinicalPhotos] Storage ID doesn't start with 'kg': ${photo.file_path}`
+              );
+            }
+          }
+
+          return {
+            ...photo,
+            url: url || null,
+          };
+        } catch (error) {
+          console.error(`[getClinicalPhotos] Error getting URL for photo ${photo._id}:`, error);
+          return {
+            ...photo,
+            url: null,
+          };
+        }
       })
     );
   },

@@ -23,14 +23,28 @@ export function useCasePhotos(caseId: string | null) {
         id: photo._id,
         file_path: photo.file_path,
         url: photo.url,
+        hasUrl: !!photo.url,
+        urlType: typeof photo.url,
       });
+
+      // URL이 없는 경우 Convex HTTP 엔드포인트 사용
+      const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.replace('.cloud', '.site');
+      const imageUrl =
+        photo.url ||
+        (photo.file_path && convexUrl ? `${convexUrl}/storage/${photo.file_path}` : null);
+
+      if (!photo.url && photo.file_path) {
+        console.warn(
+          `[useCasePhotos] No URL for photo ${photo._id}, file_path: ${photo.file_path}`
+        );
+      }
 
       return {
         id: photo._id,
         roundDay: photo.session_number,
         angle: photo.photo_type,
         uploaded: true,
-        imageUrl: photo.url,
+        imageUrl: imageUrl,
         url: photo.url,
         file_path: photo.file_path,
         created_at: photo.created_at,
