@@ -40,7 +40,7 @@ export function PhotoUploader({
   const { enqueueForCase } = useCaseSerialQueues();
 
   // Convex mutations
-  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
   const saveClinicalPhoto = useMutation(api.fileStorage.saveClinicalPhoto);
 
   // 각도 타입 변환 helper

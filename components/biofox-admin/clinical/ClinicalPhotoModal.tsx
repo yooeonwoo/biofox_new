@@ -59,7 +59,7 @@ export function ClinicalPhotoModal({
   );
 
   // Convex mutations
-  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
   const saveClinicalPhoto = useMutation(api.fileStorage.saveClinicalPhoto);
   const saveConsentFile = useMutation(api.fileStorage.saveConsentFile);
   const deleteClinicalPhoto = useMutation(api.fileStorage.deleteClinicalPhoto);
