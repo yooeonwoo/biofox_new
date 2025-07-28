@@ -58,10 +58,10 @@ interface AuthState {
 }
 
 /**
- * 완전 Supabase 기반 인증 훅
+ * 단순화된 Supabase 기반 인증 훅
  *
- * Supabase Auth + Supabase profiles 테이블을 사용하여
- * 완전한 인증 상태를 제공합니다.
+ * Supabase Auth 상태를 확인하고, 연결된 프로필 정보를 조회하는 역할만 수행합니다.
+ * 프로필 자동 생성 로직은 Supabase DB 트리거로 이전되었습니다.
  *
  * @returns {AuthState} - 통합된 인증 상태 객체
  */
@@ -77,16 +77,18 @@ export function useAuth(): AuthState {
   const [profileLoading, setProfileLoading] = useState(false);
   const [syncError, setSyncError] = useState<Error | null>(null);
 
-  // 3. 프로필 조회 및 동기화
+  // 3. 프로필 조회
   useEffect(() => {
-    if (!user || profileLoading) return;
+    // 사용자가 없으면 프로필 상태를 초기화하고 종료
+    if (!user) {
+      setProfile(null);
+      return;
+    }
 
     const fetchProfile = async () => {
+      setProfileLoading(true);
+      setSyncError(null);
       try {
-        setProfileLoading(true);
-        setSyncError(null);
-
-        // Supabase profiles 테이블에서 프로필 조회
         const { data: existingProfile, error } = await supabase
           .from('profiles')
           .select('*')
@@ -94,51 +96,22 @@ export function useAuth(): AuthState {
           .single();
 
         if (error && error.code !== 'PGRST116') {
-          // PGRST116 = no rows returned
+          // PGRST116: row not found
           throw error;
         }
 
-        if (existingProfile) {
-          setProfile(existingProfile);
-        } else {
-          // 프로필이 없으면 자동 생성
-          const newProfile = {
-            supabaseUserId: user.id,
-            email: user.email!,
-            name: user.user_metadata?.name || user.user_metadata?.full_name || user.email!,
-            role: (user.user_metadata?.role as UserRole) || 'shop_owner',
-            status: 'pending' as const,
-            shop_name: user.user_metadata?.shop_name || '매장명 미설정',
-            region: user.user_metadata?.region || null,
-            naver_place_link: user.user_metadata?.naver_place_link || null,
-            commission_rate: null,
-            total_subordinates: 0,
-            active_subordinates: 0,
-            metadata: user.user_metadata || {},
-          };
-
-          const { data: createdProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert([newProfile])
-            .select()
-            .single();
-
-          if (createError) {
-            throw createError;
-          }
-
-          setProfile(createdProfile);
-        }
+        setProfile(existingProfile || null);
       } catch (error) {
-        console.error('Profile sync error:', error);
+        console.error('Profile fetch error:', error);
         setSyncError(error as Error);
+        setProfile(null);
       } finally {
         setProfileLoading(false);
       }
     };
 
     fetchProfile();
-  }, [user, supabase]);
+  }, [user]); // user 객체가 변경될 때만 실행
 
   // 4. 통합된 인증 상태 반환
   return {
