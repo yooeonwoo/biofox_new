@@ -35,6 +35,7 @@ import {
   useUploadClinicalPhotoConvex,
   useDeleteClinicalPhotoConvex,
 } from '@/lib/clinical-photos-hooks';
+import { useCasePhotos } from '@/lib/clinical-case-photos-hooks';
 import { toast } from 'sonner';
 import { Id } from '@/convex/_generated/dataModel';
 
@@ -83,6 +84,9 @@ const CaseCard: React.FC<CaseCardProps> = ({
     console.warn('CaseCard: case ID is missing', case_);
     return null;
   }
+
+  // 케이스별 사진 데이터 조회
+  const { photos, isLoading: photosLoading } = useCasePhotos(caseId);
 
   const {
     handleDeleteCase,
@@ -261,7 +265,7 @@ const CaseCard: React.FC<CaseCardProps> = ({
             {/* 사진 업로드 캐러셀 */}
             <PhotoRoundCarousel
               caseId={caseId}
-              photos={case_.photos || []}
+              photos={photos}
               currentRound={currentRounds[caseId] || 1}
               onPhotoUpload={async (roundDay, angle, file) => {
                 try {

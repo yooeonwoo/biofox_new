@@ -257,23 +257,33 @@ export const getClinicalCase = query({
         .withIndex('by_case', q => q.eq('clinical_case_id', args.caseId))
         .first();
 
-      const caseWithDetails = {
-        ...clinicalCase,
-        photos: photos.map(photo => ({
+      // 사진들에 URL 추가
+      const photosWithUrls = await Promise.all(
+        photos.map(async photo => ({
           id: photo._id,
           session_number: photo.session_number,
           photo_type: photo.photo_type,
           file_path: photo.file_path,
           created_at: photo.created_at,
-        })),
-        consent_file: consentFile
-          ? {
-              id: consentFile._id,
-              file_path: consentFile.file_path,
-              file_name: consentFile.file_name,
-              created_at: consentFile.created_at,
-            }
-          : null,
+          url: await ctx.storage.getUrl(photo.file_path as Id<'_storage'>),
+        }))
+      );
+
+      // 동의서에 URL 추가
+      const consentFileWithUrl = consentFile
+        ? {
+            id: consentFile._id,
+            file_path: consentFile.file_path,
+            file_name: consentFile.file_name,
+            created_at: consentFile.created_at,
+            url: await ctx.storage.getUrl(consentFile.file_path as Id<'_storage'>),
+          }
+        : null;
+
+      const caseWithDetails = {
+        ...clinicalCase,
+        photos: photosWithUrls,
+        consent_file: consentFileWithUrl,
       };
 
       // ✅ 프론트엔드 호환성 필드 추가

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useCallback, useState, useRef } from 'react';
-import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { Upload, FileText, AlertCircle, Eye, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCaseSerialQueues } from '@/hooks/useSerialQueue';
 import { isPdf, isImage, getFileSizeMB } from '@/utils/file';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 
@@ -38,6 +38,12 @@ export function ConsentUploader({
   // Convex mutations
   const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
   const saveConsentFile = useMutation(api.fileStorage.saveConsentFile);
+
+  // Convex query for consent file
+  const consentFile = useQuery(
+    api.fileStorage.getConsentFile,
+    caseId ? { clinical_case_id: caseId as Id<'clinical_cases'> } : 'skip'
+  );
 
   // 파일 유효성 검사
   const validateFile = useCallback((file: File): boolean => {
@@ -215,46 +221,102 @@ export function ConsentUploader({
         aria-label="동의서 파일 선택"
       />
 
-      <Card
-        className={`relative cursor-pointer overflow-hidden transition-all duration-200 ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'} ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${isUploading ? 'border-blue-400 bg-blue-50' : ''} `}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleButtonClick}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-center justify-center space-x-3">
-            {isUploading ? (
-              <>
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-r-transparent" />
-                <span className="text-sm font-medium text-blue-600">업로드 중...</span>
-              </>
-            ) : (
-              <>
-                <FileText className="h-5 w-5 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  동의서 업로드 (PDF, 이미지)
-                </span>
-                <Upload className="h-4 w-4 text-gray-400" />
-              </>
-            )}
-          </div>
-
-          {isDragOver && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute inset-0 flex items-center justify-center bg-blue-50/80 backdrop-blur-sm"
-            >
-              <div className="text-center">
-                <Upload className="mx-auto mb-2 h-8 w-8 text-blue-500" />
-                <span className="text-sm font-medium text-blue-600">파일을 여기에 놓으세요</span>
+      {/* 동의서가 이미 업로드된 경우 미리보기 표시 */}
+      {consentFile && !isUploading ? (
+        <Card className="overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <FileText className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">동의서 업로드 완료</p>
+                  <p className="text-xs text-gray-500">{consentFile.file_name}</p>
+                </div>
               </div>
-            </motion.div>
-          )}
-        </CardContent>
-      </Card>
+              <div className="flex items-center space-x-2">
+                {consentFile.url && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={e => {
+                      e.stopPropagation();
+                      window.open(consentFile.url || '', '_blank');
+                    }}
+                    className="h-8 px-2"
+                  >
+                    <Eye className="mr-1 h-4 w-4" />
+                    보기
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={e => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="h-8 px-2 text-blue-600 hover:text-blue-700"
+                  disabled={disabled}
+                >
+                  변경
+                </Button>
+              </div>
+            </div>
+
+            {/* 이미지인 경우 미리보기 표시 */}
+            {consentFile.file_type?.startsWith('image/') && consentFile.url && (
+              <div className="mt-3 overflow-hidden rounded-lg bg-gray-50">
+                <img
+                  src={consentFile.url}
+                  alt="동의서 미리보기"
+                  className="max-h-48 w-full object-contain"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card
+          className={`relative cursor-pointer overflow-hidden transition-all duration-200 ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'} ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${isUploading ? 'border-blue-400 bg-blue-50' : ''} `}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleButtonClick}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-center space-x-3">
+              {isUploading ? (
+                <>
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-r-transparent" />
+                  <span className="text-sm font-medium text-blue-600">업로드 중...</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="h-5 w-5 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">
+                    동의서 업로드 (PDF, 이미지)
+                  </span>
+                  <Upload className="h-4 w-4 text-gray-400" />
+                </>
+              )}
+            </div>
+
+            {isDragOver && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="absolute inset-0 flex items-center justify-center bg-blue-50/80 backdrop-blur-sm"
+              >
+                <div className="text-center">
+                  <Upload className="mx-auto mb-2 h-8 w-8 text-blue-500" />
+                  <span className="text-sm font-medium text-blue-600">파일을 여기에 놓으세요</span>
+                </div>
+              </motion.div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-2 text-center text-xs text-gray-500">PDF 또는 이미지 파일 (최대 5MB)</div>
     </div>
