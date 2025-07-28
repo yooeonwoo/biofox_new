@@ -6,6 +6,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import type { PhotoSlot } from '@/types/clinical';
+import { createBrowserClient } from '@supabase/ssr';
 
 /**
  * 케이스별 임상 사진 조회 훅
@@ -30,24 +31,22 @@ export function useCasePhotos(caseId: string | null) {
       // URL 생성 로직
       let imageUrl = photo.url;
 
-      if (!imageUrl && photo.file_path) {
-        // 프로덕션 환경 감지
-        const isProduction =
-          typeof window !== 'undefined' &&
-          (window.location.hostname === 'biofoxnew.vercel.app' ||
-            window.location.hostname.includes('vercel.app'));
-
-        // 환경에 따른 Convex URL 설정
-        const convexSiteUrl = isProduction
-          ? 'https://aware-rook-16.convex.site'
-          : process.env.NEXT_PUBLIC_CONVEX_URL?.replace('.cloud', '.site') ||
-            'https://quiet-dog-358.convex.site';
-
-        imageUrl = `${convexSiteUrl}/storage/${photo.file_path}`;
-
-        console.warn(
-          `[useCasePhotos] Using HTTP endpoint for photo ${photo._id}, URL: ${imageUrl}`
+      // file_path가 Supabase Storage 경로인 경우
+      if (photo.file_path && photo.file_path.includes('/')) {
+        // Supabase public URL 생성
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         );
+
+        const { data } = supabase.storage.from('clinical-photos').getPublicUrl(photo.file_path);
+
+        imageUrl = data?.publicUrl || photo.url;
+
+        console.log(`[useCasePhotos] Using Supabase URL for photo ${photo._id}, URL: ${imageUrl}`);
+      } else if (!imageUrl && photo.file_path) {
+        // 기존 Convex storage ID인 경우 (호환성을 위해 유지)
+        imageUrl = `/api/storage/${photo.file_path}`;
       }
 
       return {

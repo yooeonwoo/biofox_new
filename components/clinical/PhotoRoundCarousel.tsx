@@ -13,7 +13,7 @@ interface PhotoRoundCarouselProps {
   photos: PhotoSlot[];
   currentRound: number;
   onPhotoUpload: (roundDay: number, angle: string, file: File) => Promise<void>;
-  onPhotoDelete: (roundDay: number, angle: string) => Promise<void>;
+  onPhotoDelete: (roundDay: number, angle: string, storagePath?: string) => Promise<void>;
   onRoundChange: (round: number) => void;
 }
 
@@ -138,7 +138,7 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
     async (slot: PhotoSlot) => {
       const roundDay: number = slot.roundDay ?? 1; // 타입 명시
       try {
-        await onPhotoDelete(roundDay, slot.angle);
+        await onPhotoDelete(roundDay, slot.angle, slot.file_path);
       } catch (error) {
         console.error('Photo delete failed:', error);
       }

@@ -8,12 +8,14 @@ import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { toast } from 'sonner';
 import type { ClinicalCase } from '@/types/clinical'; // 표준 타입 import
+import { useAuth } from '@/hooks/useAuth';
 
 interface UseClinicalPhotosManagerProps {
   profileId?: Id<'profiles'>;
 }
 
 export function useClinicalPhotosManager({ profileId }: UseClinicalPhotosManagerProps) {
+  const { profile } = useAuth();
   // Query: 케이스 목록 조회
   const casesQuery = useQuery(
     api.clinical.listClinicalCases,
@@ -209,7 +211,7 @@ export function useClinicalPhotosManager({ profileId }: UseClinicalPhotosManager
       }
     },
 
-    // 사진 업로드
+    // 사진 업로드 (Supabase Storage 사용)
     uploadPhoto: async (params: {
       caseId: Id<'clinical_cases'>;
       roundDay: number;
@@ -217,48 +219,72 @@ export function useClinicalPhotosManager({ profileId }: UseClinicalPhotosManager
       file: File;
     }) => {
       try {
-        // 1. Upload URL 생성
-        const uploadUrl = await generateUploadUrlMutation();
+        // FormData 생성
+        const formData = new FormData();
+        formData.append('file', params.file);
+        formData.append('profileId', profileId as string);
+        formData.append('caseId', params.caseId);
+        formData.append('sessionNumber', params.roundDay.toString());
 
-        // 2. 파일 업로드
-        const response = await fetch(uploadUrl, {
-          method: 'POST',
-          body: params.file,
-        });
-
-        if (!response.ok) {
-          throw new Error('Upload failed');
-        }
-
-        // 3. response에서 storageId 추출
-        const { storageId } = await response.json();
-
-        // 4. 메타데이터 저장
+        // angle 변환
         const photoType =
           params.angle === 'front'
             ? 'front'
-            : params.angle === 'leftSide'
+            : params.angle === 'left' || params.angle === 'leftSide' || params.angle === 'left_side'
               ? 'left_side'
               : 'right_side';
 
+        formData.append('photoType', photoType);
+
+        // Supabase Storage에 업로드
+        const uploadResponse = await fetch('/api/clinical-photos/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.json();
+          throw new Error(error.error || '업로드 실패');
+        }
+
+        const { storagePath, publicUrl } = await uploadResponse.json();
+
+        // Convex에 메타데이터 저장 (Supabase Storage 경로 저장)
         await uploadPhotoMutation({
           clinical_case_id: params.caseId,
           session_number: params.roundDay,
           photo_type: photoType as 'front' | 'left_side' | 'right_side',
-          storageId: storageId as Id<'_storage'>,
+          storageId: storagePath as Id<'_storage'>, // Storage 경로를 ID처럼 사용
           profileId, // string으로 그대로 전달
+          file_size: params.file.size,
         });
 
         toast.success('사진이 업로드되었습니다');
       } catch (error) {
+        console.error('Photo upload error:', error);
         toast.error('사진 업로드 실패');
         throw error;
       }
     },
 
-    // 사진 삭제
-    deletePhoto: async (params: { photoId: Id<'clinical_photos'> }) => {
+    // 사진 삭제 (Supabase Storage에서도 삭제)
+    deletePhoto: async (params: { photoId: Id<'clinical_photos'>; storagePath?: string }) => {
       try {
+        // Supabase Storage에서 삭제
+        if (params.storagePath) {
+          const deleteResponse = await fetch(
+            `/api/clinical-photos/delete?path=${encodeURIComponent(params.storagePath)}`,
+            {
+              method: 'DELETE',
+            }
+          );
+
+          if (!deleteResponse.ok) {
+            console.error('Failed to delete from Supabase storage');
+          }
+        }
+
+        // Convex에서 메타데이터 삭제
         await deletePhotoMutation({
           photoId: params.photoId,
         });
