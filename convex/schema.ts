@@ -351,8 +351,11 @@ export default defineSchema({
     name: v.string(),
     // 추가 필드 - UI와 호환성을 위해
     case_title: v.optional(v.string()), // 케이스명
+    caseName: v.optional(v.string()), // 프론트엔드 camelCase 버전
     concern_area: v.optional(v.string()), // 관심 부위
+    concernArea: v.optional(v.string()), // 프론트엔드 camelCase 버전
     treatment_plan: v.optional(v.string()), // 치료 계획
+    treatmentPlan: v.optional(v.string()), // 프론트엔드 camelCase 버전
     // 기존 필드들
     gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
     age: v.optional(v.number()),
