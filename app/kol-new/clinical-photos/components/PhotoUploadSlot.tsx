@@ -16,6 +16,7 @@ interface PhotoUploadSlotProps {
   onUpload: (file: File) => void;
   onDelete?: () => void;
   className?: string;
+  file_path?: string;
 }
 
 const PhotoUploadSlot: React.FC<PhotoUploadSlotProps> = ({
@@ -29,6 +30,7 @@ const PhotoUploadSlot: React.FC<PhotoUploadSlotProps> = ({
   onUpload,
   onDelete,
   className,
+  file_path,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -205,7 +207,7 @@ const PhotoUploadSlot: React.FC<PhotoUploadSlotProps> = ({
           <>
             {/* 업로드된 이미지 */}
             <img
-              src={imageUrl}
+              src={file_path ? `/api/storage/${file_path}` : imageUrl}
               alt={`${getRoundName(roundDay)} ${getAngleName(angle)}`}
               className="h-full w-full object-cover"
             />

@@ -369,7 +369,11 @@ export function ClinicalPhotoModal({
                       {existingPhoto ? (
                         <div className="group relative">
                           <img
-                            src={existingPhoto.imageUrl || existingPhoto.url || ''}
+                            src={
+                              existingPhoto.file_path
+                                ? `/api/storage/${existingPhoto.file_path}`
+                                : existingPhoto.imageUrl || existingPhoto.url || ''
+                            }
                             alt={`${label} 사진`}
                             className="aspect-square w-full rounded-lg object-cover"
                             onError={e => {

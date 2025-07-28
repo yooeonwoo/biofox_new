@@ -205,20 +205,22 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                   // 업로드된 이미지 표시
                   <div className="group relative h-full w-full overflow-hidden rounded-lg border-2 border-green-200 bg-green-50">
                     <img
-                      src={slot.imageUrl}
+                      src={slot.file_path ? `/api/storage/${slot.file_path}` : slot.imageUrl}
                       alt={`${currentRound}회차 ${displayAngle}`}
                       className="h-full w-full object-cover"
                       onError={e => {
                         console.error('[PhotoRoundCarousel] Image load error:', {
                           slotId: slot.id,
-                          src: slot.imageUrl,
+                          src: e.currentTarget.src,
+                          originalUrl: slot.imageUrl,
+                          file_path: slot.file_path,
                           error: e,
                         });
                       }}
                       onLoad={() => {
                         console.log('[PhotoRoundCarousel] Image loaded successfully:', {
                           slotId: slot.id,
-                          src: slot.imageUrl,
+                          src: slot.file_path ? `/api/storage/${slot.file_path}` : slot.imageUrl,
                         });
                       }}
                     />
@@ -228,7 +230,11 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => setSelectedImage(slot.imageUrl!)}
+                        onClick={() =>
+                          setSelectedImage(
+                            slot.file_path ? `/api/storage/${slot.file_path}` : slot.imageUrl!
+                          )
+                        }
                         className="h-8 w-8 p-0"
                       >
                         <ZoomIn className="h-4 w-4" />
