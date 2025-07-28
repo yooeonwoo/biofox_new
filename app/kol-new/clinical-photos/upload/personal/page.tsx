@@ -9,7 +9,7 @@ import { Plus, Camera } from 'lucide-react';
 import type { ClinicalCase } from '@/types/clinical';
 
 function PersonalPageContent() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // 사용자가 없으면 로딩 상태 표시
   if (!user) {
@@ -20,9 +20,9 @@ function PersonalPageContent() {
     );
   }
 
-  // useClinicalPhotosManager에 user.id를 전달 (단순한 string ID 사용)
+  // useClinicalPhotosManager에 profile의 Convex ID를 우선 사용
   const { data, actions } = useClinicalPhotosManager({
-    profileId: user.id, // 단순하게 user.id를 string으로 사용
+    profileId: profile?._id || user.id, // profile이 있으면 Convex ID 사용, 없으면 UUID 사용
   });
 
   const handleCreatePersonalCase = async () => {

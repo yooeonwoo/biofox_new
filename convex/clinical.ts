@@ -291,7 +291,7 @@ export const getClinicalCase = query({
  */
 export const createClinicalCase = mutation({
   args: {
-    profileId: v.id('profiles'), // 프로필 ID를 직접 전달받음
+    profileId: v.optional(v.string()), // UUID 문자열로 받음
     subject_type: v.optional(v.union(v.literal('self'), v.literal('customer'))),
     name: v.optional(v.string()),
 
@@ -352,10 +352,34 @@ export const createClinicalCase = mutation({
     try {
       console.log('[createClinicalCase] 시작:', { profileId: args.profileId, name: args.name });
 
-      // 프로필 존재 확인
-      const profile = await ctx.db.get(args.profileId);
+      // profileId 처리 - UUID 또는 현재 사용자에서 가져오기
+      let profileConvexId: Id<'profiles'> | null = null;
+
+      if (args.profileId) {
+        // UUID로 profiles 테이블에서 실제 Convex ID 조회
+        const profileByUuid = await ctx.db
+          .query('profiles')
+          .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+          .first();
+
+        if (!profileByUuid) {
+          console.error('[createClinicalCase] UUID로 프로필을 찾을 수 없음:', args.profileId);
+          throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
+        }
+        profileConvexId = profileByUuid._id;
+      } else {
+        // profileId가 없으면 현재 사용자 조회
+        const currentUser = await getCurrentUser(ctx);
+        if (!currentUser) {
+          throw new ApiError(ERROR_CODES.UNAUTHORIZED, 'User not authenticated');
+        }
+        profileConvexId = currentUser._id;
+      }
+
+      // 프로필 정보 가져오기
+      const profile = await ctx.db.get(profileConvexId);
       if (!profile) {
-        console.error('[createClinicalCase] 프로필을 찾을 수 없음:', args.profileId);
+        console.error('[createClinicalCase] 프로필을 찾을 수 없음:', profileConvexId);
         throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
       }
       console.log('[createClinicalCase] 프로필 확인 완료:', profile.name);
@@ -389,7 +413,7 @@ export const createClinicalCase = mutation({
       console.log('[createClinicalCase] 케이스 데이터 생성 중...');
       const caseId = await ctx.db.insert('clinical_cases', {
         // 기본 필드들
-        shop_id: args.profileId,
+        shop_id: profileConvexId,
         subject_type: args.subject_type || 'customer',
         name: finalName.trim(),
         case_title: args.caseName || args.case_title || finalName + ' 케이스',
@@ -411,7 +435,7 @@ export const createClinicalCase = mutation({
         latest_session: 0,
         created_at: now,
         updated_at: now,
-        created_by: args.profileId,
+        created_by: profileConvexId,
 
         // ✅ 프론트엔드 호환성 필드들 추가
         customerName: finalName.trim(),
@@ -445,7 +469,7 @@ export const createClinicalCase = mutation({
         tableName: 'clinical_cases',
         recordId: caseId,
         action: 'INSERT',
-        userId: args.profileId,
+        userId: profileConvexId,
         userRole: profile.role,
         oldValues: null,
         newValues: {
@@ -466,7 +490,7 @@ export const createClinicalCase = mutation({
       if (consentStatus === 'consented') {
         console.log('[createClinicalCase] 알림 생성 중...');
         await createNotification(ctx, {
-          userId: args.profileId, // 향후 관리자 ID로 변경 필요
+          userId: profileConvexId, // 향후 관리자 ID로 변경 필요
           type: 'clinical_progress',
           title: '새로운 임상 케이스 생성',
           message: `${profile.name}님이 새로운 임상 케이스를 생성했습니다: ${finalName}`,
