@@ -36,7 +36,7 @@ export function ConsentUploader({
   const { enqueueForCase } = useCaseSerialQueues();
 
   // Convex mutations
-  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
   const saveConsentFile = useMutation(api.fileStorage.saveConsentFile);
 
   // 파일 유효성 검사

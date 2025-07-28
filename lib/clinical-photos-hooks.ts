@@ -396,7 +396,7 @@ export function useDeleteClinicalCaseConvex() {
  * 사진 업로드 훅
  */
 export function useUploadClinicalPhotoConvex() {
-  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
   const savePhoto = useMutation(api.clinicalPhotos.uploadClinicalPhoto);
 
   return {
@@ -551,7 +551,7 @@ export function useSaveRoundCustomerInfoConvex() {
  * 동의서 파일 저장 훅
  */
 export function useSaveConsentFileConvex() {
-  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
   const saveConsent = useMutation(api.clinicalPhotos.saveConsentFile);
 
   return {

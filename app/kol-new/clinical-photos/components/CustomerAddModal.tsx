@@ -51,7 +51,7 @@ const CustomerAddModal: React.FC<CustomerAddModalProps> = ({
   const [errors, setErrors] = useState<Partial<CustomerData>>({});
 
   // Convex mutations
-  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
   const saveFileMetadata = useMutation(api.fileStorage.saveFileMetadata);
 
   // Convex query for consent image URL

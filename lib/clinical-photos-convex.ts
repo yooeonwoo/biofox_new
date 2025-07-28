@@ -284,7 +284,7 @@ export function useUploadClinicalPhoto() {
       try {
         // 🚀 Step 1: Convex에서 업로드 URL 생성
         console.log('[Upload Debug] Generating upload URL...');
-        const uploadUrl = await convex.mutation(api.fileStorage.generateSecureUploadUrl);
+        const uploadUrl = await convex.mutation(api.fileStorage.generateUploadUrl);
         console.log('[Upload Debug] Upload URL generated:', uploadUrl);
 
         // 🚀 Step 2: Convex Storage로 직접 업로드
