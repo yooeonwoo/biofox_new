@@ -539,14 +539,19 @@ export const updateClinicalCaseStatus = mutation({
       v.literal('archived') // 프론트엔드에서 사용하는 'archived' 상태
     ),
     notes: v.optional(v.string()),
-    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
+    profileId: v.optional(v.string()), // UUID 문자열로 받음
   },
   handler: async (ctx, args) => {
     try {
       // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
       let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
-        const profile = await ctx.db.get(args.profileId);
+        // UUID로 profiles 테이블에서 실제 Convex ID 조회
+        const profile = await ctx.db
+          .query('profiles')
+          .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+          .first();
+
         if (!profile) {
           throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
         }
@@ -633,14 +638,19 @@ export const updateClinicalCaseStatus = mutation({
 export const deleteClinicalCase = mutation({
   args: {
     caseId: v.id('clinical_cases'),
-    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
+    profileId: v.optional(v.string()), // UUID 문자열로 받음
   },
   handler: async (ctx, args) => {
     try {
       // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
       let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
-        const profile = await ctx.db.get(args.profileId);
+        // UUID로 profiles 테이블에서 실제 Convex ID 조회
+        const profile = await ctx.db
+          .query('profiles')
+          .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+          .first();
+
         if (!profile) {
           throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
         }
@@ -776,14 +786,19 @@ export const updateClinicalCase = mutation({
       skinWrinkle: v.optional(v.boolean()),
       skinEtc: v.optional(v.boolean()),
     }),
-    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
+    profileId: v.optional(v.string()), // UUID 문자열로 받음
   },
   handler: async (ctx, args) => {
     try {
       // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
       let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
-        const profile = await ctx.db.get(args.profileId);
+        // UUID로 profiles 테이블에서 실제 Convex ID 조회
+        const profile = await ctx.db
+          .query('profiles')
+          .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+          .first();
+
         if (!profile) {
           throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
         }
@@ -892,14 +907,19 @@ export const saveRoundCustomerInfo = mutation({
       skinTypes: v.optional(v.array(v.string())),
       memo: v.optional(v.string()),
     }),
-    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
+    profileId: v.optional(v.string()), // UUID 문자열로 받음
   },
   handler: async (ctx, args) => {
     try {
       // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
       let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
-        const profile = await ctx.db.get(args.profileId);
+        // UUID로 profiles 테이블에서 실제 Convex ID 조회
+        const profile = await ctx.db
+          .query('profiles')
+          .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+          .first();
+
         if (!profile) {
           throw new ApiError(ERROR_CODES.NOT_FOUND, 'Profile not found');
         }

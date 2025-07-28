@@ -40,14 +40,18 @@ export const uploadClinicalPhoto = mutation({
     storageId: v.id('_storage'),
     fileName: v.string(),
     fileSize: v.optional(v.number()),
-    profileId: v.optional(v.id('profiles')),
+    profileId: v.optional(v.string()), // UUID 문자열로 받음
   },
   handler: async (ctx, args) => {
     try {
       // 프로필 확인
       let currentUser: { _id: Id<'profiles'>; role: string } | null = null;
       if (args.profileId) {
-        const profile = await ctx.db.get(args.profileId);
+        // UUID로 profiles 테이블에서 실제 Convex ID 조회
+        const profile = await ctx.db
+          .query('profiles')
+          .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+          .first();
         currentUser = profile;
       } else {
         currentUser = await getCurrentUser(ctx);

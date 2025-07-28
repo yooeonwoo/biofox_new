@@ -46,13 +46,22 @@ export const saveClinicalPhoto = mutation({
     photo_type: v.union(v.literal('front'), v.literal('left_side'), v.literal('right_side')),
     file_size: v.optional(v.number()),
     metadata: v.optional(v.any()),
-    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
+    profileId: v.optional(v.string()), // UUID 문자열로 받음
   },
   handler: async (ctx, args) => {
     // profileId가 제공되면 사용, 아니면 getCurrentUser 사용
     let userId: Id<'profiles'>;
     if (args.profileId) {
-      userId = args.profileId;
+      // UUID로 profiles 테이블에서 실제 Convex ID 조회
+      const profile = await ctx.db
+        .query('profiles')
+        .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+        .first();
+
+      if (!profile) {
+        throw new Error('Profile not found');
+      }
+      userId = profile._id;
     } else {
       const user = await getCurrentUser(ctx);
       if (!user) {
@@ -114,13 +123,22 @@ export const saveConsentFile = mutation({
     file_size: v.optional(v.number()),
     file_type: v.optional(v.string()),
     metadata: v.optional(v.any()),
-    profileId: v.optional(v.id('profiles')), // 프로필 ID 추가
+    profileId: v.optional(v.string()), // UUID 문자열로 받음
   },
   handler: async (ctx, args) => {
     // profileId가 제공되면 사용, 아니면 현재 사용자 프로필 조회
     let userId: Id<'profiles'>;
     if (args.profileId) {
-      userId = args.profileId;
+      // UUID로 profiles 테이블에서 실제 Convex ID 조회
+      const profile = await ctx.db
+        .query('profiles')
+        .withIndex('by_supabaseUserId', q => q.eq('supabaseUserId', args.profileId))
+        .first();
+
+      if (!profile) {
+        throw new Error('Profile not found');
+      }
+      userId = profile._id;
     } else {
       // getCurrentUser 함수 사용하여 일관성 유지
       const user = await getCurrentUser(ctx);
