@@ -27,15 +27,26 @@ export function useCasePhotos(caseId: string | null) {
         urlType: typeof photo.url,
       });
 
-      // URL이 없는 경우 Convex HTTP 엔드포인트 사용
-      const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.replace('.cloud', '.site');
-      const imageUrl =
-        photo.url ||
-        (photo.file_path && convexUrl ? `${convexUrl}/storage/${photo.file_path}` : null);
+      // URL 생성 로직
+      let imageUrl = photo.url;
 
-      if (!photo.url && photo.file_path) {
+      if (!imageUrl && photo.file_path) {
+        // 프로덕션 환경 감지
+        const isProduction =
+          typeof window !== 'undefined' &&
+          (window.location.hostname === 'biofoxnew.vercel.app' ||
+            window.location.hostname.includes('vercel.app'));
+
+        // 환경에 따른 Convex URL 설정
+        const convexSiteUrl = isProduction
+          ? 'https://aware-rook-16.convex.site'
+          : process.env.NEXT_PUBLIC_CONVEX_URL?.replace('.cloud', '.site') ||
+            'https://quiet-dog-358.convex.site';
+
+        imageUrl = `${convexSiteUrl}/storage/${photo.file_path}`;
+
         console.warn(
-          `[useCasePhotos] No URL for photo ${photo._id}, file_path: ${photo.file_path}`
+          `[useCasePhotos] Using HTTP endpoint for photo ${photo._id}, URL: ${imageUrl}`
         );
       }
 
