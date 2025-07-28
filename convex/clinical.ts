@@ -259,25 +259,47 @@ export const getClinicalCase = query({
 
       // 사진들에 URL 추가
       const photosWithUrls = await Promise.all(
-        photos.map(async photo => ({
-          id: photo._id,
-          session_number: photo.session_number,
-          photo_type: photo.photo_type,
-          file_path: photo.file_path,
-          created_at: photo.created_at,
-          url: await ctx.storage.getUrl(photo.file_path as Id<'_storage'>),
-        }))
+        photos.map(async photo => {
+          const url = await ctx.storage.getUrl(photo.file_path as Id<'_storage'>);
+          console.log(
+            `[getClinicalCase] Photo ${photo._id} - storageId: ${photo.file_path}, url: ${url}`
+          );
+
+          if (!url) {
+            console.warn(`[getClinicalCase] Failed to get URL for photo ${photo._id}`);
+          }
+
+          return {
+            id: photo._id,
+            session_number: photo.session_number,
+            photo_type: photo.photo_type,
+            file_path: photo.file_path,
+            created_at: photo.created_at,
+            url: url || null,
+          };
+        })
       );
 
       // 동의서에 URL 추가
       const consentFileWithUrl = consentFile
-        ? {
-            id: consentFile._id,
-            file_path: consentFile.file_path,
-            file_name: consentFile.file_name,
-            created_at: consentFile.created_at,
-            url: await ctx.storage.getUrl(consentFile.file_path as Id<'_storage'>),
-          }
+        ? await (async () => {
+            const url = await ctx.storage.getUrl(consentFile.file_path as Id<'_storage'>);
+            console.log(
+              `[getClinicalCase] Consent ${consentFile._id} - storageId: ${consentFile.file_path}, url: ${url}`
+            );
+
+            if (!url) {
+              console.warn(`[getClinicalCase] Failed to get URL for consent ${consentFile._id}`);
+            }
+
+            return {
+              id: consentFile._id,
+              file_path: consentFile.file_path,
+              file_name: consentFile.file_name,
+              created_at: consentFile.created_at,
+              url: url || null,
+            };
+          })()
         : null;
 
       const caseWithDetails = {

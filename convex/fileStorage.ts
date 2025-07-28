@@ -263,10 +263,22 @@ export const getClinicalPhotos = query({
 
     // 각 사진에 URL 추가
     return await Promise.all(
-      photos.map(async photo => ({
-        ...photo,
-        url: await ctx.storage.getUrl(photo.file_path as Id<'_storage'>),
-      }))
+      photos.map(async photo => {
+        const url = await ctx.storage.getUrl(photo.file_path as Id<'_storage'>);
+        console.log(
+          `[getClinicalPhotos] Photo ${photo._id} - storageId: ${photo.file_path}, url: ${url}`
+        );
+
+        // URL이 null인 경우 storage ID를 직접 반환하지 않도록 처리
+        if (!url) {
+          console.warn(`[getClinicalPhotos] Failed to get URL for photo ${photo._id}`);
+        }
+
+        return {
+          ...photo,
+          url: url || null, // null을 명시적으로 처리
+        };
+      })
     );
   },
 });
@@ -288,9 +300,14 @@ export const getConsentFile = query({
       return null;
     }
 
+    const url = await ctx.storage.getUrl(consent.file_path as Id<'_storage'>);
+    console.log(
+      `[getConsentFile] Consent ${consent._id} - storageId: ${consent.file_path}, url: ${url}`
+    );
+
     return {
       ...consent,
-      url: await ctx.storage.getUrl(consent.file_path as Id<'_storage'>),
+      url: url,
     };
   },
 });
