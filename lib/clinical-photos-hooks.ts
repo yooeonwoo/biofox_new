@@ -396,7 +396,7 @@ export function useDeleteClinicalCaseConvex() {
  * 사진 업로드 훅
  */
 export function useUploadClinicalPhotoConvex() {
-  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
+  const generateUploadUrl = useMutation(api.fileStorage.generateSecureUploadUrl);
   const savePhoto = useMutation(api.clinicalPhotos.uploadClinicalPhoto);
 
   return {
@@ -415,30 +415,34 @@ export function useUploadClinicalPhotoConvex() {
     }) => {
       try {
         // 1. 업로드 URL 생성
+        console.log('[Upload Debug] Generating upload URL...');
         const uploadUrl = await generateUploadUrl();
+        console.log('[Upload Debug] Upload URL:', uploadUrl);
 
-        // 2. 파일 업로드
+        // 2. 파일 업로드 (POST 메서드 사용)
+        console.log('[Upload Debug] Uploading file...');
         const uploadResponse = await fetch(uploadUrl, {
-          method: 'PUT',
+          method: 'POST',
           body: file,
-          headers: {
-            'Content-Type': file.type,
-          },
         });
 
+        console.log('[Upload Debug] Upload response status:', uploadResponse.status);
         if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('[Upload Debug] Upload error:', errorText);
           throw new Error(`파일 업로드 실패: ${uploadResponse.statusText}`);
         }
 
-        // 3. URL에서 storageId 추출
-        const url = new URL(uploadUrl);
-        const storageId = url.searchParams.get('storageId');
+        // 3. response body에서 storageId 추출
+        const { storageId } = await uploadResponse.json();
+        console.log('[Upload Debug] Storage ID:', storageId);
 
         if (!storageId) {
-          throw new Error('Storage ID를 찾을 수 없습니다.');
+          throw new Error('Storage ID를 받지 못했습니다.');
         }
 
         // 4. 메타데이터 저장
+        console.log('[Upload Debug] Saving metadata...');
         const result = await savePhoto({
           caseId: caseId as Id<'clinical_cases'>,
           sessionNumber: roundNumber,
@@ -446,9 +450,10 @@ export function useUploadClinicalPhotoConvex() {
           storageId: storageId as Id<'_storage'>,
           fileName: file.name,
           fileSize: file.size,
-          profileId,
+          profileId: profileId ? (profileId as any) : undefined, // string으로 전달
         });
 
+        console.log('[Upload Debug] Metadata saved:', result);
         toast.success('사진이 업로드되었습니다.');
         return result;
       } catch (error: any) {

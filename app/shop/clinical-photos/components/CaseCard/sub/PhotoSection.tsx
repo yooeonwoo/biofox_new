@@ -44,7 +44,7 @@ export const PhotoSection: React.FC<PhotoSectionProps> = ({ caseId, isCompleted 
           roundNumber: round,
           angle,
           file,
-          profileId: profile?._id, // profileId 추가
+          profileId: authUser?.id, // UUID 사용
         });
         // Convex는 실시간 동기화로 자동 업데이트
       }}

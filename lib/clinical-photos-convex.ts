@@ -283,31 +283,54 @@ export function useUploadClinicalPhoto() {
     }) => {
       try {
         // 🚀 Step 1: Convex에서 업로드 URL 생성
+        console.log('[Upload Debug] Generating upload URL...');
         const uploadUrl = await convex.mutation(api.fileStorage.generateSecureUploadUrl);
+        console.log('[Upload Debug] Upload URL generated:', uploadUrl);
 
         // 🚀 Step 2: Convex Storage로 직접 업로드
+        console.log('[Upload Debug] Uploading file to:', uploadUrl);
         const uploadResponse = await fetch(uploadUrl, {
           method: 'POST',
           body: file,
         });
 
+        console.log('[Upload Debug] Upload response status:', uploadResponse.status);
         if (!uploadResponse.ok) {
           const errorText = await uploadResponse.text();
+          console.error('[Upload Debug] Upload failed:', errorText);
           throw new Error(`파일 업로드 실패: ${uploadResponse.statusText}`);
         }
 
-        const { storageId } = await uploadResponse.json();
+        // 디버깅을 위한 로그 추가
+        const responseText = await uploadResponse.text();
+        console.log('[Upload Debug] Response text:', responseText);
+
+        let storageId;
+        try {
+          const responseData = JSON.parse(responseText);
+          storageId = responseData.storageId;
+          console.log('[Upload Debug] Parsed storageId:', storageId);
+        } catch (parseError) {
+          console.error('[Upload Debug] Failed to parse response:', parseError);
+          throw new Error('업로드 응답 파싱 실패');
+        }
+
+        if (!storageId) {
+          throw new Error('storageId를 받지 못했습니다');
+        }
 
         // 🚀 Step 3: 메타데이터 저장
+        console.log('[Upload Debug] Saving metadata with storageId:', storageId);
         const photoResult = await convex.mutation(api.fileStorage.saveClinicalPhoto, {
           storageId,
           clinical_case_id: caseId as Id<'clinical_cases'>,
           session_number: roundNumber,
           photo_type: angle as 'front' | 'left_side' | 'right_side',
           file_size: file.size,
-          profileId: profileId as Id<'profiles'> | undefined,
+          profileId: profileId, // string으로 그대로 전달
         });
 
+        console.log('[Upload Debug] Photo metadata saved:', photoResult);
         toast.success('사진이 업로드되었습니다.');
         return photoResult;
       } catch (error: any) {

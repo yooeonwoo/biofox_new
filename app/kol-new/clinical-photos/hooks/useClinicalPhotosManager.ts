@@ -218,14 +218,11 @@ export function useClinicalPhotosManager({ profileId }: UseClinicalPhotosManager
     }) => {
       try {
         // 1. Upload URL 생성
-        const uploadData = (await generateUploadUrlMutation()) as any;
+        const uploadUrl = await generateUploadUrlMutation();
 
         // 2. 파일 업로드
-        const response = await fetch(uploadData.uploadUrl, {
+        const response = await fetch(uploadUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': params.file.type,
-          },
           body: params.file,
         });
 
@@ -233,7 +230,10 @@ export function useClinicalPhotosManager({ profileId }: UseClinicalPhotosManager
           throw new Error('Upload failed');
         }
 
-        // 3. 메타데이터 저장
+        // 3. response에서 storageId 추출
+        const { storageId } = await response.json();
+
+        // 4. 메타데이터 저장
         const photoType =
           params.angle === 'front'
             ? 'front'
@@ -245,8 +245,8 @@ export function useClinicalPhotosManager({ profileId }: UseClinicalPhotosManager
           clinical_case_id: params.caseId,
           session_number: params.roundDay,
           photo_type: photoType as 'front' | 'left_side' | 'right_side',
-          storageId: uploadData.storageId,
-          profileId,
+          storageId: storageId as Id<'_storage'>,
+          profileId, // string으로 그대로 전달
         });
 
         toast.success('사진이 업로드되었습니다');
