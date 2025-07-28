@@ -80,7 +80,7 @@ export function useAuth(): AuthState {
   // 3. 프로필 조회
   useEffect(() => {
     // 사용자가 없으면 프로필 상태를 초기화하고 종료
-    if (!user) {
+    if (!user?.id) {
       setProfile(null);
       return;
     }
@@ -111,7 +111,7 @@ export function useAuth(): AuthState {
     };
 
     fetchProfile();
-  }, [user]); // user 객체가 변경될 때만 실행
+  }, [user?.id, supabase]); // user.id가 변경될 때만 실행
 
   // 4. 통합된 인증 상태 반환
   return {

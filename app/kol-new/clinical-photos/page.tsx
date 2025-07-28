@@ -1,6 +1,7 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useClinicalPhotosManager } from './hooks/useClinicalPhotosManager';
 import CaseCard from './components/CaseCard';
@@ -8,26 +9,45 @@ import CustomerAddModal from './components/CustomerAddModal';
 import CaseStatusTabs from './components/CaseStatusTabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Camera } from 'lucide-react';
-import type { ClinicalCase } from '@/types/clinical'; // 전역 타입 사용
+import type { ClinicalCase } from '@/types/clinical';
+import { LoadingSpinner } from '@/components/ui/loading';
+import { toast } from 'sonner';
+import { Id } from '@/convex/_generated/dataModel';
 
 function ClinicalPhotosContent() {
-  const { user, profile } = useAuth();
-
-  // 사용자가 없으면 로딩 상태 표시
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
-
+  const router = useRouter();
+  const { user, profile, isLoading: authLoading, isAuthenticated } = useAuth();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [statusFilter, setStatusFilter] = React.useState<'active' | 'completed'>('active');
 
-  const { data, actions } = useClinicalPhotosManager({
-    profileId: profile?._id || user.id, // profile이 있으면 Convex ID 사용, 없으면 UUID 사용
+  // 훅을 조건부로 호출하기 위해 변수 선언
+  const manager = useClinicalPhotosManager({
+    profileId: profile?._id as Id<'profiles'> | undefined,
   });
+
+  const { data, actions } = manager;
+
+  // 인증 상태 및 권한 확인
+  useEffect(() => {
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        router.push('/signin');
+      } else if (profile && profile.role !== 'kol') {
+        // KOL 역할이 아니면 홈으로 리디렉션
+        toast.error('이 페이지에 접근할 권한이 없습니다.');
+        router.push('/');
+      }
+    }
+  }, [authLoading, isAuthenticated, profile, router]);
+
+  // 로딩 상태 처리
+  if (authLoading || !profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   const createHandlers = (caseData: any) => ({
     onUpdate: async (caseId: string, updates: Partial<ClinicalCase>) => {
@@ -88,7 +108,7 @@ function ClinicalPhotosContent() {
   if (data.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+        <LoadingSpinner />
       </div>
     );
   }
@@ -195,7 +215,7 @@ function ClinicalPhotosContent() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleAddCustomer}
-        profileId={user.id as any}
+        profileId={profile?.id as any}
       />
     </div>
   );
@@ -206,7 +226,7 @@ export default function ClinicalPhotosPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900"></div>
+          <LoadingSpinner />
         </div>
       }
     >
