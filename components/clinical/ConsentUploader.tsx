@@ -11,6 +11,7 @@ import { isPdf, isImage, getFileSizeMB } from '@/utils/file';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
+import { createBrowserClient } from '@supabase/ssr';
 
 interface ConsentUploaderProps {
   caseId: string;
@@ -31,13 +32,14 @@ export function ConsentUploader({
   profileId,
 }: ConsentUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { enqueueForCase } = useCaseSerialQueues();
 
-  // Convex mutations
-  const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
+  // Convex mutations (메타데이터만)
   const saveConsentFile = useMutation(api.fileStorage.saveConsentFile);
+  const deleteConsentFile = useMutation(api.fileStorage.deleteConsentFile);
 
   // Convex query for consent file
   const consentFile = useQuery(
@@ -77,7 +79,7 @@ export function ConsentUploader({
     return true;
   }, []);
 
-  // Convex 3단계 업로드 프로세스
+  // Supabase Storage 업로드 프로세스
   const handleFileUpload = useCallback(
     async (file: File) => {
       if (!validateFile(file)) return;
@@ -91,41 +93,38 @@ export function ConsentUploader({
           setIsUploading(true);
 
           try {
-            console.log('Step 1: Generating upload URL from Convex...');
+            console.log('Step 1: Uploading file to Supabase Storage...');
 
-            // 🚀 Step 1: Convex에서 업로드 URL 생성
-            const uploadUrl = await generateUploadUrl();
+            // FormData 생성
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('profileId', profileId || '');
+            formData.append('caseId', caseId);
 
-            console.log('Step 2: Uploading file to Convex Storage...');
-
-            // 🚀 Step 2: Convex Storage로 직접 업로드
-            const uploadResponse = await fetch(uploadUrl, {
+            // Supabase Storage에 업로드
+            const uploadResponse = await fetch('/api/consent-files/upload', {
               method: 'POST',
-              body: file,
+              body: formData,
             });
 
             if (!uploadResponse.ok) {
-              const errorText = await uploadResponse.text();
-              console.error('Convex upload failed:', {
-                status: uploadResponse.status,
-                statusText: uploadResponse.statusText,
-                error: errorText,
-              });
-              throw new Error(`파일 업로드 실패: ${uploadResponse.statusText}`);
+              const error = await uploadResponse.json();
+              throw new Error(error.error || '파일 업로드 실패');
             }
 
-            const { storageId } = await uploadResponse.json();
-            console.log('File uploaded successfully, storageId:', storageId);
+            const { storagePath, publicUrl, fileName, fileSize, fileType } =
+              await uploadResponse.json();
+            console.log('File uploaded successfully to Supabase:', { storagePath, publicUrl });
 
-            console.log('Step 3: Saving metadata to Convex...');
+            console.log('Step 2: Saving metadata to Convex...');
 
-            // 🚀 Step 3: 메타데이터 저장
+            // Convex에 메타데이터 저장 (Supabase 경로를 storageId로 사용)
             const saveResult = await saveConsentFile({
-              storageId,
+              storageId: storagePath as Id<'_storage'>, // Supabase 경로를 ID처럼 사용
               clinical_case_id: caseId as Id<'clinical_cases'>,
-              file_name: file.name,
-              file_size: file.size,
-              file_type: file.type,
+              file_name: fileName,
+              file_size: fileSize,
+              file_type: fileType,
               profileId: profileId, // UUID 문자열로 전달
             });
 
@@ -149,7 +148,7 @@ export function ConsentUploader({
         { priority: 'high' }
       );
     },
-    [caseId, roundId, validateFile, enqueueForCase, generateUploadUrl, saveConsentFile, onUploaded]
+    [caseId, roundId, validateFile, enqueueForCase, saveConsentFile, onUploaded, profileId]
   );
 
   // 파일 선택 핸들러
@@ -234,20 +233,32 @@ export function ConsentUploader({
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                {consentFile.url && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={e => {
-                      e.stopPropagation();
-                      window.open(consentFile.url || '', '_blank');
-                    }}
-                    className="h-8 px-2"
-                  >
-                    <Eye className="mr-1 h-4 w-4" />
-                    보기
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={e => {
+                    e.stopPropagation();
+                    // Supabase Storage 경로인 경우 Public URL 생성
+                    let fileUrl = consentFile.url;
+                    if (consentFile.file_path && consentFile.file_path.includes('/')) {
+                      const supabase = createBrowserClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                      );
+                      const { data } = supabase.storage
+                        .from('consent-files')
+                        .getPublicUrl(consentFile.file_path);
+                      fileUrl = data?.publicUrl || consentFile.url;
+                    }
+                    if (fileUrl) {
+                      window.open(fileUrl, '_blank');
+                    }
+                  }}
+                  className="h-8 px-2"
+                >
+                  <Eye className="mr-1 h-4 w-4" />
+                  보기
+                </Button>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -256,21 +267,80 @@ export function ConsentUploader({
                     fileInputRef.current?.click();
                   }}
                   className="h-8 px-2 text-blue-600 hover:text-blue-700"
-                  disabled={disabled}
+                  disabled={disabled || isDeleting}
                 >
                   변경
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={async e => {
+                    e.stopPropagation();
+                    if (confirm('동의서를 삭제하시겠습니까?')) {
+                      setIsDeleting(true);
+                      try {
+                        // Supabase Storage에서 삭제
+                        if (consentFile.file_path && consentFile.file_path.includes('/')) {
+                          const deleteResponse = await fetch(
+                            `/api/consent-files/delete?path=${encodeURIComponent(consentFile.file_path)}`,
+                            {
+                              method: 'DELETE',
+                            }
+                          );
+                          if (!deleteResponse.ok) {
+                            console.error('Failed to delete from Supabase storage');
+                          }
+                        }
+
+                        // Convex에서 메타데이터 삭제
+                        await deleteConsentFile({
+                          consentFileId: consentFile._id,
+                        });
+
+                        toast.success('동의서가 삭제되었습니다.');
+                        onUploaded?.();
+                      } catch (error) {
+                        console.error('동의서 삭제 실패:', error);
+                        toast.error('동의서 삭제에 실패했습니다.');
+                      } finally {
+                        setIsDeleting(false);
+                      }
+                    }
+                  }}
+                  className="h-8 px-2 text-red-600 hover:text-red-700"
+                  disabled={disabled || isDeleting}
+                >
+                  <X className="mr-1 h-4 w-4" />
+                  삭제
                 </Button>
               </div>
             </div>
 
             {/* 이미지인 경우 미리보기 표시 */}
-            {consentFile.file_type?.startsWith('image/') && consentFile.url && (
+            {consentFile.file_type?.startsWith('image/') && (
               <div className="mt-3 overflow-hidden rounded-lg bg-gray-50">
-                <img
-                  src={consentFile.url}
-                  alt="동의서 미리보기"
-                  className="max-h-48 w-full object-contain"
-                />
+                {(() => {
+                  // Supabase Storage 경로인 경우 Public URL 생성
+                  let imageUrl = consentFile.url;
+                  if (consentFile.file_path && consentFile.file_path.includes('/')) {
+                    const supabase = createBrowserClient(
+                      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                    );
+                    const { data } = supabase.storage
+                      .from('consent-files')
+                      .getPublicUrl(consentFile.file_path);
+                    imageUrl = data?.publicUrl || consentFile.url;
+                  }
+
+                  return imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt="동의서 미리보기"
+                      className="max-h-48 w-full object-contain"
+                    />
+                  ) : null;
+                })()}
               </div>
             )}
           </CardContent>

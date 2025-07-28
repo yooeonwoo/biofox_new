@@ -78,6 +78,16 @@ export function useCaseConsentFile(caseId: string | null) {
     caseId ? { clinical_case_id: caseId as Id<'clinical_cases'> } : 'skip'
   );
 
+  // Supabase Public URL 생성
+  if (consentFile && consentFile.file_path && consentFile.file_path.includes('/')) {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data } = supabase.storage.from('consent-files').getPublicUrl(consentFile.file_path);
+    consentFile.url = data?.publicUrl || consentFile.url;
+  }
+
   return {
     consentFile,
     isLoading: consentFile === undefined && caseId !== null,

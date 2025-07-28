@@ -4243,6 +4243,13 @@ cookiejar@^2.1.4:
   resolved "https://registry.npmjs.org/cookiejar/-/cookiejar-2.1.4.tgz"
   integrity sha512-LDx6oHrK+PhzLKJU9j5S7/Y3jM/mUHvD/DeI1WQmJn652iPC5Y4TBzC9l+5OMOXlyTTA+SmVUPm0HQUwpD5Jqw==
 
+cookies-next@^6.1.0:
+  version "6.1.0"
+  resolved "https://registry.npmjs.org/cookies-next/-/cookies-next-6.1.0.tgz"
+  integrity sha512-8MqWliHg6YRatqlup5HlKCqXM5cFtwq9BVowDpPniPfbTOmrfIEXUQOcRFVXQltV+hyvKDRGJPNtceICkiJ/IA==
+  dependencies:
+    cookie "^1.0.1"
+
 core-js-compat@^3.40.0:
   version "3.43.0"
   resolved "https://registry.npmjs.org/core-js-compat/-/core-js-compat-3.43.0.tgz"

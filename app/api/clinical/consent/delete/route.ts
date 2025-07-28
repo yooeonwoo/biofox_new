@@ -14,38 +14,37 @@ export async function DELETE(request: NextRequest) {
 
     // 1. Delete file from Supabase Storage
     const { error: storageError } = await supabase.storage
-      .from('clinical-photos')
+      .from('consent-files')
       .remove([storagePath]);
 
     if (storageError) {
       console.error('Supabase storage delete error:', storageError);
-      // Even if storage deletion fails, proceed to delete from DB to avoid orphaned records.
-      // But log the error.
+      // Log the error but proceed to delete from DB to avoid orphaned records.
     }
 
     // 2. Delete metadata from the database
     const { error: dbError } = await supabase
-      .from('clinical_photos')
+      .from('consent_files')
       .delete()
-      .eq('storage_path', storagePath);
+      .eq('file_path', storagePath);
 
     if (dbError) {
       console.error('Database delete error:', dbError);
       return NextResponse.json(
-        { error: '사진 메타데이터 삭제에 실패했습니다.', details: dbError.message },
+        { error: '동의서 메타데이터 삭제에 실패했습니다.', details: dbError.message },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: '파일이 성공적으로 삭제되었습니다.',
+      message: '동의서가 성공적으로 삭제되었습니다.',
     });
   } catch (error) {
-    console.error('Delete processing error:', error);
+    console.error('Consent delete processing error:', error);
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     return NextResponse.json(
-      { error: '파일 삭제 중 오류가 발생했습니다.', details: errorMessage },
+      { error: '동의서 삭제 처리 중 오류가 발생했습니다.', details: errorMessage },
       { status: 500 }
     );
   }

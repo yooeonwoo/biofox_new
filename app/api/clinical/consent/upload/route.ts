@@ -8,14 +8,12 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const profileId = formData.get('profileId') as string; // This is supabaseUserId (UUID)
     const caseId = formData.get('caseId') as string; // This is clinical_cases.id (UUID)
-    const sessionNumber = parseInt(formData.get('sessionNumber') as string);
-    const photoType = formData.get('photoType') as string;
 
-    if (!file || !profileId || !caseId || !photoType) {
+    if (!file || !profileId || !caseId) {
       return NextResponse.json({ error: '필수 파라미터가 누락되었습니다.' }, { status: 400 });
     }
 
-    // 1. Find the profile's primary key using the supabaseUserId from the client
+    // 1. Find the profile's primary key using the supabaseUserId
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('id')
@@ -29,55 +27,56 @@ export async function POST(request: NextRequest) {
     const profilePkId = profileData.id;
 
     // 2. Upload file to Supabase Storage
-    const storagePath = `clinical_photos/${profilePkId}/${caseId}/${sessionNumber}_${photoType}_${Date.now()}`;
+    const storagePath = `consent_files/${profilePkId}/${caseId}/${Date.now()}_${file.name}`;
     const { error: uploadError } = await supabase.storage
-      .from('clinical-photos') // bucket name
+      .from('consent-files') // bucket name
       .upload(storagePath, file, {
-        contentType: file.type || 'image/jpeg',
+        contentType: file.type || 'application/pdf',
         upsert: true, // Overwrite if file exists
       });
 
     if (uploadError) {
       console.error('Supabase storage upload error:', uploadError);
       return NextResponse.json(
-        { error: '파일 스토리지 업로드에 실패했습니다.', details: uploadError.message },
+        { error: '동의서 파일 스토리지 업로드에 실패했습니다.', details: uploadError.message },
         { status: 500 }
       );
     }
 
     // 3. Insert metadata into the database
-    const { error: dbError } = await supabase.from('clinical_photos').insert({
-      clinical_case_id: caseId,
-      session_number: sessionNumber,
-      photo_type: photoType,
-      storage_path: storagePath,
-      file_size: file.size,
-      uploaded_by: profilePkId,
-      metadata: {
-        originalFileName: file.name,
-      },
-    });
+    const { data: insertedData, error: dbError } = await supabase
+      .from('consent_files')
+      .insert({
+        clinical_case_id: caseId,
+        file_path: storagePath,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        uploaded_by: profilePkId,
+      })
+      .select()
+      .single();
 
     if (dbError) {
       console.error('Database insert error:', dbError);
       // If DB insert fails, delete the orphaned file from storage
-      await supabase.storage.from('clinical-photos').remove([storagePath]);
+      await supabase.storage.from('consent-files').remove([storagePath]);
       return NextResponse.json(
-        { error: '사진 메타데이터 저장에 실패했습니다.', details: dbError.message },
+        { error: '동의서 메타데이터 저장에 실패했습니다.', details: dbError.message },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      storagePath: storagePath,
-      message: '사진이 성공적으로 업로드되었습니다.',
+      fileData: insertedData,
+      message: '동의서가 성공적으로 업로드되었습니다.',
     });
   } catch (error) {
-    console.error('Upload processing error:', error);
+    console.error('Consent upload processing error:', error);
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     return NextResponse.json(
-      { error: '업로드 처리 중 오류가 발생했습니다.', details: errorMessage },
+      { error: '동의서 업로드 처리 중 오류가 발생했습니다.', details: errorMessage },
       { status: 500 }
     );
   }

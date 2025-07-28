@@ -20,6 +20,7 @@ export function createSupabaseServerClient() {
 
 // Storage 버킷 이름
 export const CLINICAL_PHOTOS_BUCKET = 'clinical-photos';
+export const CONSENT_FILES_BUCKET = 'consent-files';
 
 // 이미지 업로드 경로 생성
 export function getStoragePath(
@@ -32,15 +33,19 @@ export function getStoragePath(
 }
 
 // Public URL 가져오기
-export function getPublicUrl(supabase: any, path: string) {
-  const { data } = supabase.storage.from(CLINICAL_PHOTOS_BUCKET).getPublicUrl(path);
+export function getPublicUrl(supabase: any, path: string, bucket: string = CLINICAL_PHOTOS_BUCKET) {
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
 
   return data?.publicUrl || null;
 }
 
 // 파일 삭제
-export async function deleteFile(supabase: any, path: string) {
-  const { error } = await supabase.storage.from(CLINICAL_PHOTOS_BUCKET).remove([path]);
+export async function deleteFile(
+  supabase: any,
+  path: string,
+  bucket: string = CLINICAL_PHOTOS_BUCKET
+) {
+  const { error } = await supabase.storage.from(bucket).remove([path]);
 
   if (error) {
     console.error('Error deleting file:', error);
