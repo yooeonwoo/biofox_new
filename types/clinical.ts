@@ -50,86 +50,93 @@ export interface RoundCustomerInfo {
   date?: string; // 회차별 날짜
 }
 
-// 케이스 상태 타입
+// ✅ 백엔드와 완전히 일치하는 케이스 상태 타입
 export type CaseStatus =
-  | 'active'
+  | 'active' // 프론트엔드에서 주로 사용 (백엔드 'in_progress'와 매핑)
+  | 'in_progress' // 백엔드 원래 상태
   | 'completed'
-  | 'archived'
+  | 'paused'
   | 'cancelled'
-  | 'in_progress'
-  | 'paused';
+  | 'archived'; // 프론트엔드에서 사용
 
-// 사진 슬롯 타입
+// 사진 슬롯 타입 (백엔드 clinical_photos 테이블과 매핑)
 export interface PhotoSlot {
   id: string;
   roundDay: number;
-  angle: 'front' | 'left' | 'right';
+  angle: 'front' | 'left_side' | 'right_side'; // 백엔드 photo_type과 일치
   imageUrl?: string;
-  url?: string | null; // null 가능성 명시 (일부 컴포넌트에서 사용)
-  session_number?: number; // 세션 번호 (일부 컴포넌트에서 사용)
+  url?: string | null;
+  session_number?: number;
   uploaded: boolean;
-  photoId?: string; // Convex photo ID
+  photoId?: string;
 }
 
-// 케이스 데이터 타입
+// ✅ Convex 백엔드와 완전 호환되는 케이스 데이터 타입
 export interface ClinicalCase {
-  id: string;
-  _id?: string; // Convex ID 추가
-  name?: string; // Convex 케이스에서 사용하는 name 필드 추가
-  customerName: string;
-  status: CaseStatus;
-  createdAt: string;
-  created_at?: number; // Convex timestamp
-  updated_at?: number; // Convex timestamp
-  consentReceived: boolean;
-  consent_status?: 'no_consent' | 'consented' | 'pending'; // Convex consent 상태
-  consentImageUrl?: string;
-  photos: PhotoSlot[];
-  customerInfo: CustomerInfo;
-  roundCustomerInfo: { [roundDay: number]: RoundCustomerInfo };
+  // 🔴 Convex 필수 필드들
+  _id?: string; // Convex ID
+  shop_id?: string; // Convex profiles 참조
+  subject_type?: 'self' | 'customer'; // Convex 정의와 일치
+  name?: string; // Convex name 필드
+  status: CaseStatus; // 확장된 상태 타입
+  consent_status?: 'no_consent' | 'consented' | 'pending'; // Convex 정의와 일치
+  created_at?: number; // Convex 타임스탬프 (number)
+  updated_at?: number; // Convex 타임스탬프 (number)
 
-  // Convex 스키마 필드들
-  shop_id?: string;
+  // 🔵 Convex 선택적 필드들
   case_title?: string;
-  caseTitle?: string; // camelCase 버전 추가
-  age?: number;
-  gender?: 'male' | 'female' | 'other';
-  marketing_consent?: boolean;
-  consent_date?: number;
-  subject_type?: 'self' | 'customer';
-  treatment_item?: string;
   concern_area?: string;
-  concernArea?: string; // camelCase 버전 추가
   treatment_plan?: string;
-  treatmentPlan?: string; // camelCase 버전 추가
+  gender?: 'male' | 'female' | 'other';
+  age?: number;
+  treatment_item?: string;
+  start_date?: number;
+  end_date?: number;
+  total_sessions?: number;
+  consent_date?: number;
+  marketing_consent?: boolean;
   notes?: string;
   tags?: string[];
+  custom_fields?: any;
   photo_count?: number;
   latest_session?: number;
-  start_date?: number;
+  created_by?: string;
 
-  // 메타데이터 속성 추가 (일부 컴포넌트에서 필요)
-  metadata?: {
-    rounded?: boolean;
-    tags?: string[];
-    [key: string]: any; // 확장 가능한 메타데이터
-  };
+  // 🟢 프론트엔드 호환성 필드들 (Convex 스키마에 추가됨)
+  customerName?: string; // name과 동일, 프론트엔드에서 주로 사용
+  consentReceived?: boolean; // consent_status 기반 boolean 변환
+  is_personal?: boolean; // subject_type === 'self' 또는 name === '본인'
+  createdAt?: string; // created_at의 ISO string 버전
+  updatedAt?: string; // updated_at의 ISO string 버전
 
-  // 제품 사용 체크박스
+  // 🟡 제품 사용 체크박스 필드들 (Convex 스키마에 추가됨)
   cureBooster?: boolean;
   cureMask?: boolean;
   premiumMask?: boolean;
   allInOneSerum?: boolean;
 
-  // 피부 타입 체크박스
+  // 🟡 피부 타입 체크박스 필드들 (Convex 스키마에 추가됨)
   skinRedSensitive?: boolean;
   skinPigment?: boolean;
   skinPore?: boolean;
   skinTrouble?: boolean;
   skinWrinkle?: boolean;
   skinEtc?: boolean;
-  is_personal?: boolean;
-  total_sessions?: number;
+
+  // 🔵 메타데이터 (Convex 스키마 구조와 일치)
+  metadata?: {
+    rounds?: Record<string, RoundCustomerInfo>;
+    customFields?: any;
+    roundInfo?: any; // 하위 호환성
+    roundCustomerInfo?: any; // 하위 호환성
+  };
+
+  // 🔴 하위 호환성을 위한 레거시 필드들 (점진적 제거 예정)
+  id?: string; // _id의 별칭
+  customerInfo?: CustomerInfo; // 레거시 구조
+  roundCustomerInfo?: { [roundDay: number]: RoundCustomerInfo }; // 레거시 구조
+  photos?: PhotoSlot[]; // 실제로는 별도 쿼리로 조회
+  consentImageUrl?: string; // 동의서 파일 URL (별도 테이블)
 }
 
 // UI용 Clinical Case 타입 (Convex 데이터 구조)

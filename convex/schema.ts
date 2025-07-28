@@ -344,7 +344,7 @@ export default defineSchema({
     .index('by_training_applied', ['company_training_applied_at']) // 교육 신청일순
     .index('by_training_completed', ['company_training_completed_at']), // 교육 완료일순
 
-  // 🏥 임상 케이스 - 임상 사례 관리 (22개 컬럼)
+  // 🏥 임상 케이스 - 임상 사례 관리 (22개 컬럼 -> 확장)
   clinical_cases: defineTable({
     shop_id: v.id('profiles'),
     subject_type: v.union(v.literal('self'), v.literal('customer')),
@@ -356,11 +356,14 @@ export default defineSchema({
     // 기존 필드들
     gender: v.optional(v.union(v.literal('male'), v.literal('female'), v.literal('other'))),
     age: v.optional(v.number()),
+    // ✅ 프론트엔드 호환성을 위해 'active' 상태 추가
     status: v.union(
+      v.literal('active'), // 프론트엔드에서 사용하는 'active' 상태 (in_progress와 동일)
       v.literal('in_progress'),
       v.literal('completed'),
       v.literal('paused'),
-      v.literal('cancelled')
+      v.literal('cancelled'),
+      v.literal('archived') // 프론트엔드에서 사용하는 'archived' 상태 추가
     ),
     treatment_item: v.optional(v.string()),
     start_date: v.optional(v.number()),
@@ -374,6 +377,28 @@ export default defineSchema({
     custom_fields: v.optional(v.any()),
     photo_count: v.optional(v.number()),
     latest_session: v.optional(v.number()),
+
+    // ✅ 프론트엔드 호환성 필드들 추가
+    customerName: v.optional(v.string()), // 프론트엔드에서 사용하는 고객명 필드 (name과 동일)
+    consentReceived: v.optional(v.boolean()), // 프론트엔드에서 사용하는 동의 여부 (consent_status 기반)
+    is_personal: v.optional(v.boolean()), // 프론트엔드에서 사용하는 본인 케이스 구분자
+    createdAt: v.optional(v.string()), // 프론트엔드에서 사용하는 생성일 (created_at의 string 버전)
+    updatedAt: v.optional(v.string()), // 프론트엔드에서 사용하는 수정일 (updated_at의 string 버전)
+
+    // 제품 사용 체크박스 필드들 (프론트엔드 types/clinical.ts 호환)
+    cureBooster: v.optional(v.boolean()),
+    cureMask: v.optional(v.boolean()),
+    premiumMask: v.optional(v.boolean()),
+    allInOneSerum: v.optional(v.boolean()),
+
+    // 피부 타입 체크박스 필드들 (프론트엔드 types/clinical.ts 호환)
+    skinRedSensitive: v.optional(v.boolean()),
+    skinPigment: v.optional(v.boolean()),
+    skinPore: v.optional(v.boolean()),
+    skinTrouble: v.optional(v.boolean()),
+    skinWrinkle: v.optional(v.boolean()),
+    skinEtc: v.optional(v.boolean()),
+
     // 메타데이터 - 라운드별 정보 및 추가 필드
     metadata: v.optional(
       v.object({
