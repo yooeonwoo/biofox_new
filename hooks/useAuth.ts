@@ -1,61 +1,7 @@
 import { useSupabaseAuth } from '@/providers/supabase-auth-provider';
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-
-/**
- * Supabase 기반 사용자 역할 타입 정의
- */
-type UserRole =
-  | 'admin'
-  | 'kol'
-  | 'shop'
-  | 'hq'
-  | 'unassigned'
-  | 'ol'
-  | 'shop_owner'
-  | 'sales'
-  | null;
-
-/**
- * 프로필 인터페이스 (Supabase profiles 테이블 기반)
- */
-interface Profile {
-  id: string;
-  _id?: string; // Convex ID
-  userId?: string;
-  supabaseUserId?: string;
-  email: string;
-  name: string;
-  display_name?: string; // 표시 이름
-  bio?: string; // 자기소개
-  image?: string; // 프로필 이미지
-  role: UserRole;
-  status: 'pending' | 'approved' | 'rejected';
-  shop_name: string;
-  region?: string;
-  naver_place_link?: string;
-  approved_at?: string;
-  approved_by?: string;
-  commission_rate?: number;
-  total_subordinates?: number;
-  active_subordinates?: number;
-  metadata?: any;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * useAuth 훅이 반환하는 인증 상태 객체의 인터페이스
- */
-interface AuthState {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  user: any | null; // Supabase 사용자 객체
-  profile: Profile | null; // Supabase 프로필 객체
-  role: UserRole;
-  signOut: () => Promise<void>;
-  syncError: Error | null;
-}
+import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
+import type { Profile, UserRole, AuthState } from '@/types/auth';
 
 /**
  * 단순화된 Supabase 기반 인증 훅
@@ -66,10 +12,14 @@ interface AuthState {
  * @returns {AuthState} - 통합된 인증 상태 객체
  */
 export function useAuth(): AuthState {
-  const supabase = createClient();
-
-  // 1. Supabase 인증 상태
-  const { user, loading: isSupabaseLoading, signOut: supabaseSignOut } = useSupabaseAuth();
+  // 1. Supabase 인증 상태 - Provider에서 supabase 클라이언트도 가져옴
+  const {
+    user,
+    loading: isSupabaseLoading,
+    signOut: supabaseSignOut,
+    error: authError,
+    supabase,
+  } = useSupabaseAuth();
   const isAuthenticated = !!user;
 
   // 2. 프로필 상태
@@ -77,17 +27,51 @@ export function useAuth(): AuthState {
   const [profileLoading, setProfileLoading] = useState(false);
   const [syncError, setSyncError] = useState<Error | null>(null);
 
-  // 3. 프로필 조회
+  // 3. 프로필 생성 함수 (폴백용)
+  const createProfileFallback = useCallback(async () => {
+    if (!user?.id || !user?.email) return null;
+
+    try {
+      const { data: newProfile, error } = await supabase
+        .from('profiles')
+        .insert({
+          supabaseUserId: user.id,
+          email: user.email,
+          name: user.user_metadata?.name || user.email.split('@')[0],
+          display_name: user.user_metadata?.display_name || '',
+          role: 'unassigned',
+          status: 'pending',
+          shop_name: '',
+          metadata: user.user_metadata || {},
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('프로필이 생성되었습니다.');
+      return newProfile;
+    } catch (error) {
+      console.error('Profile creation fallback error:', error);
+      toast.error('프로필 생성에 실패했습니다. 관리자에게 문의해주세요.');
+      throw error;
+    }
+  }, [user, supabase]);
+
+  // 4. 프로필 조회
   useEffect(() => {
     // 사용자가 없으면 프로필 상태를 초기화하고 종료
     if (!user?.id) {
       setProfile(null);
+      setProfileLoading(false);
       return;
     }
 
+    let mounted = true;
     const fetchProfile = async () => {
       setProfileLoading(true);
       setSyncError(null);
+
       try {
         const { data: existingProfile, error } = await supabase
           .from('profiles')
@@ -95,25 +79,69 @@ export function useAuth(): AuthState {
           .eq('supabaseUserId', user.id)
           .single();
 
-        if (error && error.code !== 'PGRST116') {
-          // PGRST116: row not found
-          throw error;
-        }
+        if (error && error.code === 'PGRST116') {
+          // 프로필이 없는 경우 - DB 트리거가 실패했을 가능성
+          console.warn('Profile not found, attempting to create...');
 
-        setProfile(existingProfile || null);
+          if (mounted) {
+            const newProfile = await createProfileFallback();
+            if (mounted && newProfile) {
+              setProfile(newProfile);
+            }
+          }
+        } else if (error) {
+          throw error;
+        } else if (mounted) {
+          setProfile(existingProfile);
+        }
       } catch (error) {
         console.error('Profile fetch error:', error);
-        setSyncError(error as Error);
-        setProfile(null);
+        if (mounted) {
+          setSyncError(error as Error);
+          setProfile(null);
+        }
       } finally {
-        setProfileLoading(false);
+        if (mounted) {
+          setProfileLoading(false);
+        }
       }
     };
 
     fetchProfile();
-  }, [user?.id, supabase]); // user.id가 변경될 때만 실행
 
-  // 4. 통합된 인증 상태 반환
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id, supabase, createProfileFallback]); // user.id가 변경될 때만 실행
+
+  // 5. 실시간 프로필 업데이트 구독
+  useEffect(() => {
+    if (!profile?._id) return;
+
+    const channel = supabase
+      .channel(`profile-${profile._id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${profile.id}`,
+        },
+        payload => {
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            setProfile(payload.new as Profile);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?._id, profile?.id, supabase]);
+
+  // 6. 통합된 인증 상태 반환
   return {
     isAuthenticated,
     isLoading: isSupabaseLoading || profileLoading,
@@ -121,6 +149,6 @@ export function useAuth(): AuthState {
     profile,
     role: profile?.role || null,
     signOut: supabaseSignOut,
-    syncError,
+    syncError: syncError || authError,
   };
 }

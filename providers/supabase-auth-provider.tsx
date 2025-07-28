@@ -4,25 +4,18 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
-
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata?: any) => Promise<void>;
-  signOut: () => Promise<void>;
-  updateUser: (attributes: any) => Promise<void>;
-}
+import type { AuthContextType } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
+  error: null,
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
   updateUser: async () => {},
+  supabase: null as any,
 });
 
 export function useSupabaseAuth() {
@@ -37,8 +30,9 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
     // 초기 세션 체크
@@ -51,6 +45,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         setUser(session?.user ?? null);
       } catch (error) {
         console.error('Error getting session:', error);
+        setError(error as Error);
       } finally {
         setLoading(false);
       }
@@ -68,17 +63,22 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase, router]);
+  }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
+    setError(null);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) throw error;
+    if (error) {
+      setError(error);
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string, metadata?: any) => {
+    setError(null);
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -86,18 +86,29 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         data: metadata,
       },
     });
-    if (error) throw error;
+    if (error) {
+      setError(error);
+      throw error;
+    }
   };
 
   const signOut = async () => {
+    setError(null);
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (error) {
+      setError(error);
+      throw error;
+    }
     router.push('/signin');
   };
 
   const updateUser = async (attributes: any) => {
+    setError(null);
     const { error } = await supabase.auth.updateUser(attributes);
-    if (error) throw error;
+    if (error) {
+      setError(error);
+      throw error;
+    }
   };
 
   return (
@@ -106,10 +117,12 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         user,
         session,
         loading,
+        error,
         signIn,
         signUp,
         signOut,
         updateUser,
+        supabase,
       }}
     >
       {children}
