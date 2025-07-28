@@ -48,10 +48,36 @@ export function ClinicalPhotoModal({
   const { toast } = useToast();
 
   // Convex queries - 자동으로 실시간 업데이트됨
-  const photos = useQuery(
+  const photosRaw = useQuery(
     api.fileStorage.getClinicalPhotos,
     caseId ? { clinical_case_id: caseId as Id<'clinical_cases'> } : 'skip'
   );
+
+  // URL 생성 로직 추가
+  const photos = photosRaw?.map(photo => {
+    let imageUrl = photo.url;
+
+    if (!imageUrl && photo.file_path) {
+      // 프로덕션 환경 감지
+      const isProduction =
+        typeof window !== 'undefined' &&
+        (window.location.hostname === 'biofoxnew.vercel.app' ||
+          window.location.hostname.includes('vercel.app'));
+
+      // 환경에 따른 Convex URL 설정
+      const convexSiteUrl = isProduction
+        ? 'https://aware-rook-16.convex.site'
+        : process.env.NEXT_PUBLIC_CONVEX_URL?.replace('.cloud', '.site') ||
+          'https://quiet-dog-358.convex.site';
+
+      imageUrl = `${convexSiteUrl}/storage/${photo.file_path}`;
+    }
+
+    return {
+      ...photo,
+      imageUrl,
+    };
+  });
 
   const consentFile = useQuery(
     api.fileStorage.getConsentFile,
@@ -343,9 +369,18 @@ export function ClinicalPhotoModal({
                       {existingPhoto ? (
                         <div className="group relative">
                           <img
-                            src={existingPhoto.url || ''}
+                            src={existingPhoto.imageUrl || existingPhoto.url || ''}
                             alt={`${label} 사진`}
                             className="aspect-square w-full rounded-lg object-cover"
+                            onError={e => {
+                              console.error('[ClinicalPhotoModal] Image load error:', {
+                                photoId: existingPhoto._id,
+                                url: existingPhoto.url,
+                                imageUrl: existingPhoto.imageUrl,
+                                file_path: existingPhoto.file_path,
+                                src: e.currentTarget.src,
+                              });
+                            }}
                           />
                           <button
                             onClick={() => handleDeletePhoto(existingPhoto)}
