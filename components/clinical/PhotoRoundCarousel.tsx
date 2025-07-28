@@ -63,11 +63,21 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
       if (roundSlots) {
         const slotIndex = roundSlots.findIndex(slot => slot.angle === photo.angle);
         if (slotIndex !== -1) {
+          const imageUrl = photo.url || photo.imageUrl;
+          console.log('[PhotoRoundCarousel] Setting photo:', {
+            photoId: photo.id,
+            angle: photo.angle,
+            roundDay: photoRoundDay,
+            url: photo.url,
+            imageUrl: photo.imageUrl,
+            finalImageUrl: imageUrl,
+          });
+
           roundSlots[slotIndex] = {
             ...photo,
             roundDay: photoRoundDay, // 확실히 number로 설정
             uploaded: true,
-            imageUrl: photo.url || photo.imageUrl,
+            imageUrl: imageUrl,
           };
         }
       }
@@ -198,6 +208,19 @@ const PhotoRoundCarousel: React.FC<PhotoRoundCarouselProps> = ({
                       src={slot.imageUrl}
                       alt={`${currentRound}회차 ${displayAngle}`}
                       className="h-full w-full object-cover"
+                      onError={e => {
+                        console.error('[PhotoRoundCarousel] Image load error:', {
+                          slotId: slot.id,
+                          src: slot.imageUrl,
+                          error: e,
+                        });
+                      }}
+                      onLoad={() => {
+                        console.log('[PhotoRoundCarousel] Image loaded successfully:', {
+                          slotId: slot.id,
+                          src: slot.imageUrl,
+                        });
+                      }}
                     />
 
                     {/* 오버레이 버튼들 */}

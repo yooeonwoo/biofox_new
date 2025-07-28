@@ -18,18 +18,26 @@ export function useCasePhotos(caseId: string | null) {
 
   // PhotoSlot 형태로 변환
   const photoSlots: PhotoSlot[] =
-    photos?.map(photo => ({
-      id: photo._id,
-      roundDay: photo.session_number,
-      angle: photo.photo_type,
-      uploaded: true,
-      imageUrl: photo.url,
-      url: photo.url,
-      file_path: photo.file_path,
-      created_at: photo.created_at,
-      session_number: photo.session_number,
-      photo_type: photo.photo_type,
-    })) || [];
+    photos?.map(photo => {
+      console.log('[useCasePhotos] Photo data:', {
+        id: photo._id,
+        file_path: photo.file_path,
+        url: photo.url,
+      });
+
+      return {
+        id: photo._id,
+        roundDay: photo.session_number,
+        angle: photo.photo_type,
+        uploaded: true,
+        imageUrl: photo.url,
+        url: photo.url,
+        file_path: photo.file_path,
+        created_at: photo.created_at,
+        session_number: photo.session_number,
+        photo_type: photo.photo_type,
+      };
+    }) || [];
 
   return {
     photos: photoSlots,
